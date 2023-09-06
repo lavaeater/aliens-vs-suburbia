@@ -6,11 +6,13 @@ pub fn spawn_players(
     mut commands: Commands,
     asset_server: Res<AssetServer>
 ) {
+    let scene = asset_server.load("player.glb#Scene0");
+
     // to position our 3d model, simply use the Transform
     // in the SceneBundle
     commands.spawn(SceneBundle {
-        scene: asset_server.load("player.glb#Scene0"),
-        transform: Transform::from_xyz(2.0, 0.0, -5.0),
+        scene,
+        transform: Transform::from_xyz(0.0, 0.0, 0.0),
         ..Default::default()
     });
 }
