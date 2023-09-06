@@ -9,6 +9,7 @@ pub fn spawn_lights(
 ) {
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
+            illuminance: 1000.0,
             shadows_enabled: true,
             ..default()
         },
