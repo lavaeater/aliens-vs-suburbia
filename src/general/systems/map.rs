@@ -1,7 +1,6 @@
 use bevy::math::Vec3;
 use bevy::prelude::Commands;
 use bevy_xpbd_3d::prelude::{Collider, Position, RigidBody};
-use crate::METERS_PER_PIXEL;
 
 pub fn spawn_map(
     mut commands: Commands,
