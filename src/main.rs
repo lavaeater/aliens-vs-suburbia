@@ -13,16 +13,17 @@ use crate::general::systems::map::spawn_map;
 
 pub(crate) mod player;
 pub(crate) mod general;
+
 pub const METERS_PER_PIXEL: f64 = 16.0;
 
 
 fn main() {
     App::new()
         .insert_resource(Msaa::Sample4)
-        .insert_resource(Handles::<Mesh>{
+        .insert_resource(Handles::<Mesh> {
             handles: HashMap::new()
         })
-        .insert_resource(Handles::<Scene>{
+        .insert_resource(Handles::<Scene> {
             handles: HashMap::new()
         })
         .insert_resource(Msaa::Sample4)
@@ -30,13 +31,11 @@ fn main() {
         .add_plugins(PhysicsPlugins::default())
         .add_plugins(WorldInspectorPlugin::new())
 
-        .add_systems(Startup,
-                     (
-                         load_models,
-                         spawn_map,
-                         spawn_players,
-                         spawn_camera,
-                         spawn_lights
-                     ))
+        .add_systems(Startup, (
+            spawn_map,
+            spawn_players,
+            spawn_camera,
+            spawn_lights
+        ))
         .run();
 }

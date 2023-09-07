@@ -1,6 +1,5 @@
 use bevy::asset::{Asset, AssetServer, Handle};
-use bevy::gltf::Gltf;
-use bevy::prelude::{Commands, Mesh, Res, ResMut, Resource};
+use bevy::prelude::{Mesh, Res, ResMut, Resource};
 use bevy::scene::Scene;
 use bevy::utils::HashMap;
 
