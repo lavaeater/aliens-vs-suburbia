@@ -2,7 +2,7 @@ use bevy::asset::{Assets, AssetServer, LoadState};
 use bevy::gltf::{Gltf, GltfMesh};
 use bevy::prelude::{Commands, Mesh, Res, Transform};
 use bevy::scene::{SceneBundle};
-use bevy_xpbd_3d::prelude::Collider;
+use bevy_xpbd_3d::prelude::{Collider, RigidBody};
 
 pub fn spawn_players(
     mut commands: Commands,
@@ -14,5 +14,6 @@ pub fn spawn_players(
 
         ..Default::default()
     },
+        RigidBody::Dynamic,
     Collider::cuboid(0.5,0.5,0.3)));
 }
