@@ -8,7 +8,7 @@ pub fn spawn_map(
     commands.spawn(
         (
             RigidBody::Static,
-            Collider::cuboid(5.0, 1.0, 5.0),
+            Collider::cuboid(50.0, 0.1, 50.0),
             Position::from(Vec3::new(4.0, -1.0, -4.0)),
         )
     );
