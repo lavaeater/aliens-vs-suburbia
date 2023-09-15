@@ -2,8 +2,7 @@ use bevy::math::{Quat, Vec3};
 use bevy::prelude::{Camera3dBundle, Commands, Transform};
 use bevy::utils::default;
 use bevy_xpbd_3d::math::PI;
-use crate::general::components::camera::GameCamera;
-
+use crate::camera::components::camera::GameCamera;
 pub fn spawn_camera(mut commands: Commands) {
     commands.spawn((
         Camera3dBundle {
