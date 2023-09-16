@@ -1,4 +1,4 @@
-use bevy::app::{App, Startup};
+use bevy::app::{App, Startup, Update};
 use bevy::DefaultPlugins;
 use bevy::prelude::{Mesh, Msaa};
 use bevy::scene::Scene;
@@ -11,7 +11,7 @@ use camera::systems::spawn_camera::spawn_camera;
 use crate::general::systems::lights::spawn_lights;
 use crate::general::systems::load_models::Handles;
 use crate::general::systems::map::spawn_map;
-use crate::player::systems::touch_floor::touch_floor;
+use crate::player::systems::keyboard_control::keyboard_control;
 
 pub(crate) mod player;
 pub(crate) mod general;
@@ -35,12 +35,16 @@ fn main() {
         .add_plugins(PhysicsPlugins::default())
         .add_plugins(WorldInspectorPlugin::new())
 
-        .add_systems(Startup, (
-            spawn_map,
-            spawn_players,
-            spawn_camera,
-            spawn_lights,
-            touch_floor
-        ))
+        .add_systems(
+            Startup,
+            (
+                spawn_map,
+                spawn_players,
+                spawn_camera,
+                spawn_lights,
+            ))
+        .add_systems(
+            Update,
+            keyboard_control)
         .run();
 }

@@ -1,7 +1,7 @@
 use bevy::core::Name;
 use bevy::math::Vec3;
 use bevy::prelude::Commands;
-use bevy_xpbd_3d::prelude::{Collider, CollisionLayers, Position, RigidBody};
+use bevy_xpbd_3d::prelude::{Collider, Position, RigidBody};
 
 pub fn spawn_map(
     mut commands: Commands,

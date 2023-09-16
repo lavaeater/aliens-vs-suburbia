@@ -1,13 +1,13 @@
 use bevy::input::ButtonState;
 use bevy::input::keyboard::KeyboardInput;
-use bevy::prelude::{Entity, EventReader, KeyCode, Query, With};
+use bevy::prelude::{EventReader, KeyCode, Query, With};
 use crate::player::components::general::{Controller, Directions, KeyboardController, Rotations, Triggers};
 
-fn keyboard_control(
+pub fn keyboard_control(
     mut key_evr: EventReader<KeyboardInput>,
-    mut query: Query<(&mut Controller), With<KeyboardController>>,
+    mut query: Query<&mut Controller, With<KeyboardController>>,
 ) {
-    if let Ok((mut controller)) = query.get_single_mut() {
+    if let Ok(mut controller) = query.get_single_mut() {
         for ev in key_evr.iter() {
             match ev.state {
                 ButtonState::Pressed => match ev.key_code {
