@@ -5,7 +5,7 @@ use bevy::scene::{SceneBundle};
 use bevy_third_person_camera::ThirdPersonCameraTarget;
 use bevy_xpbd_3d::components::LockedAxes;
 use bevy_xpbd_3d::prelude::{Collider, RigidBody};
-use crate::player::components::general::Player;
+use crate::player::components::general::{Controller, KeyboardController, Player};
 
 pub fn spawn_players(
     mut commands: Commands,
@@ -14,6 +14,8 @@ pub fn spawn_players(
     commands.spawn((
         Name::from("Player"),
         Player {},
+        KeyboardController {},
+        Controller::default(),
         ThirdPersonCameraTarget {},
         SceneBundle {
             scene: asset_server.load("player.glb#Scene0"),
