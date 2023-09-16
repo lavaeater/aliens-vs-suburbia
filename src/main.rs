@@ -9,8 +9,9 @@ use bevy_xpbd_3d::plugins::PhysicsPlugins;
 use crate::player::systems::spawn_players::spawn_players;
 use camera::systems::spawn_camera::spawn_camera;
 use crate::general::systems::lights::spawn_lights;
-use crate::general::systems::load_models::{Handles, load_models};
+use crate::general::systems::load_models::Handles;
 use crate::general::systems::map::spawn_map;
+use crate::player::systems::touch_floor::touch_floor;
 
 pub(crate) mod player;
 pub(crate) mod general;
@@ -38,7 +39,8 @@ fn main() {
             spawn_map,
             spawn_players,
             spawn_camera,
-            spawn_lights
+            spawn_lights,
+            touch_floor
         ))
         .run();
 }
