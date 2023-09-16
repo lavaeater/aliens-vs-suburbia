@@ -4,6 +4,7 @@ use bevy::prelude::{Mesh, Msaa};
 use bevy::scene::Scene;
 use bevy::utils::HashMap;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy_third_person_camera::ThirdPersonCameraPlugin;
 use bevy_xpbd_3d::plugins::PhysicsPlugins;
 use crate::player::systems::spawn_players::spawn_players;
 use camera::systems::spawn_camera::spawn_camera;
@@ -29,6 +30,7 @@ fn main() {
         })
         .insert_resource(Msaa::Sample4)
         .add_plugins(DefaultPlugins)
+        .add_plugins(ThirdPersonCameraPlugin)
         .add_plugins(PhysicsPlugins::default())
         .add_plugins(WorldInspectorPlugin::new())
 
