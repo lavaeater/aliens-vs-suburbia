@@ -20,7 +20,7 @@ pub fn spawn_camera(mut commands: Commands) {
         Camera3dBundle {
             projection: Perspective(Default::default()),
             transform: Transform {
-                translation: Vec3::new(-2.3, 5.0, 6.0),
+                // translation: Vec3::new(-20.3, 50.0, 60.0),
                 rotation: Quat::from_rotation_x(-PI / 4.),
                 ..default()
             },
