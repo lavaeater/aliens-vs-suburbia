@@ -6,11 +6,11 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy = "0.11.2"
-bevy-inspector-egui = "0.19.0"
-bevy_egui = "0.21.0"
+bevy = "0.11.3"
+bevy-inspector-egui = "0.20.0"
+bevy_egui = "0.22.0"
 bevy_rand = "0.3.0"
-bevy_third_person_camera = "0.1.5"
+bevy_third_person_camera = "0.1.6"
 bevy_xpbd_3d = { git = "https://github.com/Jondolf/bevy_xpbd", branch = "main", default-features = false, features = ["3d", "f32", "debug-plugin", "collider-from-mesh", "simd"] }
 big-brain = "0.18.0"
 rand_chacha = "0.3.1"

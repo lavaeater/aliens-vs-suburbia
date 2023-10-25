@@ -1,6 +1,6 @@
 use bevy::math::{Quat, Vec3};
 use bevy::pbr::{CascadeShadowConfigBuilder, DirectionalLight, DirectionalLightBundle};
-use bevy::prelude::{Commands, Transform};
+use bevy::prelude::{Commands, EulerRot, Transform};
 use bevy::utils::default;
 use std::f32::consts::PI;
 use bevy::core::Name;
@@ -12,13 +12,12 @@ pub fn spawn_lights(
         Name::from("Directional Light"),
         DirectionalLightBundle {
             directional_light: DirectionalLight {
-                illuminance: 1000.0,
+                illuminance: 10000.0,
                 shadows_enabled: true,
                 ..default()
             },
             transform: Transform {
-                translation: Vec3::new(0.0, 2.0, 0.0),
-                rotation: Quat::from_rotation_x(-PI / 4.),
+                rotation: Quat::from_euler(EulerRot::XYZ, -0.5, 0.2, 0.4),
                 ..default()
             },
 // The default cascade config is designed to handle large scenes.

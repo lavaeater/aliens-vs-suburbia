@@ -1,4 +1,3 @@
-use bevy::math::Vec3;
 use bevy::prelude::Component;
 use bevy::utils::HashSet;
 use bevy_xpbd_3d::math::Vector3;

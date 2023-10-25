@@ -21,7 +21,7 @@ pub fn spawn_players(
         ThirdPersonCameraTarget {},
         SceneBundle {
             scene: asset_server.load("player.glb#Scene0"),
-            transform: Transform::from_xyz(2.0, 0.0, -5.0),
+            transform: Transform::from_xyz(0.0, 0.0, 0.0),
             ..Default::default()
         },
         ExternalForce::default().with_persistence(false),
