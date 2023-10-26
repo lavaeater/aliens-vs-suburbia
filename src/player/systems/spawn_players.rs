@@ -26,7 +26,7 @@ pub fn spawn_players(
         },
         ExternalForce::default().with_persistence(false),
         ExternalTorque::default().with_persistence(false),
-        Friction::default(),
+        Friction::from(0.0),
         AngularDamping(1.0),
         LinearDamping(0.9),
         RigidBody::Dynamic,
