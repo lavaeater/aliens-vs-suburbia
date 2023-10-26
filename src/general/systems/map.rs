@@ -16,7 +16,7 @@ pub fn spawn_map(
             ..Default::default()
         },
         RigidBody::Static,
-        Collider::cuboid(0.45, 0.45, 0.3),
+        Collider::cuboid(2.0, 0.125, 2.0),
         Position::from(Vec3::new(0.0, -10.0, 0.0)),
     ));
 }
