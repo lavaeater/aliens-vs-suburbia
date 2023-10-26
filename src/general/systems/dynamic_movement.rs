@@ -6,6 +6,7 @@ use crate::player::components::general::{Controller, Directions, Rotations};
 pub fn dynamic_movement(
     mut query: Query<(&mut ExternalForce, &mut ExternalTorque, &Rotation, &Controller)>,
 ) {
+    let force_factor = 0.1;
     for (mut external_force, mut external_torque, rotation, controller) in query.iter_mut() {
         let mut force = Vector3::ZERO;
         let mut torque = Vector3::ZERO;
@@ -22,7 +23,7 @@ pub fn dynamic_movement(
         if controller.rotations.contains(&Rotations::Right) {
             torque.y = 1.0;
         }
-        external_force.apply_force(force);
-        external_torque.apply_torque(torque);
+        external_force.apply_force(force * force_factor);
+        external_torque.apply_torque(torque * force_factor);
     }
 }

@@ -5,6 +5,7 @@ use bevy::scene::Scene;
 use bevy::utils::HashMap;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_third_person_camera::{ThirdPersonCamera, ThirdPersonCameraPlugin};
+use bevy_xpbd_3d::components::Collider;
 use bevy_xpbd_3d::plugins::PhysicsPlugins;
 use crate::player::systems::spawn_players::spawn_players;
 use camera::systems::spawn_camera::spawn_camera;
