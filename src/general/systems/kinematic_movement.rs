@@ -3,7 +3,7 @@ use bevy_xpbd_3d::math::Vector3;
 use bevy_xpbd_3d::prelude::{ExternalForce, ExternalTorque, Rotation};
 use crate::player::components::general::{Controller, Directions, Rotations};
 
-pub fn dynamic_movement(
+pub fn kinematic_movement(
     mut query: Query<(&mut ExternalForce, &mut ExternalTorque, &Rotation, &Controller)>,
 ) {
     let force_factor = 0.1;

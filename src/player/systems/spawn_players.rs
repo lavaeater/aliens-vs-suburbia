@@ -29,7 +29,7 @@ pub fn spawn_players(
         Friction::from(0.0),
         AngularDamping(1.0),
         LinearDamping(0.9),
-        RigidBody::Dynamic,
+        RigidBody::Kinematic,
         Collider::cuboid(0.5, 0.5, 0.45),
         LockedAxes::new().lock_rotation_x().lock_rotation_z(),
     ));
