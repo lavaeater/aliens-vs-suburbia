@@ -28,12 +28,10 @@ pub fn spawn_map(
                         ..Default::default()
                     },
                     RigidBody::Static,
-                    Collider::cuboid(0.45, 0.45, 0.3),
-                    Position::from(Vec3::new(0.45 * x as f32, -2.0, 0.45 * y as f32)),
+                    Collider::cuboid(2.0, 0.125, 2.0),
+                    Position::from(Vec3::new(2.0 * x as f32, -2.0, 2.0 * y as f32)),
                 ));
             }
         }
     }
-
-
 }
