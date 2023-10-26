@@ -39,3 +39,10 @@ pub struct Controller {
     pub rotations: HashSet<Rotations>,
     pub directions: HashSet<Directions>
 }
+
+#[derive(Component)]
+pub struct DynamicMovement {}
+
+
+#[derive(Component)]
+pub struct KinematicMovement {}

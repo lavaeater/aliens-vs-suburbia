@@ -10,6 +10,7 @@ use bevy_xpbd_3d::plugins::PhysicsPlugins;
 use crate::player::systems::spawn_players::spawn_players;
 use camera::systems::spawn_camera::spawn_camera;
 use crate::general::systems::dynamic_movement::dynamic_movement;
+use crate::general::systems::kinematic_movement::kinematic_movement;
 use crate::general::systems::lights::spawn_lights;
 use crate::general::systems::load_models::Handles;
 use crate::general::systems::map::spawn_map;
@@ -49,6 +50,7 @@ fn main() {
             Update,
             (
                 keyboard_control,
+                kinematic_movement,
                 dynamic_movement,
             ))
         .run();
