@@ -92,7 +92,7 @@ pub fn spawn_map(
                     },
                     RigidBody::Static,
                     Collider::cuboid(2.0, 2.0, 0.01),
-                    Position::from(Vec3::new(2.0 * x as f32 + 1.0, -1.1875, 2.0 * y as f32)),
+                    Position::from(Vec3::new(2.0 * x as f32 + 0.925, -1.325, 2.0 * y as f32)),
                     Rotation::from(Quat::from_euler(
                         bevy::math::EulerRot::YXZ,
                         PI / 2.0,
