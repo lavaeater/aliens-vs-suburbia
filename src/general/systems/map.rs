@@ -40,6 +40,12 @@ pub fn spawn_map(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
+    let tile_size = 2.0;
+    let tile_unit = tile_size / 32.0;
+    let tile_width = 32.0 * tile_unit;
+    let wall_height = 19.0 * tile_unit;
+    let tile_depth = 1.0 * tile_unit;
+
     let min_x = -1;
     let max_x = 1;
     let min_y = -1;
@@ -79,8 +85,8 @@ pub fn spawn_map(
                         ..Default::default()
                     },
                     RigidBody::Static,
-                    Collider::cuboid(2.0, 0.125, 2.0),
-                    Position::from(Vec3::new(2.0 * x as f32, -2.0, 2.0 * y as f32)),
+                    Collider::cuboid(tile_width, tile_depth, tile_width),
+                    Position::from(Vec3::new(tile_width * x as f32, -2.0, tile_width * y as f32)),
                 ));
             }
             if tile.0.contains(TileFlags::WallNorth) {
@@ -91,8 +97,8 @@ pub fn spawn_map(
                         ..Default::default()
                     },
                     RigidBody::Static,
-                    Collider::cuboid(2.0, 2.0, 0.01),
-                    Position::from(Vec3::new(2.0 * x as f32 + 0.925, -1.325, 2.0 * y as f32)),
+                    Collider::cuboid(tile_width, wall_height, tile_depth),
+                    Position::from(Vec3::new(tile_width * x as f32 + tile_width / 2.0, -wall_height, tile_width * y as f32)),
                     Rotation::from(Quat::from_euler(
                         bevy::math::EulerRot::YXZ,
                         PI / 2.0,
