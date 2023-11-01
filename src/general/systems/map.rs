@@ -98,7 +98,7 @@ pub fn spawn_map(
                     },
                     RigidBody::Static,
                     Collider::cuboid(tile_width, wall_height, tile_depth),
-                    Position::from(Vec3::new(tile_width * x as f32 + tile_width / 2.0, -wall_height, tile_width * y as f32)),
+                    Position::from(Vec3::new(tile_width * x as f32 + tile_width / 2.0 - 2.0 / 16.0, -wall_height, tile_width * y as f32)),
                     Rotation::from(Quat::from_euler(
                         bevy::math::EulerRot::YXZ,
                         PI / 2.0,
