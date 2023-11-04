@@ -37,7 +37,7 @@ impl MapTile {
 pub struct MapDef {
     pub x: i32,
     pub y: i32,
-    pub tiles: Vec<Vec<MapTile>>,
+    pub tiles: Vec<MapTile>,
 }
 
 pub fn spawn_map(
@@ -54,24 +54,23 @@ pub fn spawn_map(
     let max_x = 1;
     let min_y = -1;
     let max_y = 1;
-    let ts = (min_x..=max_x).map(|x| (min_y..=max_y).map(|y| {
-        let mut flags = MapTile::new(TileFlags::Floor);
+    let ts = (min_x..=max_x).flat_map(|x| (min_y..=max_y).map(|y| {
+        let mut flags = MapTile::new(x,y,TileFlags::Floor);
         if y == min_y {
-            flags.0 ^= TileFlags::WallSouth
+            flags.features ^= TileFlags::WallSouth
         }
         if y == max_y {
-            flags.0 ^= TileFlags::WallNorth
+            flags.features ^= TileFlags::WallNorth
         }
 
         if x == max_x {
-            flags.0 ^= TileFlags::WallEast
+            flags.features ^= TileFlags::WallEast
         }
         if x == min_x {
-            flags.0 ^= TileFlags::WallWest
+            flags.features ^= TileFlags::WallWest
         }
         flags
-    }).collect()
-    ).collect();
+    }).collect::<Vec<MapTile>>()).collect();
 
     let map = MapDef {
         x: 0,
@@ -79,92 +78,90 @@ pub fn spawn_map(
         tiles: ts,
     };
 
-    for (y, row) in map.tiles.iter().enumerate() {
-        for (x, tile) in row.iter().enumerate() {
-            if tile.0.contains(TileFlags::Floor) {
-                commands.spawn((
-                    Name::from(format!("Floor {}:{}", x, y)),
-                    SceneBundle {
-                        scene: asset_server.load("floor_fab.glb#Scene0"),
-                        ..Default::default()
-                    },
-                    RigidBody::Static,
-                    Collider::cuboid(tile_width, tile_depth, tile_width),
-                    Position::from(Vec3::new(tile_width * x as f32, -2.0, tile_width * y as f32)),
-                ));
-            }
-            if tile.0.contains(TileFlags::WallNorth) {
-                commands.spawn((
-                    Name::from(format!("Wall North {}:{}", x, y)),
-                    SceneBundle {
-                        scene: asset_server.load("wall_fab.glb#Scene0"),
-                        ..Default::default()
-                    },
-                    RigidBody::Static,
-                    Collider::cuboid(tile_width, wall_height, tile_depth),
-                    Position::from(Vec3::new(tile_width * x as f32 + tile_width / 2.0 - 2.0 / 16.0, -wall_height, tile_width * y as f32)),
-                    Rotation::from(Quat::from_euler(
-                        bevy::math::EulerRot::YXZ,
-                        PI / 2.0,
-                        0.0,
-                        0.0,
-                    )),
-                ));
-            }
-            if tile.0.contains(TileFlags::WallSouth) {
-                commands.spawn((
-                    Name::from(format!("Wall South {}:{}", x, y)),
-                    SceneBundle {
-                        scene: asset_server.load("wall_fab.glb#Scene0"),
-                        ..Default::default()
-                    },
-                    RigidBody::Static,
-                    Collider::cuboid(tile_width, wall_height, tile_depth),
-                    Position::from(Vec3::new(tile_width * x as f32 - tile_width / 2.0, -wall_height, tile_width * y as f32)),
-                    Rotation::from(Quat::from_euler(
-                        bevy::math::EulerRot::YXZ,
-                        PI / 2.0,
-                        0.0,
-                        0.0,
-                    )),
-                ));
-            }
-            if tile.0.contains(TileFlags::WallEast) {
-                commands.spawn((
-                    Name::from(format!("Wall East {}:{}", x, y)),
-                    SceneBundle {
-                        scene: asset_server.load("wall_fab.glb#Scene0"),
-                        ..Default::default()
-                    },
-                    RigidBody::Static,
-                    Collider::cuboid(tile_width, wall_height, tile_depth),
-                    Position::from(Vec3::new(tile_width * x as f32, -wall_height, tile_width * y as f32 + tile_width / 2.0)),
-                    Rotation::from(Quat::from_euler(
-                        bevy::math::EulerRot::YXZ,
-                        0.0,
-                        0.0,
-                        0.0,
-                    )),
-                ));
-            }
-            if tile.0.contains(TileFlags::WallEast) {
-                commands.spawn((
-                    Name::from(format!("Wall East {}:{}", x, y)),
-                    SceneBundle {
-                        scene: asset_server.load("wall_fab.glb#Scene0"),
-                        ..Default::default()
-                    },
-                    RigidBody::Static,
-                    Collider::cuboid(tile_width, wall_height, tile_depth),
-                    Position::from(Vec3::new(tile_width * x as f32, -wall_height, tile_width * y as f32 - tile_width * 2.5)),
-                    Rotation::from(Quat::from_euler(
-                        bevy::math::EulerRot::YXZ,
-                        0.0,
-                        0.0,
-                        0.0,
-                    )),
-                ));
-            }
+    for tile in map.tiles.iter() {
+        if tile.features.contains(TileFlags::Floor) {
+            commands.spawn((
+                Name::from(format!("Floor {}:{}", tile.x, tile.y)),
+                SceneBundle {
+                    scene: asset_server.load("floor_fab.glb#Scene0"),
+                    ..Default::default()
+                },
+                RigidBody::Static,
+                Collider::cuboid(tile_width, tile_depth, tile_width),
+                Position::from(Vec3::new(tile_width * tile.x as f32, -2.0, tile_width * tile.y as f32)),
+            ));
+        }
+        if tile.features.contains(TileFlags::WallNorth) {
+            commands.spawn((
+                Name::from(format!("Wall North {}:{}", tile.x, tile.y)),
+                SceneBundle {
+                    scene: asset_server.load("wall_fab.glb#Scene0"),
+                    ..Default::default()
+                },
+                RigidBody::Static,
+                Collider::cuboid(tile_width, wall_height, tile_depth),
+                Position::from(Vec3::new(tile_width * tile.x as f32 + tile_width / 2.0 - 2.0 / 16.0, -wall_height, tile_width * tile.y as f32)),
+                Rotation::from(Quat::from_euler(
+                    bevy::math::EulerRot::YXZ,
+                    PI / 2.0,
+                    0.0,
+                    0.0,
+                )),
+            ));
+        }
+        if tile.features.contains(TileFlags::WallSouth) {
+            commands.spawn((
+                Name::from(format!("Wall South {}:{}", tile.x, tile.y)),
+                SceneBundle {
+                    scene: asset_server.load("wall_fab.glb#Scene0"),
+                    ..Default::default()
+                },
+                RigidBody::Static,
+                Collider::cuboid(tile_width, wall_height, tile_depth),
+                Position::from(Vec3::new(tile_width * tile.x as f32 - tile_width / 2.0, -wall_height, tile_width * tile.y as f32)),
+                Rotation::from(Quat::from_euler(
+                    bevy::math::EulerRot::YXZ,
+                    PI / 2.0,
+                    0.0,
+                    0.0,
+                )),
+            ));
+        }
+        if tile.features.contains(TileFlags::WallEast) {
+            commands.spawn((
+                Name::from(format!("Wall East {}:{}", tile.x, tile.y)),
+                SceneBundle {
+                    scene: asset_server.load("wall_fab.glb#Scene0"),
+                    ..Default::default()
+                },
+                RigidBody::Static,
+                Collider::cuboid(tile_width, wall_height, tile_depth),
+                Position::from(Vec3::new(tile_width * tile.x as f32, -wall_height, tile_width * tile.y as f32 + tile_width / 2.0)),
+                Rotation::from(Quat::from_euler(
+                    bevy::math::EulerRot::YXZ,
+                    0.0,
+                    0.0,
+                    0.0,
+                )),
+            ));
+        }
+        if tile.features.contains(TileFlags::WallEast) {
+            commands.spawn((
+                Name::from(format!("Wall East {}:{}", tile.x, tile.y)),
+                SceneBundle {
+                    scene: asset_server.load("wall_fab.glb#Scene0"),
+                    ..Default::default()
+                },
+                RigidBody::Static,
+                Collider::cuboid(tile_width, wall_height, tile_depth),
+                Position::from(Vec3::new(tile_width * tile.x as f32, -wall_height, tile_width * tile.y as f32 - tile_width * 2.5)),
+                Rotation::from(Quat::from_euler(
+                    bevy::math::EulerRot::YXZ,
+                    0.0,
+                    0.0,
+                    0.0,
+                )),
+            ));
         }
     }
 }
