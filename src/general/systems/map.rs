@@ -50,23 +50,23 @@ pub fn spawn_map(
     let wall_height = 19.0 * tile_unit;
     let tile_depth = 1.0 * tile_unit;
 
-    let min_x = -1;
-    let max_x = 1;
     let min_y = -1;
     let max_y = 1;
-    let ts = (min_x..=max_x).flat_map(|x| (min_y..=max_y).map(|y| {
-        let mut flags = MapTile::new(x,y,TileFlags::Floor);
-        if y == min_y {
+    let min_x = -1;
+    let max_x = 1;
+    let ts = (min_y..=max_y).flat_map(|y| (min_x..=max_x).map(|x| {
+        let mut flags = MapTile::new(x, y, TileFlags::Floor);
+        if x == min_x {
             flags.features ^= TileFlags::WallSouth
         }
-        if y == max_y {
+        if x == max_x {
             flags.features ^= TileFlags::WallNorth
         }
 
-        if x == max_x {
+        if y == max_y {
             flags.features ^= TileFlags::WallEast
         }
-        if x == min_x {
+        if y == min_y {
             flags.features ^= TileFlags::WallWest
         }
         flags
