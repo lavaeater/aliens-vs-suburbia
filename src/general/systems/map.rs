@@ -22,11 +22,15 @@ flags! {
 /*
 
  */
-pub struct MapTile(FlagSet<TileFlags>);
+pub struct MapTile {
+    features: FlagSet<TileFlags>,
+    x: i32,
+    y: i32,
+}
 
 impl MapTile {
-    fn new(flags: impl Into<FlagSet<TileFlags>>) -> MapTile {
-        MapTile(flags.into())
+    fn new(x: i32, y: i32, features: impl Into<FlagSet<TileFlags>>) -> MapTile {
+        MapTile { features: features.into(), x, y }
     }
 }
 
