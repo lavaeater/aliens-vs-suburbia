@@ -9,13 +9,13 @@ use flagset::{flags, Flags, FlagSet};
 
 flags! {
     enum TileFlags: u64 {
-        Floor,
-        WallNorth,
-        WallEast,
-        WallSouth,
-        WallWest,
-        Pickup,
-        PossibleEncounter
+        Floor, //1
+        WallNorth, //2
+        WallEast, //4
+        WallSouth, //8
+        WallWest, //16
+        Pickup, //32
+        PossibleEncounter //64
     }
 }
 
