@@ -50,24 +50,24 @@ pub fn spawn_map(
     let wall_height = 19.0 * tile_unit;
     let tile_depth = 1.0 * tile_unit;
 
-    let min_y = -2;
-    let max_y = 2;
-    let min_x = -2;
-    let max_x = 2;
+    let min_y = 0;
+    let max_y = 1;
+    let min_x = 0;
+    let max_x = 1;
     let ts = (min_y..=max_y).flat_map(|y| (min_x..=max_x).map(|x| {
         let mut flags = MapTile::new(x, y, TileFlags::Floor);
-        // if x == min_x {
-        //     flags.features ^= TileFlags::WallSouth
-        // }
-        if x == max_x {
-            flags.features ^= TileFlags::WallNorth
+        if x == min_x {
+            flags.features ^= TileFlags::WallSouth // Change to WallWest
         }
-        // if y == max_y {
-        //     flags.features ^= TileFlags::WallEast
-        // }
-        // if y == min_y {
-        //     flags.features ^= TileFlags::WallWest
-        // }
+        if x == max_x {
+            flags.features ^= TileFlags::WallNorth //Change to WallEast
+        }
+        if y == max_y {
+            flags.features ^= TileFlags::WallEast // Change to WallSouth
+        }
+        if y == min_y {
+            flags.features ^= TileFlags::WallWest // Change to WallNorth
+        }
         flags
     }).collect::<Vec<MapTile>>()).collect();
 
@@ -90,7 +90,7 @@ pub fn spawn_map(
                 Position::from(Vec3::new(tile_width * tile.x as f32, -2.0, tile_width * tile.y as f32)),
             ));
         }
-        if tile.features.contains(TileFlags::WallNorth) {
+        if tile.features.contains(TileFlags::WallNorth) { //Change to WallEast
             commands.spawn((
                 Name::from(format!("Wall North {}:{}", tile.x, tile.y)),
                 SceneBundle {
@@ -146,14 +146,14 @@ pub fn spawn_map(
         }
         if tile.features.contains(TileFlags::WallWest) {
             commands.spawn((
-                Name::from(format!("Wall East {}:{}", tile.x, tile.y)),
+                Name::from(format!("Wall West {}:{}", tile.x, tile.y)),
                 SceneBundle {
                     scene: asset_server.load("wall_fab.glb#Scene0"),
                     ..Default::default()
                 },
                 RigidBody::Static,
                 Collider::cuboid(tile_width, wall_height, tile_depth),
-                Position::from(Vec3::new(tile_width * tile.x as f32, -wall_height, tile_width * tile.y as f32 - tile_width * 2.5)),
+                Position::from(Vec3::new(tile_width * tile.x as f32, -wall_height, tile_width * (tile.y + 1) as f32 + tile_width / 2.0)),
                 Rotation::from(Quat::from_euler(
                     bevy::math::EulerRot::YXZ,
                     0.0,
