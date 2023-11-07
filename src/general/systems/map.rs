@@ -3,6 +3,7 @@ use bevy::core::Name;
 use bevy::math::{Quat, Vec3};
 use bevy::prelude::{Commands, Res, Transform};
 use bevy::scene::SceneBundle;
+use bevy_egui::egui::Key::T;
 use bevy_xpbd_3d::math::PI;
 use bevy_xpbd_3d::prelude::{Collider, Position, RigidBody, Rotation};
 use flagset::{flags, Flags, FlagSet};
@@ -50,31 +51,42 @@ pub fn spawn_map(
     let wall_height = 19.0 * tile_unit;
     let tile_depth = 1.0 * tile_unit;
 
-    let min_y = -1;
-    let max_y = 1;
-    let min_x = -1;
-    let max_x = 1;
-    let ts = (min_y..=max_y).flat_map(|y| (min_x..=max_x).map(|x| {
-        let mut flags = MapTile::new(x, y, TileFlags::Floor);
-        if x == min_x {
-            flags.features ^= TileFlags::WallWest
-        }
-        if x == max_x {
-            flags.features ^= TileFlags::WallEast
-        }
-        if y == max_y {
-            flags.features ^= TileFlags::WallSouth
-        }
-        if y == min_y {
-            flags.features ^= TileFlags::WallNorth // Change to WallNorth
-        }
-        flags
-    }).collect::<Vec<MapTile>>()).collect();
+    // let min_y = -1;
+    // let max_y = 1;
+    // let min_x = -1;
+    // let max_x = 1;
+    // let ts = (min_y..=max_y).flat_map(|y| (min_x..=max_x).map(|x| {
+    //     let mut flags = MapTile::new(x, y, TileFlags::Floor);
+    //     if x == min_x {
+    //         flags.features ^= TileFlags::WallWest
+    //     }
+    //     if x == max_x {
+    //         flags.features ^= TileFlags::WallEast
+    //     }
+    //     if y == max_y {
+    //         flags.features ^= TileFlags::WallSouth
+    //     }
+    //     if y == min_y {
+    //         flags.features ^= TileFlags::WallNorth // Change to WallNorth
+    //     }
+    //     flags
+    // }).collect::<Vec<MapTile>>()).collect();
+
+    let other_tiles = vec![
+        MapTile::new(0, 0, TileFlags::Floor | TileFlags::WallNorth | TileFlags::WallWest | TileFlags::WallEast),
+        MapTile::new(0, 1, TileFlags::Floor | TileFlags::WallWest | TileFlags::WallEast),
+        MapTile::new(0, 2, TileFlags::Floor | TileFlags::WallWest | TileFlags::WallSouth),
+        MapTile::new(1, 2, TileFlags::Floor| TileFlags::WallNorth | TileFlags::WallSouth),
+        MapTile::new(2, 2, TileFlags::Floor| TileFlags::WallNorth | TileFlags::WallSouth),
+        MapTile::new(3, 2, TileFlags::Floor| TileFlags::WallNorth | TileFlags::WallEast),
+        MapTile::new(3, 3, TileFlags::Floor| TileFlags::WallWest | TileFlags::WallEast),
+        MapTile::new(3, 3, TileFlags::Floor| TileFlags::WallWest | TileFlags::WallEast),
+        MapTile::new(3, 3, TileFlags::Floor| TileFlags::WallWest | TileFlags::WallEast | TileFlags::WallSouth)];
 
     let map = MapDef {
         x: 0,
         y: 0,
-        tiles: ts,
+        tiles: other_tiles,
     };
 
     for tile in map.tiles.iter() {
