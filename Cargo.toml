@@ -14,8 +14,7 @@ bevy_third_person_camera = "0.1.6"
 bevy_xpbd_3d = { git = "https://github.com/Jondolf/bevy_xpbd", branch = "main", default-features = false, features = ["3d", "f32", "debug-plugin", "collider-from-mesh", "simd"] }
 big-brain = "0.18.0"
 rand_chacha = "0.3.1"
-bevy_ecs_ldtk = "0.8.0"
-
+flagset = "0.4.4"
 # Enable max optimizations for dependencies, but not for our code:
 [profile.dev.package."*"]
 opt-level = 3
