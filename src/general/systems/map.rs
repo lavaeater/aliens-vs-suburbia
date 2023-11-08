@@ -1,22 +1,42 @@
 use bevy::asset::AssetServer;
 use bevy::core::Name;
 use bevy::math::{Quat, Vec3};
-use bevy::prelude::{Commands, Res, Transform};
+use bevy::prelude::{Commands, Res};
 use bevy::scene::SceneBundle;
-use bevy_egui::egui::Key::T;
+
 use bevy_xpbd_3d::math::PI;
 use bevy_xpbd_3d::prelude::{Collider, Position, RigidBody, Rotation};
-use flagset::{flags, Flags, FlagSet};
+use flagset::{flags, FlagSet};
+
+flags! {
+    enum FileFlags: u16 {
+        Floor = 1, // 1
+        Pickup = 2, // 2
+        PossibleEncounter = 4, // 4,
+        FloorPickup = 3,
+        FloorPossibleEncounter = 5,
+    }
+}
 
 flags! {
     enum TileFlags: u64 {
-        Floor, //1
-        WallNorth, //2
-        WallEast, //4
-        WallSouth, //8
-        WallWest, //16
-        Pickup, //32
-        PossibleEncounter //64
+        Floor = 1, //1
+        WallNorth = 2, //2
+        WallEast = 4, //4
+        WallSouth = 8, //8
+        WallWest = 16, //16
+        Pickup = 32, //32
+        PossibleEncounter = 64, //64
+        WallNorthEast = (TileFlags::WallNorth | TileFlags::WallEast).bits(),
+        WallEastSouth = (TileFlags::WallEast | TileFlags::WallSouth).bits(),
+        WallSouthWest = (TileFlags::WallSouth | TileFlags::WallWest).bits(),
+        WallWestNorth = (TileFlags::WallWest | TileFlags::WallNorth).bits(),
+        WallNorthEastSouth = (TileFlags::WallNorthEast | TileFlags::WallSouth).bits(),
+        WallEastSouthWest = (TileFlags::WallEastSouth | TileFlags::WallWest).bits(),
+        WallSouthWestNorth = (TileFlags::WallSouthWest | TileFlags::WallNorth).bits(),
+        WallWestNorthEast = (TileFlags::WallWestNorth | TileFlags::WallEast).bits(),
+        WallWestEast = (TileFlags::WallWest | TileFlags::WallEast).bits(),
+        WallNorthSouth = (TileFlags::WallNorth | TileFlags::WallSouth).bits(),
     }
 }
 
@@ -71,17 +91,30 @@ pub fn spawn_map(
     //     }
     //     flags
     // }).collect::<Vec<MapTile>>()).collect();
+    let verbatim_string_map = r#"
+    11111111100000000
+    00000001100000000
+    00011111111110000
+    00011113111110000
+    00011111111110000
+    00011511111110000
+    00011100011110000
+    00011100011110000
+    00011100011110000
+    00000000000000000
+    00000000000000000
+    "#;
 
     let other_tiles = vec![
-        MapTile::new(0, 0, TileFlags::Floor | TileFlags::WallNorth | TileFlags::WallWest | TileFlags::WallEast),
-        MapTile::new(0, 1, TileFlags::Floor | TileFlags::WallWest | TileFlags::WallEast),
-        MapTile::new(0, 2, TileFlags::Floor | TileFlags::WallWest | TileFlags::WallSouth),
-        MapTile::new(1, 2, TileFlags::Floor| TileFlags::WallNorth | TileFlags::WallSouth),
-        MapTile::new(2, 2, TileFlags::Floor| TileFlags::WallNorth | TileFlags::WallSouth),
-        MapTile::new(3, 2, TileFlags::Floor| TileFlags::WallNorth | TileFlags::WallEast),
-        MapTile::new(3, 3, TileFlags::Floor| TileFlags::WallWest | TileFlags::WallEast),
-        MapTile::new(3, 3, TileFlags::Floor| TileFlags::WallWest | TileFlags::WallEast),
-        MapTile::new(3, 3, TileFlags::Floor| TileFlags::WallWest | TileFlags::WallEast | TileFlags::WallSouth)];
+        MapTile::new(0, 0, TileFlags::Floor | TileFlags::WallWestNorthEast),
+        MapTile::new(0, 1, TileFlags::Floor | TileFlags::WallWestEast),
+        MapTile::new(0, 2, TileFlags::Floor | TileFlags::WallSouthWest),
+        MapTile::new(1, 2, TileFlags::Floor| TileFlags::WallNorthSouth),
+        MapTile::new(2, 2, TileFlags::Floor| TileFlags::WallNorthSouth),
+        MapTile::new(3, 2, TileFlags::Floor| TileFlags::WallNorthEast),
+        MapTile::new(3, 3, TileFlags::Floor| TileFlags::WallWestEast),
+        MapTile::new(3, 3, TileFlags::Floor| TileFlags::WallWestEast),
+        MapTile::new(3, 3, TileFlags::Floor| TileFlags::WallEastSouthWest)];
 
     let map = MapDef {
         x: 0,
