@@ -91,6 +91,20 @@ pub fn spawn_map(
     //     }
     //     flags
     // }).collect::<Vec<MapTile>>()).collect();
+
+    let m = [
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+        [0, 0, 0, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+        [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+        [0, 0, 0, 1, 1, 5, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+        [0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
+        [0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
+        [0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ];
     let verbatim_string_map = r#"
     11111111100000000
     00000001100000000
@@ -109,12 +123,12 @@ pub fn spawn_map(
         MapTile::new(0, 0, TileFlags::Floor | TileFlags::WallWestNorthEast),
         MapTile::new(0, 1, TileFlags::Floor | TileFlags::WallWestEast),
         MapTile::new(0, 2, TileFlags::Floor | TileFlags::WallSouthWest),
-        MapTile::new(1, 2, TileFlags::Floor| TileFlags::WallNorthSouth),
-        MapTile::new(2, 2, TileFlags::Floor| TileFlags::WallNorthSouth),
-        MapTile::new(3, 2, TileFlags::Floor| TileFlags::WallNorthEast),
-        MapTile::new(3, 3, TileFlags::Floor| TileFlags::WallWestEast),
-        MapTile::new(3, 3, TileFlags::Floor| TileFlags::WallWestEast),
-        MapTile::new(3, 3, TileFlags::Floor| TileFlags::WallEastSouthWest)];
+        MapTile::new(1, 2, TileFlags::Floor | TileFlags::WallNorthSouth),
+        MapTile::new(2, 2, TileFlags::Floor | TileFlags::WallNorthSouth),
+        MapTile::new(3, 2, TileFlags::Floor | TileFlags::WallNorthEast),
+        MapTile::new(3, 3, TileFlags::Floor | TileFlags::WallWestEast),
+        MapTile::new(3, 3, TileFlags::Floor | TileFlags::WallWestEast),
+        MapTile::new(3, 3, TileFlags::Floor | TileFlags::WallEastSouthWest)];
 
     let map = MapDef {
         x: 0,
