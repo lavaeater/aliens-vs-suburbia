@@ -8,11 +8,11 @@ use crate::general::components::Ball;
 use crate::player::components::general::{Controller, Triggers};
 
 pub fn throwing(
-    mut query: Query<(&Position, &LinearVelocity, &Rotation, &mut Controller)>,
+    mut query: Query<(&Position, &Rotation, &mut Controller)>,
     mut commands: Commands,
     asset_server: Res<AssetServer>
 ) {
-    for (position, linear_velocity, rotation, mut controller) in query.iter_mut() {
+    for (position, rotation, mut controller) in query.iter_mut() {
         if controller.triggers.contains(&Triggers::Throw) {// && !controller.has_thrown {
 
             let direction = rotation.mul_vec3(Quat::from_axis_angle(Vec3::X, (5.0f32).to_radians()).mul_vec3(Vec3::new(0.0, 0.0, -1.0)));
