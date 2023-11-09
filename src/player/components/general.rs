@@ -37,7 +37,8 @@ pub enum Directions {
 pub struct Controller {
     pub triggers: HashSet<Triggers>,
     pub rotations: HashSet<Rotations>,
-    pub directions: HashSet<Directions>
+    pub directions: HashSet<Directions>,
+    pub has_thrown:bool,
 }
 
 #[derive(Component)]

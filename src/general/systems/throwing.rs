@@ -1,30 +1,39 @@
 use bevy::asset::AssetServer;
-use bevy::prelude::{Commands, Query, Res};
-use bevy_xpbd_3d::components::LinearVelocity;
+use bevy::math::{Quat, Vec3};
+use bevy::prelude::{Commands, Query, Res, Transform};
+use bevy::scene::SceneBundle;
+use bevy_xpbd_3d::components::{Collider, LinearVelocity, Position, RigidBody};
 use bevy_xpbd_3d::prelude::Rotation;
+use crate::general::components::Ball;
 use crate::player::components::general::{Controller, Triggers};
 
 pub fn throwing(
-    query: Query<(&LinearVelocity, &Rotation, &Controller)>,
+    mut query: Query<(&Position, &LinearVelocity, &Rotation, &mut Controller)>,
     mut commands: Commands,
     asset_server: Res<AssetServer>
 ) {
-    for (linear_velocity, rotation, controller) in query.iter() {
-        if controller.triggers.contains(&Triggers::Throw) {
+    for (position, linear_velocity, rotation, mut controller) in query.iter_mut() {
+        if controller.triggers.contains(&Triggers::Throw) {// && !controller.has_thrown {
+
+            let direction = rotation.mul_vec3(Quat::from_axis_angle(Vec3::X, (5.0f32).to_radians()).mul_vec3(Vec3::new(0.0, 0.0, -1.0)));
+
+            let launch_p = position.0 + direction * 0.25 + Vec3::new(0.0, 0.5, 0.0);
+
+            controller.has_thrown = true;
             commands.spawn((
-                Name::from("Ball"),
                 Ball {},
                 SceneBundle {
-                    scene: asset_server.load("ball.glb#Scene0"),
-                    transform: Transform::from_xyz(0.0, 0.0, 0.0),
+                    scene: asset_server.load("ball_fab.glb#Scene0"),
+                    transform: Transform::from_xyz(launch_p.x, launch_p.y, launch_p.z),
                     ..Default::default()
                 },
-                Friction::from(0.0),
-                AngularDamping(1.0),
-                LinearDamping(0.9),
                 RigidBody::Dynamic,
-                Collider::cuboid(0.5, 0.5, 0.45),
+                Collider::ball(1.0 / 16.0),
+                LinearVelocity(direction * 8.0),
             ));
         }
+        // if controller.has_thrown && !controller.triggers.contains(&Triggers::Throw) {
+        //     controller.has_thrown = false;
+        // }
     }
 }

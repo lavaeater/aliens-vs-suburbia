@@ -16,6 +16,7 @@ use crate::general::systems::kinematic_movement::kinematic_movement;
 use crate::general::systems::lights::spawn_lights;
 use crate::general::systems::load_models::Handles;
 use crate::general::systems::map::spawn_map;
+use crate::general::systems::throwing::throwing;
 use crate::player::systems::keyboard_control::keyboard_control;
 
 pub(crate) mod player;
@@ -56,6 +57,7 @@ fn main() {
                 keyboard_control,
                 kinematic_movement,
                 dynamic_movement,
+                throwing,
             ))
         .run();
 }
