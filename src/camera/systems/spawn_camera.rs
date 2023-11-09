@@ -5,18 +5,19 @@ use bevy::prelude::Projection::Perspective;
 use bevy::utils::default;
 use bevy_third_person_camera::ThirdPersonCamera;
 use bevy_xpbd_3d::math::PI;
-use crate::camera::components::camera::GameCamera;
+use crate::camera::components::camera::{CameraOffset, GameCamera};
 pub fn spawn_camera(mut commands: Commands) {
     commands.spawn((
         Name::from("Camera"),
-        ThirdPersonCamera {
-            mouse_orbit_button_enabled: true,
-            cursor_lock_active: false,
-            zoom_enabled: false,
-            // offset_enabled: true,
-            // offset: Offset::new(5.0,5.0),
-            ..default()
-        },
+        // ThirdPersonCamera {
+        //     mouse_orbit_button_enabled: true,
+        //     cursor_lock_active: false,
+        //     zoom_enabled: false,
+        //     // offset_enabled: true,
+        //     // offset: Offset::new(5.0,5.0),
+        //     ..default()
+        // },
+        CameraOffset(Vec3::new(0.0, 10.0, 10.0)),
         Camera3dBundle {
             projection: Perspective(Default::default()),
             transform: Transform {

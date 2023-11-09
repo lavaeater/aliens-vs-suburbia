@@ -9,6 +9,8 @@ use bevy_xpbd_3d::components::Collider;
 use bevy_xpbd_3d::plugins::PhysicsPlugins;
 use crate::player::systems::spawn_players::spawn_players;
 use camera::systems::spawn_camera::spawn_camera;
+use crate::camera::components::camera::CameraOffset;
+use crate::camera::systems::camera_follow::camera_follow;
 use crate::general::systems::dynamic_movement::dynamic_movement;
 use crate::general::systems::kinematic_movement::kinematic_movement;
 use crate::general::systems::lights::spawn_lights;
@@ -25,6 +27,7 @@ pub const METERS_PER_PIXEL: f64 = 16.0;
 
 fn main() {
     App::new()
+        .register_type::<CameraOffset>()
         .insert_resource(Msaa::Sample4)
         .insert_resource(Handles::<Mesh> {
             handles: HashMap::new()
@@ -49,6 +52,7 @@ fn main() {
         .add_systems(
             Update,
             (
+                camera_follow,
                 keyboard_control,
                 kinematic_movement,
                 dynamic_movement,
