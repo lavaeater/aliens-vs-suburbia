@@ -92,18 +92,23 @@ pub fn spawn_map(
     //     flags
     // }).collect::<Vec<MapTile>>()).collect();
 
+    // let m = [
+    //     [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+    //     [0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+    //     [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+    //     [0, 0, 0, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+    //     [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+    //     [0, 0, 0, 1, 1, 5, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+    //     [0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
+    //     [0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
+    //     [0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
+    //     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    //     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    // ];
     let m = [
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
-        [0, 0, 0, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 0, 0, 0, 0],
-        [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
-        [0, 0, 0, 1, 1, 5, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
-        [0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
-        [0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
-        [0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [1, 1, 1],
+        [0, 1, 0],
+        [1, 1, 1],
     ];
     let verbatim_string_map = r#"
     11111111100000000
@@ -134,47 +139,48 @@ pub fn spawn_map(
             //Fix border tiles
             if *t != 0 {
                 if column == 0 {
-                    flag_val ^= TileFlags::WallWest;
+                    flag_val |= TileFlags::WallWest;
                 }
                 if column == rows.len() - 1 {
-                    flag_val ^= TileFlags::WallEast;
+                    flag_val |= TileFlags::WallEast;
                 }
                 if row == 0 {
-                    flag_val ^= TileFlags::WallNorth;
+                    flag_val |= TileFlags::WallNorth;
                 }
                 if row == m.len() - 1 {
-                    flag_val ^= TileFlags::WallSouth;
-                }
-            }
-
-            //Check neighbours
-            for check in checks.iter() {
-                let column_check = column as i32 + check[0];
-                let row_check = row as i32 + check[1];
-                if column_check < column as i32 && column_check >= 0 && column_check < rows.len() as i32 && row_check >= 0 && row_check < m.len() as i32 {
-                    if column_check < column as i32 && m[row][column_check as usize] != 0 {
-                        flag_val ^= TileFlags::WallWest;
-                    }
-                    if column_check > column as i32 && m[row][column_check as usize] != 0 {
-                        flag_val ^= TileFlags::WallEast;
-                    }
-                    if row_check < row as i32 && m[row_check as usize][column] != 0 {
-                        flag_val ^= TileFlags::WallNorth;
-                    }
-                    if row_check > row as i32 && m[row_check as usize][column] != 0 {
-                        flag_val ^= TileFlags::WallSouth;
-                    }
+                    flag_val |= TileFlags::WallSouth;
                 }
 
-            }
-            if *t == 3 {
-                flag_val ^= TileFlags::Pickup;
-            }
+                //Check neighbours
+                for check in checks.iter() {
+                    let column_check = column as i32 + check[0];
+                    let row_check = row as i32 + check[1];
+                    if column_check >= 0 && column_check < rows.len() as i32 {
+                        if column_check < column as i32 && m[row][column_check as usize] == 0 {
+                            flag_val |= TileFlags::WallWest;
+                        }
+                        if column_check > column as i32 && m[row][column_check as usize] == 0 {
+                            flag_val |= TileFlags::WallEast;
+                        }
+                    }
+                    if row_check >= 0 && row_check < m.len() as i32 {
+                        if row_check < row as i32 && m[row_check as usize][column] == 0 {
+                            flag_val |= TileFlags::WallNorth;
+                        }
+                        if row_check > row as i32 && m[row_check as usize][column] == 0 {
+                            flag_val |= TileFlags::WallSouth;
+                        }
+                    }
+                }
+                if *t == 3 {
+                    flag_val |= TileFlags::Pickup;
+                }
 
-            if *t == 5 {
-                flag_val ^= TileFlags::PossibleEncounter;
+                if *t == 5 {
+                    flag_val |= TileFlags::PossibleEncounter;
+                }
+                tiles.push(MapTile::new(column as i32, row as i32, flag_val));
             }
-            tiles.push(MapTile::new(column as i32, row as i32, flag_val));
         }
     }
 
