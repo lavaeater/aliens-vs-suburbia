@@ -118,6 +118,14 @@ pub fn spawn_map(
     00000000000000000
     00000000000000000
     "#;
+// for later
+    //m.enumerate().map(|(y, row)| row.enumerate().map(|(x, t)| ));
+
+    for (y, row) in m.iter().enumerate() {
+        for (x, t) in row.iter().enumerate() {
+
+        }
+    }
 
     let other_tiles = vec![
         MapTile::new(0, 0, TileFlags::Floor | TileFlags::WallWestNorthEast),
