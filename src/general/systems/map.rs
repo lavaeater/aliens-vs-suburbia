@@ -121,9 +121,60 @@ pub fn spawn_map(
 // for later
     //m.enumerate().map(|(y, row)| row.enumerate().map(|(x, t)| ));
 
-    for (y, row) in m.iter().enumerate() {
-        for (x, t) in row.iter().enumerate() {
+    let checks = [
+        [-1, 0],
+        [1, 0],
+        [0, -1],
+        [0, 1]
+    ];
+    let mut tiles: Vec<MapTile> = Vec::new();
+    for (row, rows) in m.iter().enumerate() {
+        for (column, t) in rows.iter().enumerate() {
+            let mut flag_val: FlagSet<TileFlags> = TileFlags::Floor.into();
+            //Fix border tiles
+            if *t != 0 {
+                if column == 0 {
+                    flag_val ^= TileFlags::WallWest;
+                }
+                if column == rows.len() - 1 {
+                    flag_val ^= TileFlags::WallEast;
+                }
+                if row == 0 {
+                    flag_val ^= TileFlags::WallNorth;
+                }
+                if row == m.len() - 1 {
+                    flag_val ^= TileFlags::WallSouth;
+                }
+            }
 
+            //Check neighbours
+            for check in checks.iter() {
+                let column_check = column as i32 + check[0];
+                let row_check = row as i32 + check[1];
+                if column_check < column as i32 && column_check >= 0 && column_check < rows.len() as i32 && row_check >= 0 && row_check < m.len() as i32 {
+                    if column_check < column as i32 && m[row][column_check as usize] != 0 {
+                        flag_val ^= TileFlags::WallWest;
+                    }
+                    if column_check > column as i32 && m[row][column_check as usize] != 0 {
+                        flag_val ^= TileFlags::WallEast;
+                    }
+                    if row_check < row as i32 && m[row_check as usize][column] != 0 {
+                        flag_val ^= TileFlags::WallNorth;
+                    }
+                    if row_check > row as i32 && m[row_check as usize][column] != 0 {
+                        flag_val ^= TileFlags::WallSouth;
+                    }
+                }
+
+            }
+            if *t == 3 {
+                flag_val ^= TileFlags::Pickup;
+            }
+
+            if *t == 5 {
+                flag_val ^= TileFlags::PossibleEncounter;
+            }
+            tiles.push(MapTile::new(column as i32, row as i32, flag_val));
         }
     }
 
@@ -141,7 +192,7 @@ pub fn spawn_map(
     let map = MapDef {
         x: 0,
         y: 0,
-        tiles: other_tiles,
+        tiles,
     };
 
     for tile in map.tiles.iter() {
