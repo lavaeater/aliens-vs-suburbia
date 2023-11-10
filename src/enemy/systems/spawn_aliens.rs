@@ -11,15 +11,13 @@ pub fn spawn_aliens(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
-    let mut t = Transform::from_xyz(2.0, 0.0, 2.0);
-    t.rotate(Quat::from_rotation_z(100.0f32.to_radians()));
     commands.spawn((
         Name::from("Spider"),
         HittableTarget {},
         DynamicMovement {},
         SceneBundle {
-            scene: asset_server.load("aliens/animated_spider.glb#Scene0"),
-            transform: t,
+            scene: asset_server.load("player.glb#Scene0"),
+            transform: Transform::from_xyz(2.0, 0.0, 2.0),
             ..Default::default()
         },
         Friction::from(0.0),
