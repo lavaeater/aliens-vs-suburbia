@@ -2,7 +2,7 @@ use bevy::asset::AssetServer;
 use bevy::core::Name;
 use bevy::prelude::{Commands, Res, Transform};
 use bevy::scene::SceneBundle;
-use bevy_xpbd_3d::components::{AngularDamping, Collider, Friction, LinearDamping, LockedAxes, RigidBody};
+use bevy_xpbd_3d::components::{AngularDamping, AsyncCollider, Collider, ComputedCollider, Friction, LinearDamping, LockedAxes, RigidBody};
 use crate::general::components::HittableTarget;
 use crate::player::components::general::{DynamicMovement};
 
@@ -23,6 +23,7 @@ pub fn spawn_aliens(
         AngularDamping(1.0),
         LinearDamping(0.9),
         RigidBody::Dynamic,
+        //AsyncCollider(ComputedCollider::ConvexHull),
         Collider::cuboid(0.5, 0.5, 0.45),
         LockedAxes::new().lock_rotation_x().lock_rotation_z(),
     ));
