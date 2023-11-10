@@ -1,11 +1,10 @@
 use bevy::asset::AssetServer;
 use bevy::core::Name;
-use bevy::math::Quat;
 use bevy::prelude::{Commands, Res, Transform};
 use bevy::scene::SceneBundle;
 use bevy_xpbd_3d::components::{AngularDamping, Collider, Friction, LinearDamping, LockedAxes, RigidBody};
 use crate::general::components::HittableTarget;
-use crate::player::components::general::{Controller, DynamicMovement, KeyboardController, Player};
+use crate::player::components::general::{DynamicMovement};
 
 pub fn spawn_aliens(
     mut commands: Commands,
