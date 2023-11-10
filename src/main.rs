@@ -4,18 +4,18 @@ use bevy::prelude::{Mesh, Msaa};
 use bevy::scene::Scene;
 use bevy::utils::HashMap;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use bevy_third_person_camera::{ThirdPersonCamera, ThirdPersonCameraPlugin};
-use bevy_xpbd_3d::components::Collider;
-use bevy_xpbd_3d::plugins::PhysicsPlugins;
+use bevy_xpbd_3d::plugins::{PhysicsDebugPlugin, PhysicsPlugins};
 use crate::player::systems::spawn_players::spawn_players;
 use camera::systems::spawn_camera::spawn_camera;
 use crate::camera::components::camera::CameraOffset;
 use crate::camera::systems::camera_follow::camera_follow;
 use crate::general::systems::dynamic_movement::dynamic_movement;
+use crate::general::systems::kill_the_balls::kill_the_balls;
 use crate::general::systems::kinematic_movement::kinematic_movement;
 use crate::general::systems::lights::spawn_lights;
 use crate::general::systems::load_models::Handles;
 use crate::general::systems::map::spawn_map;
+use crate::general::systems::throwing::throwing;
 use crate::player::systems::keyboard_control::keyboard_control;
 
 pub(crate) mod player;
@@ -37,8 +37,8 @@ fn main() {
         })
         .insert_resource(Msaa::Sample4)
         .add_plugins(DefaultPlugins)
-        .add_plugins(ThirdPersonCameraPlugin)
         .add_plugins(PhysicsPlugins::default())
+        .add_plugins(PhysicsDebugPlugin::default())
         .add_plugins(WorldInspectorPlugin::new())
 
         .add_systems(
@@ -56,6 +56,8 @@ fn main() {
                 keyboard_control,
                 kinematic_movement,
                 dynamic_movement,
+                throwing,
+                kill_the_balls,
             ))
         .run();
 }

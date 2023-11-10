@@ -1,8 +1,7 @@
-use bevy::math::{Quat, Vec3};
+use bevy::math::{Quat};
 use bevy::pbr::{CascadeShadowConfigBuilder, DirectionalLight, DirectionalLightBundle};
 use bevy::prelude::{Commands, EulerRot, Transform};
 use bevy::utils::default;
-use std::f32::consts::PI;
 use bevy::core::Name;
 
 pub fn spawn_lights(

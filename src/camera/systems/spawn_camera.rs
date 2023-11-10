@@ -3,25 +3,15 @@ use bevy::math::{Quat, Vec3};
 use bevy::prelude::{Camera3dBundle, Commands, Transform};
 use bevy::prelude::Projection::Perspective;
 use bevy::utils::default;
-use bevy_third_person_camera::ThirdPersonCamera;
 use bevy_xpbd_3d::math::PI;
 use crate::camera::components::camera::{CameraOffset, GameCamera};
 pub fn spawn_camera(mut commands: Commands) {
     commands.spawn((
         Name::from("Camera"),
-        // ThirdPersonCamera {
-        //     mouse_orbit_button_enabled: true,
-        //     cursor_lock_active: false,
-        //     zoom_enabled: false,
-        //     // offset_enabled: true,
-        //     // offset: Offset::new(5.0,5.0),
-        //     ..default()
-        // },
         CameraOffset(Vec3::new(0.0, 10.0, 10.0)),
         Camera3dBundle {
             projection: Perspective(Default::default()),
             transform: Transform {
-                // translation: Vec3::new(-20.3, 50.0, 60.0),
                 rotation: Quat::from_rotation_x(-PI / 4.),
                 ..default()
             },
