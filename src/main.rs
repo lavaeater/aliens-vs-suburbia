@@ -9,6 +9,7 @@ use crate::player::systems::spawn_players::spawn_players;
 use camera::systems::spawn_camera::spawn_camera;
 use crate::camera::components::camera::CameraOffset;
 use crate::camera::systems::camera_follow::camera_follow;
+use crate::enemy::systems::alien_sight::alien_sight;
 use crate::enemy::systems::spawn_aliens::spawn_aliens;
 use crate::general::systems::dynamic_movement::dynamic_movement;
 use crate::general::systems::kill_the_balls::kill_the_balls;
@@ -57,6 +58,7 @@ fn main() {
                 dynamic_movement,
                 throwing,
                 kill_the_balls,
+                alien_sight
             ))
         .run();
 }

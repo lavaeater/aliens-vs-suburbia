@@ -2,8 +2,9 @@ use bevy::asset::AssetServer;
 use bevy::core::Name;
 use bevy::prelude::{Commands, Res, Transform};
 use bevy::scene::SceneBundle;
-use bevy_xpbd_3d::components::{AngularDamping, AsyncCollider, Collider, ComputedCollider, Friction, LinearDamping, LockedAxes, RigidBody};
-use crate::general::components::HittableTarget;
+use bevy_xpbd_3d::components::{AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
+use crate::enemy::components::general::Alien;
+use crate::general::components::{HittableTarget, Layer};
 use crate::player::components::general::{DynamicMovement};
 
 pub fn spawn_aliens(
@@ -12,6 +13,7 @@ pub fn spawn_aliens(
 ) {
     commands.spawn((
         Name::from("Spider"),
+        Alien {},
         HittableTarget {},
         DynamicMovement {},
         SceneBundle {
@@ -26,5 +28,6 @@ pub fn spawn_aliens(
         //AsyncCollider(ComputedCollider::ConvexHull),
         Collider::cuboid(0.5, 0.5, 0.45),
         LockedAxes::new().lock_rotation_x().lock_rotation_z(),
+        CollisionLayers::new([Layer::Alien], [Layer::Ball, Layer::Wall, Layer::Floor, Layer::Alien, Layer::Player]),
     ));
 }

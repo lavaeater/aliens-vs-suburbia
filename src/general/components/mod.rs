@@ -1,4 +1,5 @@
 use bevy::prelude::Component;
+use bevy_xpbd_3d::prelude::PhysicsLayer;
 
 #[derive(Component)]
 pub struct Ball {}
@@ -11,3 +12,12 @@ pub struct Floor {}
 
 #[derive(Component)]
 pub struct HittableTarget {}
+
+#[derive(PhysicsLayer)]
+pub enum Layer {
+    Floor,
+    Ball,
+    Wall,
+    Alien,
+    Player,
+}
