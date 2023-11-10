@@ -3,6 +3,7 @@ use bevy::core::Name;
 use bevy::prelude::{Commands, Res, Transform};
 use bevy::scene::SceneBundle;
 use bevy_xpbd_3d::components::{AngularDamping, Collider, Friction, LinearDamping, LockedAxes, RigidBody};
+use crate::general::components::HittableTarget;
 use crate::player::components::general::{Controller, DynamicMovement, KeyboardController, Player};
 
 pub fn spawn_players(
@@ -12,6 +13,7 @@ pub fn spawn_players(
     commands.spawn((
         Name::from("Player"),
         Player {},
+        HittableTarget {},
         KeyboardController {},
         Controller::default(),
         DynamicMovement {},
