@@ -8,7 +8,7 @@ pub fn keyboard_control(
     mut query: Query<&mut Controller, With<KeyboardController>>,
 ) {
     if let Ok(mut controller) = query.get_single_mut() {
-        for ev in key_evr.iter() {
+        for ev in key_evr.read() {
             match ev.state {
                 ButtonState::Pressed => match ev.key_code {
                     Some(KeyCode::A) => {

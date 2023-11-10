@@ -70,28 +70,6 @@ pub fn spawn_map(
     let tile_width = 32.0 * tile_unit;
     let wall_height = 19.0 * tile_unit;
     let tile_depth = 1.0 * tile_unit;
-
-    // let min_y = -1;
-    // let max_y = 1;
-    // let min_x = -1;
-    // let max_x = 1;
-    // let ts = (min_y..=max_y).flat_map(|y| (min_x..=max_x).map(|x| {
-    //     let mut flags = MapTile::new(x, y, TileFlags::Floor);
-    //     if x == min_x {
-    //         flags.features ^= TileFlags::WallWest
-    //     }
-    //     if x == max_x {
-    //         flags.features ^= TileFlags::WallEast
-    //     }
-    //     if y == max_y {
-    //         flags.features ^= TileFlags::WallSouth
-    //     }
-    //     if y == min_y {
-    //         flags.features ^= TileFlags::WallNorth // Change to WallNorth
-    //     }
-    //     flags
-    // }).collect::<Vec<MapTile>>()).collect();
-
     let m = [
         [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
         [0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -105,27 +83,6 @@ pub fn spawn_map(
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ];
-    // let m = [
-    //     [1, 0, 0],
-    //     [1, 0, 0],
-    //     [1, 1, 0],
-    // ];
-    let verbatim_string_map = r#"
-    11111111100000000
-    00000001100000000
-    00011111111110000
-    00011113111110000
-    00011111111110000
-    00011511111110000
-    00011100011110000
-    00011100011110000
-    00011100011110000
-    00000000000000000
-    00000000000000000
-    "#;
-// for later
-    //m.enumerate().map(|(y, row)| row.enumerate().map(|(x, t)| ));
-
     let checks = [
         [-1, 0],
         [1, 0],
@@ -183,18 +140,6 @@ pub fn spawn_map(
             }
         }
     }
-
-    let other_tiles = vec![
-        MapTile::new(0, 0, TileFlags::Floor | TileFlags::WallWestNorthEast),
-        MapTile::new(0, 1, TileFlags::Floor | TileFlags::WallWestEast),
-        MapTile::new(0, 2, TileFlags::Floor | TileFlags::WallSouthWest),
-        MapTile::new(1, 2, TileFlags::Floor | TileFlags::WallNorthSouth),
-        MapTile::new(2, 2, TileFlags::Floor | TileFlags::WallNorthSouth),
-        MapTile::new(3, 2, TileFlags::Floor | TileFlags::WallNorthEast),
-        MapTile::new(3, 3, TileFlags::Floor | TileFlags::WallWestEast),
-        MapTile::new(3, 3, TileFlags::Floor | TileFlags::WallWestEast),
-        MapTile::new(3, 3, TileFlags::Floor | TileFlags::WallEastSouthWest)];
-
     let map = MapDef {
         x: 0,
         y: 0,
