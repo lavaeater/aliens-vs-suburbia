@@ -11,7 +11,7 @@ bevy-inspector-egui = "0.21.0"
 bevy_egui = "0.23.0"
 bevy_rand = "0.4.0"
 bevy_third_person_camera = "0.1.6"
-bevy_xpbd_3d = { version = "0.3.2", default-features = false, features = ["3d", "f32", "debug-plugin", "collider-from-mesh", "simd"] }
+bevy_xpbd_3d = { version = "0.3.2", default-features = false, features = ["3d", "f32", "debug-plugin", "collider-from-mesh", "async-collider", "simd", "parallel"] }
 big-brain = "0.18.0"
 rand_chacha = "0.3.1"
 flagset = "0.4.4"
