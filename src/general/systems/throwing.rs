@@ -15,7 +15,7 @@ pub fn throwing(
     for (position, rotation, mut controller) in query.iter_mut() {
         if controller.triggers.contains(&Triggers::Throw) {// && !controller.has_thrown {
 
-            let direction = rotation.mul_vec3(Quat::from_axis_angle(Vec3::X, (5.0f32).to_radians()).mul_vec3(Vec3::new(0.0, 0.0, -1.0)));
+            let direction = rotation.mul_vec3(Quat::from_axis_angle(Vec3::X, (10.0f32).to_radians()).mul_vec3(Vec3::new(0.0, 0.0, -1.0)));
 
             let launch_p = position.0 + direction * 0.25 + Vec3::new(0.0, 0.5, 0.0);
 

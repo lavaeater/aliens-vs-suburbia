@@ -4,4 +4,4 @@ pub(crate) mod load_models;
 pub(crate) mod dynamic_movement;
 pub(crate) mod kinematic_movement;
 pub(crate) mod throwing;
-mod kill_the_balls;
+pub(crate) mod kill_the_balls;

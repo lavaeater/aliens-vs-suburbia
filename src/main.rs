@@ -4,12 +4,13 @@ use bevy::prelude::{Mesh, Msaa};
 use bevy::scene::Scene;
 use bevy::utils::HashMap;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use bevy_xpbd_3d::plugins::{ContactReportingPlugin, PhysicsDebugPlugin, PhysicsPlugins};
+use bevy_xpbd_3d::plugins::{PhysicsDebugPlugin, PhysicsPlugins};
 use crate::player::systems::spawn_players::spawn_players;
 use camera::systems::spawn_camera::spawn_camera;
 use crate::camera::components::camera::CameraOffset;
 use crate::camera::systems::camera_follow::camera_follow;
 use crate::general::systems::dynamic_movement::dynamic_movement;
+use crate::general::systems::kill_the_balls::kill_the_balls;
 use crate::general::systems::kinematic_movement::kinematic_movement;
 use crate::general::systems::lights::spawn_lights;
 use crate::general::systems::load_models::Handles;
@@ -56,6 +57,7 @@ fn main() {
                 kinematic_movement,
                 dynamic_movement,
                 throwing,
+                kill_the_balls,
             ))
         .run();
 }
