@@ -17,7 +17,6 @@ pub fn spawn_players(
         KeyboardController {},
         Controller::default(),
         DynamicMovement {},
-        // ThirdPersonCameraTarget {},
         SceneBundle {
             scene: asset_server.load("player.glb#Scene0"),
             transform: Transform::from_xyz(0.0, 0.0, 0.0),

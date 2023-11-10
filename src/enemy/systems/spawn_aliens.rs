@@ -1,5 +1,6 @@
 use bevy::asset::AssetServer;
 use bevy::core::Name;
+use bevy::math::Quat;
 use bevy::prelude::{Commands, Res, Transform};
 use bevy::scene::SceneBundle;
 use bevy_xpbd_3d::components::{AngularDamping, Collider, Friction, LinearDamping, LockedAxes, RigidBody};
@@ -10,13 +11,15 @@ pub fn spawn_aliens(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
+    let mut t = Transform::from_xyz(2.0, 0.0, 2.0);
+    t.rotate(Quat::from_rotation_z(100.0f32.to_radians()));
     commands.spawn((
         Name::from("Spider"),
         HittableTarget {},
         DynamicMovement {},
         SceneBundle {
             scene: asset_server.load("aliens/animated_spider.glb#Scene0"),
-            transform: Transform::from_xyz(5.0, 1.0, 0.0),
+            transform: t,
             ..Default::default()
         },
         Friction::from(0.0),
