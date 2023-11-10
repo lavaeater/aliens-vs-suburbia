@@ -9,6 +9,7 @@ use crate::player::systems::spawn_players::spawn_players;
 use camera::systems::spawn_camera::spawn_camera;
 use crate::camera::components::camera::CameraOffset;
 use crate::camera::systems::camera_follow::camera_follow;
+use crate::enemy::systems::spawn_aliens::spawn_aliens;
 use crate::general::systems::dynamic_movement::dynamic_movement;
 use crate::general::systems::kill_the_balls::kill_the_balls;
 use crate::general::systems::kinematic_movement::kinematic_movement;
@@ -17,14 +18,12 @@ use crate::general::systems::load_models::Handles;
 use crate::general::systems::map::spawn_map;
 use crate::general::systems::throwing::throwing;
 use crate::player::systems::keyboard_control::keyboard_control;
-
 pub(crate) mod player;
 pub(crate) mod general;
 pub(crate) mod camera;
+pub(crate) mod enemy;
 
 pub const METERS_PER_PIXEL: f64 = 16.0;
-
-
 fn main() {
     App::new()
         .register_type::<CameraOffset>()
@@ -39,12 +38,12 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(PhysicsPlugins::default())
         .add_plugins(WorldInspectorPlugin::new())
-
         .add_systems(
             Startup,
             (
                 spawn_map,
                 spawn_players,
+                spawn_aliens,
                 spawn_camera,
                 spawn_lights,
             ))
