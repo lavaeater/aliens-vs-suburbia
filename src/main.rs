@@ -1,7 +1,8 @@
-use bevy::app::{App, Startup, Update};
+use bevy::app::{App, FixedUpdate, Startup, Update};
 use bevy::DefaultPlugins;
 use bevy::prelude::{Mesh, Msaa};
 use bevy::scene::Scene;
+use bevy::time::{Fixed, Time};
 use bevy::utils::HashMap;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_xpbd_3d::plugins::{PhysicsDebugPlugin, PhysicsPlugins};
@@ -19,12 +20,14 @@ use crate::general::systems::load_models::Handles;
 use crate::general::systems::map::spawn_map;
 use crate::general::systems::throwing::throwing;
 use crate::player::systems::keyboard_control::keyboard_control;
+
 pub(crate) mod player;
 pub(crate) mod general;
 pub(crate) mod camera;
 pub(crate) mod enemy;
 
 pub const METERS_PER_PIXEL: f64 = 16.0;
+
 fn main() {
     App::new()
         .register_type::<CameraOffset>()
@@ -35,10 +38,11 @@ fn main() {
         .insert_resource(Handles::<Scene> {
             handles: HashMap::new()
         })
+        .insert_resource(Time::<Fixed>::from_seconds(0.1))
         .insert_resource(Msaa::Sample4)
         .add_plugins(DefaultPlugins)
         .add_plugins(PhysicsPlugins::default())
-        .add_plugins(PhysicsDebugPlugin::default())
+        // .add_plugins(PhysicsDebugPlugin::default())
         .add_plugins(WorldInspectorPlugin::new())
         .add_systems(
             Startup,
@@ -58,7 +62,11 @@ fn main() {
                 dynamic_movement,
                 throwing,
                 kill_the_balls,
-                alien_sight
+            ))
+        .add_systems(
+            FixedUpdate,
+            (
+                alien_sight,
             ))
         .run();
 }

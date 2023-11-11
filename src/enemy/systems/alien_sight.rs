@@ -1,3 +1,4 @@
+use bevy::core::Name;
 use bevy::math::{EulerRot, Quat, Vec3};
 use bevy::prelude::{Query, With};
 use bevy_xpbd_3d::components::{Position, Rotation};
@@ -8,6 +9,7 @@ use crate::general::components::Layer;
 pub fn alien_sight(
     spatial_query: SpatialQuery,
     alien_query: Query<(&Position, &Rotation), With<Alien>>,
+    name_query: Query<&Name>
 ) {
 // Cast ray and get up to 20 hits
     for (position, rotation) in alien_query.iter() {
@@ -26,7 +28,12 @@ pub fn alien_sight(
         );
         // Print hits
         for hit in hits.iter() {
-            println!("Hit: {:?}", hit);
+            if name_query.contains(hit.entity) {
+                let name = name_query.get(hit.entity).unwrap();
+                println!("Hit: {:?}", name);
+            } else {
+                println!("Hit: {:?}", hit.entity);
+            }
         }
     }
 

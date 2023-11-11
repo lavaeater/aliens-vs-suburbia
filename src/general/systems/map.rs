@@ -3,11 +3,12 @@ use bevy::core::Name;
 use bevy::math::{Quat, Vec3};
 use bevy::prelude::{Commands, Res};
 use bevy::scene::SceneBundle;
+use bevy_xpbd_3d::components::CollisionLayers;
 
 use bevy_xpbd_3d::math::PI;
 use bevy_xpbd_3d::prelude::{Collider, Position, RigidBody, Rotation};
 use flagset::{flags, FlagSet};
-use crate::general::components::{Floor, HittableTarget, Wall};
+use crate::general::components::{Floor, HittableTarget, Layer, Wall};
 
 flags! {
     enum FileFlags: u16 {
@@ -159,6 +160,7 @@ pub fn spawn_map(
                 RigidBody::Static,
                 Collider::cuboid(tile_width, tile_depth, tile_width),
                 Position::from(Vec3::new(tile_width * tile.x as f32, -2.0, tile_width * tile.y as f32)),
+                CollisionLayers::new([Layer::Floor], [Layer::Ball, Layer::Alien, Layer::Player])
             ));
         }
         if tile.features.contains(TileFlags::WallEast) { //Change to WallEast
@@ -179,6 +181,7 @@ pub fn spawn_map(
                     0.0,
                     0.0,
                 )),
+                CollisionLayers::new([Layer::Wall], [Layer::Ball, Layer::Alien, Layer::Player]),
             ));
         }
         if tile.features.contains(TileFlags::WallWest) {
@@ -199,6 +202,7 @@ pub fn spawn_map(
                     0.0,
                     0.0,
                 )),
+                CollisionLayers::new([Layer::Wall], [Layer::Ball, Layer::Alien, Layer::Player]),
             ));
         }
         if tile.features.contains(TileFlags::WallSouth) {
@@ -219,6 +223,7 @@ pub fn spawn_map(
                     0.0,
                     0.0,
                 )),
+                CollisionLayers::new([Layer::Wall], [Layer::Ball, Layer::Alien, Layer::Player]),
             ));
         }
         if tile.features.contains(TileFlags::WallNorth) {
@@ -239,6 +244,7 @@ pub fn spawn_map(
                     0.0,
                     0.0,
                 )),
+                CollisionLayers::new([Layer::Wall], [Layer::Ball, Layer::Alien, Layer::Player]),
             ));
         }
     }
