@@ -1,6 +1,5 @@
 use bevy::prelude::Component;
 use bonsai_bt::BT;
-use std::{collections::HashMap, thread::sleep, time::Duration};
 
 /*
 This should, in reality, be a list of all the small behaviors we can
@@ -22,31 +21,22 @@ pub enum AlienBehavior {
 }
 
 #[derive(Component)]
-pub struct Loiter {
-    pub status: bonsai_bt::Status,
-}
+pub struct Loiter {}
+#[derive(Component)]
+pub struct CanISeePlayer {}
 
 #[derive(Component)]
-pub struct CanISeePlayer {
-    pub status: bonsai_bt::Status,
-}
+pub struct ApproachPlayer {}
 
 #[derive(Component)]
-pub struct ApproachPlayer {
-    pub status: bonsai_bt::Status,
-}
-
-#[derive(Component)]
-pub struct AttackPlayer {
-    pub status: bonsai_bt::Status,
-}
-
-trait ReturnStatus {
-    fn update(&mut self, status: bonsai_bt::Status);
-    fn get_status(&self) -> bonsai_bt::Status;
-}
+pub struct AttackPlayer {}
 
 #[derive(Component)]
 pub struct BonsaiTree {
-    pub tree: BT<AlienBehavior, String, serde_json::Value>
+    pub tree: BT<AlienBehavior, String, serde_json::Value>,
+}
+
+#[derive(Component)]
+pub struct BonsaiTreeStatus {
+    pub current_action_status: bonsai_bt::Status,
 }
