@@ -15,11 +15,11 @@ pub fn alien_sight(
     for (position, rotation, sight_shape) in alien_query.iter() {
         let direction = rotation.0.mul_vec3(Vec3::new(0.0, 0.0, -1.0));
         let hits = spatial_query.shape_hits(
-            &sight_shape.0, // Shape to cast
+            &sight_shape.shape, // Shape to cast
             position.0, // Origin
-            sight_shape.1, // Rotation of shape
+            sight_shape.rotation, // Rotation of shape
             direction,// Direction
-            5.0, // Maximum time of impact (travel distance)
+            sight_shape.range, // Maximum time of impact (travel distance)
             20, // Maximum number of hits
             true, // Does the ray treat colliders as "solid"
             SpatialQueryFilter::new().with_masks([Layer::Player]), // Query for players

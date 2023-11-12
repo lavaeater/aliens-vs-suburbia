@@ -1,4 +1,4 @@
-use bevy::prelude::Component;
+use bevy::prelude::{Component, Entity};
 use bonsai_bt::BT;
 use crate::player::components::general::{ControlDirection, ControlRotation};
 
@@ -25,11 +25,24 @@ pub enum AlienBehavior {
 pub struct Loiter {}
 
 #[derive(Component)]
-pub struct LoiterData {
-    pub last_rotation_direction: ControlRotation,
-    pub turns: u32,
-    pub max_turns: u32
+pub struct AlienBrain {
+    pub loiter_rotation_direction: ControlRotation,
+    pub loiter_turns: u32,
+    pub loiter_max_turns: u32,
+    pub seen_player_entity: Option<Entity>
 }
+
+impl Default for AlienBrain {
+    fn default() -> Self {
+        AlienBrain {
+            loiter_rotation_direction: ControlRotation::Left,
+            loiter_turns: 0,
+            loiter_max_turns: 100,
+            seen_player_entity: None
+        }
+    }
+}
+
 #[derive(Component)]
 pub struct CanISeePlayer {}
 
