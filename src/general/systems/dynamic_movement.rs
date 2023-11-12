@@ -2,7 +2,7 @@ use bevy::prelude::{Query, With};
 use bevy_xpbd_3d::components::{AngularVelocity, LinearVelocity};
 use bevy_xpbd_3d::math::Vector3;
 use bevy_xpbd_3d::prelude::{Rotation};
-use crate::player::components::general::{Controller, Directions, DynamicMovement, Rotations};
+use crate::player::components::general::{Controller, ControlDirection, DynamicMovement, ControlRotation};
 
 pub fn dynamic_movement(
     mut query: Query<(&mut LinearVelocity, &mut AngularVelocity, &Rotation, &Controller), With<DynamicMovement>>,
@@ -12,16 +12,16 @@ pub fn dynamic_movement(
         let mut force = Vector3::ZERO;
         let mut torque = Vector3::ZERO;
 
-        if controller.directions.contains(&Directions::Forward) {
+        if controller.directions.contains(&ControlDirection::Forward) {
             force.z = -1.0;
         }
-        if controller.directions.contains(&Directions::Backward) {
+        if controller.directions.contains(&ControlDirection::Backward) {
             force.z = 1.0;
         }
-        if controller.rotations.contains(&Rotations::Left) {
+        if controller.rotations.contains(&ControlRotation::Left) {
             torque.y = 1.0;
         }
-        if controller.rotations.contains(&Rotations::Right) {
+        if controller.rotations.contains(&ControlRotation::Right) {
             torque.y = -1.0;
         }
         force = rotation.mul_vec3(force) * force_factor;

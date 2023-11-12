@@ -5,9 +5,9 @@ use bevy_xpbd_3d::components::Position;
 use bevy_xpbd_3d::components::Rotation;
 use bevy_xpbd_3d::prelude::{RayHitData, SpatialQuery, SpatialQueryFilter};
 use bonsai_bt::{Event, UpdateArgs};
-use crate::enemy::components::bonsai_ai_components::{AlienBehavior, ApproachPlayer, AttackPlayer, BonsaiTree, BonsaiTreeStatus, CanISeePlayer, Loiter};
+use crate::enemy::components::bonsai_ai_components::{AlienBehavior, ApproachPlayer, AttackPlayer, BonsaiTree, BonsaiTreeStatus, CanISeePlayer, Loiter, LoiterData};
 use crate::general::components::Layer;
-use crate::player::components::general::{Controller, Directions, Rotations};
+use crate::player::components::general::{Controller, ControlDirection, ControlRotation, Opposite};
 
 pub fn update_behavior_tree(
     time: Res<Time>,
@@ -103,15 +103,15 @@ gonna move forward, if there is a wall in front of us, we're gonna turn
 */
 
 pub fn loiter_system(
-    mut alien_query: Query<(&mut BonsaiTreeStatus, &mut Controller, &Position, &Rotation), With<Loiter>>,
+    mut alien_query: Query<(&mut BonsaiTreeStatus, &mut Controller, &mut LoiterData, &Position, &Rotation), With<Loiter>>,
     spatial_query: SpatialQuery,
 ) {
-    for (mut status, mut controller, position, rotation) in alien_query.iter_mut() {
+    for (mut status, mut controller, mut loiter_data, position, rotation) in alien_query.iter_mut() {
         let direction = rotation.0.mul_vec3(Vec3::new(0.0, 0.0, -1.0));
         let hits = spatial_query.cast_ray (
             position.0, // Origin
             direction,// Direction
-            1.0, // Maximum time of impact (travel distance)
+            1.5, // Maximum time of impact (travel distance)
                         true, // Does the ray treat colliders as "solid"
             SpatialQueryFilter::new().with_masks([Layer::Wall]), // Query for players
         );
@@ -120,11 +120,22 @@ pub fn loiter_system(
         match hits {
             None => {
                 // No wall, just keep moving forward
-                controller.directions.insert(Directions::Forward);
+                controller.directions.insert(ControlDirection::Forward);
+                loiter_data.last_rotation_direction = loiter_data.last_rotation_direction.opposite();
+                loiter_data.turns = 0;
             }
             Some(_) => {
                 // Wall, start turning
-                controller.rotations.insert(Rotations::Left);
+                controller.rotations.insert(loiter_data.last_rotation_direction);
+                /*
+                Sometimes, change directions!
+                 */
+                loiter_data.turns += 1;
+                print!("Turns: {}", loiter_data.turns);
+                if loiter_data.turns > loiter_data.max_turns {
+                    loiter_data.turns = 0;
+                    loiter_data.last_rotation_direction = loiter_data.last_rotation_direction.opposite();
+                }
             }
         }
         status.current_action_status = bonsai_bt::Status::Running;

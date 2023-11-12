@@ -63,12 +63,12 @@ fn main() {
                 dynamic_movement,
                 throwing,
                 kill_the_balls,
-                loiter_system,
             ))
         .add_systems(
             FixedUpdate,
             (
-                alien_sight,
+                // alien_sight,
+                loiter_system,
                 update_behavior_tree,
             ))
         .run();

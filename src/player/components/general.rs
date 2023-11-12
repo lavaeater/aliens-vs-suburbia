@@ -19,25 +19,49 @@ pub enum Triggers {
     Jump
 }
 
-#[derive(Hash, PartialEq, Eq)]
-pub enum Rotations {
+#[derive(Hash, PartialEq, Eq, Copy, Clone)]
+pub enum ControlRotation {
     Left,
     Right
 }
 
-#[derive(Hash, PartialEq, Eq)]
-pub enum Directions {
+#[derive(Hash, PartialEq, Eq, Copy, Clone)]
+pub enum ControlDirection {
     Forward,
     Backward,
-    Left,
-    Right
+    StrafeLeft,
+    StrafeRight
+}
+
+pub trait Opposite {
+    fn opposite(&self) -> Self;
+}
+
+impl Opposite for ControlDirection {
+    fn opposite(&self) -> Self {
+        match self {
+            ControlDirection::Forward => ControlDirection::Backward,
+            ControlDirection::Backward => ControlDirection::Forward,
+            ControlDirection::StrafeLeft => ControlDirection::StrafeRight,
+            ControlDirection::StrafeRight => ControlDirection::StrafeLeft,
+        }
+    }
+}
+
+impl Opposite for ControlRotation {
+    fn opposite(&self) -> Self {
+        match self {
+            ControlRotation::Left => ControlRotation::Right,
+            ControlRotation::Right => ControlRotation::Left,
+        }
+    }
 }
 
 #[derive(Component, Default)]
 pub struct Controller {
     pub triggers: HashSet<Triggers>,
-    pub rotations: HashSet<Rotations>,
-    pub directions: HashSet<Directions>,
+    pub rotations: HashSet<ControlRotation>,
+    pub directions: HashSet<ControlDirection>,
     pub has_thrown:bool,
 }
 

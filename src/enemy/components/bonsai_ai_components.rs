@@ -1,5 +1,6 @@
 use bevy::prelude::Component;
 use bonsai_bt::BT;
+use crate::player::components::general::{ControlDirection, ControlRotation};
 
 /*
 This should, in reality, be a list of all the small behaviors we can
@@ -22,6 +23,13 @@ pub enum AlienBehavior {
 
 #[derive(Component)]
 pub struct Loiter {}
+
+#[derive(Component)]
+pub struct LoiterData {
+    pub last_rotation_direction: ControlRotation,
+    pub turns: u32,
+    pub max_turns: u32
+}
 #[derive(Component)]
 pub struct CanISeePlayer {}
 
