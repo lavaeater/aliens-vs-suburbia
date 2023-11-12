@@ -1,2 +1,2 @@
 pub(crate) mod general;
-pub(crate) mod ai;
+pub(crate) mod bonsai_ai_components;

@@ -186,6 +186,7 @@ dependencies = [
  "flagset",
  "rand_chacha",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
