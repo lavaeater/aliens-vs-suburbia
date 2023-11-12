@@ -1,16 +1,17 @@
-use bevy::prelude::{Commands, Entity, Query, Res};
+use bevy::prelude::{Commands, Entity, Query, Res, With};
 use bevy::time::Time;
 use bonsai_bt::{Event, UpdateArgs};
 use crate::enemy::components::bonsai_ai_components::{AlienBehavior, ApproachPlayer, AttackPlayer, BonsaiTree, BonsaiTreeStatus, CanISeePlayer, Loiter};
+use crate::player::components::general::Controller;
 
 pub fn update_behavior_tree(
     time: Res<Time>,
     mut bt_query: Query<(&mut BonsaiTree, &BonsaiTreeStatus, Entity)>,
     mut commands: Commands,
-    loiter_query: Query<(&Loiter)>,
-    see_player_query: Query<(&CanISeePlayer)>,
-    approach_player_query: Query<(&ApproachPlayer)>,
-    attack_player_query: Query<(&AttackPlayer)>,
+    loiter_query: Query<&Loiter>,
+    see_player_query: Query<&CanISeePlayer>,
+    approach_player_query: Query<&ApproachPlayer>,
+    attack_player_query: Query<&AttackPlayer>,
 ) {
     // proceed to next iteration in event loop
 
@@ -71,7 +72,29 @@ pub fn update_behavior_tree(
     }
 }
 
-pub fn loiter_system(alien_query: Query<(&Loiter)>) {
+/*
+The specific component can and should perhaps contain information
+that is specific to this behavior?
+
+Or should we contain that is some kind of cool "alien brain" component?
+
+The loitering system could be made much, much more complex, obviously.
+
+We could have soo many things going on here, but we will start with the
+basics...
+
+What is loitering? It is a system that makes the alien move around, avoid
+walls, and generally look like it is doing something.
+
+To make it really easy we could have a database of "tiles we have visited"
+Or in fact, we should have some A* pathfinding of the current map, that's
+way easier to get something running quickly.
+
+*/
+
+pub fn loiter_system(
+    mut alien_query: Query<(&mut BonsaiTreeStatus, &mut Controller), With<Loiter>>
+) {
 
 }
 
