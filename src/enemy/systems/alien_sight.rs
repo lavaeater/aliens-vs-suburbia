@@ -32,9 +32,6 @@ pub fn alien_sight(
         of the environment like walls etc. Perhaps it can build a mental model of the world in the
         form of a graph? Yes. It can.
          */
-
-
-
         // Print hits
         for hit in hits.iter() {
             if name_query.contains(hit.entity) {
