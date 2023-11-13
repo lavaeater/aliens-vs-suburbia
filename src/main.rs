@@ -10,10 +10,11 @@ use bevy_xpbd_3d::plugins::{PhysicsPlugins};
 use big_brain::{BigBrainPlugin};
 use crate::player::systems::spawn_players::spawn_players;
 use camera::systems::spawn_camera::spawn_camera;
+use crate::ai::systems::approach_player_systems::{approach_player_action_system, approach_player_scorer_system, can_i_see_player_system};
+use crate::ai::systems::avoid_walls_systems::{avoid_walls_action_system, avoid_walls_data_system, avoid_walls_scorer_system};
+use crate::ai::systems::move_forward_systems::{move_forward_action_system, move_forward_scorer_system};
 use crate::camera::components::camera::CameraOffset;
 use crate::camera::systems::camera_follow::camera_follow;
-use crate::enemy::systems::big_brain_ai_systems::{avoid_walls_action_system, avoid_walls_data_system, avoid_walls_scorer_system, move_forward_action_system, move_forward_scorer_system};
-use crate::enemy::systems::bonsai_ai_systems::{approach_player_system, attack_player_system, can_i_see_player_system, loiter_system, update_behavior_tree};
 use crate::enemy::systems::spawn_aliens::spawn_aliens;
 use crate::general::systems::dynamic_movement::dynamic_movement;
 use crate::general::systems::kill_the_balls::kill_the_balls;
@@ -28,6 +29,7 @@ pub(crate) mod player;
 pub(crate) mod general;
 pub(crate) mod camera;
 pub(crate) mod enemy;
+pub(crate) mod ai;
 
 pub const METERS_PER_PIXEL: f64 = 16.0;
 
@@ -76,6 +78,7 @@ fn main() {
             FixedUpdate,
             (
                 avoid_walls_data_system,
+                can_i_see_player_system,
             ))
         .add_systems(
             PreUpdate,
@@ -84,6 +87,8 @@ fn main() {
                 avoid_walls_action_system,
                 move_forward_scorer_system,
                 move_forward_action_system,
+                approach_player_scorer_system,
+                approach_player_action_system
             ),
         )
         .run();
