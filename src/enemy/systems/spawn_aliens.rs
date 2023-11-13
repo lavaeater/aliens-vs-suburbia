@@ -5,9 +5,10 @@ use bevy_xpbd_3d::components::{AngularDamping, Collider, CollisionLayers, Fricti
 use big_brain::actions::Steps;
 use big_brain::pickers::FirstToScore;
 use big_brain::thinker::Thinker;
-use crate::enemy::components::bonsai_ai_components::{AlienBrain};
-use crate::enemy::components::general::{Alien};
-use crate::enemy::systems::big_brain_ai_systems::{AvoidWallsAction, AvoidWallScore, AvoidWallsData, MoveForwardAction, MoveForwardScore};
+use crate::ai::components::approach_player_components::{ApproachPlayerAction, ApproachPlayerData, ApproachPlayerScore};
+use crate::ai::components::avoid_wall_components::{AvoidWallsAction, AvoidWallScore, AvoidWallsData};
+use crate::ai::components::move_forward_components::{MoveForwardAction, MoveForwardScore};
+use crate::enemy::components::general::{Alien, AlienSightShape};
 use crate::general::components::{HittableTarget, Layer};
 use crate::player::components::general::{Controller, DynamicMovement};
 
@@ -22,15 +23,18 @@ pub fn spawn_aliens(
 
     // Build the thinker
     let thinker = Thinker::build()
-        .label("WallThinker")
+        .label("Spider Thinker")
         // We don't do anything unless we're thirsty enough.
         .picker(FirstToScore { threshold: 0.3 })
         .when(AvoidWallScore, avoid_walls)
+        .when(ApproachPlayerScore,
+              Steps::build()
+                  .label("Approach Player")
+                  .step(ApproachPlayerAction {}))
         .when(MoveForwardScore,
               Steps::build()
                   .label("Move Forward")
-                  .step(MoveForwardAction {})
-        );
+                  .step(MoveForwardAction {}));
 
     commands.spawn(
         (
@@ -54,8 +58,9 @@ pub fn spawn_aliens(
             CollisionLayers::new([Layer::Alien], [Layer::Ball, Layer::Wall, Layer::Floor, Layer::Alien, Layer::Player]),
         )).insert((
         Alien {},
-        AlienBrain::default(),
         AvoidWallsData::new(2.0),
+        ApproachPlayerData::default(),
+        AlienSightShape::default(),
         thinker
     ));
 }
