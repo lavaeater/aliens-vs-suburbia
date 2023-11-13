@@ -1,9 +1,10 @@
-use bevy::app::{App, FixedUpdate, Startup, Update};
+use bevy::app::{App, FixedUpdate, PluginGroup, Startup, Update};
 use bevy::DefaultPlugins;
+use bevy::log::LogPlugin;
 use bevy::prelude::{Mesh, Msaa};
 use bevy::scene::Scene;
 use bevy::time::{Fixed, Time};
-use bevy::utils::HashMap;
+use bevy::utils::{default, HashMap};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_xpbd_3d::plugins::{PhysicsPlugins};
 use crate::player::systems::spawn_players::spawn_players;
@@ -30,6 +31,13 @@ pub const METERS_PER_PIXEL: f64 = 16.0;
 
 fn main() {
     App::new()
+        .add_plugins(
+            DefaultPlugins.set(
+                LogPlugin {
+                    // Use `RUST_LOG=big_brain=trace,thirst=trace cargo run --example thirst --features=trace` to see extra tracing output.
+                    filter: "big_brain=debug,sequence=debug".to_string(),
+                    ..default()
+                }))
         .register_type::<CameraOffset>()
         .insert_resource(Msaa::Sample4)
         .insert_resource(Handles::<Mesh> {
