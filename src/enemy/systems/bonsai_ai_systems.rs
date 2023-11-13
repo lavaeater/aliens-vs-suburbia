@@ -1,11 +1,10 @@
-use bevy::a11y::accesskit::Vec2;
 use bevy::math::Vec3;
 use bevy::prelude::{Commands, Entity, Query, Res, With};
 use bevy::time::Time;
 use bevy_xpbd_3d::components::Position;
 use bevy_xpbd_3d::components::Rotation;
 use bevy_xpbd_3d::math::Vector2;
-use bevy_xpbd_3d::prelude::{RayHitData, ShapeHitData, SpatialQuery, SpatialQueryFilter};
+use bevy_xpbd_3d::prelude::{SpatialQuery, SpatialQueryFilter};
 use bonsai_bt::{Event, UpdateArgs};
 use crate::enemy::components::bonsai_ai_components::{AlienBehavior, ApproachPlayer, AttackPlayer, BonsaiTree, BonsaiTreeStatus, CanISeePlayer, Loiter, AlienBrain};
 use crate::enemy::components::general::AlienSightShape;
@@ -182,13 +181,13 @@ pub fn can_i_see_player_system(
 pub fn approach_player_system(
     mut alien_query: Query<(
         &mut BonsaiTreeStatus,
-        &mut AlienBrain,
+        &AlienBrain,
         &mut Controller,
         &Position,
         &Rotation), With<ApproachPlayer>>,
-    mut player_query: Query<(&Position, &Rotation), With<Player>>,
+    player_query: Query<&Position, With<Player>>,
 ) {
-    for (mut status, mut alien_brain, mut controller, alien_position, alien_rotation) in alien_query.iter_mut() {
+    for (mut status, alien_brain, mut controller, alien_position, alien_rotation) in alien_query.iter_mut() {
         match alien_brain.seen_player_entity {
             None => {
                 status.current_action_status = bonsai_bt::Status::Failure;
@@ -198,8 +197,11 @@ pub fn approach_player_system(
 
                 let alien_direction_vector2 = Vector2::new(alien_direction_vector3.x, alien_direction_vector3.z);
                 let alien_position_vector2 = Vector2::new(alien_position.0.x, alien_position.0.z);
-                let (player_position, player_rotation) = player_query.get(player_entity).unwrap();
-                let player_position_vector2 = Vector2::new(player_position.0.x, player_position.0.z);
+                let player_position = player_query.get(player_entity).unwrap();
+                let player_position_vector2 = Vector2::new(
+                    player_position.0.x,
+                    player_position.0.z
+                );
                 let alien_to_player_direction = (player_position_vector2 - alien_position_vector2).normalize();
                 let angle = alien_direction_vector2.angle_between(alien_to_player_direction).to_degrees();
                 controller.rotations.clear();
@@ -221,4 +223,6 @@ pub fn approach_player_system(
     }
 }
 
-pub fn attack_player_system() {}
+pub fn attack_player_system() {
+
+}

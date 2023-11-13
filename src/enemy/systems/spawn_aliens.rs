@@ -1,29 +1,28 @@
 use std::collections::HashMap;
 use bevy::asset::AssetServer;
-use bevy::math::{EulerRot, Quat};
 use bevy::prelude::{Commands, Name, Res, Transform};
 use bevy::scene::SceneBundle;
 use bevy_xpbd_3d::components::{AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
-use bonsai_bt::{Action, BT, Invert, Select, Sequence, Wait, While};
+use bonsai_bt::{Action, BT, Invert, Select, While};
 use crate::enemy::components::bonsai_ai_components::{BonsaiTree, BonsaiTreeStatus, AlienBrain};
 use crate::enemy::components::bonsai_ai_components::AlienBehavior::{ApproachPlayer, CanISeePlayer, Loiter};
 use crate::enemy::components::general::{Alien, AlienSightShape};
 use crate::general::components::{HittableTarget, Layer};
-use crate::player::components::general::{Controller, ControlRotation, DynamicMovement};
+use crate::player::components::general::{Controller, DynamicMovement};
 
 pub fn spawn_aliens(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
     // Create BT
-    // let loiter = Action(Loiter);
+     let loiter = Action(Loiter);
     let can_i_see_player = Action(CanISeePlayer);
     let approach_player = Action(ApproachPlayer);
-    // let loiter_unless_see = While(Box::new(Invert(Box::new(can_i_see_player.clone()))), vec![loiter]);
+    let loiter_unless_see = While(Box::new(Invert(Box::new(can_i_see_player.clone()))), vec![loiter]);
     let approach_if_see = While(Box::new(can_i_see_player.clone()),vec![approach_player]);
-    // let loiter_until_see = Select(vec![approach_if_see, loiter_unless_see]);
+    let loiter_until_see = Select(vec![approach_if_see, loiter_unless_see]);
     let blackboard: HashMap<String, serde_json::Value> = HashMap::new();
-    let bt = BT::new(approach_if_see, blackboard);
+    let bt = BT::new(loiter_until_see, blackboard);
 
     commands.spawn(
         (

@@ -1,8 +1,8 @@
 use bevy::core::Name;
-use bevy::math::{EulerRot, Quat, Vec3};
+use bevy::math::{Vec3};
 use bevy::prelude::{Query, With};
 use bevy_xpbd_3d::components::{Position, Rotation};
-use bevy_xpbd_3d::prelude::{Collider, SpatialQuery, SpatialQueryFilter};
+use bevy_xpbd_3d::prelude::{SpatialQuery, SpatialQueryFilter};
 use crate::enemy::components::general::{Alien, AlienSightShape};
 use crate::general::components::Layer;
 

@@ -1,6 +1,6 @@
 use bevy::prelude::{Component, Entity};
 use bonsai_bt::BT;
-use crate::player::components::general::{ControlDirection, ControlRotation};
+use crate::player::components::general::{ControlRotation};
 
 /*
 This should, in reality, be a list of all the small behaviors we can

@@ -1,6 +1,6 @@
 use bevy::prelude::{Commands, DespawnRecursiveExt, EventReader, Query};
 use bevy_xpbd_3d::prelude::Collision;
-use crate::general::components::{Ball, Floor, HittableTarget, Wall};
+use crate::general::components::{Ball, HittableTarget};
 
 pub fn kill_the_balls(
     mut collision_event_reader: EventReader<Collision>,
