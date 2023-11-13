@@ -1,16 +1,18 @@
-use bevy::app::{App, FixedUpdate, PluginGroup, Startup, Update};
+use bevy::app::{App, FixedUpdate, PluginGroup, PreUpdate, Startup, Update};
 use bevy::DefaultPlugins;
 use bevy::log::LogPlugin;
-use bevy::prelude::{Mesh, Msaa};
+use bevy::prelude::{default, Mesh, Msaa};
 use bevy::scene::Scene;
 use bevy::time::{Fixed, Time};
-use bevy::utils::{default, HashMap};
+use bevy::utils::{HashMap};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_xpbd_3d::plugins::{PhysicsPlugins};
+use big_brain::{BigBrainPlugin};
 use crate::player::systems::spawn_players::spawn_players;
 use camera::systems::spawn_camera::spawn_camera;
 use crate::camera::components::camera::CameraOffset;
 use crate::camera::systems::camera_follow::camera_follow;
+use crate::enemy::systems::big_brain_ai_systems::{avoid_walls_action_system, avoid_walls_data_system, avoid_walls_scorer_system, move_forward_action_system, move_forward_scorer_system};
 use crate::enemy::systems::bonsai_ai_systems::{approach_player_system, attack_player_system, can_i_see_player_system, loiter_system, update_behavior_tree};
 use crate::enemy::systems::spawn_aliens::spawn_aliens;
 use crate::general::systems::dynamic_movement::dynamic_movement;
@@ -31,13 +33,6 @@ pub const METERS_PER_PIXEL: f64 = 16.0;
 
 fn main() {
     App::new()
-        .add_plugins(
-            DefaultPlugins.set(
-                LogPlugin {
-                    // Use `RUST_LOG=big_brain=trace,thirst=trace cargo run --example thirst --features=trace` to see extra tracing output.
-                    filter: "big_brain=debug,sequence=debug".to_string(),
-                    ..default()
-                }))
         .register_type::<CameraOffset>()
         .insert_resource(Msaa::Sample4)
         .insert_resource(Handles::<Mesh> {
@@ -48,10 +43,15 @@ fn main() {
         })
         .insert_resource(Time::<Fixed>::from_seconds(0.1))
         .insert_resource(Msaa::Sample4)
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(LogPlugin {
+            // Use `RUST_LOG=big_brain=trace,thirst=trace cargo run --example
+            // thirst --features=trace` to see extra tracing output.
+            filter: "big_brain=debug,thirst=debug".to_string(),
+            ..default()}))
         .add_plugins(PhysicsPlugins::default())
         // .add_plugins(PhysicsDebugPlugin::default())
         .add_plugins(WorldInspectorPlugin::new())
+        .add_plugins(BigBrainPlugin::new(PreUpdate))
         .add_systems(
             Startup,
             (
@@ -74,12 +74,16 @@ fn main() {
         .add_systems(
             FixedUpdate,
             (
-                // alien_sight,
-                loiter_system,
-                can_i_see_player_system,
-                approach_player_system,
-                attack_player_system,
-                update_behavior_tree,
+                avoid_walls_data_system,
             ))
+        .add_systems(
+            PreUpdate,
+            (
+                avoid_walls_scorer_system,
+                avoid_walls_action_system,
+                move_forward_scorer_system,
+                move_forward_action_system,
+            )
+        )
         .run();
 }
