@@ -2000,18 +2000,16 @@ dependencies = [
 [[package]]
 name = "big-brain"
 version = "0.18.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca84fca00ea07a9cd447f219f27d79366aaf02439a0226b0a28a7a9ed083cb9c"
+source = "git+https://github.com/zkat/big-brain?branch=main#69c3a4a506fb5bcb94e26d87cccdb27cc180429a"
 dependencies = [
- "bevy 0.11.3",
+ "bevy 0.12.0",
  "big-brain-derive",
 ]
 
 [[package]]
 name = "big-brain-derive"
 version = "0.18.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed1182a1a029aeb2aa54b5a06250559fc1f69a50e7008ab66c6f7907973e4592"
+source = "git+https://github.com/zkat/big-brain?branch=main#69c3a4a506fb5bcb94e26d87cccdb27cc180429a"
 dependencies = [
  "proc-macro2",
  "quote",

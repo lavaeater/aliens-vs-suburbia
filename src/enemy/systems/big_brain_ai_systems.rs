@@ -1,12 +1,3 @@
-//! This example describes how to create an action that takes multiple steps.
-//!
-//! It is similar to the thirst example, but instead of just magically quenching a thirst,
-//! the actor must be near a water source in order to drink.
-//!
-//! Note that it does not matter if the actor is already near a water source:
-//! the MoveToWaterSource action will simply terminate immediately.
-
-use bevy::log::LogPlugin;
 use bevy::prelude::*;
 use bevy::utils::tracing::{debug, trace};
 use big_brain::prelude::*;
@@ -156,7 +147,7 @@ fn drink_action_system(
     time: Res<Time>,
     mut thirsts: Query<(&Position, &mut Thirst), Without<WaterSource>>,
     waters: Query<&Position, With<WaterSource>>,
-    mut query: Query<(&Actor, &mut ActionState, &Drink, &ActionSpan)>,
+    mut query: Query<(&Actor, &Drink)>
 ) {
     // Loop through all actions, just like you'd loop over all entities in any other query.
     for (Actor(actor), mut state, drink, span) in &mut query {
