@@ -1,11 +1,13 @@
-use std::collections::HashMap;
 use bevy::asset::AssetServer;
 use bevy::prelude::{Commands, Name, Res, Transform};
 use bevy::scene::SceneBundle;
 use bevy_xpbd_3d::components::{AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
-use bonsai_bt::{Action, BT, Invert, Select, While};
-use crate::enemy::components::bonsai_ai_components::{BonsaiTree, BonsaiTreeStatus, AlienBrain};
-use crate::enemy::components::bonsai_ai_components::AlienBehavior::{ApproachPlayer, CanISeePlayer, Loiter};
+use big_brain::actions::Steps;
+use big_brain::pickers::FirstToScore;
+use big_brain::thinker::Thinker;
+use crate::ai::components::approach_player_components::{ApproachPlayerAction, ApproachPlayerData, ApproachPlayerScore};
+use crate::ai::components::avoid_wall_components::{AvoidWallsAction, AvoidWallScore, AvoidWallsData};
+use crate::ai::components::move_forward_components::{MoveForwardAction, MoveForwardScore};
 use crate::enemy::components::general::{Alien, AlienSightShape};
 use crate::general::components::{HittableTarget, Layer};
 use crate::player::components::general::{Controller, DynamicMovement};
@@ -14,15 +16,25 @@ pub fn spawn_aliens(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
-    // Create BT
-     let loiter = Action(Loiter);
-    let can_i_see_player = Action(CanISeePlayer);
-    let approach_player = Action(ApproachPlayer);
-    let loiter_unless_see = While(Box::new(Invert(Box::new(can_i_see_player.clone()))), vec![loiter]);
-    let approach_if_see = While(Box::new(can_i_see_player.clone()),vec![approach_player]);
-    let loiter_until_see = Select(vec![approach_if_see, loiter_unless_see]);
-    let blackboard: HashMap<String, serde_json::Value> = HashMap::new();
-    let bt = BT::new(loiter_until_see, blackboard);
+    let avoid_walls = Steps::build()
+        .label("Avoid Walls")
+        // ...AvoidWalls...
+        .step(AvoidWallsAction {});
+
+    // Build the thinker
+    let thinker = Thinker::build()
+        .label("Spider Thinker")
+        // We don't do anything unless we're thirsty enough.
+        .picker(FirstToScore { threshold: 0.3 })
+        .when(AvoidWallScore, avoid_walls)
+        .when(ApproachPlayerScore,
+              Steps::build()
+                  .label("Approach Player")
+                  .step(ApproachPlayerAction {}))
+        .when(MoveForwardScore,
+              Steps::build()
+                  .label("Move Forward")
+                  .step(MoveForwardAction {}));
 
     commands.spawn(
         (
@@ -33,7 +45,7 @@ pub fn spawn_aliens(
             Controller::default(),
             SceneBundle {
                 scene: asset_server.load("player.glb#Scene0"),
-                transform: Transform::from_xyz(8.0 * 2.0, 0.0, 4.0 * 2.0),
+                transform: Transform::from_xyz(1.0* 2.0, 0.0, 2.0 * 2.0),
                 ..Default::default()
             },
             Friction::from(0.0),
@@ -46,13 +58,9 @@ pub fn spawn_aliens(
             CollisionLayers::new([Layer::Alien], [Layer::Ball, Layer::Wall, Layer::Floor, Layer::Alien, Layer::Player]),
         )).insert((
         Alien {},
+        AvoidWallsData::new(2.0),
+        ApproachPlayerData::default(),
         AlienSightShape::default(),
-        BonsaiTreeStatus {
-            current_action_status: bonsai_bt::Status::Running,
-        },
-        BonsaiTree {
-            tree: bt,
-        },
-        AlienBrain::default()
+        thinker
     ));
 }
