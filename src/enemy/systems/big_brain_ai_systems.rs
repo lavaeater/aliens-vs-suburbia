@@ -32,9 +32,13 @@ pub fn avoid_walls_scorer_system(
 ) {
     for (Actor(actor), mut score) in &mut query {
         if let Ok(avoid_wall_data) = avoid_wall_data_query.get(*actor) {
-            let s =(avoid_wall_data.forward_distance.min(avoid_wall_data.max_distance) / avoid_wall_data.max_distance).clamp(0.0, 1.0);
-            debug!(s);
-            score.set(s);
+            if avoid_wall_data.forward_distance < avoid_wall_data.max_distance {
+                score.set(1.0);
+            } else {
+                score.set(0.0);
+            }
+            let s =(avoid_wall_data.forward_distance.min(avoid_wall_data.max_distance) / avoid_wall_data.max_distance).recip().clamp(0.0, 1.0);
+            debug!("AvoidWallScore: {}", s);
         }
     }
 }

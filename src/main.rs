@@ -1,5 +1,5 @@
 use bevy::app::{App, FixedUpdate, PluginGroup, PreUpdate, Startup, Update};
-use bevy::DefaultPlugins;
+use bevy::{DefaultPlugins, log};
 use bevy::log::LogPlugin;
 use bevy::prelude::{default, Mesh, Msaa};
 use bevy::scene::Scene;
@@ -41,13 +41,14 @@ fn main() {
         .insert_resource(Handles::<Scene> {
             handles: HashMap::new()
         })
-        .insert_resource(Time::<Fixed>::from_seconds(0.1))
+        .insert_resource(Time::<Fixed>::from_seconds(0.05))
         .insert_resource(Msaa::Sample4)
         .add_plugins(DefaultPlugins.set(LogPlugin {
             // Use `RUST_LOG=big_brain=trace,thirst=trace cargo run --example
             // thirst --features=trace` to see extra tracing output.
-            filter: "big_brain=debug,thirst=debug".to_string(),
-            ..default()}))
+            filter: "wgpu_core=warn,wgpu_hal=warn".into(),
+            level: log::Level::DEBUG,
+        }))
         .add_plugins(PhysicsPlugins::default())
         // .add_plugins(PhysicsDebugPlugin::default())
         .add_plugins(WorldInspectorPlugin::new())
@@ -83,7 +84,7 @@ fn main() {
                 avoid_walls_action_system,
                 move_forward_scorer_system,
                 move_forward_action_system,
-            )
+            ),
         )
         .run();
 }
