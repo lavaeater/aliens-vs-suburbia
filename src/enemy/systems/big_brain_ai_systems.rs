@@ -1,56 +1,97 @@
+use std::cmp::{max, min};
+use std::f32::consts::FRAC_PI_2;
 use bevy::prelude::*;
 use bevy::utils::tracing::{debug, trace};
+use bevy_xpbd_3d::components::{Position, Rotation};
+use bevy_xpbd_3d::prelude::{RayHitData, SpatialQuery, SpatialQueryFilter};
 use big_brain::prelude::*;
+use crate::general::components::Layer;
 
-/// First, we make a simple Position component.
-#[derive(Component, Debug, Copy, Clone)]
-pub struct Position {
-    pub position: Vec2,
+#[derive(Clone, Component, Debug)]
+pub struct AvoidWallData {
+    pub forward_distance: f32,
+    pub left_distance: f32,
+    pub right_distance: f32,
+    pub max_distance: f32,
 }
 
-/// A marker component for an entity that describes a water source.
-#[derive(Component, Debug)]
-pub struct WaterSource;
-
-/// We steal the Thirst component from the thirst example.
-#[derive(Component, Debug)]
-pub struct Thirst {
-    /// How much thirstier the entity gets over time.
-    pub per_second: f32,
-    /// How much thirst the entity currently has.
-    pub thirst: f32,
-}
-
-impl Thirst {
-    pub fn new(thirst: f32, per_second: f32) -> Self {
-        Self { thirst, per_second }
+impl AvoidWallData {
+    pub fn new(total_distance: f32, max_distance: f32) -> Self {
+        Self { forward_distance: total_distance, left_distance: 0.0, right_distance: 0.0, max_distance }
     }
 }
 
-/// A simple system that just pushes the thirst value up over time.
-/// Just a plain old Bevy system, big-brain is not involved yet.
-pub fn thirst_system(time: Res<Time>, mut thirsts: Query<&mut Thirst>) {
-    for mut thirst in &mut thirsts {
-        thirst.thirst += thirst.per_second * time.delta_seconds();
+// Scorers are the same as in the thirst example.
+#[derive(Clone, Component, Debug, ScorerBuilder)]
+pub struct AvoidWallScore;
 
-        // Thirst is capped at 100.0
-        if thirst.thirst >= 100.0 {
-            thirst.thirst = 100.0;
+pub fn avoid_walls_scorer_system(
+    avoid_wall_data_query: Query<&AvoidWallData>,
+    mut query: Query<(&Actor, &mut Score), With<AvoidWallScore>>,
+) {
+    for (Actor(actor), mut score) in &mut query {
+        if let Ok(avoid_wall_data) = avoid_wall_data_query.get(*actor) {
+            score.set((avoid_wall_data.forward_distance.min(avoid_wall_data.max_distance) / avoid_wall_data.max_distance).recip());
         }
-
-        trace!("Thirst: {}", thirst.thirst);
     }
 }
 
-/// An action where the actor moves to the closest water source
-#[derive(Clone, Component, Debug, ActionBuilder)]
-pub struct MoveToWaterSource {
-    // The movement speed of the actor.
-    speed: f32,
-}
+pub fn avoid_wall_data_system(
+    time: Res<Time>,
+    mut avoid_wall_data_query: Query<(&mut AvoidWallData, &Position, &Rotation)>,
+    spatial_query: SpatialQuery,
+) {
+    for (mut avoid_wall_data, position, rotation) in avoid_wall_data_query.iter_mut() {
+        let left_rot = Quat::from_euler(EulerRot::YXZ, 90.0f32.to_radians(), 0.0, 0.0);
+        let right_rot = Quat::from_euler(EulerRot::YXZ, -90.0f32.to_radians(), 0.0, 0.0);
+        let forward = rotation.0.mul_vec3(Vec3::new(0.0, 0.0, -1.0)); //forward
+        let left = left_rot.mul_vec3(forward.clone()); //left
+        let right = right_rot.mul_vec3(forward.clone()); //right
 
-/// Closest distance to a water source to be able to drink from it.
-const MAX_DISTANCE: f32 = 0.1;
+        avoid_wall_data.forward_distance = 0.0;
+        avoid_wall_data.left_distance = 0.0;
+        avoid_wall_data.right_distance = 0.0;
+
+        match spatial_query.cast_ray(
+            position.0, // Origin
+            forward,// Direction
+            avoid_wall_data.max_distance, // Maximum time of impact (travel distance)
+            true, // Does the ray treat colliders as "solid"
+            SpatialQueryFilter::new().with_masks([Layer::Wall]), // Query for players
+        ) {
+            None => {}
+            Some(hit) => {
+                avoid_wall_data.forward_distance = hit.time_of_impact;
+            }
+        };
+
+        match spatial_query.cast_ray(
+            position.0, // Origin
+            left,// Direction
+            avoid_wall_data.max_distance, // Maximum time of impact (travel distance)
+            true, // Does the ray treat colliders as "solid"
+            SpatialQueryFilter::new().with_masks([Layer::Wall]), // Query for players
+        ) {
+            None => {}
+            Some(hit) => {
+                avoid_wall_data.left_distance = hit.time_of_impact;
+            }
+        };
+
+        match spatial_query.cast_ray(
+            position.0, // Origin
+            right,// Direction
+            avoid_wall_data.max_distance, // Maximum time of impact (travel distance)
+            true, // Does the ray treat colliders as "solid"
+            SpatialQueryFilter::new().with_masks([Layer::Wall]), // Query for players
+        ) {
+            None => {}
+            Some(hit) => {
+                avoid_wall_data.right_distance = hit.time_of_impact;
+            }
+        };
+    }
+}
 
 fn move_to_water_source_action_system(
     time: Res<Time>,
@@ -122,21 +163,6 @@ fn move_to_water_source_action_system(
     }
 }
 
-/// A utility function that finds the closest water source to the actor.
-fn find_closest_water_source(
-    waters: &Query<&Position, With<WaterSource>>,
-    actor_position: &Position,
-) -> Position {
-    *(waters
-        .iter()
-        .min_by(|a, b| {
-            let da = (a.position - actor_position.position).length_squared();
-            let db = (b.position - actor_position.position).length_squared();
-            da.partial_cmp(&db).unwrap()
-        })
-        .expect("no water sources"))
-}
-
 /// A simple action: the actor's thirst shall decrease, but only if they are near a water source.
 #[derive(Clone, Component, Debug, ActionBuilder)]
 pub struct Drink {
@@ -145,9 +171,9 @@ pub struct Drink {
 
 fn drink_action_system(
     time: Res<Time>,
-    mut thirsts: Query<(&Position, &mut Thirst), Without<WaterSource>>,
+    mut thirsts: Query<(&Position, &mut Hunger), Without<WaterSource>>,
     waters: Query<&Position, With<WaterSource>>,
-    mut query: Query<(&Actor, &Drink)>
+    mut query: Query<(&Actor, &mut ActionState, &Drink, &ActionSpan)>,
 ) {
     // Loop through all actions, just like you'd loop over all entities in any other query.
     for (Actor(actor), mut state, drink, span) in &mut query {
@@ -182,11 +208,11 @@ fn drink_action_system(
 
                     // Start reducing the thirst. Alternatively, you could send out some kind of
                     // DrinkFromSource event that indirectly decreases thirst.
-                    thirst.thirst -= drink.per_second * time.delta_seconds();
+                    thirst.hunger -= drink.per_second * time.delta_seconds();
 
                     // Once we hit 0 thirst, we stop drinking and report success.
-                    if thirst.thirst <= 0.0 {
-                        thirst.thirst = 0.0;
+                    if thirst.hunger <= 0.0 {
+                        thirst.hunger = 0.0;
                         *state = ActionState::Success;
                     }
                 } else {
@@ -207,36 +233,7 @@ fn drink_action_system(
     }
 }
 
-// Scorers are the same as in the thirst example.
-#[derive(Clone, Component, Debug, ScorerBuilder)]
-pub struct Thirsty;
-
-pub fn thirsty_scorer_system(
-    thirsts: Query<&Thirst>,
-    mut query: Query<(&Actor, &mut Score), With<Thirsty>>,
-) {
-    for (Actor(actor), mut score) in &mut query {
-        if let Ok(thirst) = thirsts.get(*actor) {
-            score.set(thirst.thirst / 100.);
-        }
-    }
-}
-
 pub fn init_entities(mut cmd: Commands) {
-    // Spawn two water sources.
-    cmd.spawn((
-        WaterSource,
-        Position {
-            position: Vec2::new(10.0, 10.0),
-        },
-    ));
-
-    cmd.spawn((
-        WaterSource,
-        Position {
-            position: Vec2::new(-10.0, 0.0),
-        },
-    ));
 
     // We use the Steps struct to essentially build a "MoveAndDrink" action by composing
     // the MoveToWaterSource and Drink actions.
@@ -258,10 +255,10 @@ pub fn init_entities(mut cmd: Commands) {
         .label("ThirstyThinker")
         // We don't do anything unless we're thirsty enough.
         .picker(FirstToScore { threshold: 0.8 })
-        .when(Thirsty, move_and_drink);
+        .when(AvoidWallScore, move_and_drink);
 
     cmd.spawn((
-        Thirst::new(75.0, 2.0),
+        Hunger::new(75.0, 2.0),
         Position {
             position: Vec2::new(0.0, 0.0),
         },
