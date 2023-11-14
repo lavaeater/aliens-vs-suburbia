@@ -19,13 +19,13 @@ pub enum Triggers {
     Jump
 }
 
-#[derive(Hash, PartialEq, Eq, Copy, Clone)]
+#[derive(Hash, PartialEq, Eq, Copy, Clone, Debug)]
 pub enum ControlRotation {
     Left,
     Right
 }
 
-#[derive(Hash, PartialEq, Eq, Copy, Clone)]
+#[derive(Hash, PartialEq, Eq, Copy, Clone, Debug)]
 pub enum ControlDirection {
     Forward,
     Backward,

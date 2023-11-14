@@ -1,5 +1,6 @@
 use bevy::prelude::Component;
 use big_brain::prelude::{ActionBuilder, ScorerBuilder};
+use crate::player::components::general::ControlRotation;
 
 #[derive(Clone, Component, Debug)]
 pub struct AvoidWallsData {
@@ -7,11 +8,22 @@ pub struct AvoidWallsData {
     pub left_distance: f32,
     pub right_distance: f32,
     pub max_distance: f32,
+    pub rotation_direction: ControlRotation,
+    pub rotation_timer: f32,
+    pub rotation_timer_max: f32,
 }
 
 impl AvoidWallsData {
     pub fn new(max_distance: f32) -> Self {
-        Self { forward_distance: max_distance, left_distance: max_distance, right_distance: max_distance, max_distance }
+        Self {
+            forward_distance: max_distance,
+            left_distance: max_distance,
+            right_distance: max_distance,
+            max_distance,
+            rotation_direction: ControlRotation::Left,
+            rotation_timer: 1.0,
+            rotation_timer_max: 1.0
+        }
     }
 }
 

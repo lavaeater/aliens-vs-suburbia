@@ -1,10 +1,11 @@
-use bevy::prelude::{Query, With};
+use bevy::prelude::{Query, Res, With};
 use big_brain::prelude::{ActionSpan, Actor, Score};
 use bevy::log::debug;
 use big_brain::actions::ActionState;
 use bevy_xpbd_3d::components::{Position, Rotation};
 use bevy_xpbd_3d::prelude::{SpatialQuery, SpatialQueryFilter};
 use bevy::math::{EulerRot, Quat, Vec3};
+use bevy::time::Time;
 use crate::ai::components::avoid_wall_components::{AvoidWallsAction, AvoidWallScore, AvoidWallsData};
 use crate::general::components::Layer;
 use crate::player::components::general::{Controller, ControlRotation};
@@ -75,8 +76,9 @@ pub fn avoid_walls_data_system(
 
 pub fn avoid_walls_action_system(
     // A query on all current MoveToWaterSource actions.
+    res: Res<Time>,
     mut action_query: Query<(&Actor, &mut ActionState, &ActionSpan), With<AvoidWallsAction>>,
-    mut actor_query: Query<(&mut Controller, &AvoidWallsData)>,
+    mut actor_query: Query<(&mut Controller, &mut AvoidWallsData)>,
 ) {
     // Loop through all actions, just like you'd loop over all entities in any other query.
     for (actor, mut action_state, span) in action_query.iter_mut() {
@@ -92,18 +94,24 @@ pub fn avoid_walls_action_system(
             }
             ActionState::Executing => {
                 // Look up the actor's position.
-                if let Ok((mut controller, avoid_walls_data)) = actor_query.get_mut(actor.0) {
-                    // let rotation = if avoid_walls_data.right_distance < avoid_walls_data.left_distance
-                    // {
-                    //     ControlRotation::Right
-                    // } else {
-                    //     ControlRotation::Left
-                    // };
+                if let Ok((mut controller, mut avoid_walls_data)) = actor_query.get_mut(actor.0) {
+                    avoid_walls_data.rotation_timer -= res.delta_seconds();
+                    if avoid_walls_data.rotation_timer < 0.0 {
+                        debug!("We switch rotation direction!");
+                        debug!("Direction was: {:?}", avoid_walls_data.rotation_direction);
+                        avoid_walls_data.rotation_timer = avoid_walls_data.rotation_timer_max;
+                        avoid_walls_data.rotation_direction = if avoid_walls_data.right_distance < avoid_walls_data.left_distance
+                        {
+                            ControlRotation::Left
+                        } else {
+                            ControlRotation::Right
+                        };
+                        debug!("Direction is now: {:?}", avoid_walls_data.rotation_direction);
+                    }
 
                     controller.rotations.clear();
-                    controller.rotations.insert(ControlRotation::Left);
+                    controller.rotations.insert(avoid_walls_data.rotation_direction);
                     controller.directions.clear();
-                   // *action_state = ActionState::Success;
                 }
             }
             ActionState::Cancelled => {
