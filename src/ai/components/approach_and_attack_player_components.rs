@@ -12,7 +12,7 @@ impl Default for ApproachAndAttackPlayerData {
     fn default() -> Self {
         Self {
             seen_player: None,
-            attack_distance: 0.1,
+            attack_distance: 0.5,
         }
     }
 }

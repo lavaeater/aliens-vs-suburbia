@@ -146,9 +146,8 @@ pub fn attack_player_action_system(
                 *action_state = ActionState::Executing;
             }
             ActionState::Executing => {
-                if let Ok(
-                    (attack_player_data, mut controller, alien_position, alien_attack)
-                ) = alien_query.get_mut(*actor)
+                if let Ok((attack_player_data, mut controller, alien_position, alien_attack))
+                    = alien_query.get_mut(*actor)
                 {
                     // Look up the actor's position.
                     match attack_player_data.seen_player {
@@ -168,7 +167,7 @@ pub fn attack_player_action_system(
                             let distance = (player_position_vector2 - alien_position_vector2).length();
                             if distance < attack_player_data.attack_distance * 2.0 {
                                 debug!("We are close enough to attack!");
-                                player_health.health -= *alien_attack.damage_range.end();
+                                player_health.health -= alien_attack.damage_range;
                                 debug!("Player health: {}", player_health.health);
                                 *action_state = ActionState::Success;
                             } else {
