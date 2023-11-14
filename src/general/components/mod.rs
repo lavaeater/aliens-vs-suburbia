@@ -2,7 +2,19 @@ use bevy::prelude::{Component, Reflect};
 use bevy_xpbd_3d::prelude::PhysicsLayer;
 
 #[derive(Component)]
-pub struct Ball {}
+pub struct Ball {
+    pub bounces: i32,
+    pub bounce_max: i32,
+}
+
+impl Default for Ball {
+    fn default() -> Self {
+        Self {
+            bounces: 0,
+            bounce_max: 3,
+        }
+    }
+}
 
 #[derive(Component)]
 pub struct Wall {}

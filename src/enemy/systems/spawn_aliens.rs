@@ -1,6 +1,7 @@
 use bevy::asset::AssetServer;
 use bevy::prelude::{Commands, Name, Res, Transform};
 use bevy::scene::SceneBundle;
+use bevy::utils::default;
 use bevy_xpbd_3d::components::{AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
 use big_brain::actions::Steps;
 use big_brain::pickers::FirstToScore;
@@ -45,7 +46,10 @@ pub fn spawn_aliens(
             // // We rotat the cone since it is defined as a cone pointing up the y axis. Rotating it -90 degrees around the x axis makes it point forward properly. Maybe.
             HittableTarget {},
             DynamicMovement {},
-            Controller::default(),
+            Controller {
+                turn_speed: 4.0,
+                ..default()
+            },
             SceneBundle {
                 scene: asset_server.load("player.glb#Scene0"),
                 transform: Transform::from_xyz(1.0* 2.0, 0.0, 2.0 * 2.0),

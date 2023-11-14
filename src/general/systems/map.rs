@@ -8,7 +8,7 @@ use bevy_xpbd_3d::components::CollisionLayers;
 use bevy_xpbd_3d::math::PI;
 use bevy_xpbd_3d::prelude::{Collider, Position, RigidBody, Rotation};
 use flagset::{flags, FlagSet};
-use crate::general::components::{Floor, HittableTarget, Layer, Wall};
+use crate::general::components::{Floor, Layer, Wall};
 
 flags! {
     enum FileFlags: u16 {
@@ -167,7 +167,6 @@ pub fn spawn_map(
             commands.spawn((
                 Name::from(format!("Wall East {}:{}", tile.x, tile.y)),
                 Wall {},
-                HittableTarget {},
                 SceneBundle {
                     scene: asset_server.load("wall_fab.glb#Scene0"),
                     ..Default::default()
@@ -188,7 +187,6 @@ pub fn spawn_map(
             commands.spawn((
                 Name::from(format!("Wall West {}:{}", tile.x, tile.y)),
                 Wall {},
-                HittableTarget {},
                 SceneBundle {
                     scene: asset_server.load("wall_fab.glb#Scene0"),
                     ..Default::default()
@@ -209,7 +207,6 @@ pub fn spawn_map(
             commands.spawn((
                 Name::from(format!("Wall South {}:{}", tile.x, tile.y)),
                 Wall {},
-                HittableTarget {},
                 SceneBundle {
                     scene: asset_server.load("wall_fab.glb#Scene0"),
                     ..Default::default()
@@ -230,7 +227,6 @@ pub fn spawn_map(
             commands.spawn((
                 Name::from(format!("Wall North {}:{}", tile.x, tile.y)),
                 Wall {},
-                HittableTarget {},
                 SceneBundle {
                     scene: asset_server.load("wall_fab.glb#Scene0"),
                     ..Default::default()
