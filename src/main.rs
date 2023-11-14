@@ -48,7 +48,7 @@ fn main() {
             // Use `RUST_LOG=big_brain=trace,thirst=trace cargo run --example
             // thirst --features=trace` to see extra tracing output.
             filter: "wgpu_core=warn,wgpu_hal=warn".into(),
-            level: log::Level::DEBUG,
+            level: log::Level::INFO,
         }))
         .add_plugins(PhysicsPlugins::default())
         // .add_plugins(PhysicsDebugPlugin::default())

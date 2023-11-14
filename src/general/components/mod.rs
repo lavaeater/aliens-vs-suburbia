@@ -13,7 +13,7 @@ impl Default for Ball {
     fn default() -> Self {
         Self {
             bounces: 0,
-            bounce_max: 3,
+            bounce_max: 5,
         }
     }
 }
