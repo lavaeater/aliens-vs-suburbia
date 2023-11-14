@@ -1,7 +1,7 @@
 use bevy::app::{App, FixedUpdate, PluginGroup, PreUpdate, Startup, Update};
 use bevy::{DefaultPlugins, log};
 use bevy::log::LogPlugin;
-use bevy::prelude::{default, Mesh, Msaa};
+use bevy::prelude::{Mesh, Msaa};
 use bevy::scene::Scene;
 use bevy::time::{Fixed, Time};
 use bevy::utils::{HashMap};

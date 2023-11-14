@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy::utils::tracing::span;
 use bevy_xpbd_3d::components::{Position, Rotation};
 use bevy_xpbd_3d::math::Vector2;
 use bevy_xpbd_3d::prelude::{SpatialQuery, SpatialQueryFilter};

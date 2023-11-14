@@ -1,5 +1,5 @@
 use bevy::prelude::{Component, Entity};
-use big_brain::prelude::{ActionBuilder, Actor, ScorerBuilder};
+use big_brain::prelude::{ActionBuilder, ScorerBuilder};
 
 #[derive(Clone, Component, Debug, Default)]
 pub struct ApproachPlayerData {
