@@ -11,18 +11,18 @@ use crate::general::components::Layer;
 use crate::player::components::general::{Controller, ControlRotation};
 
 pub fn avoid_walls_scorer_system(
-    avoid_wall_data_query: Query<&AvoidWallsData>,
+    mut avoid_wall_data_query: Query<&mut AvoidWallsData>,
     mut query: Query<(&Actor, &mut Score), With<AvoidWallScore>>,
 ) {
     for (Actor(actor), mut score) in &mut query {
-        if let Ok(avoid_wall_data) = avoid_wall_data_query.get(*actor) {
+        if let Ok(mut avoid_wall_data) = avoid_wall_data_query.get_mut(*actor) {
             if avoid_wall_data.forward_distance < avoid_wall_data.max_distance {
-                score.set(0.9);
+                score.set(0.91);
             } else {
                 score.set(0.0);
             }
-            let s =(avoid_wall_data.forward_distance.min(avoid_wall_data.max_distance) / avoid_wall_data.max_distance).recip().clamp(0.0, 1.0);
-            debug!("AvoidWallScore: {}", s);
+            avoid_wall_data.proto_val =(avoid_wall_data.forward_distance.min(avoid_wall_data.max_distance) / avoid_wall_data.max_distance).recip();
+            debug!("AvoidWallScore: {}", score.get());
         }
     }
 }

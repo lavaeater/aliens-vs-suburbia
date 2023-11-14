@@ -15,7 +15,7 @@ pub fn move_forward_action_system(
         match *action_state {
             // Action was just requested; it hasn't been seen before.
             ActionState::Requested => {
-                debug!("Let's go find some water!");
+                debug!("Let's move forward!");
                 // We don't really need any initialization code here, since the queries are cheap enough.
                 *action_state = ActionState::Executing;
             }
@@ -47,6 +47,7 @@ pub fn move_forward_scorer_system(
     mut query: Query<&mut Score, With<MoveForwardScore>>,
 ) {
     for mut score in query.iter_mut() {
-        score.set(0.999);
+        score.set(0.9);
+        debug!("MoveForwardScore: {}", score.get());
     }
 }

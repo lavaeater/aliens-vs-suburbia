@@ -3,7 +3,7 @@ use bevy::core::Name;
 use bevy::prelude::{Commands, Res, Transform};
 use bevy::scene::SceneBundle;
 use bevy_xpbd_3d::components::{AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
-use crate::general::components::{HittableTarget, Layer};
+use crate::general::components::{Health, HittableTarget, Layer};
 use crate::player::components::general::{Controller, DynamicMovement, KeyboardController, Player};
 
 pub fn spawn_players(
@@ -29,5 +29,6 @@ pub fn spawn_players(
         Collider::cuboid(0.5, 0.5, 0.45),
         LockedAxes::new().lock_rotation_x().lock_rotation_z(),
         CollisionLayers::new([Layer::Player], [Layer::Ball, Layer::Wall, Layer::Floor, Layer::Alien, Layer::Player]),
+        Health::default(),
     ));
 }
