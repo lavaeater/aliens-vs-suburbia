@@ -1,4 +1,4 @@
-use bevy::prelude::Component;
+use bevy::prelude::{Component, Reflect};
 use bevy_xpbd_3d::prelude::PhysicsLayer;
 
 #[derive(Component)]
@@ -21,3 +21,34 @@ pub enum Layer {
     Alien,
     Player,
 }
+
+#[derive(Component, Clone, Debug, PartialEq)]
+pub struct Attack {
+    pub damage_range: i32,
+}
+
+impl Default for Attack {
+    fn default() -> Self {
+        Self {
+            damage_range: 5,
+        }
+    }
+}
+
+
+#[derive(Component, Clone, Copy, Debug, PartialEq, Reflect)]
+pub struct Health {
+    pub health: i32,
+    pub max_health: i32,
+}
+
+impl Default for Health {
+    fn default() -> Self {
+        Self {
+            health: 100,
+            max_health: 100,
+        }
+    }
+}
+
+

@@ -5,11 +5,11 @@ use bevy_xpbd_3d::components::{AngularDamping, Collider, CollisionLayers, Fricti
 use big_brain::actions::Steps;
 use big_brain::pickers::FirstToScore;
 use big_brain::thinker::Thinker;
-use crate::ai::components::approach_player_components::{ApproachPlayerAction, ApproachPlayerData, ApproachPlayerScore};
+use crate::ai::components::approach_and_attack_player_components::{ApproachPlayerAction, ApproachAndAttackPlayerData, ApproachAndAttackPlayerScore, AttackPlayerAction};
 use crate::ai::components::avoid_wall_components::{AvoidWallsAction, AvoidWallScore, AvoidWallsData};
 use crate::ai::components::move_forward_components::{MoveForwardAction, MoveForwardScore};
 use crate::enemy::components::general::{Alien, AlienSightShape};
-use crate::general::components::{HittableTarget, Layer};
+use crate::general::components::{Attack, Health, HittableTarget, Layer};
 use crate::player::components::general::{Controller, DynamicMovement};
 
 pub fn spawn_aliens(
@@ -27,10 +27,13 @@ pub fn spawn_aliens(
         // We don't do anything unless we're thirsty enough.
         .picker(FirstToScore { threshold: 0.3 })
         .when(AvoidWallScore, avoid_walls)
-        .when(ApproachPlayerScore,
+        .when(ApproachAndAttackPlayerScore,
               Steps::build()
-                  .label("Approach Player")
-                  .step(ApproachPlayerAction {}))
+                  .label("Approach and Attack Player")
+                  // ...ApproachPlayer...
+                  .step(ApproachPlayerAction {})
+                  // ...AttackPlayer...
+                  .step(AttackPlayerAction {}))
         .when(MoveForwardScore,
               Steps::build()
                   .label("Move Forward")
@@ -58,9 +61,11 @@ pub fn spawn_aliens(
             CollisionLayers::new([Layer::Alien], [Layer::Ball, Layer::Wall, Layer::Floor, Layer::Alien, Layer::Player]),
         )).insert((
         Alien {},
-        AvoidWallsData::new(2.0),
-        ApproachPlayerData::default(),
+        AvoidWallsData::new(1.5),
+        ApproachAndAttackPlayerData::default(),
         AlienSightShape::default(),
+        Attack::default(),
+        Health::default(),
         thinker
     ));
 }
