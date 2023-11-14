@@ -62,7 +62,7 @@ pub fn spawn_aliens(
             //AsyncCollider(ComputedCollider::ConvexHull),
             Collider::cuboid(0.5, 0.5, 0.45),
             LockedAxes::new().lock_rotation_x().lock_rotation_z(),
-            CollisionLayers::new([Layer::Alien], [Layer::Ball, Layer::Wall, Layer::Floor, Layer::Alien, Layer::Player]),
+            CollisionLayers::new([Layer::Alien], [Layer::Ball, Layer::Wall, Layer::Floor, Layer::Alien, Layer::Player, Layer::AlienSpawnPoint, Layer::AlienGoal]),
         )).insert((
         Alien {},
         AvoidWallsData::new(1.5),

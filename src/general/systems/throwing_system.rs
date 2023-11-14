@@ -34,7 +34,7 @@ pub fn throwing(
                     RigidBody::Dynamic,
                     Collider::ball(1.0 / 16.0),
                     LinearVelocity(direction * 12.0),
-                    CollisionLayers::new([Layer::Ball], [Layer::Wall, Layer::Floor, Layer::Alien, Layer::Player]),
+                    CollisionLayers::new([Layer::Ball], [Layer::Wall, Layer::Floor, Layer::Alien, Layer::Player, Layer::AlienSpawnPoint, Layer::AlienGoal]),
                 ));
             }
         } else {

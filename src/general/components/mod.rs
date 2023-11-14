@@ -28,6 +28,8 @@ pub enum Layer {
     Wall,
     Alien,
     Player,
+    AlienSpawnPoint,
+    AlienGoal,
 }
 
 #[derive(Component, Clone, Debug, PartialEq)]

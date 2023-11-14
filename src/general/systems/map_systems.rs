@@ -1,7 +1,7 @@
 use bevy::asset::AssetServer;
 use bevy::core::Name;
 use bevy::math::{Quat, Vec3};
-use bevy::prelude::{Commands, Res};
+use bevy::prelude::{Commands, Res, Transform};
 use bevy::scene::SceneBundle;
 use bevy_xpbd_3d::components::CollisionLayers;
 
@@ -9,15 +9,20 @@ use bevy_xpbd_3d::math::PI;
 use bevy_xpbd_3d::prelude::{Collider, Position, RigidBody, Rotation};
 use flagset::{flags, FlagSet};
 use crate::general::components::Layer;
-use crate::general::components::map_components::{Floor, Wall};
+use crate::general::components::map_components::{AlienGoal, AlienSpawnPoint, Floor, PlayerSpawnPoint, Wall};
+use crate::general::systems::map_systems::FileFlags::PlayerSpawn;
 
 flags! {
     enum FileFlags: u16 {
         Floor = 1, // 1
         Pickup = 2, // 2
-        PossibleEncounter = 4, // 4,
+        AlienSpawn = 4, // 4,
         FloorPickup = 3,
-        FloorPossibleEncounter = 5,
+        FloorSpawn = 5,
+        AlienGoal = 8, // 8
+        FloorAlienGoal = 9,
+        PlayerSpawn = 16, // 16
+        FloorPlayerSpawn = 17,
     }
 }
 
@@ -30,7 +35,9 @@ flags! {
         WallSouth = 8, //8
         WallWest = 16, //16
         Pickup = 32, //32
-        PossibleEncounter = 64, //64
+        AlienSpawnPoint = 64, //64
+        AlienGoal = 128, //128
+        PlayerSpawn = 256, //256
         WallNorthEast = (TileFlags::WallNorth | TileFlags::WallEast).bits(),
         WallEastSouth = (TileFlags::WallEast | TileFlags::WallSouth).bits(),
         WallSouthWest = (TileFlags::WallSouth | TileFlags::WallWest).bits(),
@@ -75,6 +82,7 @@ pub fn spawn_map(
     let wall_height = 19.0 * tile_unit;
     let tile_depth = 1.0 * tile_unit;
     let m = [
+        [17, 1, 1, 1, 1, 1, 1, 1, 5],
         [1, 1, 1, 1, 1, 1, 1, 1, 1],
         [1, 1, 1, 1, 1, 1, 1, 1, 1],
         [1, 1, 1, 1, 1, 1, 1, 1, 1],
@@ -82,8 +90,7 @@ pub fn spawn_map(
         [1, 1, 1, 1, 1, 1, 1, 1, 1],
         [1, 1, 1, 1, 1, 1, 1, 1, 1],
         [1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1],
+        [9, 1, 1, 1, 1, 1, 1, 1, 1],
     ];
     // let m = [
     //     [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -149,7 +156,15 @@ pub fn spawn_map(
                 }
 
                 if *t == 5 {
-                    flag_val |= TileFlags::PossibleEncounter;
+                    flag_val |= TileFlags::AlienSpawnPoint;
+                }
+
+                if *t == 9 {
+                    flag_val |= TileFlags::AlienGoal;
+                }
+
+                if *t == 17 {
+                    flag_val |= TileFlags::PlayerSpawn;
                 }
                 tiles.push(MapTile::new(column as i32, row as i32, flag_val));
             }
@@ -254,6 +269,43 @@ pub fn spawn_map(
                     0.0,
                 )),
                 CollisionLayers::new([Layer::Wall], [Layer::Ball, Layer::Alien, Layer::Player]),
+            ));
+        }
+
+        if tile.features.contains(TileFlags::AlienSpawnPoint) {
+            commands.spawn((
+                Name::from(format!("Alien Spawn Point{}:{}", tile.x, tile.y)),
+                AlienSpawnPoint::default(),
+                SceneBundle {
+                    scene: asset_server.load("player.glb#Scene0"),
+                    ..Default::default()
+                },
+                RigidBody::Static,
+                Collider::cuboid(0.5, 0.5, 0.45),
+                Position::from(Vec3::new(tile_width * tile.x as f32, -wall_height, tile_width * tile.y as f32 - tile_width / 2.0)),
+                CollisionLayers::new([Layer::AlienSpawnPoint], [Layer::Ball, Layer::Alien, Layer::Player]),
+            ));
+        }
+        if tile.features.contains(TileFlags::AlienGoal) {
+            commands.spawn((
+                Name::from(format!("Alien Goal {}:{}", tile.x, tile.y)),
+                AlienGoal {},
+                SceneBundle {
+                    scene: asset_server.load("player.glb#Scene0"),
+                    ..Default::default()
+                },
+                RigidBody::Static,
+                Collider::cuboid(0.5, 0.5, 0.45),
+                Position::from(Vec3::new(tile_width * tile.x as f32, -wall_height, tile_width * tile.y as f32 - tile_width / 2.0)),
+                CollisionLayers::new([Layer::AlienGoal], [Layer::Ball, Layer::Alien, Layer::Player]),
+            ));
+        }
+
+        if tile.features.contains(TileFlags::PlayerSpawn) {
+            commands.spawn((
+                Name::from(format!("Player Spawn Point{}:{}", tile.x, tile.y)),
+                Transform::from_xyz(tile_width * tile.x as f32, -wall_height, tile_width * tile.y as f32 - tile_width / 2.0),
+                PlayerSpawnPoint {},
             ));
         }
     }

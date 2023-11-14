@@ -33,7 +33,7 @@ pub fn spawn_players(
         RigidBody::Dynamic,
         Collider::cuboid(0.5, 0.5, 0.45),
         LockedAxes::new().lock_rotation_x().lock_rotation_z(),
-        CollisionLayers::new([Layer::Player], [Layer::Ball, Layer::Wall, Layer::Floor, Layer::Alien, Layer::Player]),
+        CollisionLayers::new([Layer::Player], [Layer::Ball, Layer::Wall, Layer::Floor, Layer::Alien, Layer::Player, Layer::AlienSpawnPoint, Layer::AlienGoal]),
         Health::default(),
     ));
 }
