@@ -2,6 +2,7 @@ use bevy::asset::AssetServer;
 use bevy::core::Name;
 use bevy::prelude::{Commands, Res, Transform};
 use bevy::scene::SceneBundle;
+use bevy::utils::default;
 use bevy_xpbd_3d::components::{AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
 use crate::general::components::{Health, HittableTarget, Layer};
 use crate::player::components::general::{Controller, DynamicMovement, KeyboardController, Player};
@@ -15,7 +16,11 @@ pub fn spawn_players(
         Player {},
         HittableTarget {},
         KeyboardController {},
-        Controller::default(),
+        Controller {
+            speed: 3.0,
+            turn_speed: 3.0,
+            ..default()
+        },
         DynamicMovement {},
         SceneBundle {
             scene: asset_server.load("player.glb#Scene0"),
