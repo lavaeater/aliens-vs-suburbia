@@ -1,6 +1,6 @@
-pub(crate) mod lights;
-pub(crate) mod map;
-pub(crate) mod dynamic_movement;
-pub(crate) mod kinematic_movement;
-pub(crate) mod throwing;
-pub(crate) mod kill_the_balls;
+pub(crate) mod lights_systems;
+pub(crate) mod map_systems;
+pub(crate) mod dynamic_movement_system;
+pub(crate) mod kinematic_movement_system;
+pub(crate) mod throwing_system;
+pub(crate) mod collision_handling_system;

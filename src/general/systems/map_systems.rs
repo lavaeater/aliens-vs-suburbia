@@ -8,7 +8,8 @@ use bevy_xpbd_3d::components::CollisionLayers;
 use bevy_xpbd_3d::math::PI;
 use bevy_xpbd_3d::prelude::{Collider, Position, RigidBody, Rotation};
 use flagset::{flags, FlagSet};
-use crate::general::components::{Floor, Layer, Wall};
+use crate::general::components::Layer;
+use crate::general::components::map_components::{Floor, Wall};
 
 flags! {
     enum FileFlags: u16 {

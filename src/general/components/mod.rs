@@ -1,3 +1,5 @@
+pub (crate) mod map_components;
+
 use bevy::prelude::{Component, Reflect};
 use bevy_xpbd_3d::prelude::PhysicsLayer;
 
@@ -15,12 +17,6 @@ impl Default for Ball {
         }
     }
 }
-
-#[derive(Component)]
-pub struct Wall {}
-
-#[derive(Component)]
-pub struct Floor {}
 
 #[derive(Component)]
 pub struct HittableTarget {}

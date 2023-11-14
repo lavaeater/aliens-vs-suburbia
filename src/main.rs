@@ -17,12 +17,12 @@ use crate::camera::components::camera::CameraOffset;
 use crate::camera::systems::camera_follow::camera_follow;
 use crate::enemy::systems::spawn_aliens::spawn_aliens;
 use crate::general::components::Health;
-use crate::general::systems::dynamic_movement::dynamic_movement;
-use crate::general::systems::kill_the_balls::collision_handling_system;
-use crate::general::systems::kinematic_movement::kinematic_movement;
-use crate::general::systems::lights::spawn_lights;
-use crate::general::systems::map::spawn_map;
-use crate::general::systems::throwing::throwing;
+use crate::general::systems::dynamic_movement_system::dynamic_movement;
+use crate::general::systems::collision_handling_system::collision_handling_system;
+use crate::general::systems::kinematic_movement_system::kinematic_movement;
+use crate::general::systems::lights_systems::spawn_lights;
+use crate::general::systems::map_systems::spawn_map;
+use crate::general::systems::throwing_system::throwing;
 use crate::player::components::general::Controller;
 use crate::player::systems::keyboard_control::keyboard_control;
 
