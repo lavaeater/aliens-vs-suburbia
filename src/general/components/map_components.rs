@@ -5,7 +5,24 @@ use bevy::reflect::Reflect;
 pub struct Wall {}
 
 #[derive(Component)]
-pub struct AlienGoal {}
+pub struct AlienGoal {
+    pub x: usize,
+    pub y: usize
+}
+
+impl AlienGoal {
+    pub fn new(x: usize, y: usize) -> Self {
+        Self {
+            x,
+            y
+        }
+    }
+}
+
+#[derive(Component, Debug, Reflect, Default)]
+pub struct CurrentTile {
+    pub tile: (usize, usize)
+}
 
 #[derive(Component, Debug, Reflect)]
 pub struct AlienSpawnPoint {

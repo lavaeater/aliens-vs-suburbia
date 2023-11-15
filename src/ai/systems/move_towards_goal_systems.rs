@@ -5,12 +5,14 @@ use bevy_xpbd_3d::prelude::{LinearVelocity, SpatialQuery, SpatialQueryFilter};
 use big_brain::actions::ActionState;
 use big_brain::scorers::Score;
 use big_brain::thinker::{ActionSpan, Actor};
-use crate::ai::components::approach_and_attack_player_components::{ApproachPlayerAction, ApproachAndAttackPlayerData, ApproachAndAttackPlayerScore, AttackPlayerAction};
+use crate::ai::components::approach_and_attack_player_components::{ApproachAndAttackPlayerData, AttackPlayerAction};
 use crate::ai::components::move_towards_goal_components::{MoveTowardsGoalAction, MoveTowardsGoalData, MoveTowardsGoalScore};
 use crate::general::components::{Attack, Health, Layer};
 use crate::enemy::components::general::{Alien, AlienSightShape};
-use crate::general::components::map_components::AlienGoal;
+use crate::general::components::map_components::{AlienGoal, CurrentTile};
+use crate::general::resources::map_resources::MapGraph;
 use crate::player::components::general::{ControlDirection, Controller, ControlRotation, Player};
+use pathfinding::directed::astar::astar;
 
 pub fn not_in_use_right_now(
     mut approach_player_query: Query<(&mut ApproachAndAttackPlayerData, &AlienSightShape, &Position, &Rotation)>,
@@ -53,66 +55,69 @@ pub fn move_towards_goal_scorer_system(
 ) {
     for (Actor(_actor), mut score) in query.iter_mut() {
         if let Ok(_goal_position) = goal_query.get_single() {
-            score.set(0.91);
+            score.set(0.91); // we always want to move towards the goal, mate!
         }
     }
 }
 
 pub fn move_towards_goal_action_system(
+    map_graph: Res<MapGraph>,
     mut action_query: Query<(&Actor, &mut ActionState, &ActionSpan), With<MoveTowardsGoalAction>>,
-    mut alien_query: Query<(&MoveTowardsGoalData, &mut Controller, &Position, &Rotation, &LinearVelocity), With<Alien>>
+    mut alien_query: Query<(&mut MoveTowardsGoalData, &mut Controller, &Position, &Rotation, &CurrentTile), With<Alien>>
 ) {
     for (Actor(actor), mut action_state, span) in action_query.iter_mut() {
         let _guard = span.span().enter();
 
         match *action_state {
-            // Action was just requested; it hasn't been seen before.
             ActionState::Requested => {
-                debug!("Let's approach the player!");
-                // We don't really need any initialization code here, since the queries are cheap enough.
+
+
+
+
                 *action_state = ActionState::Executing;
             }
             ActionState::Executing => {
                 if let Ok(
-                    (approach_player_data, mut controller, alien_position, alien_rotation, alien_velocity)
+                    (mut move_towards_goal_data, mut controller, alien_position, alien_rotation, alien_current_tile)
                 ) = alien_query.get_mut(*actor)
                 {
-                    // Look up the actor's position.
-                    if alien_velocity.0 == Vec3::ZERO {
-                     *action_state = ActionState::Failure;
-                    } else {
-                    }
-                    match approach_player_data.seen_player {
+                    match &move_towards_goal_data.path {
                         None => {
-                            debug!("We no longer see the player!");
-                            *action_state = ActionState::Failure;
-                        }
-                        Some(player_entity) => {
-                            let alien_direction_vector3 = alien_rotation.0.mul_vec3(Vec3::new(0.0, 0.0, -1.0));
-                            let alien_direction_vector2 = Vector2::new(alien_direction_vector3.x, alien_direction_vector3.z);
-                            let alien_position_vector2 = Vector2::new(alien_position.0.x, alien_position.0.z);
-                            let player_position = player_query.get(player_entity).unwrap();
-                            let player_position_vector2 = Vector2::new(
-                                player_position.0.x,
-                                player_position.0.z,
-                            );
-                            let alien_to_player_direction = (player_position_vector2 - alien_position_vector2).normalize();
-                            let angle = alien_direction_vector2.angle_between(alien_to_player_direction).to_degrees();
-                            controller.rotations.clear();
-                            if angle.abs() < 15.0 {
-                                controller.directions.insert(ControlDirection::Forward);
-                            } else if angle > 0.0 {
-                                controller.rotations.insert(ControlRotation::Right);
-                            } else {
-                                controller.rotations.insert(ControlRotation::Left);
+                            // Get a path, set the path, return here later, eh?
+                            let astar =
+                                astar(
+                                    &alien_current_tile.tile,
+                                    |t| map_graph.grid.neighbours(*t).into_iter().map(|t| (t, 1)),
+                                    |t| map_graph.grid.distance(*t, map_graph.goal),
+                                    |t| *t == map_graph.goal);
+                            match astar {
+                                None => {
+                                    *action_state = ActionState::Failure;
+                                }
+                                Some(path) => {
+                                    move_towards_goal_data.path = Some(path.0);
+                                }
                             }
-                            let distance = (player_position_vector2 - alien_position_vector2).length();
-                            if distance < approach_player_data.attack_distance {
-                                debug!("We are close enough to attack!");
+                        }
+                        Some(path) => {
+                            if path.len() == 0 {
+                                *action_state = ActionState::Success;
+                            } else {
+                                let next_tile = path[0];
+
+                                let next_tile_position = Vec2::new((next_tile.0 as f32) * 2.0f32 - 1.0, (next_tile.1 as f32) * 2.0f32 - 1.0);
+                                let alien_position = Vec2::new((alien_current_tile.tile.0 as f32) * 2.0f32 - 1.0, (alien_current_tile.tile.1 as f32) * 2.0f32 - 1.0);
+                                let direction = next_tile_position - alien_position;
+                                let direction = direction.normalize();
+                                controller.directions.clear();
+                                controller.directions.push(ControlDirection(direction));
+                                controller.rotations.clear();
+                                controller.rotations.push(ControlRotation(alien_rotation.0));
                                 *action_state = ActionState::Success;
                             }
                         }
                     }
+
                 }
             }
             ActionState::Cancelled => {

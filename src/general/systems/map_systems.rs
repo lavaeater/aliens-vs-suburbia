@@ -1,15 +1,17 @@
 use bevy::asset::AssetServer;
 use bevy::core::Name;
 use bevy::math::{Quat, Vec3};
-use bevy::prelude::{Commands, EventReader, EventWriter, Res};
+use bevy::prelude::{Commands, Component, EventReader, EventWriter, Query, Res, ResMut};
 use bevy::scene::SceneBundle;
 use bevy_xpbd_3d::components::CollisionLayers;
 use bevy_xpbd_3d::math::PI;
 use bevy_xpbd_3d::prelude::{Collider, Position, RigidBody, Rotation};
 use flagset::{flags, FlagSet};
+use pathfinding::grid::Grid;
 use crate::general::components::Layer;
-use crate::general::components::map_components::{AlienGoal, AlienSpawnPoint, Floor, Wall};
+use crate::general::components::map_components::{AlienGoal, AlienSpawnPoint, CurrentTile, Floor, Wall};
 use crate::general::events::map_events::{LoadMap, SpawnPlayer};
+use crate::general::resources::map_resources::MapGraph;
 
 flags! {
     enum FileFlags: u16 {
@@ -36,7 +38,7 @@ flags! {
         Pickup = 32, //32
         AlienSpawnPoint = 64, //64
         AlienGoal = 128, //128
-        PlayerSpawn = 256, //256
+        PlayerSpawn = 256, //256,
         WallNorthEast = (TileFlags::WallNorth | TileFlags::WallEast).bits(),
         WallEastSouth = (TileFlags::WallEast | TileFlags::WallSouth).bits(),
         WallSouthWest = (TileFlags::WallSouth | TileFlags::WallWest).bits(),
@@ -50,9 +52,6 @@ flags! {
     }
 }
 
-/*
-
- */
 pub struct MapTile {
     features: FlagSet<TileFlags>,
     x: i32,
@@ -79,6 +78,7 @@ pub fn load_map_one(
 
 
 pub fn map_loader(
+    mut map_graph: ResMut<MapGraph>,
     mut load_map_event_reader: EventReader<LoadMap>,
     mut spawn_player_event_writer: EventWriter<SpawnPlayer>,
     mut commands: Commands,
@@ -90,6 +90,7 @@ pub fn map_loader(
         let tile_width = 32.0 * tile_unit;
         let wall_height = 19.0 * tile_unit;
         let tile_depth = 1.0 * tile_unit;
+
         let m = [
             [17, 1, 1, 1, 1, 1, 1, 1, 5],
             [1, 1, 1, 1, 1, 1, 1, 1, 1],
@@ -101,6 +102,9 @@ pub fn map_loader(
             [1, 1, 1, 1, 1, 1, 1, 1, 1],
             [9, 1, 1, 1, 1, 1, 1, 1, 1],
         ];
+        let rows = m.len();
+        let cols = m[0].len();
+        map_graph.grid = Grid::new(cols, rows);
         // let m = [
         //     [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
         //     [0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -126,6 +130,7 @@ pub fn map_loader(
                 let mut flag_val: FlagSet<TileFlags> = TileFlags::Floor.into();
                 //Fix border tiles
                 if *t != 0 {
+                    map_graph.grid.add_vertex((column, row));
                     if column == 0 {
                         flag_val |= TileFlags::WallWest;
                     }
@@ -179,6 +184,10 @@ pub fn map_loader(
                 }
             }
         }
+
+        //This will make the grid ready for some a* path-finding!
+        map_graph.grid.add_borders();
+
         let map = MapDef {
             x: 0,
             y: 0,
@@ -296,9 +305,10 @@ pub fn map_loader(
                 ));
             }
             if tile.features.contains(TileFlags::AlienGoal) {
+                map_graph.goal = (tile.x as usize, tile.y as usize);
                 commands.spawn((
                     Name::from(format!("Alien Goal {}:{}", tile.x, tile.y)),
-                    AlienGoal {},
+                    AlienGoal::new(tile.x as usize, tile.y as usize), //ooh, we need to handle this in the future...
                     SceneBundle {
                         scene: asset_server.load("player.glb#Scene0"),
                         ..Default::default()
@@ -316,5 +326,13 @@ pub fn map_loader(
                 });
             }
         }
+    }
+}
+
+pub fn current_tile_system(
+    mut current_tile_query: Query<(&Position, &mut CurrentTile)>
+) {
+    for (position, mut current_tile) in current_tile_query.iter_mut() {
+        current_tile.tile = ( ((position.0.x / 2.0) as usize), ((position.0.z / 2.0) as usize));
     }
 }

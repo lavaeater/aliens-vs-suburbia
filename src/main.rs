@@ -6,6 +6,7 @@ use bevy::time::{Fixed, Time};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_xpbd_3d::plugins::{PhysicsPlugins};
 use big_brain::BigBrainPlugin;
+use pathfinding::grid::Grid;
 use crate::player::systems::spawn_players::spawn_players;
 use camera::systems::spawn_camera::spawn_camera;
 use general::events::map_events::{LoadMap, SpawnAlien, SpawnPlayer};
@@ -19,11 +20,12 @@ use crate::camera::systems::camera_follow::camera_follow;
 use crate::enemy::components::general::AlienCounter;
 use crate::enemy::systems::spawn_aliens::{alien_spawner_system, spawn_aliens};
 use crate::general::components::Health;
+use crate::general::resources::map_resources::MapGraph;
 use crate::general::systems::dynamic_movement_system::dynamic_movement;
 use crate::general::systems::collision_handling_system::collision_handling_system;
 use crate::general::systems::kinematic_movement_system::kinematic_movement;
 use crate::general::systems::lights_systems::spawn_lights;
-use crate::general::systems::map_systems::{load_map_one, map_loader};
+use crate::general::systems::map_systems::{current_tile_system, load_map_one, map_loader};
 use crate::general::systems::throwing_system::throwing;
 use crate::player::components::general::Controller;
 use crate::player::systems::keyboard_control::keyboard_control;
@@ -47,6 +49,7 @@ fn main() {
         .register_type::<AvoidWallsData>()
         .register_type::<ApproachAndAttackPlayerData>()
         .insert_resource(AlienCounter::new(50))
+        .insert_resource(MapGraph { grid: Grid::new(0,0)})
         .insert_resource(Msaa::Sample4)
         .insert_resource(Time::<Fixed>::from_seconds(0.05))
         .insert_resource(Msaa::Sample4)
@@ -70,6 +73,7 @@ fn main() {
         .add_systems(
             Update,
             (
+                current_tile_system,
                 alien_spawner_system,
                 map_loader,
                 spawn_players,

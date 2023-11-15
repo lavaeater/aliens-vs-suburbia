@@ -12,7 +12,7 @@ use crate::ai::components::avoid_wall_components::{AvoidWallsAction, AvoidWallSc
 use crate::ai::components::move_forward_components::{MoveForwardAction, MoveForwardScore};
 use crate::enemy::components::general::{Alien, AlienCounter, AlienSightShape};
 use crate::general::components::{Attack, Health, HittableTarget, Layer};
-use crate::general::components::map_components::{AlienSpawnPoint, CoolDown};
+use crate::general::components::map_components::{AlienSpawnPoint, CoolDown, CurrentTile};
 use crate::general::events::map_events::SpawnAlien;
 use crate::player::components::general::{Controller, DynamicMovement};
 
@@ -88,6 +88,7 @@ pub fn spawn_aliens(
                 LockedAxes::new().lock_rotation_x().lock_rotation_z(),
                 CollisionLayers::new([Layer::Alien], [Layer::Ball, Layer::Wall, Layer::Floor, Layer::Alien, Layer::Player, Layer::AlienGoal]),
             )).insert((
+            CurrentTile::default(),
             Alien {},
             AvoidWallsData::new(2.5, 0.75, 0.75),
             ApproachAndAttackPlayerData::default(),
