@@ -13,7 +13,7 @@ use crate::ai::components::move_forward_components::{MoveForwardAction, MoveForw
 use crate::enemy::components::general::{Alien, AlienSightShape};
 use crate::general::components::{Attack, Health, HittableTarget, Layer};
 use crate::general::components::map_components::{AlienSpawnPoint, CoolDown};
-use crate::general::systems::map_systems::SpawnAlien;
+use crate::general::events::map_events::SpawnAlien;
 use crate::player::components::general::{Controller, DynamicMovement};
 
 pub fn alien_spawner_system(
@@ -81,7 +81,7 @@ pub fn spawn_aliens(
                 //AsyncCollider(ComputedCollider::ConvexHull),
                 Collider::cuboid(0.5, 0.5, 0.45),
                 LockedAxes::new().lock_rotation_x().lock_rotation_z(),
-                CollisionLayers::new([Layer::Alien], [Layer::Ball, Layer::Wall, Layer::Floor, Layer::Alien, Layer::Player, Layer::AlienSpawnPoint, Layer::AlienGoal]),
+                CollisionLayers::new([Layer::Alien], [Layer::Ball, Layer::Wall, Layer::Floor, Layer::Alien, Layer::Player, Layer::AlienGoal]),
             )).insert((
             Alien {},
             AvoidWallsData::new(1.5),

@@ -1,16 +1,17 @@
 use bevy::app::{App, FixedUpdate, PluginGroup, PreUpdate, Startup, Update};
 use bevy::{DefaultPlugins, log};
 use bevy::log::LogPlugin;
-use bevy::prelude::{Msaa};
+use bevy::prelude::Msaa;
 use bevy::time::{Fixed, Time};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use bevy_xpbd_3d::plugins::{PhysicsPlugins};
-use big_brain::{BigBrainPlugin};
+use bevy_xpbd_3d::plugins::PhysicsPlugins;
+use big_brain::BigBrainPlugin;
 use crate::player::systems::spawn_players::spawn_players;
 use camera::systems::spawn_camera::spawn_camera;
+use general::events::map_events::{LoadMap, SpawnAlien, SpawnPlayer};
 use crate::ai::components::approach_and_attack_player_components::ApproachAndAttackPlayerData;
 use crate::ai::components::avoid_wall_components::AvoidWallsData;
-use crate::ai::systems::approach_and_attack_player_systems::{approach_player_action_system, approach_and_attack_player_scorer_system, attack_player_action_system, can_i_see_player_system};
+use crate::ai::systems::approach_and_attack_player_systems::{approach_and_attack_player_scorer_system, approach_player_action_system, attack_player_action_system, can_i_see_player_system};
 use crate::ai::systems::avoid_walls_systems::{avoid_walls_action_system, avoid_walls_data_system, avoid_walls_scorer_system};
 use crate::ai::systems::move_forward_systems::{move_forward_action_system, move_forward_scorer_system};
 use crate::camera::components::camera::CameraOffset;
@@ -36,6 +37,9 @@ pub const METERS_PER_PIXEL: f64 = 16.0;
 
 fn main() {
     App::new()
+        .add_event::<LoadMap>()
+        .add_event::<SpawnAlien>()
+        .add_event::<SpawnPlayer>()
         .register_type::<CameraOffset>()
         .register_type::<Controller>()
         .register_type::<Health>()

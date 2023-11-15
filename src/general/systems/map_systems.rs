@@ -1,15 +1,15 @@
 use bevy::asset::AssetServer;
 use bevy::core::Name;
 use bevy::math::{Quat, Vec3};
-use bevy::prelude::{Commands, Event, EventReader, EventWriter, Res, Transform};
+use bevy::prelude::{Commands, EventReader, EventWriter, Res};
 use bevy::scene::SceneBundle;
 use bevy_xpbd_3d::components::CollisionLayers;
-
 use bevy_xpbd_3d::math::PI;
 use bevy_xpbd_3d::prelude::{Collider, Position, RigidBody, Rotation};
 use flagset::{flags, FlagSet};
 use crate::general::components::Layer;
 use crate::general::components::map_components::{AlienGoal, AlienSpawnPoint, Floor, Wall};
+use crate::general::events::map_events::{LoadMap, SpawnPlayer};
 
 flags! {
     enum FileFlags: u16 {
@@ -69,20 +69,7 @@ pub struct MapDef {
     pub x: i32,
     pub y: i32,
     pub tiles: Vec<MapTile>,
-}
-
-#[derive(Event)]
-pub struct LoadMap {} //No data needed now
-
-#[derive(Event)]
-pub struct SpawnPlayer {
-    pub position: Vec3,
-}
-
-#[derive(Event)]
-pub struct SpawnAlien {
-    pub position: Vec3,
-}
+} //No data needed now
 
 pub fn load_map_one(
     mut send_event: EventWriter<LoadMap>
@@ -304,8 +291,8 @@ pub fn map_loader(
                     },
                     RigidBody::Static,
                     Collider::cuboid(0.5, 0.5, 0.45),
-                    Position::from(Vec3::new(tile_width * tile.x as f32, -wall_height, tile_width * tile.y as f32 - tile_width / 2.0)),
-                    CollisionLayers::new([Layer::AlienSpawnPoint], [Layer::Ball, Layer::Alien, Layer::Player]),
+                    Position::from(Vec3::new(tile_width * tile.x as f32, -wall_height, tile_width * tile.y as f32)),
+                    CollisionLayers::new([Layer::AlienSpawnPoint], [Layer::Ball, Layer::Player]),
                 ));
             }
             if tile.features.contains(TileFlags::AlienGoal) {
@@ -325,7 +312,7 @@ pub fn map_loader(
 
             if tile.features.contains(TileFlags::PlayerSpawn) {
                 spawn_player_event_writer.send(SpawnPlayer {
-                    position: Vec3::new(tile_width * tile.x as f32, -wall_height, tile_width * tile.y as f32 - tile_width / 2.0),
+                    position: Vec3::new(tile_width * tile.x as f32 + tile_width / 2.0, -wall_height, tile_width * tile.y as f32 + tile_width / 2.0),
                 });
             }
         }
