@@ -24,7 +24,11 @@ pub fn keyboard_control(
                         controller.directions.insert(ControlDirection::Backward);
                     }
                     Some(KeyCode::Space) => {
-                        controller.triggers.remove(&Triggers::Throw);
+                        if controller.triggers.contains(&Triggers::Throw) {
+                            controller.triggers.remove(&Triggers::Throw);
+                        } else {
+                            controller.triggers.insert(Triggers::Throw);
+                        }
                     }
                     _ => {}
                 },
@@ -40,9 +44,6 @@ pub fn keyboard_control(
                     }
                     Some(KeyCode::S) => {
                         controller.directions.remove(&ControlDirection::Backward);
-                    }
-                    Some(KeyCode::Space) => {
-                        controller.triggers.insert(Triggers::Throw);
                     }
                     _ => {}
                 }
