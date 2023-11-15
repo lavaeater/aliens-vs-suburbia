@@ -7,7 +7,7 @@ use bevy_xpbd_3d::prelude::Position;
 use big_brain::actions::Steps;
 use big_brain::pickers::FirstToScore;
 use big_brain::thinker::Thinker;
-use crate::ai::components::approach_and_attack_player_components::{ApproachPlayerAction, ApproachAndAttackPlayerData, ApproachAndAttackPlayerScore, AttackPlayerAction};
+use crate::ai::components::approach_and_attack_player_components::{ApproachAndAttackPlayerData};
 use crate::ai::components::avoid_wall_components::{AvoidWallsAction, AvoidWallScore, AvoidWallsData};
 use crate::ai::components::move_forward_components::{MoveForwardAction, MoveForwardScore};
 use crate::enemy::components::general::{Alien, AlienCounter, AlienSightShape};
