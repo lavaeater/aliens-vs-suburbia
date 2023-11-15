@@ -23,6 +23,7 @@ pub fn move_forward_action_system(
                 // Look up the actor's position.
                 if let Ok(mut controller) = controller_query.get_mut(actor.0) {
                     controller.rotations.clear();
+                    controller.speed = controller.max_speed;
                     controller.directions.insert(ControlDirection::Forward);
                 }
             }
@@ -31,11 +32,11 @@ pub fn move_forward_action_system(
                 // You don't need to terminate immediately, by the way, this is only a flag that
                 // the cancellation has been requested. If the actor is balancing on a tightrope,
                 // for instance, you may let them walk off before ending the action.
-                if let Ok(mut controller) = controller_query.get_mut(actor.0) {
-                    controller.rotations.clear();
-                    controller.directions.clear();
-                    // *action_state = ActionState::Success;
-                }
+                // if let Ok(mut controller) = controller_query.get_mut(actor.0) {
+                //     controller.rotations.clear();
+                //     controller.directions.clear();
+                //     // *action_state = ActionState::Success;
+                // }
                 *action_state = ActionState::Failure;
             }
             _ => {}

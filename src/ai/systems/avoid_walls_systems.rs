@@ -8,6 +8,7 @@ use bevy::math::{EulerRot, Quat, Vec3};
 use bevy::time::Time;
 use crate::ai::components::avoid_wall_components::{AvoidWallsAction, AvoidWallScore, AvoidWallsData};
 use crate::general::components::Layer;
+use crate::general::components::map_components::CoolDown;
 use crate::player::components::general::{Controller, ControlRotation};
 
 pub fn avoid_walls_scorer_system(
@@ -16,12 +17,14 @@ pub fn avoid_walls_scorer_system(
 ) {
     for (Actor(actor), mut score) in &mut query {
         if let Ok(mut avoid_wall_data) = avoid_wall_data_query.get_mut(*actor) {
-            if avoid_wall_data.forward_distance < avoid_wall_data.max_distance {
+            if avoid_wall_data.forward_distance < avoid_wall_data.max_forward_distance ||
+                avoid_wall_data.left_distance < avoid_wall_data.max_left_distance ||
+                avoid_wall_data.right_distance < avoid_wall_data.max_right_distance {
                 score.set(0.91);
             } else {
                 score.set(0.0);
             }
-            avoid_wall_data.proto_val =(avoid_wall_data.forward_distance.min(avoid_wall_data.max_distance) / avoid_wall_data.max_distance).recip();
+            avoid_wall_data.proto_val =(avoid_wall_data.forward_distance.min(avoid_wall_data.max_forward_distance) / avoid_wall_data.max_forward_distance).recip();
             debug!("AvoidWallScore: {}", score.get());
         }
     }
@@ -38,14 +41,14 @@ pub fn avoid_walls_data_system(
         let left = left_rot.mul_vec3(forward.clone()); //left
         let right = right_rot.mul_vec3(forward.clone()); //right
 
-        avoid_wall_data.forward_distance = avoid_wall_data.max_distance;
-        avoid_wall_data.left_distance = avoid_wall_data.max_distance;
-        avoid_wall_data.right_distance = avoid_wall_data.max_distance;
+        avoid_wall_data.forward_distance = avoid_wall_data.max_forward_distance;
+        avoid_wall_data.left_distance = avoid_wall_data.max_left_distance;
+        avoid_wall_data.right_distance = avoid_wall_data.max_right_distance;
 
         if let Some(hit) = spatial_query.cast_ray(
             position.0, // Origin
             forward,// Direction
-            avoid_wall_data.max_distance, // Maximum time of impact (travel distance)
+            avoid_wall_data.max_forward_distance, // Maximum time of impact (travel distance)
             true, // Does the ray treat colliders as "solid"
             SpatialQueryFilter::new().with_masks([Layer::Wall]), // Query for players
         ) {
@@ -55,7 +58,7 @@ pub fn avoid_walls_data_system(
         if let Some(hit) = spatial_query.cast_ray(
             position.0, // Origin
             left,// Direction
-            avoid_wall_data.max_distance, // Maximum time of impact (travel distance)
+            avoid_wall_data.max_left_distance, // Maximum time of impact (travel distance)
             true, // Does the ray treat colliders as "solid"
             SpatialQueryFilter::new().with_masks([Layer::Wall]), // Query for players
         ) {
@@ -65,7 +68,7 @@ pub fn avoid_walls_data_system(
         if let Some(hit) = spatial_query.cast_ray(
             position.0, // Origin
             right,// Direction
-            avoid_wall_data.max_distance, // Maximum time of impact (travel distance)
+            avoid_wall_data.max_right_distance, // Maximum time of impact (travel distance)
             true, // Does the ray treat colliders as "solid"
             SpatialQueryFilter::new().with_masks([Layer::Wall]), // Query for players
         ) {
@@ -92,28 +95,22 @@ pub fn avoid_walls_action_system(
                 // We don't really need any initialization code here, since the queries are cheap enough.
                 *action_state = ActionState::Executing;
             }
-            ActionState::Executing => {
-                // Look up the actor's position.
-                if let Ok((mut controller, mut avoid_walls_data)) = actor_query.get_mut(actor.0) {
-                    avoid_walls_data.rotation_timer -= res.delta_seconds();
-                    if avoid_walls_data.rotation_timer < 0.0 {
-                        debug!("We switch rotation direction!");
-                        debug!("Direction was: {:?}", avoid_walls_data.rotation_direction);
-                        avoid_walls_data.rotation_timer = avoid_walls_data.rotation_timer_max;
-                        avoid_walls_data.rotation_direction = if avoid_walls_data.right_distance < avoid_walls_data.left_distance
-                        {
-                            ControlRotation::Left
-                        } else {
-                            ControlRotation::Right
-                        };
-                        debug!("Direction is now: {:?}", avoid_walls_data.rotation_direction);
-                    }
-
-                    controller.rotations.clear();
-                    controller.rotations.insert(avoid_walls_data.rotation_direction);
-                    controller.directions.clear();
+            ActionState::Executing => if let Ok((mut controller, mut avoid_walls_data)) = actor_query.get_mut(actor.0) {
+                if avoid_walls_data.left_distance < avoid_walls_data.max_left_distance {
+                    avoid_walls_data.rotation_direction = ControlRotation::Right;
+                } else if avoid_walls_data.right_distance < avoid_walls_data.max_right_distance {
+                    avoid_walls_data.rotation_direction = ControlRotation::Left;
+                } else {
+                    avoid_walls_data.cool_down(res.delta_seconds());
                 }
-            }
+
+                controller.rotations.clear();
+                controller.rotations.insert(avoid_walls_data.rotation_direction);
+                let speed_factor = avoid_walls_data.forward_distance / avoid_walls_data.max_forward_distance;
+                controller.speed = controller.max_speed * speed_factor;
+
+                //*action_state = ActionState::Success;
+            },
             ActionState::Cancelled => {
                 // Always treat cancellations, or we might keep doing this forever!
                 // You don't need to terminate immediately, by the way, this is only a flag that

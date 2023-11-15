@@ -16,7 +16,7 @@ pub struct AlienSpawnPoint {
 impl Default for AlienSpawnPoint {
     fn default() -> Self {
         Self {
-            spawn_rate_per_second: 0.3,
+            spawn_rate_per_second: 1.0,
             spawn_cool_down: 0.0
         }
     }

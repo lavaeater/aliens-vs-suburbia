@@ -21,6 +21,7 @@ pub fn spawn_players(
             KeyboardController {},
             Controller {
                 speed: 3.0,
+                max_speed: 3.0,
                 turn_speed: 3.0,
                 ..default()
             },
@@ -34,7 +35,7 @@ pub fn spawn_players(
             AngularDamping(1.0),
             LinearDamping(0.9),
             RigidBody::Dynamic,
-            Collider::cuboid(0.5, 0.5, 0.45),
+            Collider::capsule(0.25, 0.25),
             LockedAxes::new().lock_rotation_x().lock_rotation_z(),
             CollisionLayers::new([Layer::Player], [Layer::Ball, Layer::Wall, Layer::Floor, Layer::Alien, Layer::Player, Layer::AlienSpawnPoint, Layer::AlienGoal]),
             Health::default(),

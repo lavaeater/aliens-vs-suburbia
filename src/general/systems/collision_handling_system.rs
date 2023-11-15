@@ -1,11 +1,13 @@
-use bevy::prelude::{Commands, DespawnRecursiveExt, EventReader, Query};
+use bevy::prelude::{Commands, DespawnRecursiveExt, EventReader, Has, Query, ResMut};
 use bevy_xpbd_3d::prelude::Collision;
+use crate::enemy::components::general::{Alien, AlienCounter};
 use crate::general::components::{Ball, Health, HittableTarget};
 
 pub fn collision_handling_system(
+    mut alien_counter: ResMut<AlienCounter>,
     mut collision_event_reader: EventReader<Collision>,
     mut ball_query: Query<&mut Ball>,
-    mut hittable_target_query: Query<(&mut Health, &HittableTarget)>,
+    mut hittable_target_query: Query<(&mut Health, &HittableTarget, Has<Alien>)>,
     mut commands: Commands,
 ) {
     for Collision(contacts) in collision_event_reader.read() {
@@ -28,11 +30,14 @@ pub fn collision_handling_system(
             }
 
             let hittable_entity = if ball_is_first { contacts.entity2 } else { contacts.entity1 };
-            if let Ok((mut alien_health, _)) = hittable_target_query.get_mut(hittable_entity) {
+            if let Ok((mut target_health, _, is_alien)) = hittable_target_query.get_mut(hittable_entity) {
                 let despawn_the_ball = if ball_is_first { contacts.entity1 } else { contacts.entity2 };
                 commands.entity(despawn_the_ball).despawn_recursive();
-                alien_health.health -= 10;
-                if alien_health.health <= 0 {
+                target_health.health -= 10;
+                if target_health.health <= 0 {
+                    if is_alien {
+                        alien_counter.count -= 1;
+                    }
                     commands.entity(hittable_entity).despawn_recursive();
                 }
             }

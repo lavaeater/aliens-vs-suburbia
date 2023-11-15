@@ -4,7 +4,7 @@ use bevy::log::LogPlugin;
 use bevy::prelude::Msaa;
 use bevy::time::{Fixed, Time};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use bevy_xpbd_3d::plugins::PhysicsPlugins;
+use bevy_xpbd_3d::plugins::{PhysicsDebugPlugin, PhysicsPlugins};
 use big_brain::BigBrainPlugin;
 use crate::player::systems::spawn_players::spawn_players;
 use camera::systems::spawn_camera::spawn_camera;
@@ -16,6 +16,7 @@ use crate::ai::systems::avoid_walls_systems::{avoid_walls_action_system, avoid_w
 use crate::ai::systems::move_forward_systems::{move_forward_action_system, move_forward_scorer_system};
 use crate::camera::components::camera::CameraOffset;
 use crate::camera::systems::camera_follow::camera_follow;
+use crate::enemy::components::general::AlienCounter;
 use crate::enemy::systems::spawn_aliens::{alien_spawner_system, spawn_aliens};
 use crate::general::components::Health;
 use crate::general::systems::dynamic_movement_system::dynamic_movement;
@@ -45,17 +46,18 @@ fn main() {
         .register_type::<Health>()
         .register_type::<AvoidWallsData>()
         .register_type::<ApproachAndAttackPlayerData>()
+        .insert_resource(AlienCounter::new(100))
         .insert_resource(Msaa::Sample4)
         .insert_resource(Time::<Fixed>::from_seconds(0.05))
         .insert_resource(Msaa::Sample4)
-        .add_plugins(DefaultPlugins.set(LogPlugin {
-            // Use `RUST_LOG=big_brain=trace,thirst=trace cargo run --example
-            // thirst --features=trace` to see extra tracing output.
-            filter: "wgpu_core=warn,wgpu_hal=warn".into(),
-            level: log::Level::INFO,
-        }))
+        .add_plugins(
+            DefaultPlugins.set(
+                LogPlugin {
+                    filter: "wgpu_core=warn,wgpu_hal=warn".into(),
+                    level: log::Level::INFO,
+                }))
         .add_plugins(PhysicsPlugins::default())
-        // .add_plugins(PhysicsDebugPlugin::default())
+        .add_plugins(PhysicsDebugPlugin::default())
         .add_plugins(WorldInspectorPlugin::new())
         .add_plugins(BigBrainPlugin::new(PreUpdate))
         .add_systems(
