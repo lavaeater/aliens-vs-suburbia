@@ -16,7 +16,7 @@ pub struct AlienSightShape {
 impl Default for AlienSightShape {
     fn default() -> Self {
         AlienSightShape {
-            shape: Collider::cone(10.0, 10.0),
+            shape: Collider::cone(5.0, 4.0),
             rotation: Quat::from_euler(EulerRot::YXZ, 0.0, -90.0, 0.0),
             range: 5.0,
         }
