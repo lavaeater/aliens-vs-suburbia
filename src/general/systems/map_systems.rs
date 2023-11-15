@@ -1,7 +1,7 @@
 use bevy::asset::AssetServer;
 use bevy::core::Name;
 use bevy::math::{Quat, Vec3};
-use bevy::prelude::{Commands, Res, Transform};
+use bevy::prelude::{Commands, Event, EventReader, EventWriter, Res, Transform};
 use bevy::scene::SceneBundle;
 use bevy_xpbd_3d::components::CollisionLayers;
 
@@ -9,8 +9,7 @@ use bevy_xpbd_3d::math::PI;
 use bevy_xpbd_3d::prelude::{Collider, Position, RigidBody, Rotation};
 use flagset::{flags, FlagSet};
 use crate::general::components::Layer;
-use crate::general::components::map_components::{AlienGoal, AlienSpawnPoint, Floor, PlayerSpawnPoint, Wall};
-use crate::general::systems::map_systems::FileFlags::PlayerSpawn;
+use crate::general::components::map_components::{AlienGoal, AlienSpawnPoint, Floor, Wall};
 
 flags! {
     enum FileFlags: u16 {
@@ -72,241 +71,263 @@ pub struct MapDef {
     pub tiles: Vec<MapTile>,
 }
 
-pub fn spawn_map(
+#[derive(Event)]
+pub struct LoadMap {} //No data needed now
+
+#[derive(Event)]
+pub struct SpawnPlayer {
+    pub position: Vec3,
+}
+
+#[derive(Event)]
+pub struct SpawnAlien {
+    pub position: Vec3,
+}
+
+pub fn load_map_one(
+    mut send_event: EventWriter<LoadMap>
+) {
+    send_event.send(LoadMap {});
+}
+
+
+pub fn map_loader(
+    mut load_map_event_reader: EventReader<LoadMap>,
+    mut spawn_player_event_writer: EventWriter<SpawnPlayer>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
-    let tile_size = 2.0;
-    let tile_unit = tile_size / 32.0;
-    let tile_width = 32.0 * tile_unit;
-    let wall_height = 19.0 * tile_unit;
-    let tile_depth = 1.0 * tile_unit;
-    let m = [
-        [17, 1, 1, 1, 1, 1, 1, 1, 5],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [9, 1, 1, 1, 1, 1, 1, 1, 1],
-    ];
-    // let m = [
-    //     [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-    //     [0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-    //     [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
-    //     [0, 1, 1, 0, 0, 1, 1, 3, 1, 1, 1, 1, 1, 0, 0, 0, 0],
-    //     [0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
-    //     [0, 0, 1, 1, 1, 5, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
-    //     [0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
-    //     [0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
-    //     [1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
-    //     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    //     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    // ];
-    let checks = [
-        [-1, 0],
-        [1, 0],
-        [0, -1],
-        [0, 1]
-    ];
-    let mut tiles: Vec<MapTile> = Vec::new();
-    for (row, rows) in m.iter().enumerate() {
-        for (column, t) in rows.iter().enumerate() {
-            let mut flag_val: FlagSet<TileFlags> = TileFlags::Floor.into();
-            //Fix border tiles
-            if *t != 0 {
-                if column == 0 {
-                    flag_val |= TileFlags::WallWest;
-                }
-                if column == rows.len() - 1 {
-                    flag_val |= TileFlags::WallEast;
-                }
-                if row == 0 {
-                    flag_val |= TileFlags::WallNorth;
-                }
-                if row == m.len() - 1 {
-                    flag_val |= TileFlags::WallSouth;
-                }
+    for _load_map in load_map_event_reader.read() {
+        let tile_size = 2.0;
+        let tile_unit = tile_size / 32.0;
+        let tile_width = 32.0 * tile_unit;
+        let wall_height = 19.0 * tile_unit;
+        let tile_depth = 1.0 * tile_unit;
+        let m = [
+            [17, 1, 1, 1, 1, 1, 1, 1, 5],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [9, 1, 1, 1, 1, 1, 1, 1, 1],
+        ];
+        // let m = [
+        //     [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        //     [0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        //     [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+        //     [0, 1, 1, 0, 0, 1, 1, 3, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+        //     [0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+        //     [0, 0, 1, 1, 1, 5, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+        //     [0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
+        //     [0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
+        //     [1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
+        //     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        //     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        // ];
+        let checks = [
+            [-1, 0],
+            [1, 0],
+            [0, -1],
+            [0, 1]
+        ];
+        let mut tiles: Vec<MapTile> = Vec::new();
+        for (row, rows) in m.iter().enumerate() {
+            for (column, t) in rows.iter().enumerate() {
+                let mut flag_val: FlagSet<TileFlags> = TileFlags::Floor.into();
+                //Fix border tiles
+                if *t != 0 {
+                    if column == 0 {
+                        flag_val |= TileFlags::WallWest;
+                    }
+                    if column == rows.len() - 1 {
+                        flag_val |= TileFlags::WallEast;
+                    }
+                    if row == 0 {
+                        flag_val |= TileFlags::WallNorth;
+                    }
+                    if row == m.len() - 1 {
+                        flag_val |= TileFlags::WallSouth;
+                    }
 
-                //Check neighbours
-                for check in checks.iter() {
-                    let column_check = column as i32 + check[0];
-                    let row_check = row as i32 + check[1];
-                    if column_check >= 0 && column_check < rows.len() as i32 {
-                        if column_check < column as i32 && m[row][column_check as usize] == 0 {
-                            flag_val |= TileFlags::WallWest;
+                    //Check neighbours
+                    for check in checks.iter() {
+                        let column_check = column as i32 + check[0];
+                        let row_check = row as i32 + check[1];
+                        if column_check >= 0 && column_check < rows.len() as i32 {
+                            if column_check < column as i32 && m[row][column_check as usize] == 0 {
+                                flag_val |= TileFlags::WallWest;
+                            }
+                            if column_check > column as i32 && m[row][column_check as usize] == 0 {
+                                flag_val |= TileFlags::WallEast;
+                            }
                         }
-                        if column_check > column as i32 && m[row][column_check as usize] == 0 {
-                            flag_val |= TileFlags::WallEast;
+                        if row_check >= 0 && row_check < m.len() as i32 {
+                            if row_check < row as i32 && m[row_check as usize][column] == 0 {
+                                flag_val |= TileFlags::WallNorth;
+                            }
+                            if row_check > row as i32 && m[row_check as usize][column] == 0 {
+                                flag_val |= TileFlags::WallSouth;
+                            }
                         }
                     }
-                    if row_check >= 0 && row_check < m.len() as i32 {
-                        if row_check < row as i32 && m[row_check as usize][column] == 0 {
-                            flag_val |= TileFlags::WallNorth;
-                        }
-                        if row_check > row as i32 && m[row_check as usize][column] == 0 {
-                            flag_val |= TileFlags::WallSouth;
-                        }
+                    if *t == 3 {
+                        flag_val |= TileFlags::Pickup;
                     }
-                }
-                if *t == 3 {
-                    flag_val |= TileFlags::Pickup;
-                }
 
-                if *t == 5 {
-                    flag_val |= TileFlags::AlienSpawnPoint;
-                }
+                    if *t == 5 {
+                        flag_val |= TileFlags::AlienSpawnPoint;
+                    }
 
-                if *t == 9 {
-                    flag_val |= TileFlags::AlienGoal;
-                }
+                    if *t == 9 {
+                        flag_val |= TileFlags::AlienGoal;
+                    }
 
-                if *t == 17 {
-                    flag_val |= TileFlags::PlayerSpawn;
+                    if *t == 17 {
+                        flag_val |= TileFlags::PlayerSpawn;
+                    }
+                    tiles.push(MapTile::new(column as i32, row as i32, flag_val));
                 }
-                tiles.push(MapTile::new(column as i32, row as i32, flag_val));
             }
         }
-    }
-    let map = MapDef {
-        x: 0,
-        y: 0,
-        tiles,
-    };
+        let map = MapDef {
+            x: 0,
+            y: 0,
+            tiles,
+        };
 
-    for tile in map.tiles.iter() {
-        if tile.features.contains(TileFlags::Floor) {
-            commands.spawn((
-                Name::from(format!("Floor {}:{}", tile.x, tile.y)),
-                Floor {},
-                SceneBundle {
-                    scene: asset_server.load("floor_fab.glb#Scene0"),
-                    ..Default::default()
-                },
-                RigidBody::Static,
-                Collider::cuboid(tile_width, tile_depth, tile_width),
-                Position::from(Vec3::new(tile_width * tile.x as f32, -2.0, tile_width * tile.y as f32)),
-                CollisionLayers::new([Layer::Floor], [Layer::Ball, Layer::Alien, Layer::Player])
-            ));
-        }
-        if tile.features.contains(TileFlags::WallEast) { //Change to WallEast
-            commands.spawn((
-                Name::from(format!("Wall East {}:{}", tile.x, tile.y)),
-                Wall {},
-                SceneBundle {
-                    scene: asset_server.load("wall_fab.glb#Scene0"),
-                    ..Default::default()
-                },
-                RigidBody::Static,
-                Collider::cuboid(tile_width, wall_height, tile_depth),
-                Position::from(Vec3::new(tile_width * tile.x as f32 + tile_width / 2.0 - 2.0 / 16.0, -wall_height, tile_width * tile.y as f32)),
-                Rotation::from(Quat::from_euler(
-                    bevy::math::EulerRot::YXZ,
-                    PI / 2.0,
-                    0.0,
-                    0.0,
-                )),
-                CollisionLayers::new([Layer::Wall], [Layer::Ball, Layer::Alien, Layer::Player]),
-            ));
-        }
-        if tile.features.contains(TileFlags::WallWest) {
-            commands.spawn((
-                Name::from(format!("Wall West {}:{}", tile.x, tile.y)),
-                Wall {},
-                SceneBundle {
-                    scene: asset_server.load("wall_fab.glb#Scene0"),
-                    ..Default::default()
-                },
-                RigidBody::Static,
-                Collider::cuboid(tile_width, wall_height, tile_depth),
-                Position::from(Vec3::new(tile_width * tile.x as f32 - tile_width / 2.0, -wall_height, tile_width * tile.y as f32)),
-                Rotation::from(Quat::from_euler(
-                    bevy::math::EulerRot::YXZ,
-                    PI / 2.0,
-                    0.0,
-                    0.0,
-                )),
-                CollisionLayers::new([Layer::Wall], [Layer::Ball, Layer::Alien, Layer::Player]),
-            ));
-        }
-        if tile.features.contains(TileFlags::WallSouth) {
-            commands.spawn((
-                Name::from(format!("Wall South {}:{}", tile.x, tile.y)),
-                Wall {},
-                SceneBundle {
-                    scene: asset_server.load("wall_fab.glb#Scene0"),
-                    ..Default::default()
-                },
-                RigidBody::Static,
-                Collider::cuboid(tile_width, wall_height, tile_depth),
-                Position::from(Vec3::new(tile_width * tile.x as f32, -wall_height, tile_width * tile.y as f32 + tile_width / 2.0)),
-                Rotation::from(Quat::from_euler(
-                    bevy::math::EulerRot::YXZ,
-                    0.0,
-                    0.0,
-                    0.0,
-                )),
-                CollisionLayers::new([Layer::Wall], [Layer::Ball, Layer::Alien, Layer::Player]),
-            ));
-        }
-        if tile.features.contains(TileFlags::WallNorth) {
-            commands.spawn((
-                Name::from(format!("Wall North {}:{}", tile.x, tile.y)),
-                Wall {},
-                SceneBundle {
-                    scene: asset_server.load("wall_fab.glb#Scene0"),
-                    ..Default::default()
-                },
-                RigidBody::Static,
-                Collider::cuboid(tile_width, wall_height, tile_depth),
-                Position::from(Vec3::new(tile_width * tile.x as f32, -wall_height, tile_width * tile.y as f32 - tile_width / 2.0)),
-                Rotation::from(Quat::from_euler(
-                    bevy::math::EulerRot::YXZ,
-                    0.0,
-                    0.0,
-                    0.0,
-                )),
-                CollisionLayers::new([Layer::Wall], [Layer::Ball, Layer::Alien, Layer::Player]),
-            ));
-        }
+        for tile in map.tiles.iter() {
+            if tile.features.contains(TileFlags::Floor) {
+                commands.spawn((
+                    Name::from(format!("Floor {}:{}", tile.x, tile.y)),
+                    Floor {},
+                    SceneBundle {
+                        scene: asset_server.load("floor_fab.glb#Scene0"),
+                        ..Default::default()
+                    },
+                    RigidBody::Static,
+                    Collider::cuboid(tile_width, tile_depth, tile_width),
+                    Position::from(Vec3::new(tile_width * tile.x as f32, -2.0, tile_width * tile.y as f32)),
+                    CollisionLayers::new([Layer::Floor], [Layer::Ball, Layer::Alien, Layer::Player])
+                ));
+            }
+            if tile.features.contains(TileFlags::WallEast) { //Change to WallEast
+                commands.spawn((
+                    Name::from(format!("Wall East {}:{}", tile.x, tile.y)),
+                    Wall {},
+                    SceneBundle {
+                        scene: asset_server.load("wall_fab.glb#Scene0"),
+                        ..Default::default()
+                    },
+                    RigidBody::Static,
+                    Collider::cuboid(tile_width, wall_height, tile_depth),
+                    Position::from(Vec3::new(tile_width * tile.x as f32 + tile_width / 2.0 - 2.0 / 16.0, -wall_height, tile_width * tile.y as f32)),
+                    Rotation::from(Quat::from_euler(
+                        bevy::math::EulerRot::YXZ,
+                        PI / 2.0,
+                        0.0,
+                        0.0,
+                    )),
+                    CollisionLayers::new([Layer::Wall], [Layer::Ball, Layer::Alien, Layer::Player]),
+                ));
+            }
+            if tile.features.contains(TileFlags::WallWest) {
+                commands.spawn((
+                    Name::from(format!("Wall West {}:{}", tile.x, tile.y)),
+                    Wall {},
+                    SceneBundle {
+                        scene: asset_server.load("wall_fab.glb#Scene0"),
+                        ..Default::default()
+                    },
+                    RigidBody::Static,
+                    Collider::cuboid(tile_width, wall_height, tile_depth),
+                    Position::from(Vec3::new(tile_width * tile.x as f32 - tile_width / 2.0, -wall_height, tile_width * tile.y as f32)),
+                    Rotation::from(Quat::from_euler(
+                        bevy::math::EulerRot::YXZ,
+                        PI / 2.0,
+                        0.0,
+                        0.0,
+                    )),
+                    CollisionLayers::new([Layer::Wall], [Layer::Ball, Layer::Alien, Layer::Player]),
+                ));
+            }
+            if tile.features.contains(TileFlags::WallSouth) {
+                commands.spawn((
+                    Name::from(format!("Wall South {}:{}", tile.x, tile.y)),
+                    Wall {},
+                    SceneBundle {
+                        scene: asset_server.load("wall_fab.glb#Scene0"),
+                        ..Default::default()
+                    },
+                    RigidBody::Static,
+                    Collider::cuboid(tile_width, wall_height, tile_depth),
+                    Position::from(Vec3::new(tile_width * tile.x as f32, -wall_height, tile_width * tile.y as f32 + tile_width / 2.0)),
+                    Rotation::from(Quat::from_euler(
+                        bevy::math::EulerRot::YXZ,
+                        0.0,
+                        0.0,
+                        0.0,
+                    )),
+                    CollisionLayers::new([Layer::Wall], [Layer::Ball, Layer::Alien, Layer::Player]),
+                ));
+            }
+            if tile.features.contains(TileFlags::WallNorth) {
+                commands.spawn((
+                    Name::from(format!("Wall North {}:{}", tile.x, tile.y)),
+                    Wall {},
+                    SceneBundle {
+                        scene: asset_server.load("wall_fab.glb#Scene0"),
+                        ..Default::default()
+                    },
+                    RigidBody::Static,
+                    Collider::cuboid(tile_width, wall_height, tile_depth),
+                    Position::from(Vec3::new(tile_width * tile.x as f32, -wall_height, tile_width * tile.y as f32 - tile_width / 2.0)),
+                    Rotation::from(Quat::from_euler(
+                        bevy::math::EulerRot::YXZ,
+                        0.0,
+                        0.0,
+                        0.0,
+                    )),
+                    CollisionLayers::new([Layer::Wall], [Layer::Ball, Layer::Alien, Layer::Player]),
+                ));
+            }
 
-        if tile.features.contains(TileFlags::AlienSpawnPoint) {
-            commands.spawn((
-                Name::from(format!("Alien Spawn Point{}:{}", tile.x, tile.y)),
-                AlienSpawnPoint::default(),
-                SceneBundle {
-                    scene: asset_server.load("player.glb#Scene0"),
-                    ..Default::default()
-                },
-                RigidBody::Static,
-                Collider::cuboid(0.5, 0.5, 0.45),
-                Position::from(Vec3::new(tile_width * tile.x as f32, -wall_height, tile_width * tile.y as f32 - tile_width / 2.0)),
-                CollisionLayers::new([Layer::AlienSpawnPoint], [Layer::Ball, Layer::Alien, Layer::Player]),
-            ));
-        }
-        if tile.features.contains(TileFlags::AlienGoal) {
-            commands.spawn((
-                Name::from(format!("Alien Goal {}:{}", tile.x, tile.y)),
-                AlienGoal {},
-                SceneBundle {
-                    scene: asset_server.load("player.glb#Scene0"),
-                    ..Default::default()
-                },
-                RigidBody::Static,
-                Collider::cuboid(0.5, 0.5, 0.45),
-                Position::from(Vec3::new(tile_width * tile.x as f32, -wall_height, tile_width * tile.y as f32 - tile_width / 2.0)),
-                CollisionLayers::new([Layer::AlienGoal], [Layer::Ball, Layer::Alien, Layer::Player]),
-            ));
-        }
+            if tile.features.contains(TileFlags::AlienSpawnPoint) {
+                commands.spawn((
+                    Name::from(format!("Alien Spawn Point{}:{}", tile.x, tile.y)),
+                    AlienSpawnPoint::default(),
+                    SceneBundle {
+                        scene: asset_server.load("player.glb#Scene0"),
+                        ..Default::default()
+                    },
+                    RigidBody::Static,
+                    Collider::cuboid(0.5, 0.5, 0.45),
+                    Position::from(Vec3::new(tile_width * tile.x as f32, -wall_height, tile_width * tile.y as f32 - tile_width / 2.0)),
+                    CollisionLayers::new([Layer::AlienSpawnPoint], [Layer::Ball, Layer::Alien, Layer::Player]),
+                ));
+            }
+            if tile.features.contains(TileFlags::AlienGoal) {
+                commands.spawn((
+                    Name::from(format!("Alien Goal {}:{}", tile.x, tile.y)),
+                    AlienGoal {},
+                    SceneBundle {
+                        scene: asset_server.load("player.glb#Scene0"),
+                        ..Default::default()
+                    },
+                    RigidBody::Static,
+                    Collider::cuboid(0.5, 0.5, 0.45),
+                    Position::from(Vec3::new(tile_width * tile.x as f32, -wall_height, tile_width * tile.y as f32 - tile_width / 2.0)),
+                    CollisionLayers::new([Layer::AlienGoal], [Layer::Ball, Layer::Alien, Layer::Player]),
+                ));
+            }
 
-        if tile.features.contains(TileFlags::PlayerSpawn) {
-            commands.spawn((
-                Name::from(format!("Player Spawn Point{}:{}", tile.x, tile.y)),
-                Transform::from_xyz(tile_width * tile.x as f32, -wall_height, tile_width * tile.y as f32 - tile_width / 2.0),
-                PlayerSpawnPoint {},
-            ));
+            if tile.features.contains(TileFlags::PlayerSpawn) {
+                spawn_player_event_writer.send(SpawnPlayer {
+                    position: Vec3::new(tile_width * tile.x as f32, -wall_height, tile_width * tile.y as f32 - tile_width / 2.0),
+                });
+            }
         }
     }
 }

@@ -15,13 +15,13 @@ use crate::ai::systems::avoid_walls_systems::{avoid_walls_action_system, avoid_w
 use crate::ai::systems::move_forward_systems::{move_forward_action_system, move_forward_scorer_system};
 use crate::camera::components::camera::CameraOffset;
 use crate::camera::systems::camera_follow::camera_follow;
-use crate::enemy::systems::spawn_aliens::spawn_aliens;
+use crate::enemy::systems::spawn_aliens::{alien_spawner_system, spawn_aliens};
 use crate::general::components::Health;
 use crate::general::systems::dynamic_movement_system::dynamic_movement;
 use crate::general::systems::collision_handling_system::collision_handling_system;
 use crate::general::systems::kinematic_movement_system::kinematic_movement;
 use crate::general::systems::lights_systems::spawn_lights;
-use crate::general::systems::map_systems::spawn_map;
+use crate::general::systems::map_systems::{load_map_one, map_loader};
 use crate::general::systems::throwing_system::throwing;
 use crate::player::components::general::Controller;
 use crate::player::systems::keyboard_control::keyboard_control;
@@ -57,15 +57,17 @@ fn main() {
         .add_systems(
             Startup,
             (
-                spawn_map,
-                spawn_players,
-                spawn_aliens,
+                load_map_one,
                 spawn_camera,
                 spawn_lights,
             ))
         .add_systems(
             Update,
             (
+                alien_spawner_system,
+                map_loader,
+                spawn_players,
+                spawn_aliens,
                 camera_follow,
                 keyboard_control,
                 kinematic_movement,

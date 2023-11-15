@@ -7,10 +7,6 @@ pub struct Wall {}
 #[derive(Component)]
 pub struct AlienGoal {}
 
-
-#[derive(Component)]
-pub struct PlayerSpawnPoint {}
-
 #[derive(Component, Debug, Reflect)]
 pub struct AlienSpawnPoint {
     pub spawn_rate_per_second: f32,
@@ -26,7 +22,7 @@ impl Default for AlienSpawnPoint {
     }
 }
 
-trait CoolDown {
+pub trait CoolDown {
     /// Returns true if the cool down is finished
     fn cool_down(&mut self, delta: f32) -> bool;
 }
