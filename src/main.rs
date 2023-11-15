@@ -46,7 +46,7 @@ fn main() {
         .register_type::<Health>()
         .register_type::<AvoidWallsData>()
         .register_type::<ApproachAndAttackPlayerData>()
-        .insert_resource(AlienCounter::new(500))
+        .insert_resource(AlienCounter::new(50))
         .insert_resource(Msaa::Sample4)
         .insert_resource(Time::<Fixed>::from_seconds(0.05))
         .insert_resource(Msaa::Sample4)

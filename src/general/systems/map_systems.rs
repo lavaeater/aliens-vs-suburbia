@@ -292,7 +292,7 @@ pub fn map_loader(
                     RigidBody::Static,
                     Collider::cuboid(0.5, 0.5, 0.45),
                     Position::from(Vec3::new(tile_width * tile.x as f32, -wall_height, tile_width * tile.y as f32)),
-                    CollisionLayers::new([Layer::AlienSpawnPoint], [Layer::Ball, Layer::Player]),
+                    CollisionLayers::new([Layer::AlienSpawnPoint], [Layer::Player]),
                 ));
             }
             if tile.features.contains(TileFlags::AlienGoal) {
