@@ -4,7 +4,7 @@ use bevy::log::LogPlugin;
 use bevy::prelude::Msaa;
 use bevy::time::{Fixed, Time};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use bevy_xpbd_3d::plugins::{PhysicsDebugPlugin, PhysicsPlugins};
+use bevy_xpbd_3d::plugins::{PhysicsPlugins};
 use big_brain::BigBrainPlugin;
 use crate::player::systems::spawn_players::spawn_players;
 use camera::systems::spawn_camera::spawn_camera;
@@ -57,7 +57,7 @@ fn main() {
                     level: log::Level::INFO,
                 }))
         .add_plugins(PhysicsPlugins::default())
-        .add_plugins(PhysicsDebugPlugin::default())
+        // .add_plugins(PhysicsDebugPlugin::default())
         .add_plugins(WorldInspectorPlugin::new())
         .add_plugins(BigBrainPlugin::new(PreUpdate))
         .add_systems(
