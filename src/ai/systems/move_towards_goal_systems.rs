@@ -13,6 +13,7 @@ use crate::general::components::map_components::{AlienGoal, CurrentTile};
 use crate::general::resources::map_resources::MapGraph;
 use crate::player::components::general::{ControlDirection, Controller, ControlRotation, Player};
 use pathfinding::directed::astar::astar;
+use pathfinding::num_traits::Signed;
 
 pub fn not_in_use_right_now(
     mut approach_player_query: Query<(&mut ApproachAndAttackPlayerData, &AlienSightShape, &Position, &Rotation)>,
@@ -55,7 +56,7 @@ pub fn move_towards_goal_scorer_system(
 ) {
     for (Actor(_actor), mut score) in query.iter_mut() {
         if let Ok(_goal_position) = goal_query.get_single() {
-            score.set(0.91); // we always want to move towards the goal, mate!
+            score.set(0.9); // we always want to move towards the goal, mate!
         }
     }
 }
@@ -63,22 +64,21 @@ pub fn move_towards_goal_scorer_system(
 pub fn move_towards_goal_action_system(
     map_graph: Res<MapGraph>,
     mut action_query: Query<(&Actor, &mut ActionState, &ActionSpan), With<MoveTowardsGoalAction>>,
-    mut alien_query: Query<(&mut MoveTowardsGoalData, &mut Controller, &Position, &Rotation, &CurrentTile), With<Alien>>
+    mut alien_query: Query<(&mut MoveTowardsGoalData, &mut Controller, &Position, &Rotation, &CurrentTile), With<Alien>>,
 ) {
     for (Actor(actor), mut action_state, span) in action_query.iter_mut() {
         let _guard = span.span().enter();
 
         match *action_state {
             ActionState::Requested => {
-
-
-
-
                 *action_state = ActionState::Executing;
             }
             ActionState::Executing => {
-                if let Ok(
-                    (mut move_towards_goal_data, mut controller, alien_position, alien_rotation, alien_current_tile)
+                if let Ok((mut move_towards_goal_data,
+                              mut controller,
+                              alien_position,
+                              alien_rotation,
+                              alien_current_tile)
                 ) = alien_query.get_mut(*actor)
                 {
                     match &move_towards_goal_data.path {
@@ -101,23 +101,42 @@ pub fn move_towards_goal_action_system(
                         }
                         Some(path) => {
                             if path.len() == 0 {
+                                move_towards_goal_data.path = None;
                                 *action_state = ActionState::Success;
                             } else {
                                 let next_tile = path[0];
 
-                                let next_tile_position = Vec2::new((next_tile.0 as f32) * 2.0f32 - 1.0, (next_tile.1 as f32) * 2.0f32 - 1.0);
-                                let alien_position = Vec2::new((alien_current_tile.tile.0 as f32) * 2.0f32 - 1.0, (alien_current_tile.tile.1 as f32) * 2.0f32 - 1.0);
+                                let next_tile_position =
+                                    Vec2::new(
+                                        (next_tile.0 as f32) * 2.0f32 - 1.0,
+                                        (next_tile.1 as f32) * 2.0f32 - 1.0);
+                                let alien_position =
+                                    Vec2::new(
+                                    (alien_current_tile.tile.0 as f32) * 2.0f32 - 1.0,
+                                    (alien_current_tile.tile.1 as f32) * 2.0f32 - 1.0);
                                 let direction = next_tile_position - alien_position;
+                                let distance = direction.length();
+                                if distance < 0.5 {
+                                    move_towards_goal_data.path = Some(path[1..].to_vec());
+                                    return;
+                                }
                                 let direction = direction.normalize();
+                                let alien_direction = alien_rotation.0.mul_vec3(Vec3::new(0.0, 0.0, -1.0));
+                                let angle = direction.angle_between(alien_direction.xz()).to_degrees();
                                 controller.directions.clear();
-                                controller.directions.push(ControlDirection(direction));
                                 controller.rotations.clear();
-                                controller.rotations.push(ControlRotation(alien_rotation.0));
-                                *action_state = ActionState::Success;
+                                if angle.abs() > 5.0 {
+                                    if angle.is_negative() {
+                                        controller.rotations.insert(ControlRotation::Left);
+                                    } else {
+                                        controller.rotations.insert(ControlRotation::Right);
+                                    }
+                                }
+                                controller.directions.insert(ControlDirection::Forward);
+
                             }
                         }
                     }
-
                 }
             }
             ActionState::Cancelled => {

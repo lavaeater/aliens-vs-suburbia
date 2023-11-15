@@ -10,6 +10,7 @@ use big_brain::thinker::Thinker;
 use crate::ai::components::approach_and_attack_player_components::{ApproachAndAttackPlayerData};
 use crate::ai::components::avoid_wall_components::{AvoidWallsAction, AvoidWallScore, AvoidWallsData};
 use crate::ai::components::move_forward_components::{MoveForwardAction, MoveForwardScore};
+use crate::ai::components::move_towards_goal_components::{MoveTowardsGoalAction, MoveTowardsGoalData, MoveTowardsGoalScore};
 use crate::enemy::components::general::{Alien, AlienCounter, AlienSightShape};
 use crate::general::components::{Attack, Health, HittableTarget, Layer};
 use crate::general::components::map_components::{AlienSpawnPoint, CoolDown, CurrentTile};
@@ -59,10 +60,10 @@ pub fn spawn_aliens(
             //           .step(ApproachPlayerAction {})
             //           // ...AttackPlayer...
             //           .step(AttackPlayerAction {}))
-            .when(MoveForwardScore,
+            .when(MoveTowardsGoalScore,
                   Steps::build()
-                      .label("Move Forward")
-                      .step(MoveForwardAction {}));
+                      .label("Move Towards Goal")
+                      .step(MoveTowardsGoalAction {}));
 
         commands.spawn(
             (
@@ -92,6 +93,7 @@ pub fn spawn_aliens(
             Alien {},
             AvoidWallsData::new(2.5, 0.75, 0.75),
             ApproachAndAttackPlayerData::default(),
+            MoveTowardsGoalData {path: None},
             AlienSightShape::default(),
             Attack::default(),
             Health::default(),

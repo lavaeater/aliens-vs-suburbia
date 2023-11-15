@@ -186,7 +186,7 @@ pub fn map_loader(
         }
 
         //This will make the grid ready for some a* path-finding!
-        map_graph.grid.add_borders();
+//        map_graph.grid.add_borders();
 
         let map = MapDef {
             x: 0,

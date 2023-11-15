@@ -15,6 +15,7 @@ use crate::ai::components::avoid_wall_components::AvoidWallsData;
 use crate::ai::systems::approach_and_attack_player_systems::{approach_and_attack_player_scorer_system, approach_player_action_system, attack_player_action_system, can_i_see_player_system};
 use crate::ai::systems::avoid_walls_systems::{avoid_walls_action_system, avoid_walls_data_system, avoid_walls_scorer_system};
 use crate::ai::systems::move_forward_systems::{move_forward_action_system, move_forward_scorer_system};
+use crate::ai::systems::move_towards_goal_systems::{move_towards_goal_action_system, move_towards_goal_scorer_system};
 use crate::camera::components::camera::CameraOffset;
 use crate::camera::systems::camera_follow::camera_follow;
 use crate::enemy::components::general::AlienCounter;
@@ -49,7 +50,10 @@ fn main() {
         .register_type::<AvoidWallsData>()
         .register_type::<ApproachAndAttackPlayerData>()
         .insert_resource(AlienCounter::new(50))
-        .insert_resource(MapGraph { grid: Grid::new(0,0)})
+        .insert_resource(MapGraph {
+            grid: Grid::new(0,0),
+            goal: (0,0)
+        })
         .insert_resource(Msaa::Sample4)
         .insert_resource(Time::<Fixed>::from_seconds(0.05))
         .insert_resource(Msaa::Sample4)
@@ -84,6 +88,7 @@ fn main() {
                 dynamic_movement,
                 throwing,
                 collision_handling_system,
+                current_tile_system,
             ))
         .add_systems(
             FixedUpdate,
@@ -101,6 +106,8 @@ fn main() {
                 approach_and_attack_player_scorer_system,
                 approach_player_action_system,
                 attack_player_action_system,
+                move_towards_goal_scorer_system,
+                move_towards_goal_action_system
             ),
         )
         .run();
