@@ -7,7 +7,7 @@ use bevy_xpbd_3d::components::{Collider, CollisionLayers, LinearVelocity, Positi
 use bevy_xpbd_3d::prelude::Rotation;
 use crate::general::components::{Ball, Layer};
 use crate::general::components::map_components::CoolDown;
-use crate::player::components::general::{Controller, Triggers};
+use crate::player::components::general::{Controller, ControlCommands};
 
 pub fn throwing(
     time_res: Res<Time>,
@@ -16,7 +16,7 @@ pub fn throwing(
     asset_server: Res<AssetServer>,
 ) {
     for (position, rotation, mut controller) in query.iter_mut() {
-        if controller.triggers.contains(&Triggers::Throw) && controller.cool_down(time_res.delta_seconds()) {
+        if controller.triggers.contains(&ControlCommands::Throw) && controller.cool_down(time_res.delta_seconds()) {
             let direction = rotation.mul_vec3(Quat::from_axis_angle(Vec3::X, (2.5f32).to_radians()).mul_vec3(Vec3::new(0.0, 0.0, -1.0)));
             let launch_p = position.0 + direction * 0.5 + Vec3::new(0.0, 0.25, 0.0);
 

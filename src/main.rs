@@ -30,7 +30,7 @@ use crate::general::systems::lights_systems::spawn_lights;
 use crate::general::systems::map_systems::{current_tile_system, load_map_one, map_loader};
 use crate::general::systems::throwing_system::throwing;
 use crate::player::components::general::Controller;
-use crate::player::systems::keyboard_control::keyboard_control;
+use crate::player::systems::keyboard_control::input_control;
 
 pub(crate) mod player;
 pub(crate) mod general;
@@ -85,7 +85,7 @@ fn main() {
                 spawn_players,
                 spawn_aliens,
                 camera_follow,
-                keyboard_control,
+                input_control,
                 kinematic_movement,
                 dynamic_movement,
                 throwing,

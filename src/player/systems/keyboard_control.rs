@@ -1,9 +1,10 @@
 use bevy::input::ButtonState;
 use bevy::input::keyboard::KeyboardInput;
+use bevy::input::mouse::MouseButtonInput;
 use bevy::prelude::{EventReader, KeyCode, Query, With};
-use crate::player::components::general::{Controller, ControlDirection, KeyboardController, ControlRotation, Triggers};
+use crate::player::components::general::{Controller, ControlDirection, KeyboardController, ControlRotation, ControlCommands};
 
-pub fn keyboard_control(
+pub fn input_control(
     mut key_evr: EventReader<KeyboardInput>,
     mut query: Query<&mut Controller, With<KeyboardController>>,
 ) {
@@ -11,6 +12,13 @@ pub fn keyboard_control(
         for ev in key_evr.read() {
             match ev.state {
                 ButtonState::Pressed => match ev.key_code {
+                    Some(KeyCode::B) => {
+                        if controller.triggers.contains(&ControlCommands::Build) {
+                            controller.triggers.remove(&ControlCommands::Build);
+                        } else {
+                            controller.triggers.insert(ControlCommands::Build);
+                        }
+                    }
                     Some(KeyCode::A) => {
                         controller.rotations.insert(ControlRotation::Left);
                     }
@@ -24,10 +32,10 @@ pub fn keyboard_control(
                         controller.directions.insert(ControlDirection::Backward);
                     }
                     Some(KeyCode::Space) => {
-                        if controller.triggers.contains(&Triggers::Throw) {
-                            controller.triggers.remove(&Triggers::Throw);
+                        if controller.triggers.contains(&ControlCommands::Throw) {
+                            controller.triggers.remove(&ControlCommands::Throw);
                         } else {
-                            controller.triggers.insert(Triggers::Throw);
+                            controller.triggers.insert(ControlCommands::Throw);
                         }
                     }
                     _ => {}

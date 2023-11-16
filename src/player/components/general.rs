@@ -16,9 +16,10 @@ pub struct FollowCamera {
 pub struct KeyboardController {}
 
 #[derive(Hash, PartialEq, Eq, Clone, Reflect)]
-pub enum Triggers {
+pub enum ControlCommands {
     Throw,
-    Jump
+    Jump,
+    Build
 }
 
 #[derive(Hash, PartialEq, Eq, Copy, Clone, Debug, Reflect)]
@@ -61,7 +62,7 @@ impl Opposite for ControlRotation {
 
 #[derive(Component, Reflect)]
 pub struct Controller {
-    pub triggers: HashSet<Triggers>,
+    pub triggers: HashSet<ControlCommands>,
     pub rotations: HashSet<ControlRotation>,
     pub directions: HashSet<ControlDirection>,
     pub has_thrown:bool,
