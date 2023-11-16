@@ -1,7 +1,6 @@
 use bevy::asset::AssetServer;
 use bevy::prelude::{Commands, EventReader, EventWriter, Name, Query, Res, ResMut, Time, Transform};
 use bevy::scene::SceneBundle;
-use bevy::utils::default;
 use bevy_xpbd_3d::components::{AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
 use bevy_xpbd_3d::prelude::Position;
 use big_brain::actions::Steps;
@@ -9,7 +8,6 @@ use big_brain::pickers::FirstToScore;
 use big_brain::thinker::Thinker;
 use crate::ai::components::approach_and_attack_player_components::{ApproachAndAttackPlayerData};
 use crate::ai::components::avoid_wall_components::{AvoidWallsAction, AvoidWallScore, AvoidWallsData};
-use crate::ai::components::move_forward_components::{MoveForwardAction, MoveForwardScore};
 use crate::ai::components::move_towards_goal_components::{MoveTowardsGoalAction, MoveTowardsGoalData, MoveTowardsGoalScore};
 use crate::enemy::components::general::{Alien, AlienCounter, AlienSightShape};
 use crate::general::components::{Attack, Health, HittableTarget, Layer};
@@ -71,10 +69,7 @@ pub fn spawn_aliens(
                 // // We rotat the cone since it is defined as a cone pointing up the y axis. Rotating it -90 degrees around the x axis makes it point forward properly. Maybe.
                 HittableTarget {},
                 DynamicMovement {},
-                Controller {
-                    turn_speed: 4.0,
-                    ..default()
-                },
+                Controller::new(1.0, 3.0,1.0),
                 SceneBundle {
                     scene: asset_server.load("player.glb#Scene0"),
                     transform: Transform::from_xyz(spawn_alien.position.x, spawn_alien.position.y, spawn_alien.position.z),
@@ -91,7 +86,7 @@ pub fn spawn_aliens(
             )).insert((
             CurrentTile::default(),
             Alien {},
-            AvoidWallsData::new(2.5, 0.75, 0.75),
+            AvoidWallsData::new(1.0, 0.5, 0.5),
             ApproachAndAttackPlayerData::default(),
             MoveTowardsGoalData {path: None},
             AlienSightShape::default(),

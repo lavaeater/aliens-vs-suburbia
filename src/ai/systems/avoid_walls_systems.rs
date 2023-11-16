@@ -1,6 +1,5 @@
 use bevy::prelude::{Query, Res, With};
 use big_brain::prelude::{ActionSpan, Actor, Score};
-use bevy::log::debug;
 use big_brain::actions::ActionState;
 use bevy_xpbd_3d::components::{Position, Rotation};
 use bevy_xpbd_3d::prelude::{SpatialQuery, SpatialQueryFilter};
@@ -25,7 +24,6 @@ pub fn avoid_walls_scorer_system(
                 score.set(0.0);
             }
             avoid_wall_data.proto_val =(avoid_wall_data.forward_distance.min(avoid_wall_data.max_forward_distance) / avoid_wall_data.max_forward_distance).recip();
-            debug!("AvoidWallScore: {}", score.get());
         }
     }
 }
@@ -91,7 +89,6 @@ pub fn avoid_walls_action_system(
         match *action_state {
             // Action was just requested; it hasn't been seen before.
             ActionState::Requested => {
-                debug!("Let's go find some water!");
                 // We don't really need any initialization code here, since the queries are cheap enough.
                 *action_state = ActionState::Executing;
             }
@@ -108,6 +105,7 @@ pub fn avoid_walls_action_system(
                 controller.rotations.insert(avoid_walls_data.rotation_direction);
                 let speed_factor = avoid_walls_data.forward_distance / avoid_walls_data.max_forward_distance;
                 controller.speed = controller.max_speed * speed_factor;
+                controller.turn_speed = controller.max_turn_speed;
 
                 //*action_state = ActionState::Success;
             },

@@ -52,11 +52,9 @@ pub fn approach_and_attack_player_scorer_system(
         if let Ok(avoid_wall_data) = approach_player_data.get(*actor) {
             match avoid_wall_data.seen_player {
                 None => {
-                    debug!("ApproachAndAttackPlayerScore: {}", 0.0);
                     score.set(0.0);
                 }
                 Some(_) => {
-                    debug!("ApproachAndAttackPlayerScore: {}", 0.92);
                     score.set(0.91);
                 }
             }
@@ -75,7 +73,6 @@ pub fn approach_player_action_system(
         match *action_state {
             // Action was just requested; it hasn't been seen before.
             ActionState::Requested => {
-                debug!("Let's approach the player!");
                 // We don't really need any initialization code here, since the queries are cheap enough.
                 *action_state = ActionState::Executing;
             }
@@ -87,7 +84,6 @@ pub fn approach_player_action_system(
                     // Look up the actor's position.
                     match approach_player_data.seen_player {
                         None => {
-                            debug!("We no longer see the player!");
                             *action_state = ActionState::Failure;
                         }
                         Some(player_entity) => {
@@ -111,7 +107,6 @@ pub fn approach_player_action_system(
                             }
                             let distance = (player_position_vector2 - alien_position_vector2).length();
                             if distance < approach_player_data.attack_distance {
-                                debug!("We are close enough to attack!");
                                 *action_state = ActionState::Success;
                             }
                         }
@@ -141,7 +136,6 @@ pub fn attack_player_action_system(
         match *action_state {
             // Action was just requested; it hasn't been seen before.
             ActionState::Requested => {
-                debug!("Let's attack the player!");
                 // We don't really need any initialization code here, since the queries are cheap enough.
                 *action_state = ActionState::Executing;
             }
@@ -152,7 +146,6 @@ pub fn attack_player_action_system(
                     // Look up the actor's position.
                     match attack_player_data.seen_player {
                         None => {
-                            debug!("We no longer see they player!");
                             *action_state = ActionState::Failure;
                         }
                         Some(player_entity) => {
@@ -166,12 +159,9 @@ pub fn attack_player_action_system(
 
                             let distance = (player_position_vector2 - alien_position_vector2).length();
                             if distance < attack_player_data.attack_distance * 2.0 {
-                                debug!("We are close enough to attack!");
                                 player_health.health -= alien_attack.damage_range;
-                                debug!("Player health: {}", player_health.health);
                                 *action_state = ActionState::Success;
                             } else {
-                                debug!("Player moved out of range!");
                                 *action_state = ActionState::Failure;
                             }
                         }

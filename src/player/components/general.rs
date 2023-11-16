@@ -68,21 +68,23 @@ pub struct Controller {
     pub speed: f32,
     pub max_speed: f32,
     pub turn_speed: f32,
-    pub rate_of_fire: f32,
+    pub max_turn_speed: f32,
+    pub rate_of_fire_per_minute: f32,
     pub fire_cool_down: f32
 }
 
-impl Default for Controller {
-    fn default() -> Self {
+impl Controller {
+    pub fn new(speed: f32, turn_speed: f32, rate_of_fire_per_minute: f32, ) -> Self {
         Self {
             triggers: HashSet::default(),
             rotations: HashSet::default(),
             directions: HashSet::default(),
             has_thrown: false,
-            speed: 2.0,
-            max_speed: 2.0,
-            turn_speed: 2.0,
-            rate_of_fire: 15.0,
+            speed,
+            max_speed: speed,
+            turn_speed,
+            max_turn_speed: turn_speed,
+            rate_of_fire_per_minute,
             fire_cool_down: 0.0
         }
     }
@@ -92,7 +94,7 @@ impl CoolDown for Controller {
     fn cool_down(&mut self, delta: f32) -> bool {
         self.fire_cool_down -= delta;
         if self.fire_cool_down <= 0.0 {
-            self.fire_cool_down = 1.0 / self.rate_of_fire;
+            self.fire_cool_down = 60.0 / self.rate_of_fire_per_minute;
             return true;
         }
         false

@@ -1,7 +1,6 @@
 use bevy::prelude::{Query, With};
 use big_brain::prelude::{ActionSpan, Actor, Score};
 use big_brain::actions::ActionState;
-use bevy::log::debug;
 use crate::ai::components::move_forward_components::{MoveForwardAction, MoveForwardScore};
 use crate::player::components::general::{ControlDirection, Controller};
 
@@ -15,7 +14,6 @@ pub fn move_forward_action_system(
         match *action_state {
             // Action was just requested; it hasn't been seen before.
             ActionState::Requested => {
-                debug!("Let's move forward!");
                 // We don't really need any initialization code here, since the queries are cheap enough.
                 *action_state = ActionState::Executing;
             }
@@ -49,6 +47,5 @@ pub fn move_forward_scorer_system(
 ) {
     for mut score in query.iter_mut() {
         score.set(0.9);
-        debug!("MoveForwardScore: {}", score.get());
     }
 }

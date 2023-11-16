@@ -1,13 +1,14 @@
 use bevy::asset::AssetServer;
 use bevy::core::Name;
 use bevy::math::{Quat, Vec3};
-use bevy::prelude::{Commands, Component, EventReader, EventWriter, Query, Res, ResMut};
+use bevy::prelude::{Commands, EventReader, EventWriter, Query, Res, ResMut};
 use bevy::scene::SceneBundle;
 use bevy_xpbd_3d::components::CollisionLayers;
 use bevy_xpbd_3d::math::PI;
 use bevy_xpbd_3d::prelude::{Collider, Position, RigidBody, Rotation};
 use flagset::{flags, FlagSet};
 use pathfinding::grid::Grid;
+use crate::enemy::components::general::AlienCounter;
 use crate::general::components::Layer;
 use crate::general::components::map_components::{AlienGoal, AlienSpawnPoint, CurrentTile, Floor, Wall};
 use crate::general::events::map_events::{LoadMap, SpawnPlayer};
@@ -83,6 +84,7 @@ pub fn map_loader(
     mut spawn_player_event_writer: EventWriter<SpawnPlayer>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
+    mut alien_counter: ResMut<AlienCounter>
 ) {
     for _load_map in load_map_event_reader.read() {
         let tile_size = 2.0;
@@ -291,16 +293,18 @@ pub fn map_loader(
             }
 
             if tile.features.contains(TileFlags::AlienSpawnPoint) {
+                // We set the max aliens in the map, OK?
+                alien_counter.max_count = 2;
                 commands.spawn((
                     Name::from(format!("Alien Spawn Point{}:{}", tile.x, tile.y)),
-                    AlienSpawnPoint::default(),
+                    AlienSpawnPoint::new(30.0),
                     SceneBundle {
                         scene: asset_server.load("player.glb#Scene0"),
                         ..Default::default()
                     },
                     RigidBody::Static,
                     Collider::cuboid(0.5, 0.5, 0.45),
-                    Position::from(Vec3::new(tile_width * tile.x as f32, -wall_height, tile_width * tile.y as f32)),
+                    Position::from(Vec3::new(tile_width * tile.x as f32 - 1.0, -wall_height, tile_width * tile.y as f32 + 1.0)),
                     CollisionLayers::new([Layer::AlienSpawnPoint], [Layer::Player]),
                 ));
             }
