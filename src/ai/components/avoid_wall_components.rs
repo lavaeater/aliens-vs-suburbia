@@ -1,30 +1,48 @@
 use bevy::prelude::Component;
 use bevy::reflect::Reflect;
 use big_brain::prelude::{ActionBuilder, ScorerBuilder};
-use crate::player::components::general::ControlRotation;
+use crate::general::components::map_components::CoolDown;
+use crate::player::components::general::{ControlRotation, Opposite};
 
 #[derive(Clone, Component, Debug, Reflect)]
 pub struct AvoidWallsData {
     pub forward_distance: f32,
     pub left_distance: f32,
     pub right_distance: f32,
-    pub max_distance: f32,
+    pub max_forward_distance: f32,
+    pub max_left_distance: f32,
+    pub max_right_distance: f32,
     pub rotation_direction: ControlRotation,
     pub rotation_timer: f32,
     pub rotation_timer_max: f32,
     pub proto_val: f32
 }
 
+impl CoolDown for AvoidWallsData {
+    fn cool_down(&mut self, delta: f32) -> bool {
+        self.rotation_timer -= delta;
+        if self.rotation_timer <= 0.0 {
+            self.rotation_direction = self.rotation_direction.opposite();
+            self.rotation_timer = self.rotation_timer_max;
+            true
+        } else {
+            false
+        }
+    }
+}
+
 impl AvoidWallsData {
-    pub fn new(max_distance: f32) -> Self {
+    pub fn new(max_forward_distance: f32, max_left_distance: f32, max_right_distance: f32) -> Self {
         Self {
-            forward_distance: max_distance,
-            left_distance: max_distance,
-            right_distance: max_distance,
-            max_distance,
+            forward_distance: max_forward_distance,
+            left_distance: max_left_distance,
+            max_left_distance,
+            right_distance: max_right_distance,
+            max_right_distance,
+            max_forward_distance,
             rotation_direction: ControlRotation::Left,
-            rotation_timer: 1.0,
-            rotation_timer_max: 1.0,
+            rotation_timer: 5.0,
+            rotation_timer_max: 5.0,
             proto_val: 0.0
         }
     }

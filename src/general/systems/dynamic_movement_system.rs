@@ -26,6 +26,6 @@ pub fn dynamic_movement(
         force = rotation.mul_vec3(force) * controller.speed;
         linear_velocity.x = force.x;
         linear_velocity.z = force.z;
-        angular_velocity.0 = torque * controller.speed;
+        angular_velocity.0 = torque * controller.turn_speed;
     }
 }
