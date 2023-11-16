@@ -96,10 +96,10 @@ pub fn map_loader(
         let m = [
             [17, 1, 1, 1, 1, 1, 1, 1, 5],
             [1, 1, 1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 0, 0, 0, 1, 1, 1],
+            [1, 1, 1, 0, 0, 0, 1, 1, 1],
+            [1, 1, 1, 0, 0, 0, 1, 1, 1],
+            [1, 1, 1, 0, 0, 0, 1, 1, 1],
             [1, 1, 1, 1, 1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1, 1, 1, 1, 1],
             [9, 1, 1, 1, 1, 1, 1, 1, 1],
@@ -188,7 +188,7 @@ pub fn map_loader(
         }
 
         //This will make the grid ready for some a* path-finding!
-//        map_graph.grid.add_borders();
+        map_graph.grid.enable_diagonal_mode();
 
         let map = MapDef {
             x: 0,
@@ -294,7 +294,7 @@ pub fn map_loader(
 
             if tile.features.contains(TileFlags::AlienSpawnPoint) {
                 // We set the max aliens in the map, OK?
-                alien_counter.max_count = 2;
+                alien_counter.max_count = 1;
                 commands.spawn((
                     Name::from(format!("Alien Spawn Point{}:{}", tile.x, tile.y)),
                     AlienSpawnPoint::new(30.0),
