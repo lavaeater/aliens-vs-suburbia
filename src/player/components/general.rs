@@ -22,6 +22,12 @@ pub enum ControlCommands {
     Build
 }
 
+#[derive(Hash, PartialEq, Eq, Clone, Reflect, Component)]
+pub struct IsBuilding;
+
+#[derive(Hash, PartialEq, Eq, Clone, Reflect, Component)]
+pub struct BuildingIndicator;
+
 #[derive(Hash, PartialEq, Eq, Copy, Clone, Debug, Reflect)]
 pub enum ControlRotation {
     Left,

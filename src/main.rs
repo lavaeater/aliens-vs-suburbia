@@ -30,6 +30,8 @@ use crate::general::systems::lights_systems::spawn_lights;
 use crate::general::systems::map_systems::{current_tile_system, load_map_one, map_loader};
 use crate::general::systems::throwing_system::throwing;
 use crate::player::components::general::Controller;
+use crate::player::events::building_events::{StartBuilding, StopBuilding};
+use crate::player::systems::build_systems::{start_build, stop_build};
 use crate::player::systems::keyboard_control::input_control;
 
 pub(crate) mod player;
@@ -46,6 +48,8 @@ fn main() {
         .add_event::<SpawnAlien>()
         .add_event::<AlienReachedGoal>()
         .add_event::<SpawnPlayer>()
+        .add_event::<StartBuilding>()
+        .add_event::<StopBuilding>()
         .register_type::<CameraOffset>()
         .register_type::<Controller>()
         .register_type::<Health>()
@@ -92,6 +96,8 @@ fn main() {
                 collision_handling_system,
                 current_tile_system,
                 alien_reached_goal_handler,
+                start_build,
+                stop_build,
             ))
         .add_systems(
             FixedUpdate,
