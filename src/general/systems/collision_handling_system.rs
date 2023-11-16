@@ -32,13 +32,17 @@ pub fn collision_handling_system(
             let hittable_entity = if ball_is_first { contacts.entity2 } else { contacts.entity1 };
             if let Ok((mut target_health, _, is_alien)) = hittable_target_query.get_mut(hittable_entity) {
                 let despawn_the_ball = if ball_is_first { contacts.entity1 } else { contacts.entity2 };
-                commands.entity(despawn_the_ball).despawn_recursive();
+                if let Some(ball_commands) = commands.get_entity(despawn_the_ball) {
+                    ball_commands.despawn_recursive();
+                }
                 target_health.health -= 10;
                 if target_health.health <= 0 {
                     if is_alien {
                         alien_counter.count -= 1;
                     }
-                    commands.entity(hittable_entity).despawn_recursive();
+                    if let Some(alien_commands) = commands.get_entity(hittable_entity) {
+                        alien_commands.despawn_recursive();
+                    }
                 }
             }
         }

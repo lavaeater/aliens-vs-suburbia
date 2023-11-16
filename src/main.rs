@@ -15,12 +15,13 @@ use crate::ai::components::avoid_wall_components::AvoidWallsData;
 use crate::ai::systems::approach_and_attack_player_systems::{approach_and_attack_player_scorer_system, approach_player_action_system, attack_player_action_system, can_i_see_player_system};
 use crate::ai::systems::avoid_walls_systems::{avoid_walls_action_system, avoid_walls_data_system, avoid_walls_scorer_system};
 use crate::ai::systems::move_forward_systems::{move_forward_action_system, move_forward_scorer_system};
-use crate::ai::systems::move_towards_goal_systems::{move_towards_goal_action_system, move_towards_goal_scorer_system};
+use crate::ai::systems::move_towards_goal_systems::{alien_reached_goal_handler, move_towards_goal_action_system, move_towards_goal_scorer_system};
 use crate::camera::components::camera::CameraOffset;
 use crate::camera::systems::camera_follow::camera_follow;
 use crate::enemy::components::general::AlienCounter;
 use crate::enemy::systems::spawn_aliens::{alien_spawner_system, spawn_aliens};
 use crate::general::components::Health;
+use crate::general::events::map_events::AlienReachedGoal;
 use crate::general::resources::map_resources::MapGraph;
 use crate::general::systems::dynamic_movement_system::dynamic_movement;
 use crate::general::systems::collision_handling_system::collision_handling_system;
@@ -43,6 +44,7 @@ fn main() {
     App::new()
         .add_event::<LoadMap>()
         .add_event::<SpawnAlien>()
+        .add_event::<AlienReachedGoal>()
         .add_event::<SpawnPlayer>()
         .register_type::<CameraOffset>()
         .register_type::<Controller>()
@@ -89,6 +91,7 @@ fn main() {
                 throwing,
                 collision_handling_system,
                 current_tile_system,
+                alien_reached_goal_handler,
             ))
         .add_systems(
             FixedUpdate,

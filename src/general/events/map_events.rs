@@ -1,4 +1,4 @@
-use bevy::prelude::Event;
+use bevy::prelude::{Entity, Event};
 use bevy::math::Vec3;
 
 #[derive(Event)]
@@ -13,3 +13,6 @@ pub struct SpawnPlayer {
 pub struct SpawnAlien {
     pub position: Vec3,
 }
+
+#[derive(Event)]
+pub struct AlienReachedGoal(pub Entity);
