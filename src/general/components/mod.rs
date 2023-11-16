@@ -22,7 +22,7 @@ impl Default for Ball {
 pub struct HittableTarget {}
 
 #[derive(PhysicsLayer)]
-pub enum Layer {
+pub enum CollisionLayer {
     Floor,
     Ball,
     Wall,
@@ -30,6 +30,7 @@ pub enum Layer {
     Player,
     AlienSpawnPoint,
     AlienGoal,
+    BuildIndicator,
 }
 
 #[derive(Component, Clone, Debug, PartialEq)]

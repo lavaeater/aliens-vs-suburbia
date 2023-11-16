@@ -10,7 +10,7 @@ use crate::ai::components::approach_and_attack_player_components::{ApproachAndAt
 use crate::ai::components::avoid_wall_components::{AvoidWallsAction, AvoidWallScore, AvoidWallsData};
 use crate::ai::components::move_towards_goal_components::{MoveTowardsGoalAction, MoveTowardsGoalData, MoveTowardsGoalScore};
 use crate::enemy::components::general::{Alien, AlienCounter, AlienSightShape};
-use crate::general::components::{Attack, Health, HittableTarget, Layer};
+use crate::general::components::{Attack, Health, HittableTarget, CollisionLayer};
 use crate::general::components::map_components::{AlienSpawnPoint, CoolDown, CurrentTile};
 use crate::general::events::map_events::SpawnAlien;
 use crate::player::components::general::{Controller, DynamicMovement};
@@ -82,7 +82,7 @@ pub fn spawn_aliens(
                 //AsyncCollider(ComputedCollider::ConvexHull),
                 Collider::capsule(0.25, 0.25),
                 LockedAxes::new().lock_rotation_x().lock_rotation_z(),
-                CollisionLayers::new([Layer::Alien], [Layer::Ball, Layer::Wall, Layer::Floor, Layer::Alien, Layer::Player, Layer::AlienGoal]),
+                CollisionLayers::new([CollisionLayer::Alien], [CollisionLayer::Ball, CollisionLayer::Wall, CollisionLayer::Floor, CollisionLayer::Alien, CollisionLayer::Player, CollisionLayer::AlienGoal]),
             )).insert((
             CurrentTile::default(),
             Alien {},

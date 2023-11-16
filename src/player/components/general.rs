@@ -1,4 +1,4 @@
-use bevy::prelude::Component;
+use bevy::prelude::{Component, Entity};
 use bevy::reflect::Reflect;
 use bevy::utils::HashSet;
 use bevy_xpbd_3d::math::Vector3;
@@ -26,7 +26,7 @@ pub enum ControlCommands {
 pub struct IsBuilding;
 
 #[derive(Hash, PartialEq, Eq, Clone, Reflect, Component)]
-pub struct BuildingIndicator;
+pub struct BuildingIndicator(pub Entity);
 
 #[derive(Hash, PartialEq, Eq, Copy, Clone, Debug, Reflect)]
 pub enum ControlRotation {

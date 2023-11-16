@@ -5,7 +5,7 @@ use bevy::scene::SceneBundle;
 use bevy::time::Time;
 use bevy_xpbd_3d::components::{Collider, CollisionLayers, LinearVelocity, Position, RigidBody};
 use bevy_xpbd_3d::prelude::Rotation;
-use crate::general::components::{Ball, Layer};
+use crate::general::components::{Ball, CollisionLayer};
 use crate::general::components::map_components::CoolDown;
 use crate::player::components::general::{Controller, ControlCommands};
 
@@ -31,7 +31,7 @@ pub fn throwing(
                 RigidBody::Dynamic,
                 Collider::ball(1.0 / 16.0),
                 LinearVelocity(direction * 12.0),
-                CollisionLayers::new([Layer::Ball], [Layer::Wall, Layer::Floor, Layer::Alien, Layer::Player, Layer::AlienSpawnPoint, Layer::AlienGoal]),
+                CollisionLayers::new([CollisionLayer::Ball], [CollisionLayer::Wall, CollisionLayer::Floor, CollisionLayer::Alien, CollisionLayer::Player, CollisionLayer::AlienSpawnPoint, CollisionLayer::AlienGoal]),
             ));
         } else {
             controller.fire_cool_down = 0.0;

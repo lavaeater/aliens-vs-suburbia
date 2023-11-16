@@ -3,7 +3,7 @@ use bevy::core::Name;
 use bevy::prelude::{Commands, EventReader, Res, Transform};
 use bevy::scene::SceneBundle;
 use bevy_xpbd_3d::components::{AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
-use crate::general::components::{Health, Layer};
+use crate::general::components::{Health, CollisionLayer};
 use crate::general::components::map_components::CurrentTile;
 use crate::general::events::map_events::SpawnPlayer;
 use crate::player::components::general::{Controller, DynamicMovement, KeyboardController, Player};
@@ -31,7 +31,7 @@ pub fn spawn_players(
             RigidBody::Dynamic,
             Collider::capsule(0.25, 0.25),
             LockedAxes::new().lock_rotation_x().lock_rotation_z(),
-            CollisionLayers::new([Layer::Player], [Layer::Ball, Layer::Wall, Layer::Floor, Layer::Alien, Layer::Player, Layer::AlienSpawnPoint, Layer::AlienGoal]),
+            CollisionLayers::new([CollisionLayer::Player], [CollisionLayer::Ball, CollisionLayer::Wall, CollisionLayer::Floor, CollisionLayer::Alien, CollisionLayer::Player, CollisionLayer::AlienSpawnPoint, CollisionLayer::AlienGoal]),
             Health::default(),
             CurrentTile::default(),
         ));

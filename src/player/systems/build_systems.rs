@@ -1,8 +1,12 @@
+use bevy::asset::AssetServer;
+use bevy::core::Name;
 use bevy::math::{Vec2, Vec3, Vec3Swizzles};
 use bevy::prelude::{Commands, EventReader, Has, Query, Res, With};
+use bevy::scene::SceneBundle;
 use bevy::utils::petgraph::matrix_graph::Zero;
-use bevy_xpbd_3d::components::Rotation;
+use bevy_xpbd_3d::components::{Collider, CollisionLayers, RigidBody, Rotation};
 use bevy_xpbd_3d::prelude::Position;
+use crate::general::components::CollisionLayer;
 use crate::general::components::map_components::CurrentTile;
 use crate::general::resources::map_resources::MapGraph;
 use crate::player::components::general::{BuildingIndicator, IsBuilding};
@@ -12,9 +16,22 @@ use crate::player::events::building_events::{StartBuilding, StopBuilding};
 pub fn start_build(
     mut start_evr: EventReader<StartBuilding>,
     mut commands: Commands,
+    asset_server: Res<AssetServer>
 ) {
     for start_event in start_evr.read() {
         commands.entity(start_event.0).insert(IsBuilding {});
+        // let entity_commands = commands.spawn((
+        //     Name::from("BuildingIndicator"),
+        //     SceneBundle {
+        //         scene: asset_server.load("floor_fab.glb#Scene0"),
+        //         ..Default::default()
+        //     },
+        //     RigidBody::Kinematic,
+        //     Collider::cuboid(tile_width, tile_depth, tile_width),
+        //     Position::from(Vec3::new(tile_width * tile.x as f32, -2.0, tile_width * tile.y as f32)),
+        //     CollisionLayers::new([CollisionLayer::BuildIndicator], []),
+        //     CurrentTile::default(),
+        // ));
     }
 }
 

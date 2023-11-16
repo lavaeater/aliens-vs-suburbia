@@ -6,7 +6,7 @@ use big_brain::actions::ActionState;
 use big_brain::scorers::Score;
 use big_brain::thinker::{ActionSpan, Actor};
 use crate::ai::components::approach_and_attack_player_components::{ApproachPlayerAction, ApproachAndAttackPlayerData, ApproachAndAttackPlayerScore, AttackPlayerAction};
-use crate::general::components::{Attack, Health, Layer};
+use crate::general::components::{Attack, Health, CollisionLayer};
 use crate::enemy::components::general::{Alien, AlienSightShape};
 use crate::player::components::general::{ControlDirection, Controller, ControlRotation, Player};
 
@@ -32,7 +32,7 @@ pub fn can_i_see_player_system(
             direction,// Direction
             sight_shape.range, // Maximum time of impact (travel distance)
             true,
-            SpatialQueryFilter::new().with_masks([Layer::Player]), // Query for players
+            SpatialQueryFilter::new().with_masks([CollisionLayer::Player]), // Query for players
         ) {
             None => {
                 alien_brain.seen_player = None;

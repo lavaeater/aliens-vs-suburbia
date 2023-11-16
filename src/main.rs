@@ -27,7 +27,7 @@ use crate::general::systems::dynamic_movement_system::dynamic_movement;
 use crate::general::systems::collision_handling_system::collision_handling_system;
 use crate::general::systems::kinematic_movement_system::kinematic_movement;
 use crate::general::systems::lights_systems::spawn_lights;
-use crate::general::systems::map_systems::{current_tile_system, load_map_one, map_loader};
+use crate::general::systems::map_systems::{current_tile_system, load_map_one, map_loader, TileDefinitions};
 use crate::general::systems::throwing_system::throwing;
 use crate::player::components::general::Controller;
 use crate::player::events::building_events::{StartBuilding, StopBuilding};
@@ -55,6 +55,7 @@ fn main() {
         .register_type::<Health>()
         .register_type::<AvoidWallsData>()
         .register_type::<ApproachAndAttackPlayerData>()
+        .insert_resource(TileDefinitions::new(2.0, 32.0, 19.0, 1.0))
         .insert_resource(AlienCounter::new(50))
         .insert_resource(MapGraph {
             grid: Grid::new(0,0),

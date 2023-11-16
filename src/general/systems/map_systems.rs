@@ -1,7 +1,7 @@
 use bevy::asset::AssetServer;
 use bevy::core::Name;
 use bevy::math::{Quat, Vec3};
-use bevy::prelude::{Commands, EventReader, EventWriter, Query, Res, ResMut};
+use bevy::prelude::{Commands, EventReader, EventWriter, Query, Res, ResMut, Resource};
 use bevy::scene::SceneBundle;
 use bevy_xpbd_3d::components::CollisionLayers;
 use bevy_xpbd_3d::math::PI;
@@ -9,13 +9,14 @@ use bevy_xpbd_3d::prelude::{Collider, Position, RigidBody, Rotation};
 use flagset::{flags, FlagSet};
 use pathfinding::grid::Grid;
 use crate::enemy::components::general::AlienCounter;
-use crate::general::components::Layer;
+use crate::general::components::CollisionLayer;
 use crate::general::components::map_components::{AlienGoal, AlienSpawnPoint, CurrentTile, Floor, Wall};
 use crate::general::events::map_events::{LoadMap, SpawnPlayer};
 use crate::general::resources::map_resources::MapGraph;
+use bevy::math::EulerRot;
 
 flags! {
-    enum FileFlags: u16 {
+    pub enum FileFlags: u16 {
         Floor = 1, // 1
         Pickup = 2, // 2
         AlienSpawn = 4, // 4,
@@ -30,7 +31,7 @@ flags! {
 
 // Max number of flags is... 64, dummy
 flags! {
-    enum TileFlags: u64 {
+    pub enum TileFlags: u64 {
         Floor = 1, //1
         WallNorth = 2, //2
         WallEast = 4, //4
@@ -78,21 +79,83 @@ pub fn load_map_one(
 }
 
 
+#[derive(Resource)]
+pub struct TileDefinitions {
+    pub tile_size: f32,
+    pub tile_basis: f32,
+    pub tile_unit: f32,
+    pub tile_width: f32,
+    pub wall_height: f32,
+    pub tile_depth: f32,
+}
+
+impl TileDefinitions {
+    pub fn new(tile_size: f32, tile_basis: f32, wall_basis: f32, tile_depth_basis: f32) -> Self {
+        let tile_unit = tile_size / tile_basis;
+        let tile_width = tile_basis * tile_unit;
+        let wall_height = wall_basis * tile_unit;
+        let tile_depth = tile_depth_basis * tile_unit;
+        Self {
+            tile_size,
+            tile_basis,
+            tile_unit,
+            tile_width,
+            wall_height,
+            tile_depth,
+        }
+    }
+
+    pub fn create_floor_collider(&self) -> Collider {
+        Collider::cuboid(self.tile_width, self.tile_depth, self.tile_width)
+    }
+
+    pub fn get_floor_position(&self, x: i32, y: i32) -> Vec3 {
+        Vec3::new(self.tile_width * x as f32, -1.6, self.tile_width * y as f32)
+    }
+
+    pub fn create_wall_collider(&self) -> Collider {
+        Collider::cuboid(self.tile_width, self.wall_height, self.tile_depth)
+    }
+
+    pub fn get_wall_position(&self, x: i32, y: i32, wall_direction: TileFlags) -> Vec3 {
+        match wall_direction {
+            TileFlags::WallNorth => {
+                Vec3::new(self.tile_width * x as f32, -self.wall_height, self.tile_width * y as f32 - self.tile_width / self.tile_size)
+            }
+            TileFlags::WallEast => {
+                Vec3::new(self.tile_width * x as f32 + self.tile_width / self.tile_size - self.tile_size / self.tile_basis, -self.wall_height, self.tile_width * y as f32)
+            }
+            TileFlags::WallSouth => {
+                Vec3::new(self.tile_width * x as f32, -self.wall_height, self.tile_width * y as f32 + self.tile_width / self.tile_size)
+            }
+            TileFlags::WallWest => {
+                Vec3::new(self.tile_width * x as f32 - self.tile_width / self.tile_size, -self.wall_height, self.tile_width * y as f32)
+            }
+            _ => { panic!("Not a wall direction") }
+        }
+    }
+
+    pub fn get_wall_rotation(&self, wall_direction: TileFlags) -> Quat {
+        match wall_direction {
+            TileFlags::WallNorth => { Quat::from_euler(EulerRot::YXZ, 0.0, 0.0, 0.0) }
+            TileFlags::WallSouth => { Quat::from_euler(EulerRot::YXZ, 0.0, 0.0, 0.0) }
+            TileFlags::WallEast => { Quat::from_euler(EulerRot::YXZ, PI / 2.0, 0.0, 0.0) }
+            TileFlags::WallWest => { Quat::from_euler(EulerRot::YXZ, PI / 2.0, 0.0, 0.0) }
+            _ => { panic!("Not a wall direction") }
+        }
+    }
+}
+
 pub fn map_loader(
     mut map_graph: ResMut<MapGraph>,
     mut load_map_event_reader: EventReader<LoadMap>,
     mut spawn_player_event_writer: EventWriter<SpawnPlayer>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut alien_counter: ResMut<AlienCounter>
+    mut alien_counter: ResMut<AlienCounter>,
+    tile_definitions: Res<TileDefinitions>,
 ) {
     for _load_map in load_map_event_reader.read() {
-        let tile_size = 2.0;
-        let tile_unit = tile_size / 32.0;
-        let tile_width = 32.0 * tile_unit;
-        let wall_height = 19.0 * tile_unit;
-        let tile_depth = 1.0 * tile_unit;
-
         let m = [
             [17, 1, 1, 1, 1, 1, 1, 1, 5],
             [1, 1, 1, 1, 1, 1, 1, 1, 1],
@@ -206,9 +269,9 @@ pub fn map_loader(
                         ..Default::default()
                     },
                     RigidBody::Static,
-                    Collider::cuboid(tile_width, tile_depth, tile_width),
-                    Position::from(Vec3::new(tile_width * tile.x as f32, -2.0, tile_width * tile.y as f32)),
-                    CollisionLayers::new([Layer::Floor], [Layer::Ball, Layer::Alien, Layer::Player])
+                    tile_definitions.create_floor_collider(),
+                    Position::from(tile_definitions.get_floor_position(tile.x, tile.y)),
+                    CollisionLayers::new([CollisionLayer::Floor], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player])
                 ));
             }
             if tile.features.contains(TileFlags::WallEast) { //Change to WallEast
@@ -220,15 +283,10 @@ pub fn map_loader(
                         ..Default::default()
                     },
                     RigidBody::Static,
-                    Collider::cuboid(tile_width, wall_height, tile_depth),
-                    Position::from(Vec3::new(tile_width * tile.x as f32 + tile_width / 2.0 - 2.0 / 16.0, -wall_height, tile_width * tile.y as f32)),
-                    Rotation::from(Quat::from_euler(
-                        bevy::math::EulerRot::YXZ,
-                        PI / 2.0,
-                        0.0,
-                        0.0,
-                    )),
-                    CollisionLayers::new([Layer::Wall], [Layer::Ball, Layer::Alien, Layer::Player]),
+                    tile_definitions.create_wall_collider(),
+                    Position::from(tile_definitions.get_wall_position(tile.x, tile.y, TileFlags::WallEast)),
+                    Rotation::from(tile_definitions.get_wall_rotation(TileFlags::WallEast)),
+                    CollisionLayers::new([CollisionLayer::Wall], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
                 ));
             }
             if tile.features.contains(TileFlags::WallWest) {
@@ -240,15 +298,10 @@ pub fn map_loader(
                         ..Default::default()
                     },
                     RigidBody::Static,
-                    Collider::cuboid(tile_width, wall_height, tile_depth),
-                    Position::from(Vec3::new(tile_width * tile.x as f32 - tile_width / 2.0, -wall_height, tile_width * tile.y as f32)),
-                    Rotation::from(Quat::from_euler(
-                        bevy::math::EulerRot::YXZ,
-                        PI / 2.0,
-                        0.0,
-                        0.0,
-                    )),
-                    CollisionLayers::new([Layer::Wall], [Layer::Ball, Layer::Alien, Layer::Player]),
+                    Collider::cuboid(tile_definitions.tile_width, tile_definitions.wall_height, tile_definitions.tile_depth),
+                    Position::from(tile_definitions.get_wall_position(tile.x, tile.y, TileFlags::WallWest)),
+                    Rotation::from(tile_definitions.get_wall_rotation(TileFlags::WallWest)),
+                    CollisionLayers::new([CollisionLayer::Wall], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
                 ));
             }
             if tile.features.contains(TileFlags::WallSouth) {
@@ -260,15 +313,10 @@ pub fn map_loader(
                         ..Default::default()
                     },
                     RigidBody::Static,
-                    Collider::cuboid(tile_width, wall_height, tile_depth),
-                    Position::from(Vec3::new(tile_width * tile.x as f32, -wall_height, tile_width * tile.y as f32 + tile_width / 2.0)),
-                    Rotation::from(Quat::from_euler(
-                        bevy::math::EulerRot::YXZ,
-                        0.0,
-                        0.0,
-                        0.0,
-                    )),
-                    CollisionLayers::new([Layer::Wall], [Layer::Ball, Layer::Alien, Layer::Player]),
+                    Collider::cuboid(tile_definitions.tile_width, tile_definitions.wall_height, tile_definitions.tile_depth),
+                    Position::from(tile_definitions.get_wall_position(tile.x, tile.y, TileFlags::WallSouth)),
+                    Rotation::from(tile_definitions.get_wall_rotation(TileFlags::WallSouth)),
+                    CollisionLayers::new([CollisionLayer::Wall], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
                 ));
             }
             if tile.features.contains(TileFlags::WallNorth) {
@@ -280,15 +328,10 @@ pub fn map_loader(
                         ..Default::default()
                     },
                     RigidBody::Static,
-                    Collider::cuboid(tile_width, wall_height, tile_depth),
-                    Position::from(Vec3::new(tile_width * tile.x as f32, -wall_height, tile_width * tile.y as f32 - tile_width / 2.0)),
-                    Rotation::from(Quat::from_euler(
-                        bevy::math::EulerRot::YXZ,
-                        0.0,
-                        0.0,
-                        0.0,
-                    )),
-                    CollisionLayers::new([Layer::Wall], [Layer::Ball, Layer::Alien, Layer::Player]),
+                    Collider::cuboid(tile_definitions.tile_width, tile_definitions.wall_height, tile_definitions.tile_depth),
+                    Position::from(tile_definitions.get_wall_position(tile.x, tile.y, TileFlags::WallNorth)),
+                    Rotation::from(tile_definitions.get_wall_rotation(TileFlags::WallNorth)),
+                    CollisionLayers::new([CollisionLayer::Wall], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
                 ));
             }
 
@@ -304,8 +347,8 @@ pub fn map_loader(
                     },
                     RigidBody::Static,
                     Collider::cuboid(0.5, 0.5, 0.45),
-                    Position::from(Vec3::new(tile_width * tile.x as f32 - 1.0, -wall_height, tile_width * tile.y as f32 + 1.0)),
-                    CollisionLayers::new([Layer::AlienSpawnPoint], [Layer::Player]),
+                    Position::from(Vec3::new(tile_definitions.tile_width * tile.x as f32 - 1.0, -tile_definitions.wall_height, tile_definitions.tile_width * tile.y as f32 + 1.0)),
+                    CollisionLayers::new([CollisionLayer::AlienSpawnPoint], [CollisionLayer::Player]),
                 ));
             }
             if tile.features.contains(TileFlags::AlienGoal) {
@@ -319,14 +362,14 @@ pub fn map_loader(
                     },
                     RigidBody::Static,
                     Collider::cuboid(0.5, 0.5, 0.45),
-                    Position::from(Vec3::new(tile_width * tile.x as f32, -wall_height, tile_width * tile.y as f32 - tile_width / 2.0)),
-                    CollisionLayers::new([Layer::AlienGoal], [Layer::Ball, Layer::Alien, Layer::Player]),
+                    Position::from(Vec3::new(tile_definitions.tile_width * tile.x as f32, -tile_definitions.wall_height, tile_definitions.tile_width * tile.y as f32 - tile_definitions.tile_width / 2.0)),
+                    CollisionLayers::new([CollisionLayer::AlienGoal], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
                 ));
             }
 
             if tile.features.contains(TileFlags::PlayerSpawn) {
                 spawn_player_event_writer.send(SpawnPlayer {
-                    position: Vec3::new(tile_width * tile.x as f32 + tile_width / 2.0, -wall_height, tile_width * tile.y as f32 + tile_width / 2.0),
+                    position: Vec3::new(tile_definitions.tile_width * tile.x as f32 + tile_definitions.tile_width / 2.0, -tile_definitions.wall_height, tile_definitions.tile_width * tile.y as f32 + tile_definitions.tile_width / 2.0),
                 });
             }
         }
@@ -337,6 +380,6 @@ pub fn current_tile_system(
     mut current_tile_query: Query<(&Position, &mut CurrentTile)>
 ) {
     for (position, mut current_tile) in current_tile_query.iter_mut() {
-        current_tile.tile = ( ((position.0.x / 2.0) as usize), ((position.0.z / 2.0) as usize));
+        current_tile.tile = (((position.0.x / 2.0) as usize), ((position.0.z / 2.0) as usize));
     }
 }
