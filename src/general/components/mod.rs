@@ -22,14 +22,15 @@ impl Default for Ball {
 pub struct HittableTarget {}
 
 #[derive(PhysicsLayer)]
-pub enum Layer {
+pub enum CollisionLayer {
     Floor,
     Ball,
-    Wall,
+    Impassable,
     Alien,
     Player,
     AlienSpawnPoint,
     AlienGoal,
+    BuildIndicator,
 }
 
 #[derive(Component, Clone, Debug, PartialEq)]

@@ -1,4 +1,4 @@
-use bevy::prelude::Component;
+use bevy::prelude::{Component, Entity};
 use bevy::reflect::Reflect;
 use bevy::utils::HashSet;
 use bevy_xpbd_3d::math::Vector3;
@@ -16,10 +16,20 @@ pub struct FollowCamera {
 pub struct KeyboardController {}
 
 #[derive(Hash, PartialEq, Eq, Clone, Reflect)]
-pub enum Triggers {
+pub enum ControlCommands {
     Throw,
-    Jump
+    Jump,
+    Build
 }
+
+#[derive(Hash, PartialEq, Eq, Clone, Reflect, Component)]
+pub struct IsBuilding;
+
+#[derive(Hash, PartialEq, Eq, Clone, Reflect, Component)]
+pub struct BuildingIndicator(pub Entity);
+
+#[derive(Hash, PartialEq, Eq, Clone, Reflect, Component)]
+pub struct IsBuildIndicator {}
 
 #[derive(Hash, PartialEq, Eq, Copy, Clone, Debug, Reflect)]
 pub enum ControlRotation {
@@ -61,7 +71,7 @@ impl Opposite for ControlRotation {
 
 #[derive(Component, Reflect)]
 pub struct Controller {
-    pub triggers: HashSet<Triggers>,
+    pub triggers: HashSet<ControlCommands>,
     pub rotations: HashSet<ControlRotation>,
     pub directions: HashSet<ControlDirection>,
     pub has_thrown:bool,

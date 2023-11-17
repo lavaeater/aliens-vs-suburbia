@@ -70,40 +70,44 @@ pub fn move_towards_goal_action_system(
                                 *action_state = ActionState::Success;
                             } else {
                                 let next_tile = path[0];
+                                if map_graph.grid.has_vertex(next_tile) {
+                                    let next_tile_position =
+                                        Vec2::new(
+                                            (next_tile.0 as f32) * 2.0f32 + 0.5,
+                                            (next_tile.1 as f32) * 2.0f32 + 0.5);
+                                    let alien_position_vector2 = alien_position.0.xz();
 
-                                let next_tile_position =
-                                    Vec2::new(
-                                        (next_tile.0 as f32) * 2.0f32+0.5,
-                                        (next_tile.1 as f32) * 2.0f32+0.5);
-                                let alien_position_vector2 = alien_position.0.xz();
-
-                                let alien_direction_vector2 = alien_rotation.0.mul_vec3(Vec3::new(0.0, 0.0, -1.0)).xz();
-                                let alien_to_goal_direction = next_tile_position - alien_position_vector2;
-                                let distance = alien_to_goal_direction.length();
-                                if distance < 0.5 {
-                                    move_towards_goal_data.path = Some(path[1..].to_vec());
-                                    return;
-                                }
-
-                                let angle = alien_direction_vector2.angle_between(alien_to_goal_direction).to_degrees();
-                                controller.rotations.clear();
-                                controller.directions.clear();
-                                let angle_speed_value = 90.0;
-                                let angle_forward_value = 15.0;
-                                if angle.abs() < angle_speed_value {
-                                    controller.turn_speed = controller.max_turn_speed * (angle.abs() / angle_speed_value);
-                                } else {
-                                    controller.turn_speed = controller.max_turn_speed;
-                                }
-                                if angle.abs() > 1.0 {
-                                    if angle.is_positive() {
-                                        controller.rotations.insert(ControlRotation::Right);
-                                    } else {
-                                        controller.rotations.insert(ControlRotation::Left);
+                                    let alien_direction_vector2 = alien_rotation.0.mul_vec3(Vec3::new(0.0, 0.0, -1.0)).xz();
+                                    let alien_to_goal_direction = next_tile_position - alien_position_vector2;
+                                    let distance = alien_to_goal_direction.length();
+                                    if distance < 0.5 {
+                                        move_towards_goal_data.path = Some(path[1..].to_vec());
+                                        return;
                                     }
-                                }
-                                if angle.abs() < angle_forward_value {
-                                    controller.directions.insert(ControlDirection::Forward);
+
+                                    let angle = alien_direction_vector2.angle_between(alien_to_goal_direction).to_degrees();
+                                    controller.rotations.clear();
+                                    controller.directions.clear();
+                                    let angle_speed_value = 90.0;
+                                    let angle_forward_value = 15.0;
+                                    if angle.abs() < angle_speed_value {
+                                        controller.turn_speed = controller.max_turn_speed * (angle.abs() / angle_speed_value);
+                                    } else {
+                                        controller.turn_speed = controller.max_turn_speed;
+                                    }
+                                    if angle.abs() > 1.0 {
+                                        if angle.is_positive() {
+                                            controller.rotations.insert(ControlRotation::Right);
+                                        } else {
+                                            controller.rotations.insert(ControlRotation::Left);
+                                        }
+                                    }
+                                    if angle.abs() < angle_forward_value {
+                                        controller.directions.insert(ControlDirection::Forward);
+                                    }
+                                } else {
+                                    move_towards_goal_data.path = None;
+                                    *action_state = ActionState::Failure;
                                 }
                             }
                         }

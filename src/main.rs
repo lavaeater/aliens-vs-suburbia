@@ -21,16 +21,19 @@ use crate::camera::systems::camera_follow::camera_follow;
 use crate::enemy::components::general::AlienCounter;
 use crate::enemy::systems::spawn_aliens::{alien_spawner_system, spawn_aliens};
 use crate::general::components::Health;
+use crate::general::components::map_components::CurrentTile;
 use crate::general::events::map_events::AlienReachedGoal;
 use crate::general::resources::map_resources::MapGraph;
 use crate::general::systems::dynamic_movement_system::dynamic_movement;
 use crate::general::systems::collision_handling_system::collision_handling_system;
 use crate::general::systems::kinematic_movement_system::kinematic_movement;
 use crate::general::systems::lights_systems::spawn_lights;
-use crate::general::systems::map_systems::{current_tile_system, load_map_one, map_loader};
+use crate::general::systems::map_systems::{current_tile_system, load_map_one, map_loader, TileDefinitions};
 use crate::general::systems::throwing_system::throwing;
 use crate::player::components::general::Controller;
-use crate::player::systems::keyboard_control::keyboard_control;
+use crate::player::events::building_events::{AddTile, EnterBuildMode, ExecuteBuild, ExitBuildMode, RemoveTile};
+use crate::player::systems::build_systems::{add_tile_to_map, building_mode, enter_build_mode, execute_build, exit_build_mode, remove_tile_from_map};
+use crate::player::systems::keyboard_control::input_control;
 
 pub(crate) mod player;
 pub(crate) mod general;
@@ -46,11 +49,18 @@ fn main() {
         .add_event::<SpawnAlien>()
         .add_event::<AlienReachedGoal>()
         .add_event::<SpawnPlayer>()
+        .add_event::<EnterBuildMode>()
+        .add_event::<ExitBuildMode>()
+        .add_event::<ExecuteBuild>()
+        .add_event::<RemoveTile>()
+        .add_event::<AddTile>()
         .register_type::<CameraOffset>()
+        .register_type::<CurrentTile>()
         .register_type::<Controller>()
         .register_type::<Health>()
         .register_type::<AvoidWallsData>()
         .register_type::<ApproachAndAttackPlayerData>()
+        .insert_resource(TileDefinitions::new(2.0, 32.0, 19.0, 1.0))
         .insert_resource(AlienCounter::new(50))
         .insert_resource(MapGraph {
             grid: Grid::new(0,0),
@@ -85,13 +95,19 @@ fn main() {
                 spawn_players,
                 spawn_aliens,
                 camera_follow,
-                keyboard_control,
+                input_control,
                 kinematic_movement,
                 dynamic_movement,
                 throwing,
                 collision_handling_system,
                 current_tile_system,
                 alien_reached_goal_handler,
+                enter_build_mode,
+                exit_build_mode,
+                building_mode,
+                execute_build,
+                remove_tile_from_map,
+                add_tile_to_map,
             ))
         .add_systems(
             FixedUpdate,
