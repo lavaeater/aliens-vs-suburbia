@@ -147,7 +147,6 @@ impl ToWorldCoordinates for (usize, usize) {
     }
 }
 
-/// This is a trait that allows us to convert a Vec2 to a grid neighbour. vec has to be normalized
 impl ToGridNeighbour for Rotation {
     fn get_neighbour(&self, current_tile: (usize, usize)) -> (usize, usize) {
         let n = self.0.

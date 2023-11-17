@@ -348,7 +348,7 @@ pub fn map_loader(
                     },
                     RigidBody::Static,
                     Collider::cuboid(0.5, 0.5, 0.45),
-                    Position::from(Vec3::new(tile_definitions.tile_width * tile.x as f32 - 1.0, -tile_definitions.wall_height, tile_definitions.tile_width * tile.y as f32 + 1.0)),
+                    Position::from((tile.x as usize, tile.y as usize).to_world_coords(&tile_definitions) + Vec3::new(0.0, -tile_definitions.wall_height, 0.0)),
                     CollisionLayers::new([CollisionLayer::AlienSpawnPoint], [CollisionLayer::Player]),
                 ));
             }
@@ -363,7 +363,7 @@ pub fn map_loader(
                     },
                     RigidBody::Static,
                     Collider::cuboid(0.5, 0.5, 0.45),
-                    Position::from(Vec3::new(tile_definitions.tile_width * tile.x as f32, -tile_definitions.wall_height, tile_definitions.tile_width * tile.y as f32 - tile_definitions.tile_width / 2.0)),
+                    Position::from((tile.x as usize, tile.y as usize).to_world_coords(&tile_definitions) + Vec3::new(0.0, -tile_definitions.wall_height, 0.0)),
                     CollisionLayers::new([CollisionLayer::AlienGoal], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
                 ));
             }
