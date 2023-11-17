@@ -31,8 +31,8 @@ use crate::general::systems::lights_systems::spawn_lights;
 use crate::general::systems::map_systems::{current_tile_system, load_map_one, map_loader, TileDefinitions};
 use crate::general::systems::throwing_system::throwing;
 use crate::player::components::general::Controller;
-use crate::player::events::building_events::{StartBuilding, StopBuilding};
-use crate::player::systems::build_systems::{building_mode, start_build_mode, stop_build_mode};
+use crate::player::events::building_events::{AddTile, EnterBuildMode, ExecuteBuild, ExitBuildMode, RemoveTile};
+use crate::player::systems::build_systems::{add_tile_to_map, building_mode, enter_build_mode, execute_build, exit_build_mode, remove_tile_from_map};
 use crate::player::systems::keyboard_control::input_control;
 
 pub(crate) mod player;
@@ -49,8 +49,11 @@ fn main() {
         .add_event::<SpawnAlien>()
         .add_event::<AlienReachedGoal>()
         .add_event::<SpawnPlayer>()
-        .add_event::<StartBuilding>()
-        .add_event::<StopBuilding>()
+        .add_event::<EnterBuildMode>()
+        .add_event::<ExitBuildMode>()
+        .add_event::<ExecuteBuild>()
+        .add_event::<RemoveTile>()
+        .add_event::<AddTile>()
         .register_type::<CameraOffset>()
         .register_type::<CurrentTile>()
         .register_type::<Controller>()
@@ -99,9 +102,12 @@ fn main() {
                 collision_handling_system,
                 current_tile_system,
                 alien_reached_goal_handler,
-                start_build_mode,
-                stop_build_mode,
+                enter_build_mode,
+                exit_build_mode,
                 building_mode,
+                execute_build,
+                remove_tile_from_map,
+                add_tile_to_map,
             ))
         .add_systems(
             FixedUpdate,

@@ -48,7 +48,7 @@ pub fn avoid_walls_data_system(
             forward,// Direction
             avoid_wall_data.max_forward_distance, // Maximum time of impact (travel distance)
             true, // Does the ray treat colliders as "solid"
-            SpatialQueryFilter::new().with_masks([CollisionLayer::Wall]), // Query for players
+            SpatialQueryFilter::new().with_masks([CollisionLayer::Impassable]), // Query for players
         ) {
             avoid_wall_data.forward_distance = hit.time_of_impact;
         };
@@ -58,7 +58,7 @@ pub fn avoid_walls_data_system(
             left,// Direction
             avoid_wall_data.max_left_distance, // Maximum time of impact (travel distance)
             true, // Does the ray treat colliders as "solid"
-            SpatialQueryFilter::new().with_masks([CollisionLayer::Wall]), // Query for players
+            SpatialQueryFilter::new().with_masks([CollisionLayer::Impassable]), // Query for players
         ) {
             avoid_wall_data.left_distance = hit.time_of_impact;
         };
@@ -68,7 +68,7 @@ pub fn avoid_walls_data_system(
             right,// Direction
             avoid_wall_data.max_right_distance, // Maximum time of impact (travel distance)
             true, // Does the ray treat colliders as "solid"
-            SpatialQueryFilter::new().with_masks([CollisionLayer::Wall]), // Query for players
+            SpatialQueryFilter::new().with_masks([CollisionLayer::Impassable]), // Query for players
         ) {
             avoid_wall_data.right_distance = hit.time_of_impact;
         };

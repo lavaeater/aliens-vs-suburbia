@@ -2,7 +2,7 @@ use bevy::asset::AssetServer;
 use bevy::core::Name;
 use bevy::hierarchy::DespawnRecursiveExt;
 use bevy::math::{Vec2, Vec3, Vec3Swizzles};
-use bevy::prelude::{Commands, EventReader, Query, Res, With};
+use bevy::prelude::{Commands, EventReader, EventWriter, Query, Res, ResMut, With};
 use bevy::scene::{SceneBundle, SceneInstance};
 use bevy_xpbd_3d::components::{CollisionLayers, LockedAxes, RigidBody, Rotation};
 use bevy_xpbd_3d::prelude::Position;
@@ -11,22 +11,22 @@ use crate::general::components::map_components::CurrentTile;
 use crate::general::resources::map_resources::MapGraph;
 use crate::general::systems::map_systems::TileDefinitions;
 use crate::player::components::general::{BuildingIndicator, IsBuilding, IsBuildIndicator};
-use crate::player::events::building_events::{StartBuilding, StopBuilding};
+use crate::player::events::building_events::{EnterBuildMode, ExitBuildMode, ExecuteBuild, RemoveTile, AddTile};
 
 
-pub fn start_build_mode(
-    mut start_evr: EventReader<StartBuilding>,
+pub fn enter_build_mode(
+    mut enter_build_mode_evr: EventReader<EnterBuildMode>,
     mut builder_query: Query<(&CurrentTile, &Rotation)>,
     asset_server: Res<AssetServer>,
     tile_definitions: Res<TileDefinitions>,
     mut commands: Commands,
 ) {
-    for start_event in start_evr.read() {
+    for start_event in enter_build_mode_evr.read() {
         if let Ok((current_tile, rotation)) = builder_query.get_mut(start_event.0) {
             let desired_neighbour_pos =
                 rotation
                     .get_neighbour(current_tile.tile)
-                    .to_world_coords(&tile_definitions) + Vec3::new(0.0, -tile_definitions.wall_height + 0.1, 0.0);
+                    .to_world_coords(&tile_definitions) + Vec3::new(0.0, -1.2, 0.0);
 
             let building_indicator = commands.spawn((
                 Name::from("BuildingIndicator"),
@@ -49,12 +49,12 @@ pub fn start_build_mode(
     }
 }
 
-pub fn stop_build_mode(
-    mut stop_evr: EventReader<StopBuilding>,
+pub fn exit_build_mode(
+    mut exit_build_mode_evr: EventReader<ExitBuildMode>,
     player_build_indicator_query: Query<&BuildingIndicator>,
     mut commands: Commands,
 ) {
-    for stop_event in stop_evr.read() {
+    for stop_event in exit_build_mode_evr.read() {
         if let Ok(bulding_indicator) = player_build_indicator_query.get(stop_event.0) {
             commands.entity(bulding_indicator.0).despawn_recursive();
         }
@@ -63,23 +63,67 @@ pub fn stop_build_mode(
     }
 }
 
+pub fn remove_tile_from_map(
+    mut remove_tile_evr: EventReader<RemoveTile>,
+    mut map_graph: ResMut<MapGraph>
+) {
+    for remove_tile_event in remove_tile_evr.read() {
+        map_graph.grid.remove_vertex(remove_tile_event.0);
+    }
+}
+
+pub fn add_tile_to_map(
+    mut add_tile_evr: EventReader<AddTile>,
+    mut map_graph: ResMut<MapGraph>
+) {
+    for add_tile_event in add_tile_evr.read() {
+        map_graph.grid.add_vertex(add_tile_event.0);
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn execute_build(
+    mut execute_evr: EventReader<ExecuteBuild>,
+    mut cancel_build: EventWriter<ExitBuildMode>,
+    player_build_indicator_query: Query<&BuildingIndicator>,
+    building_indicator: Query<(&Position, &CurrentTile), With<IsBuildIndicator>>,
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    tile_definitions: Res<TileDefinitions>,
+    mut remove_tile_we: EventWriter<RemoveTile>,
+) {
+    for execute_event in execute_evr.read() {
+        if let Ok(build_indicator) = player_build_indicator_query.get(execute_event.0) {
+            if let Ok((position, current_tile)) = building_indicator.get(build_indicator.0) {
+                commands.spawn((
+                    Name::from("New Building, Bro"),
+                    IsBuildIndicator {},
+                    SceneBundle {
+                        scene: asset_server.load("floor_fab.glb#Scene0"),
+                        ..Default::default()
+                    },
+                    RigidBody::Kinematic,
+                    tile_definitions.create_floor_collider(),
+                    *position,
+                    CollisionLayers::new([CollisionLayer::Impassable], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
+                    CurrentTile::default(),
+                ));
+                remove_tile_we.send(RemoveTile(current_tile.tile));
+            }
+        }
+        cancel_build.send(ExitBuildMode(execute_event.0));
+    }
+}
+
 pub fn building_mode(
     builder_query: Query<(&CurrentTile, &Rotation, &BuildingIndicator), With<IsBuilding>>,
     mut building_indicator_query: Query<(&CurrentTile, &Rotation, &mut Position, &SceneInstance), With<IsBuildIndicator>>,
-    map_graph: Res<MapGraph>,
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
     tile_definitions: Res<TileDefinitions>,
 ) {
     for (current_tile, rotation, building_indicator) in builder_query.iter() {
         let desired_neighbour = rotation.get_neighbour(current_tile.tile);
-        // if map_graph.grid.has_vertex(desired_neighbour) {
-        //     //Color should be green
-        // } else {
-        //     //Color should be red
-        // }
         if let Ok((current_tile, rotation, mut position, scene_instance)) = building_indicator_query.get_mut(building_indicator.0) {
-            let desired_neighbour_pos = desired_neighbour.to_world_coords(&tile_definitions) + Vec3::new(0.0, -tile_definitions.wall_height + 0.1 , 0.0);
+            let desired_neighbour_pos = desired_neighbour.to_world_coords(&tile_definitions) + Vec3::new(0.0, -1.2, 0.0);
             position.0 = desired_neighbour_pos;
         }
     }

@@ -158,12 +158,12 @@ pub fn map_loader(
 ) {
     for _load_map in load_map_event_reader.read() {
         let m = [
-            [1, 1, 1, 1, 1, 1, 1, 1, 5],
+            [17, 1, 1, 1, 1, 1, 1, 1, 5],
             [1, 1, 1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 17, 1, 1, 0, 1, 1, 1],
-            [1, 1, 1, 1, 1, 0, 1, 1, 1],
-            [1, 1, 1, 1, 1, 0, 1, 1, 1],
-            [1, 1, 1, 0, 0, 0, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1, 1, 1, 1, 1],
             [9, 1, 1, 1, 1, 1, 1, 1, 1],
@@ -287,7 +287,7 @@ pub fn map_loader(
                     tile_definitions.create_wall_collider(),
                     Position::from(tile_definitions.get_wall_position(tile.x, tile.y, TileFlags::WallEast)),
                     Rotation::from(tile_definitions.get_wall_rotation(TileFlags::WallEast)),
-                    CollisionLayers::new([CollisionLayer::Wall], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
+                    CollisionLayers::new([CollisionLayer::Impassable], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
                 ));
             }
             if tile.features.contains(TileFlags::WallWest) {
@@ -302,7 +302,7 @@ pub fn map_loader(
                     Collider::cuboid(tile_definitions.tile_width, tile_definitions.wall_height, tile_definitions.tile_depth),
                     Position::from(tile_definitions.get_wall_position(tile.x, tile.y, TileFlags::WallWest)),
                     Rotation::from(tile_definitions.get_wall_rotation(TileFlags::WallWest)),
-                    CollisionLayers::new([CollisionLayer::Wall], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
+                    CollisionLayers::new([CollisionLayer::Impassable], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
                 ));
             }
             if tile.features.contains(TileFlags::WallSouth) {
@@ -317,7 +317,7 @@ pub fn map_loader(
                     Collider::cuboid(tile_definitions.tile_width, tile_definitions.wall_height, tile_definitions.tile_depth),
                     Position::from(tile_definitions.get_wall_position(tile.x, tile.y, TileFlags::WallSouth)),
                     Rotation::from(tile_definitions.get_wall_rotation(TileFlags::WallSouth)),
-                    CollisionLayers::new([CollisionLayer::Wall], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
+                    CollisionLayers::new([CollisionLayer::Impassable], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
                 ));
             }
             if tile.features.contains(TileFlags::WallNorth) {
@@ -332,7 +332,7 @@ pub fn map_loader(
                     Collider::cuboid(tile_definitions.tile_width, tile_definitions.wall_height, tile_definitions.tile_depth),
                     Position::from(tile_definitions.get_wall_position(tile.x, tile.y, TileFlags::WallNorth)),
                     Rotation::from(tile_definitions.get_wall_rotation(TileFlags::WallNorth)),
-                    CollisionLayers::new([CollisionLayer::Wall], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
+                    CollisionLayers::new([CollisionLayer::Impassable], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
                 ));
             }
 

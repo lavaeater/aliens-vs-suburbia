@@ -31,7 +31,7 @@ pub fn throwing(
                 RigidBody::Dynamic,
                 Collider::ball(1.0 / 16.0),
                 LinearVelocity(direction * 12.0),
-                CollisionLayers::new([CollisionLayer::Ball], [CollisionLayer::Wall, CollisionLayer::Floor, CollisionLayer::Alien, CollisionLayer::Player, CollisionLayer::AlienSpawnPoint, CollisionLayer::AlienGoal]),
+                CollisionLayers::new([CollisionLayer::Ball], [CollisionLayer::Impassable, CollisionLayer::Floor, CollisionLayer::Alien, CollisionLayer::Player, CollisionLayer::AlienSpawnPoint, CollisionLayer::AlienGoal]),
             ));
         } else {
             controller.fire_cool_down = 0.0;

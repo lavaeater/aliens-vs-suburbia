@@ -1,10 +1,20 @@
 use bevy::prelude::{Entity, Event};
 
 #[derive(Event)]
-pub struct StartBuilding(pub Entity);
+pub struct EnterBuildMode(pub Entity);
 
 #[derive(Event)]
-pub struct StopBuilding(pub Entity);
+pub struct ExecuteBuild(pub Entity);
+
+#[derive(Event)]
+pub struct RemoveTile(pub (usize, usize));
+
+#[derive(Event)]
+pub struct AddTile(pub (usize, usize));
+
+
+#[derive(Event)]
+pub struct ExitBuildMode(pub Entity);
 
 #[derive(Event)]
 pub struct CurrentTileUpdated(pub Entity, pub (usize, usize));

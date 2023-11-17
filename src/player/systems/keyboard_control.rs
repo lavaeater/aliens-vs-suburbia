@@ -2,13 +2,14 @@ use bevy::input::ButtonState;
 use bevy::input::keyboard::KeyboardInput;
 use bevy::prelude::{Entity, EventReader, EventWriter, KeyCode, Query, With};
 use crate::player::components::general::{Controller, ControlDirection, KeyboardController, ControlRotation, ControlCommands};
-use crate::player::events::building_events::{StartBuilding, StopBuilding};
+use crate::player::events::building_events::{EnterBuildMode, ExitBuildMode, ExecuteBuild};
 
 pub fn input_control(
     mut key_evr: EventReader<KeyboardInput>,
     mut query: Query<(Entity, &mut Controller), With<KeyboardController>>,
-    mut start_build_ew: EventWriter<StartBuilding>,
-    mut stop_build_ew: EventWriter<StopBuilding>,
+    mut start_build_ew: EventWriter<EnterBuildMode>,
+    mut execute_build: EventWriter<ExecuteBuild>,
+    mut cancel_build: EventWriter<ExitBuildMode>,
 ) {
     if let Ok((entity, mut controller)) = query.get_single_mut() {
         for ev in key_evr.read() {
@@ -17,10 +18,16 @@ pub fn input_control(
                     Some(KeyCode::B) => {
                         if controller.triggers.contains(&ControlCommands::Build) {
                             controller.triggers.remove(&ControlCommands::Build);
-                            stop_build_ew.send(StopBuilding(entity));
+                            execute_build.send(ExecuteBuild(entity));
                         } else {
                             controller.triggers.insert(ControlCommands::Build);
-                            start_build_ew.send(StartBuilding(entity));
+                            start_build_ew.send(EnterBuildMode(entity));
+                        }
+                    }
+                    Some(KeyCode::Escape) => {
+                        if controller.triggers.contains(&ControlCommands::Build) {
+                            controller.triggers.remove(&ControlCommands::Build);
+                            cancel_build.send(ExitBuildMode(entity));
                         }
                     }
                     Some(KeyCode::A) => {

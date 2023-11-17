@@ -25,7 +25,7 @@ pub struct HittableTarget {}
 pub enum CollisionLayer {
     Floor,
     Ball,
-    Wall,
+    Impassable,
     Alien,
     Player,
     AlienSpawnPoint,
