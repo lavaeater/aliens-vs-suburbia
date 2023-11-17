@@ -18,7 +18,7 @@ pub fn spawn_players(
             Name::from("Player"),
             Player {},
             KeyboardController {},
-            Controller::new (3.0, 3.0, 120.0),
+            Controller::new (3.0, 3.0, 60.0),
             DynamicMovement {},
             SceneBundle {
                 scene: asset_server.load("player.glb#Scene0"),

@@ -339,10 +339,10 @@ pub fn map_loader(
 
             if tile.features.contains(TileFlags::AlienSpawnPoint) {
                 // We set the max aliens in the map, OK?
-                alien_counter.max_count = 1;
+                alien_counter.max_count = 100;
                 commands.spawn((
                     Name::from(format!("Alien Spawn Point{}:{}", tile.x, tile.y)),
-                    AlienSpawnPoint::new(30.0),
+                    AlienSpawnPoint::new(6.0),
                     SceneBundle {
                         scene: asset_server.load("player.glb#Scene0"),
                         ..Default::default()
