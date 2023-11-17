@@ -252,7 +252,7 @@ pub fn map_loader(
         }
 
         //This will make the grid ready for some a* path-finding!
-        map_graph.grid.enable_diagonal_mode();
+        //map_graph.grid.enable_diagonal_mode();
 
         let map = MapDef {
             x: 0,

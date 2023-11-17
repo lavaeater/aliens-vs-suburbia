@@ -1,5 +1,7 @@
 use bevy::prelude::*;
+use bevy::utils::petgraph::matrix_graph::Zero;
 use bevy_xpbd_3d::components::{Position, Rotation};
+use bevy_xpbd_3d::prelude::LinearVelocity;
 use big_brain::actions::ActionState;
 use big_brain::scorers::Score;
 use big_brain::thinker::{ActionSpan, Actor};
@@ -11,6 +13,8 @@ use crate::player::components::general::{ControlDirection, Controller, ControlRo
 use pathfinding::directed::astar::astar;
 use pathfinding::num_traits::Signed;
 use crate::general::events::map_events::AlienReachedGoal;
+use crate::general::systems::map_systems::TileDefinitions;
+use crate::player::systems::build_systems::ToWorldCoordinates;
 
 pub fn move_towards_goal_scorer_system(
     _approach_player_data: Query<&MoveTowardsGoalData>,
@@ -27,8 +31,9 @@ pub fn move_towards_goal_scorer_system(
 pub fn move_towards_goal_action_system(
     map_graph: Res<MapGraph>,
     mut action_query: Query<(&Actor, &mut ActionState, &ActionSpan), With<MoveTowardsGoalAction>>,
-    mut alien_query: Query<(&mut MoveTowardsGoalData, &mut Controller, &Position, &Rotation, &CurrentTile), With<Alien>>,
+    mut alien_query: Query<(&mut MoveTowardsGoalData, &mut Controller, &Position, &Rotation, &CurrentTile, &LinearVelocity), With<Alien>>,
     mut alien_reached_goal_event_writer: EventWriter<AlienReachedGoal>,
+    tile_definitions: Res<TileDefinitions>,
 ) {
     for (actor, mut action_state, span) in action_query.iter_mut() {
         let _guard = span.span().enter();
@@ -42,9 +47,15 @@ pub fn move_towards_goal_action_system(
                               mut controller,
                               alien_position,
                               alien_rotation,
-                              alien_current_tile)
+                              alien_current_tile, linear_velocity)
                 ) = alien_query.get_mut(actor.0)
                 {
+                    if linear_velocity.length().is_zero() {
+                        info!("We are STANDING STILL!");
+                        move_towards_goal_data.path = None;
+                        *action_state = ActionState::Failure;
+                        return;
+                    }
                     match &move_towards_goal_data.path {
                         None => {
                             // Get a path, set the path, return here later, eh?
@@ -71,10 +82,7 @@ pub fn move_towards_goal_action_system(
                             } else {
                                 let next_tile = path[0];
                                 if map_graph.grid.has_vertex(next_tile) {
-                                    let next_tile_position =
-                                        Vec2::new(
-                                            (next_tile.0 as f32) * 2.0f32 + 0.5,
-                                            (next_tile.1 as f32) * 2.0f32 + 0.5);
+                                    let next_tile_position = next_tile.to_world_coords(&tile_definitions).xz();
                                     let alien_position_vector2 = alien_position.0.xz();
 
                                     let alien_direction_vector2 = alien_rotation.0.mul_vec3(Vec3::new(0.0, 0.0, -1.0)).xz();
