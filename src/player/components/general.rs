@@ -28,6 +28,9 @@ pub struct IsBuilding;
 #[derive(Hash, PartialEq, Eq, Clone, Reflect, Component)]
 pub struct BuildingIndicator(pub Entity);
 
+#[derive(Hash, PartialEq, Eq, Clone, Reflect, Component)]
+pub struct IsBuildIndicator {}
+
 #[derive(Hash, PartialEq, Eq, Copy, Clone, Debug, Reflect)]
 pub enum ControlRotation {
     Left,

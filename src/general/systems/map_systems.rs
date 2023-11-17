@@ -14,6 +14,7 @@ use crate::general::components::map_components::{AlienGoal, AlienSpawnPoint, Cur
 use crate::general::events::map_events::{LoadMap, SpawnPlayer};
 use crate::general::resources::map_resources::MapGraph;
 use bevy::math::EulerRot;
+use crate::player::systems::build_systems::ToWorldCoordinates;
 
 flags! {
     pub enum FileFlags: u16 {
@@ -110,7 +111,7 @@ impl TileDefinitions {
     }
 
     pub fn get_floor_position(&self, x: i32, y: i32) -> Vec3 {
-        Vec3::new(self.tile_width * x as f32, -1.6, self.tile_width * y as f32)
+        Vec3::new(self.tile_width * x as f32, -1.8, self.tile_width * y as f32)
     }
 
     pub fn create_wall_collider(&self) -> Collider {
@@ -120,16 +121,16 @@ impl TileDefinitions {
     pub fn get_wall_position(&self, x: i32, y: i32, wall_direction: TileFlags) -> Vec3 {
         match wall_direction {
             TileFlags::WallNorth => {
-                Vec3::new(self.tile_width * x as f32, -self.wall_height, self.tile_width * y as f32 - self.tile_width / self.tile_size)
+                Vec3::new(self.tile_width * x as f32, -self.wall_height, self.tile_width * y as f32 - self.tile_width / 2.0)
             }
             TileFlags::WallEast => {
-                Vec3::new(self.tile_width * x as f32 + self.tile_width / self.tile_size - self.tile_size / self.tile_basis, -self.wall_height, self.tile_width * y as f32)
+                Vec3::new(self.tile_width * x as f32 + self.tile_width / 2.0 - self.tile_size / self.tile_basis, -self.wall_height, self.tile_width * y as f32)
             }
             TileFlags::WallSouth => {
-                Vec3::new(self.tile_width * x as f32, -self.wall_height, self.tile_width * y as f32 + self.tile_width / self.tile_size)
+                Vec3::new(self.tile_width * x as f32, -self.wall_height, self.tile_width * y as f32 + self.tile_width / 2.0)
             }
             TileFlags::WallWest => {
-                Vec3::new(self.tile_width * x as f32 - self.tile_width / self.tile_size, -self.wall_height, self.tile_width * y as f32)
+                Vec3::new(self.tile_width * x as f32 - self.tile_width / 2.0, -self.wall_height, self.tile_width * y as f32)
             }
             _ => { panic!("Not a wall direction") }
         }
@@ -157,11 +158,11 @@ pub fn map_loader(
 ) {
     for _load_map in load_map_event_reader.read() {
         let m = [
-            [17, 1, 1, 1, 1, 1, 1, 1, 5],
+            [1, 1, 1, 1, 1, 1, 1, 1, 5],
             [1, 1, 1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 0, 0, 0, 1, 1, 1],
-            [1, 1, 1, 0, 0, 0, 1, 1, 1],
-            [1, 1, 1, 0, 0, 0, 1, 1, 1],
+            [1, 1, 17, 1, 1, 0, 1, 1, 1],
+            [1, 1, 1, 1, 1, 0, 1, 1, 1],
+            [1, 1, 1, 1, 1, 0, 1, 1, 1],
             [1, 1, 1, 0, 0, 0, 1, 1, 1],
             [1, 1, 1, 1, 1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1, 1, 1, 1, 1],
@@ -369,7 +370,7 @@ pub fn map_loader(
 
             if tile.features.contains(TileFlags::PlayerSpawn) {
                 spawn_player_event_writer.send(SpawnPlayer {
-                    position: Vec3::new(tile_definitions.tile_width * tile.x as f32 + tile_definitions.tile_width / 2.0, -tile_definitions.wall_height, tile_definitions.tile_width * tile.y as f32 + tile_definitions.tile_width / 2.0),
+                    position: (tile.x as usize, tile.y as usize).to_world_coords(&tile_definitions) + Vec3::new(0.0, -tile_definitions.wall_height, 0.0),
                 });
             }
         }
@@ -377,9 +378,10 @@ pub fn map_loader(
 }
 
 pub fn current_tile_system(
-    mut current_tile_query: Query<(&Position, &mut CurrentTile)>
+    mut current_tile_query: Query<(&Position, &mut CurrentTile)>,
+    tile_definitions: Res<TileDefinitions>,
 ) {
     for (position, mut current_tile) in current_tile_query.iter_mut() {
-        current_tile.tile = (((position.0.x / 2.0) as usize), ((position.0.z / 2.0) as usize));
+        current_tile.tile = ((((position.0.x + 1.0) / 2.0) as usize), (((position.0.z + 1.0) / 2.0) as usize));
     }
 }

@@ -21,6 +21,7 @@ use crate::camera::systems::camera_follow::camera_follow;
 use crate::enemy::components::general::AlienCounter;
 use crate::enemy::systems::spawn_aliens::{alien_spawner_system, spawn_aliens};
 use crate::general::components::Health;
+use crate::general::components::map_components::CurrentTile;
 use crate::general::events::map_events::AlienReachedGoal;
 use crate::general::resources::map_resources::MapGraph;
 use crate::general::systems::dynamic_movement_system::dynamic_movement;
@@ -31,7 +32,7 @@ use crate::general::systems::map_systems::{current_tile_system, load_map_one, ma
 use crate::general::systems::throwing_system::throwing;
 use crate::player::components::general::Controller;
 use crate::player::events::building_events::{StartBuilding, StopBuilding};
-use crate::player::systems::build_systems::{start_build, stop_build};
+use crate::player::systems::build_systems::{building_mode, start_build_mode, stop_build_mode};
 use crate::player::systems::keyboard_control::input_control;
 
 pub(crate) mod player;
@@ -51,6 +52,7 @@ fn main() {
         .add_event::<StartBuilding>()
         .add_event::<StopBuilding>()
         .register_type::<CameraOffset>()
+        .register_type::<CurrentTile>()
         .register_type::<Controller>()
         .register_type::<Health>()
         .register_type::<AvoidWallsData>()
@@ -97,8 +99,9 @@ fn main() {
                 collision_handling_system,
                 current_tile_system,
                 alien_reached_goal_handler,
-                start_build,
-                stop_build,
+                start_build_mode,
+                stop_build_mode,
+                building_mode,
             ))
         .add_systems(
             FixedUpdate,

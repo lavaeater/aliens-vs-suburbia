@@ -1,21 +1,26 @@
 use bevy::input::ButtonState;
 use bevy::input::keyboard::KeyboardInput;
-use bevy::prelude::{EventReader, KeyCode, Query, With};
+use bevy::prelude::{Entity, EventReader, EventWriter, KeyCode, Query, With};
 use crate::player::components::general::{Controller, ControlDirection, KeyboardController, ControlRotation, ControlCommands};
+use crate::player::events::building_events::{StartBuilding, StopBuilding};
 
 pub fn input_control(
     mut key_evr: EventReader<KeyboardInput>,
-    mut query: Query<&mut Controller, With<KeyboardController>>,
+    mut query: Query<(Entity, &mut Controller), With<KeyboardController>>,
+    mut start_build_ew: EventWriter<StartBuilding>,
+    mut stop_build_ew: EventWriter<StopBuilding>,
 ) {
-    if let Ok(mut controller) = query.get_single_mut() {
+    if let Ok((entity, mut controller)) = query.get_single_mut() {
         for ev in key_evr.read() {
             match ev.state {
                 ButtonState::Pressed => match ev.key_code {
                     Some(KeyCode::B) => {
                         if controller.triggers.contains(&ControlCommands::Build) {
                             controller.triggers.remove(&ControlCommands::Build);
+                            stop_build_ew.send(StopBuilding(entity));
                         } else {
                             controller.triggers.insert(ControlCommands::Build);
+                            start_build_ew.send(StartBuilding(entity));
                         }
                     }
                     Some(KeyCode::A) => {
