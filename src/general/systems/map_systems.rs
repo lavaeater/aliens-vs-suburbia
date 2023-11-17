@@ -1,19 +1,20 @@
 use bevy::asset::AssetServer;
 use bevy::core::Name;
 use bevy::math::{Quat, Vec3};
-use bevy::prelude::{Commands, EventReader, EventWriter, Query, Res, ResMut, Resource};
+use bevy::prelude::{Commands, EventReader, EventWriter, Has, Query, Res, ResMut, Resource};
 use bevy::scene::SceneBundle;
 use bevy_xpbd_3d::components::CollisionLayers;
 use bevy_xpbd_3d::math::PI;
 use bevy_xpbd_3d::prelude::{Collider, Position, RigidBody, Rotation};
 use flagset::{flags, FlagSet};
 use pathfinding::grid::Grid;
-use crate::enemy::components::general::AlienCounter;
+use crate::enemy::components::general::{Alien, AlienCounter};
 use crate::general::components::CollisionLayer;
 use crate::general::components::map_components::{AlienGoal, AlienSpawnPoint, CurrentTile, Floor, Wall};
 use crate::general::events::map_events::{LoadMap, SpawnPlayer};
 use crate::general::resources::map_resources::MapGraph;
 use bevy::math::EulerRot;
+use crate::player::components::general::{IsBuildIndicator, Player};
 use crate::player::systems::build_systems::ToWorldCoordinates;
 
 flags! {
@@ -170,7 +171,7 @@ pub fn map_loader(
         ];
         let rows = m.len();
         let cols = m[0].len();
-        map_graph.grid = Grid::new(cols, rows);
+        map_graph.path_finding_grid = Grid::new(cols, rows);
         // let m = [
         //     [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
         //     [0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -196,7 +197,7 @@ pub fn map_loader(
                 let mut flag_val: FlagSet<TileFlags> = TileFlags::Floor.into();
                 //Fix border tiles
                 if *t != 0 {
-                    map_graph.grid.add_vertex((column, row));
+                    map_graph.path_finding_grid.add_vertex((column, row));
                     if column == 0 {
                         flag_val |= TileFlags::WallWest;
                     }
@@ -377,11 +378,16 @@ pub fn map_loader(
     }
 }
 
-pub fn current_tile_system(
-    mut current_tile_query: Query<(&Position, &mut CurrentTile)>,
+pub fn update_current_tile_system(
+    mut current_tile_query: Query<(&Position, &mut CurrentTile, Has<IsBuildIndicator>)>,
     tile_definitions: Res<TileDefinitions>,
+    mut map_graph: ResMut<MapGraph>
 ) {
-    for (position, mut current_tile) in current_tile_query.iter_mut() {
-        current_tile.tile = ((((position.0.x + 1.0) / 2.0) as usize), (((position.0.z + 1.0) / 2.0) as usize));
+    map_graph.occupied_tiles.clear();
+    for (position, mut current_tile, is_build_indicator) in current_tile_query.iter_mut() {
+        current_tile.tile = ((((position.0.x + tile_definitions.tile_width / 2.0) / tile_definitions.tile_size) as usize), (((position.0.z + tile_definitions.tile_width / 2.0) / tile_definitions.tile_size) as usize));
+        if !is_build_indicator {
+            map_graph.occupied_tiles.insert(current_tile.tile);
+        }
     }
 }

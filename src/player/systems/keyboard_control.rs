@@ -17,7 +17,6 @@ pub fn input_control(
                 ButtonState::Pressed => match ev.key_code {
                     Some(KeyCode::B) => {
                         if controller.triggers.contains(&ControlCommands::Build) {
-                            controller.triggers.remove(&ControlCommands::Build);
                             execute_build.send(ExecuteBuild(entity));
                         } else {
                             controller.triggers.insert(ControlCommands::Build);
@@ -26,7 +25,6 @@ pub fn input_control(
                     }
                     Some(KeyCode::Escape) => {
                         if controller.triggers.contains(&ControlCommands::Build) {
-                            controller.triggers.remove(&ControlCommands::Build);
                             cancel_build.send(ExitBuildMode(entity));
                         }
                     }

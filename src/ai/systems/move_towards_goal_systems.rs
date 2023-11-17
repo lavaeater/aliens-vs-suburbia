@@ -62,8 +62,8 @@ pub fn move_towards_goal_action_system(
                             let astar =
                                 astar(
                                     &alien_current_tile.tile,
-                                    |t| map_graph.grid.neighbours(*t).into_iter().map(|t| (t, 1)),
-                                    |t| map_graph.grid.distance(*t, map_graph.goal),
+                                    |t| map_graph.path_finding_grid.neighbours(*t).into_iter().map(|t| (t, 1)),
+                                    |t| map_graph.path_finding_grid.distance(*t, map_graph.goal),
                                     |t| *t == map_graph.goal);
                             match astar {
                                 None => {
@@ -81,7 +81,7 @@ pub fn move_towards_goal_action_system(
                                 *action_state = ActionState::Success;
                             } else {
                                 let next_tile = path[0];
-                                if map_graph.grid.has_vertex(next_tile) {
+                                if map_graph.path_finding_grid.has_vertex(next_tile) {
                                     let next_tile_position = next_tile.to_world_coords(&tile_definitions).xz();
                                     let alien_position_vector2 = alien_position.0.xz();
 

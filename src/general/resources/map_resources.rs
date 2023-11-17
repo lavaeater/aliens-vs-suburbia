@@ -1,8 +1,10 @@
+use std::collections::{HashSet};
 use bevy::prelude::Resource;
 use pathfinding::grid::Grid;
 
 #[derive(Resource)]
 pub struct MapGraph {
-    pub grid: Grid,
+    pub path_finding_grid: Grid,
+    pub occupied_tiles: HashSet<(usize, usize)>,
     pub goal: (usize, usize)
 }

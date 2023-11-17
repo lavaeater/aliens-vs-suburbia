@@ -2,7 +2,7 @@ use bevy::asset::AssetServer;
 use bevy::core::Name;
 use bevy::hierarchy::DespawnRecursiveExt;
 use bevy::math::{Vec2, Vec3, Vec3Swizzles};
-use bevy::prelude::{Commands, EventReader, EventWriter, Query, Res, ResMut, With};
+use bevy::prelude::{Commands, EventReader, EventWriter, Query, Res, ResMut, With, Without};
 use bevy::scene::{SceneBundle, SceneInstance};
 use bevy_xpbd_3d::components::{CollisionLayers, LockedAxes, RigidBody, Rotation};
 use bevy_xpbd_3d::prelude::Position;
@@ -10,13 +10,13 @@ use crate::general::components::CollisionLayer;
 use crate::general::components::map_components::CurrentTile;
 use crate::general::resources::map_resources::MapGraph;
 use crate::general::systems::map_systems::TileDefinitions;
-use crate::player::components::general::{BuildingIndicator, IsBuilding, IsBuildIndicator};
+use crate::player::components::general::{BuildingIndicator, IsBuilding, IsBuildIndicator, Controller, ControlCommands, IsObstacle};
 use crate::player::events::building_events::{EnterBuildMode, ExitBuildMode, ExecuteBuild, RemoveTile, AddTile};
 
 
 pub fn enter_build_mode(
     mut enter_build_mode_evr: EventReader<EnterBuildMode>,
-    mut builder_query: Query<(&CurrentTile, &Rotation)>,
+    mut builder_query: Query<(&CurrentTile, &Rotation), Without<IsBuilding>>,
     asset_server: Res<AssetServer>,
     tile_definitions: Res<TileDefinitions>,
     mut commands: Commands,
@@ -51,11 +51,12 @@ pub fn enter_build_mode(
 
 pub fn exit_build_mode(
     mut exit_build_mode_evr: EventReader<ExitBuildMode>,
-    player_build_indicator_query: Query<&BuildingIndicator>,
+    mut player_build_indicator_query: Query<(&BuildingIndicator, &mut Controller), With<IsBuilding>>,
     mut commands: Commands,
 ) {
     for stop_event in exit_build_mode_evr.read() {
-        if let Ok(bulding_indicator) = player_build_indicator_query.get(stop_event.0) {
+        if let Ok((bulding_indicator, mut controller)) = player_build_indicator_query.get_mut(stop_event.0) {
+            controller.triggers.remove(&ControlCommands::Build);
             commands.entity(bulding_indicator.0).despawn_recursive();
         }
         commands.entity(stop_event.0).remove::<IsBuilding>();
@@ -68,7 +69,7 @@ pub fn remove_tile_from_map(
     mut map_graph: ResMut<MapGraph>
 ) {
     for remove_tile_event in remove_tile_evr.read() {
-        map_graph.grid.remove_vertex(remove_tile_event.0);
+        map_graph.path_finding_grid.remove_vertex(remove_tile_event.0);
     }
 }
 
@@ -77,41 +78,44 @@ pub fn add_tile_to_map(
     mut map_graph: ResMut<MapGraph>
 ) {
     for add_tile_event in add_tile_evr.read() {
-        map_graph.grid.add_vertex(add_tile_event.0);
+        map_graph.path_finding_grid.add_vertex(add_tile_event.0);
     }
 }
 
 #[allow(clippy::too_many_arguments)]
 pub fn execute_build(
     mut execute_evr: EventReader<ExecuteBuild>,
-    mut cancel_build: EventWriter<ExitBuildMode>,
+    mut exit_build_ew: EventWriter<ExitBuildMode>,
     player_build_indicator_query: Query<&BuildingIndicator>,
     building_indicator: Query<(&Position, &CurrentTile), With<IsBuildIndicator>>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     tile_definitions: Res<TileDefinitions>,
     mut remove_tile_we: EventWriter<RemoveTile>,
+    map_graph: Res<MapGraph>,
 ) {
     for execute_event in execute_evr.read() {
         if let Ok(build_indicator) = player_build_indicator_query.get(execute_event.0) {
             if let Ok((position, current_tile)) = building_indicator.get(build_indicator.0) {
-                commands.spawn((
-                    Name::from("New Building, Bro"),
-                    IsBuildIndicator {},
-                    SceneBundle {
-                        scene: asset_server.load("floor_fab.glb#Scene0"),
-                        ..Default::default()
-                    },
-                    RigidBody::Kinematic,
-                    tile_definitions.create_floor_collider(),
-                    *position,
-                    CollisionLayers::new([CollisionLayer::Impassable], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
-                    CurrentTile::default(),
-                ));
-                remove_tile_we.send(RemoveTile(current_tile.tile));
+                if !map_graph.occupied_tiles.contains(&current_tile.tile) {
+                    commands.spawn((
+                        Name::from("New Building, Bro"),
+                        IsObstacle {},
+                        SceneBundle {
+                            scene: asset_server.load("floor_fab.glb#Scene0"),
+                            ..Default::default()
+                        },
+                        RigidBody::Kinematic,
+                        tile_definitions.create_floor_collider(),
+                        *position,
+                        CollisionLayers::new([CollisionLayer::Impassable], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
+                        CurrentTile::default(),
+                    ));
+                    remove_tile_we.send(RemoveTile(current_tile.tile));
+                    exit_build_ew.send(ExitBuildMode(execute_event.0));
+                }
             }
         }
-        cancel_build.send(ExitBuildMode(execute_event.0));
     }
 }
 
