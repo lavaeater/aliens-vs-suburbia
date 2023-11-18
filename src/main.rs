@@ -64,7 +64,7 @@ fn main() {
         .insert_resource(
             TileDefinitions::new(1.0,
                                  32.0,
-                                 19.0,
+                                 9.5,
                                  1.0,
                                  "map/wall_small.glb#Scene0".into(),
                                  "map/floor_small.glb#Scene0".into()))

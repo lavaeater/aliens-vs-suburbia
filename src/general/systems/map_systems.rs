@@ -121,7 +121,7 @@ impl TileDefinitions {
     }
 
     pub fn get_floor_position(&self, x: i32, y: i32) -> Vec3 {
-        Vec3::new(self.tile_width * x as f32, -1.8, self.tile_width * y as f32)
+        Vec3::new(self.tile_width * x as f32, -self.wall_height * 2.0, self.tile_width * y as f32)
     }
 
     pub fn create_wall_collider(&self) -> Collider {
