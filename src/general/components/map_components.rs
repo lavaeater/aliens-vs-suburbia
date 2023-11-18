@@ -25,7 +25,7 @@ pub struct ModelDefinition<L: PhysicsLayer> {
 
 #[derive(Resource)]
 pub struct ModelDefinitions<L:PhysicsLayer> {
-    pub definitions: HashMap<String, ModelDefinition<L>>
+    pub definitions: HashMap<&'static str, ModelDefinition<L>>
 }
 
 impl AlienGoal {
