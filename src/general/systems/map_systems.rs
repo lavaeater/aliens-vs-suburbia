@@ -253,7 +253,7 @@ pub fn map_loader(
         }
 
         //This will make the grid ready for some a* path-finding!
-        //map_graph.grid.enable_diagonal_mode();
+        map_graph.grid.enable_diagonal_mode();
 
         let map = MapDef {
             x: 0,
@@ -381,7 +381,7 @@ pub fn map_loader(
 pub fn update_current_tile_system(
     mut current_tile_query: Query<(&Position, &mut CurrentTile, Has<IsBuildIndicator>)>,
     tile_definitions: Res<TileDefinitions>,
-    mut map_graph: ResMut<MapGraph>
+    mut map_graph: ResMut<MapGraph>,
 ) {
     map_graph.occupied_tiles.clear();
     for (position, mut current_tile, is_build_indicator) in current_tile_query.iter_mut() {
