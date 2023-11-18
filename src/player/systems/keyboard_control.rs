@@ -66,6 +66,9 @@ pub fn input_control(
                     Some(KeyCode::Left) => {
                         change_build_indicator.send(ChangeBuildIndicator(entity, -1));
                     }
+                    Some(KeyCode::Right) => {
+                        change_build_indicator.send(ChangeBuildIndicator(entity, 1));
+                    }
                     _ => {}
                 }
             }

@@ -180,7 +180,7 @@ pub fn map_loader(
     mut map_graph: ResMut<MapGraph>,
     asset_server: Res<AssetServer>,
     tile_defs: Res<TileDefinitions>,
-    model_defs: Res<ModelDefinitions<CollisionLayer>>,
+    model_defs: Res<ModelDefinitions>,
 ) {
     for _load_map in load_map_event_reader.read() {
         let m = [

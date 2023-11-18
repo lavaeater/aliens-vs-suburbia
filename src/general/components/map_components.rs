@@ -14,25 +14,26 @@ pub struct AlienGoal {
     pub y: usize
 }
 
-pub struct ModelDefinition<L: PhysicsLayer> {
+pub struct ModelDefinition {
     pub file: &'static str,
     pub width: f32,
     pub height: f32,
     pub depth: f32,
     pub rigid_body: RigidBody,
-    pub group: Vec<L>,
-    pub mask: Vec<L>,
+    pub group: Vec<CollisionLayer>,
+    pub mask: Vec<CollisionLayer>,
 }
 
-impl ModelDefinition<CollisionLayer> {
+impl ModelDefinition {
     pub fn create_collision_layers(&self) -> CollisionLayers {
         CollisionLayers::new(self.group.clone(), self.mask.clone())
     }
 }
 
 #[derive(Resource)]
-pub struct ModelDefinitions<L:PhysicsLayer> {
-    pub definitions: HashMap<&'static str, ModelDefinition<L>>
+pub struct ModelDefinitions {
+    pub definitions: HashMap<&'static str, ModelDefinition>,
+    pub build_indicators: Vec<&'static str>,
 }
 
 impl AlienGoal {

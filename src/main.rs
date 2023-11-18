@@ -65,45 +65,49 @@ fn main() {
         .register_type::<AvoidWallsData>()
         .register_type::<ApproachAndAttackPlayerData>()
         .insert_resource(
-            ModelDefinitions::<CollisionLayer> { definitions: HashMap::from(
-            [
-                ("wall", ModelDefinition {
-                    file: "map/wall_small.glb#Scene0",
-                    width: 16.0,
-                    height: 19.0,
-                    depth: 1.0,
-                    rigid_body: RigidBody::Static,
-                    group: vec![CollisionLayer::Impassable],
-                    mask: vec![CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player],
-                }),
-                ("floor", ModelDefinition {
-                    file: "map/floor_small.glb#Scene0",
-                    width: 16.0,
-                    height: 1.0,
-                    depth: 16.0,
-                    rigid_body: RigidBody::Static,
-                    group: vec![CollisionLayer::Floor],
-                    mask: vec![CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player],
-                }),
-                ("obstacle", ModelDefinition {
-                    file: "map/obstacle.glb#Scene0",
-                    width: 16.0,
-                    height: 4.0,
-                    depth: 16.0,
-                    rigid_body: RigidBody::Kinematic,
-                    group: vec![CollisionLayer::Impassable],
-                    mask: vec![CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player],
-                }),
-                ("tower", ModelDefinition {
-                    file: "map/tower_balls.glb#Scene0",
-                    width: 16.0,
-                    height: 8.0,
-                    depth: 16.0,
-                    rigid_body: RigidBody::Kinematic,
-                    group: vec![CollisionLayer::Impassable],
-                    mask: vec![CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player],
-                }),
-                ]) }
+            ModelDefinitions {
+                definitions: HashMap::from(
+                    [
+                        ("wall", ModelDefinition {
+                            file: "map/wall_small.glb#Scene0",
+                            width: 16.0,
+                            height: 19.0,
+                            depth: 1.0,
+                            rigid_body: RigidBody::Static,
+                            group: vec![CollisionLayer::Impassable],
+                            mask: vec![CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player],
+                        }),
+                        ("floor", ModelDefinition {
+                            file: "map/floor_small.glb#Scene0",
+                            width: 16.0,
+                            height: 1.0,
+                            depth: 16.0,
+                            rigid_body: RigidBody::Static,
+                            group: vec![CollisionLayer::Floor],
+                            mask: vec![CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player],
+                        }),
+                        ("obstacle", ModelDefinition {
+                            file: "map/obstacle.glb#Scene0",
+                            width: 16.0,
+                            height: 4.0,
+                            depth: 16.0,
+                            rigid_body: RigidBody::Kinematic,
+                            group: vec![CollisionLayer::Impassable],
+                            mask: vec![CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player],
+                        }),
+                        ("tower", ModelDefinition {
+                            file: "map/tower_balls.glb#Scene0",
+                            width: 16.0,
+                            height: 8.0,
+                            depth: 16.0,
+                            rigid_body: RigidBody::Kinematic,
+                            group: vec![CollisionLayer::Impassable],
+                            mask: vec![CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player],
+                        }),
+                    ]),
+                build_indicators: vec!["obstacle", "tower"],
+
+            }
         )
         .insert_resource(
             TileDefinitions::new(1.0,

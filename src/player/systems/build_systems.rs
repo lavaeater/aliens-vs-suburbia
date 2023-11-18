@@ -7,7 +7,7 @@ use bevy::scene::{SceneBundle, SceneInstance};
 use bevy_xpbd_3d::components::{CollisionLayers, LockedAxes, RigidBody, Rotation};
 use bevy_xpbd_3d::prelude::{Collider, Position};
 use crate::general::components::CollisionLayer;
-use crate::general::components::map_components::CurrentTile;
+use crate::general::components::map_components::{CurrentTile, ModelDefinitions};
 use crate::general::resources::map_resources::MapGraph;
 use crate::general::systems::map_systems::TileDefinitions;
 use crate::player::components::general::{BuildingIndicator, IsBuilding, IsBuildIndicator, Controller, ControlCommands, IsObstacle};
@@ -43,7 +43,9 @@ pub fn enter_build_mode(
                 CurrentTile::default(),
             )).id();
 
-            commands.entity(start_event.0).insert(BuildingIndicator(building_indicator));
+            commands.entity(start_event.0).insert(BuildingIndicator(
+                building_indicator,
+                0));
             commands.entity(start_event.0).insert(IsBuilding {});
         }
     }
@@ -66,7 +68,7 @@ pub fn exit_build_mode(
 
 pub fn remove_tile_from_map(
     mut remove_tile_evr: EventReader<RemoveTile>,
-    mut map_graph: ResMut<MapGraph>
+    mut map_graph: ResMut<MapGraph>,
 ) {
     for remove_tile_event in remove_tile_evr.read() {
         map_graph.path_finding_grid.remove_vertex(remove_tile_event.0);
@@ -75,7 +77,7 @@ pub fn remove_tile_from_map(
 
 pub fn add_tile_to_map(
     mut add_tile_evr: EventReader<AddTile>,
-    mut map_graph: ResMut<MapGraph>
+    mut map_graph: ResMut<MapGraph>,
 ) {
     for add_tile_event in add_tile_evr.read() {
         map_graph.path_finding_grid.add_vertex(add_tile_event.0);
@@ -135,15 +137,34 @@ pub fn building_mode(
 
 pub fn change_build_indicator(
     mut change_build_indicator_evr: EventReader<ChangeBuildIndicator>,
-    builder_query: Query<(&BuildingIndicator), With<IsBuilding>>,
+    mut builder_query: Query<(&mut BuildingIndicator), With<IsBuilding>>,
     mut commands: Commands,
-    asset_server: Res<AssetServer>
+    asset_server: Res<AssetServer>,
+    model_defs: Res<ModelDefinitions>,
 ) {
     for change_build_event in change_build_indicator_evr.read() {
-        if let Ok((building_indicator)) = builder_query.get(change_build_event.0) {
+        if let Ok((mut building_indicator)) = builder_query.get_mut(change_build_event.0) {
+            let current_index = building_indicator.1;
+
+            let next_index = current_index + change_build_event.1;
+
+            building_indicator.1 = if next_index < 0 {
+                model_defs.build_indicators.len() as i32 - 1
+            } else if next_index >= model_defs.build_indicators.len() as i32 {
+                0
+            } else {
+                next_index
+            };
+
             commands.entity(building_indicator.0).remove::<SceneInstance>();
             commands.entity(building_indicator.0).insert(SceneBundle {
-                scene: asset_server.load("map/tower_balls.glb#Scene0"),
+                scene: asset_server
+                    .load(
+                        model_defs
+                            .definitions
+                            .get(model_defs.build_indicators[next_index as usize])
+                            .unwrap()
+                            .file),
                 ..Default::default()
             });
         }
@@ -179,7 +200,7 @@ impl ToGridNeighbour for Rotation {
 
         angle = if angle.is_negative() { 360 + angle } else { angle };
 
-        let x:i32 = match angle {
+        let x: i32 = match angle {
             0..=59 => { 1 }
             60..=119 => { 0 }
             120..=239 => { -1 }
@@ -188,7 +209,7 @@ impl ToGridNeighbour for Rotation {
             _ => { 1 }
         } + current_tile.0 as i32;
 
-        let y:i32 = match angle {
+        let y: i32 = match angle {
             46..=134 => { -1 }
             135..=224 => { 0 }
             225..=314 => { 1 }
