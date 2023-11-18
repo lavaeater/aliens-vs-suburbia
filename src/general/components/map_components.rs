@@ -1,8 +1,9 @@
 use bevy::prelude::{Component, Resource};
 use bevy::reflect::Reflect;
 use bevy::utils::HashMap;
-use bevy_xpbd_3d::components::RigidBody;
+use bevy_xpbd_3d::components::{CollisionLayers, RigidBody};
 use bevy_xpbd_3d::prelude::PhysicsLayer;
+use crate::general::components::CollisionLayer;
 
 #[derive(Component)]
 pub struct Wall {}
@@ -21,6 +22,12 @@ pub struct ModelDefinition<L: PhysicsLayer> {
     pub rigid_body: RigidBody,
     pub group: Vec<L>,
     pub mask: Vec<L>,
+}
+
+impl ModelDefinition<CollisionLayer> {
+    pub fn create_collision_layers(&self) -> CollisionLayers {
+        CollisionLayers::new(self.group.clone(), self.mask.clone())
+    }
 }
 
 #[derive(Resource)]

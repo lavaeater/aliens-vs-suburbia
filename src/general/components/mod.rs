@@ -21,7 +21,7 @@ impl Default for Ball {
 #[derive(Component)]
 pub struct HittableTarget {}
 
-#[derive(PhysicsLayer)]
+#[derive(PhysicsLayer,PartialEq, Eq, Clone, Copy)]
 pub enum CollisionLayer {
     Floor,
     Ball,
