@@ -32,8 +32,8 @@ use crate::general::systems::lights_systems::spawn_lights;
 use crate::general::systems::map_systems::{update_current_tile_system, load_map_one, map_loader, TileDefinitions};
 use crate::general::systems::throwing_system::throwing;
 use crate::player::components::general::Controller;
-use crate::player::events::building_events::{AddTile, EnterBuildMode, ExecuteBuild, ExitBuildMode, RemoveTile};
-use crate::player::systems::build_systems::{add_tile_to_map, building_mode, enter_build_mode, execute_build, exit_build_mode, remove_tile_from_map};
+use crate::player::events::building_events::{AddTile, ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode, RemoveTile};
+use crate::player::systems::build_systems::{add_tile_to_map, building_mode, change_build_indicator, enter_build_mode, execute_build, exit_build_mode, remove_tile_from_map};
 use crate::player::systems::keyboard_control::input_control;
 
 pub(crate) mod player;
@@ -53,6 +53,7 @@ fn main() {
         .add_event::<EnterBuildMode>()
         .add_event::<ExitBuildMode>()
         .add_event::<ExecuteBuild>()
+        .add_event::<ChangeBuildIndicator>()
         .add_event::<RemoveTile>()
         .add_event::<AddTile>()
         .register_type::<CameraOffset>()
@@ -117,6 +118,7 @@ fn main() {
                 execute_build,
                 remove_tile_from_map,
                 add_tile_to_map,
+                change_build_indicator,
             ))
         .add_systems(
             FixedUpdate,

@@ -5,13 +5,13 @@ use bevy::math::{Vec2, Vec3, Vec3Swizzles};
 use bevy::prelude::{Commands, EventReader, EventWriter, Query, Res, ResMut, With, Without};
 use bevy::scene::{SceneBundle, SceneInstance};
 use bevy_xpbd_3d::components::{CollisionLayers, LockedAxes, RigidBody, Rotation};
-use bevy_xpbd_3d::prelude::Position;
+use bevy_xpbd_3d::prelude::{Collider, Position};
 use crate::general::components::CollisionLayer;
 use crate::general::components::map_components::CurrentTile;
 use crate::general::resources::map_resources::MapGraph;
 use crate::general::systems::map_systems::TileDefinitions;
 use crate::player::components::general::{BuildingIndicator, IsBuilding, IsBuildIndicator, Controller, ControlCommands, IsObstacle};
-use crate::player::events::building_events::{EnterBuildMode, ExitBuildMode, ExecuteBuild, RemoveTile, AddTile};
+use crate::player::events::building_events::{EnterBuildMode, ExitBuildMode, ExecuteBuild, RemoveTile, AddTile, ChangeBuildIndicator};
 
 
 pub fn enter_build_mode(
@@ -129,6 +129,23 @@ pub fn building_mode(
         if let Ok((current_tile, rotation, mut position, scene_instance)) = building_indicator_query.get_mut(building_indicator.0) {
             let desired_neighbour_pos = desired_neighbour.to_world_coords(&tile_definitions) + Vec3::new(0.0, -tile_definitions.wall_height, 0.0);
             position.0 = desired_neighbour_pos;
+        }
+    }
+}
+
+pub fn change_build_indicator(
+    mut change_build_indicator_evr: EventReader<ChangeBuildIndicator>,
+    builder_query: Query<(&BuildingIndicator), With<IsBuilding>>,
+    mut commands: Commands,
+    asset_server: Res<AssetServer>
+) {
+    for change_build_event in change_build_indicator_evr.read() {
+        if let Ok((building_indicator)) = builder_query.get(change_build_event.0) {
+            commands.entity(building_indicator.0).remove::<SceneInstance>();
+            commands.entity(building_indicator.0).insert(SceneBundle {
+                scene: asset_server.load("map/tower_balls.glb#Scene0"),
+                ..Default::default()
+            });
         }
     }
 }

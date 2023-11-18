@@ -2,7 +2,7 @@ use bevy::input::ButtonState;
 use bevy::input::keyboard::KeyboardInput;
 use bevy::prelude::{Entity, EventReader, EventWriter, KeyCode, Query, With};
 use crate::player::components::general::{Controller, ControlDirection, KeyboardController, ControlRotation, ControlCommands};
-use crate::player::events::building_events::{EnterBuildMode, ExitBuildMode, ExecuteBuild};
+use crate::player::events::building_events::{EnterBuildMode, ExitBuildMode, ExecuteBuild, ChangeBuildIndicator};
 
 pub fn input_control(
     mut key_evr: EventReader<KeyboardInput>,
@@ -10,6 +10,7 @@ pub fn input_control(
     mut start_build_ew: EventWriter<EnterBuildMode>,
     mut execute_build: EventWriter<ExecuteBuild>,
     mut cancel_build: EventWriter<ExitBuildMode>,
+    mut change_build_indicator: EventWriter<ChangeBuildIndicator>,
 ) {
     if let Ok((entity, mut controller)) = query.get_single_mut() {
         for ev in key_evr.read() {
@@ -61,6 +62,9 @@ pub fn input_control(
                     }
                     Some(KeyCode::S) => {
                         controller.directions.remove(&ControlDirection::Backward);
+                    }
+                    Some(KeyCode::Left) => {
+                        change_build_indicator.send(ChangeBuildIndicator(entity, -1));
                     }
                     _ => {}
                 }
