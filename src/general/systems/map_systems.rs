@@ -288,10 +288,10 @@ pub fn map_loader(
                 commands.spawn((
                     Name::from(format!("Floor {}:{}", tile.x, tile.y)),
                     Floor {},
-                    // SceneBundle {
-                    //     scene: asset_server.load(&tile_definitions.floor_file),
-                    //     ..Default::default()
-                    // },
+                    SceneBundle {
+                        scene: asset_server.load(&tile_definitions.floor_file),
+                        ..Default::default()
+                    },
                     RigidBody::Static,
                     tile_definitions.create_collider(16.0,1.0,16.0),
                     Position::from(tile_definitions.get_floor_position(tile.x, tile.y)),

@@ -26,17 +26,17 @@ pub fn enter_build_mode(
             let desired_neighbour_pos =
                 rotation
                     .get_neighbour(current_tile.tile)
-                    .to_world_coords(&tile_definitions) + Vec3::new(0.0, -1.2, 0.0);
+                    .to_world_coords(&tile_definitions) + Vec3::new(0.0, -tile_definitions.wall_height * 2.0, 0.0);
 
             let building_indicator = commands.spawn((
                 Name::from("BuildingIndicator"),
                 IsBuildIndicator {},
                 SceneBundle {
-                    scene: asset_server.load("floor_fab.glb#Scene0"),
+                    scene: asset_server.load("map/obstacle.glb#Scene0"),
                     ..Default::default()
                 },
                 RigidBody::Kinematic,
-                tile_definitions.create_floor_collider(),
+                tile_definitions.create_collider(16.0, 4.0, 16.0),
                 Position::from(desired_neighbour_pos),
                 CollisionLayers::new([CollisionLayer::BuildIndicator], []),
                 LockedAxes::new().lock_rotation_x().lock_rotation_z().lock_rotation_y(),
@@ -102,11 +102,11 @@ pub fn execute_build(
                         Name::from("New Building, Bro"),
                         IsObstacle {},
                         SceneBundle {
-                            scene: asset_server.load("floor_fab.glb#Scene0"),
+                            scene: asset_server.load("map/obstacle.glb#Scene0"),
                             ..Default::default()
                         },
                         RigidBody::Kinematic,
-                        tile_definitions.create_floor_collider(),
+                        tile_definitions.create_collider(16.0, 4.0, 16.0),
                         *position,
                         CollisionLayers::new([CollisionLayer::Impassable], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
                         CurrentTile::default(),
@@ -127,7 +127,7 @@ pub fn building_mode(
     for (current_tile, rotation, building_indicator) in builder_query.iter() {
         let desired_neighbour = rotation.get_neighbour(current_tile.tile);
         if let Ok((current_tile, rotation, mut position, scene_instance)) = building_indicator_query.get_mut(building_indicator.0) {
-            let desired_neighbour_pos = desired_neighbour.to_world_coords(&tile_definitions) + Vec3::new(0.0, -1.2, 0.0);
+            let desired_neighbour_pos = desired_neighbour.to_world_coords(&tile_definitions) + Vec3::new(0.0, -tile_definitions.wall_height, 0.0);
             position.0 = desired_neighbour_pos;
         }
     }
