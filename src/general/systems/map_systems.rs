@@ -89,10 +89,17 @@ pub struct TileDefinitions {
     pub tile_width: f32,
     pub wall_height: f32,
     pub tile_depth: f32,
+    pub wall_file: String,
+    pub floor_file: String,
 }
 
 impl TileDefinitions {
-    pub fn new(tile_size: f32, tile_basis: f32, wall_basis: f32, tile_depth_basis: f32) -> Self {
+    pub fn new(tile_size: f32,
+               tile_basis: f32,
+               wall_basis: f32,
+               tile_depth_basis: f32,
+               wall_file: String,
+               floor_file: String) -> Self {
         let tile_unit = tile_size / tile_basis;
         let tile_width = tile_basis * tile_unit;
         let wall_height = wall_basis * tile_unit;
@@ -104,6 +111,8 @@ impl TileDefinitions {
             tile_width,
             wall_height,
             tile_depth,
+            wall_file,
+            floor_file
         }
     }
 
@@ -267,7 +276,7 @@ pub fn map_loader(
                     Name::from(format!("Floor {}:{}", tile.x, tile.y)),
                     Floor {},
                     SceneBundle {
-                        scene: asset_server.load("floor_fab.glb#Scene0"),
+                        scene: asset_server.load(&tile_definitions.floor_file),
                         ..Default::default()
                     },
                     RigidBody::Static,
@@ -281,7 +290,7 @@ pub fn map_loader(
                     Name::from(format!("Wall East {}:{}", tile.x, tile.y)),
                     Wall {},
                     SceneBundle {
-                        scene: asset_server.load("wall_fab.glb#Scene0"),
+                        scene: asset_server.load(&tile_definitions.wall_file),
                         ..Default::default()
                     },
                     RigidBody::Static,
@@ -296,7 +305,7 @@ pub fn map_loader(
                     Name::from(format!("Wall West {}:{}", tile.x, tile.y)),
                     Wall {},
                     SceneBundle {
-                        scene: asset_server.load("wall_fab.glb#Scene0"),
+                        scene: asset_server.load(&tile_definitions.wall_file),
                         ..Default::default()
                     },
                     RigidBody::Static,
@@ -311,7 +320,7 @@ pub fn map_loader(
                     Name::from(format!("Wall South {}:{}", tile.x, tile.y)),
                     Wall {},
                     SceneBundle {
-                        scene: asset_server.load("wall_fab.glb#Scene0"),
+                        scene: asset_server.load(&tile_definitions.wall_file),
                         ..Default::default()
                     },
                     RigidBody::Static,
@@ -326,7 +335,7 @@ pub fn map_loader(
                     Name::from(format!("Wall North {}:{}", tile.x, tile.y)),
                     Wall {},
                     SceneBundle {
-                        scene: asset_server.load("wall_fab.glb#Scene0"),
+                        scene: asset_server.load(&tile_definitions.wall_file),
                         ..Default::default()
                     },
                     RigidBody::Static,

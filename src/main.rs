@@ -5,7 +5,7 @@ use bevy::log::LogPlugin;
 use bevy::prelude::Msaa;
 use bevy::time::{Fixed, Time};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use bevy_xpbd_3d::plugins::{PhysicsPlugins};
+use bevy_xpbd_3d::plugins::{PhysicsDebugPlugin, PhysicsPlugins};
 use big_brain::BigBrainPlugin;
 use pathfinding::grid::Grid;
 use crate::player::systems::spawn_players::spawn_players;
@@ -61,12 +61,18 @@ fn main() {
         .register_type::<Health>()
         .register_type::<AvoidWallsData>()
         .register_type::<ApproachAndAttackPlayerData>()
-        .insert_resource(TileDefinitions::new(2.0, 32.0, 19.0, 1.0))
+        .insert_resource(
+            TileDefinitions::new(1.0,
+                                 32.0,
+                                 19.0,
+                                 1.0,
+                                 "map/wall_small.glb#Scene0".into(),
+                                 "map/floor_small.glb#Scene0".into()))
         .insert_resource(AlienCounter::new(50))
         .insert_resource(MapGraph {
             path_finding_grid: Grid::new(0, 0),
             occupied_tiles: HashSet::new(),
-            goal: (0,0)
+            goal: (0, 0),
         })
         .insert_resource(Msaa::Sample4)
         .insert_resource(Time::<Fixed>::from_seconds(0.05))
@@ -78,7 +84,7 @@ fn main() {
                     level: log::Level::INFO,
                 }))
         .add_plugins(PhysicsPlugins::default())
-        // .add_plugins(PhysicsDebugPlugin::default())
+        .add_plugins(PhysicsDebugPlugin::default())
         .add_plugins(WorldInspectorPlugin::new())
         .add_plugins(BigBrainPlugin::new(PreUpdate))
         .add_systems(
