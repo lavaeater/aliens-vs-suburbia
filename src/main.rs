@@ -67,7 +67,8 @@ fn main() {
                                  9.5,
                                  1.0,
                                  "map/wall_small.glb#Scene0".into(),
-                                 "map/floor_small.glb#Scene0".into()))
+                                 "map/floor_small.glb#Scene0".into(),
+                                 "map/obstacle.glb#Scene0".into()))
         .insert_resource(AlienCounter::new(50))
         .insert_resource(MapGraph {
             path_finding_grid: Grid::new(0, 0),

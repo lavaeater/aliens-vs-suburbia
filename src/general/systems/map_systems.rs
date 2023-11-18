@@ -89,8 +89,10 @@ pub struct TileDefinitions {
     pub tile_width: f32,
     pub wall_height: f32,
     pub tile_depth: f32,
+    pub floor_level:f32,
     pub wall_file: String,
     pub floor_file: String,
+    pub obstacle_file: String,
 }
 
 impl TileDefinitions {
@@ -99,7 +101,8 @@ impl TileDefinitions {
                wall_basis: f32,
                tile_depth_basis: f32,
                wall_file: String,
-               floor_file: String) -> Self {
+               floor_file: String,
+               obstacle_file: String) -> Self {
         let tile_unit = tile_size / tile_basis;
         let tile_width = tile_basis * tile_unit;
         let wall_height = wall_basis * tile_unit;
@@ -111,9 +114,19 @@ impl TileDefinitions {
             tile_width,
             wall_height,
             tile_depth,
+            floor_level: -wall_height * 2.0,
             wall_file,
-            floor_file
+            floor_file,
+            obstacle_file,
         }
+    }
+
+    pub fn create_collider(&self, width: f32, height: f32, depth: f32) -> Collider {
+        Collider::cuboid(width * self.tile_unit * 2.0, height * self.tile_unit * 2.0, depth * self.tile_unit * 2.0)
+    }
+
+    pub fn get_position(&self, x: i32, y: i32) -> Vec3 {
+        Vec3::new(self.tile_width * x as f32, 0.0, self.tile_width * y as f32)
     }
 
     pub fn create_floor_collider(&self) -> Collider {
@@ -121,7 +134,7 @@ impl TileDefinitions {
     }
 
     pub fn get_floor_position(&self, x: i32, y: i32) -> Vec3 {
-        Vec3::new(self.tile_width * x as f32, -self.wall_height * 2.0, self.tile_width * y as f32)
+        Vec3::new(self.tile_width * x as f32, self.floor_level, self.tile_width * y as f32)
     }
 
     pub fn create_wall_collider(&self) -> Collider {
@@ -275,12 +288,12 @@ pub fn map_loader(
                 commands.spawn((
                     Name::from(format!("Floor {}:{}", tile.x, tile.y)),
                     Floor {},
-                    SceneBundle {
-                        scene: asset_server.load(&tile_definitions.floor_file),
-                        ..Default::default()
-                    },
+                    // SceneBundle {
+                    //     scene: asset_server.load(&tile_definitions.floor_file),
+                    //     ..Default::default()
+                    // },
                     RigidBody::Static,
-                    tile_definitions.create_floor_collider(),
+                    tile_definitions.create_collider(16.0,1.0,16.0),
                     Position::from(tile_definitions.get_floor_position(tile.x, tile.y)),
                     CollisionLayers::new([CollisionLayer::Floor], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player])
                 ));
