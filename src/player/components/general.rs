@@ -25,8 +25,8 @@ pub enum ControlCommands {
 #[derive(Hash, PartialEq, Eq, Clone, Reflect, Component)]
 pub struct IsBuilding;
 
-#[derive(Hash, PartialEq, Eq, Clone, Reflect, Component)]
-pub struct BuildingIndicator(pub Entity);
+#[derive(Hash, PartialEq, Eq, Clone, Component)]
+pub struct BuildingIndicator(pub Entity, pub i32);
 
 #[derive(Hash, PartialEq, Eq, Clone, Reflect, Component)]
 pub struct IsBuildIndicator {}

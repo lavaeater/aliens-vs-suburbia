@@ -4,8 +4,10 @@ use bevy::{DefaultPlugins, log};
 use bevy::log::LogPlugin;
 use bevy::prelude::Msaa;
 use bevy::time::{Fixed, Time};
+use bevy::utils::HashMap;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use bevy_xpbd_3d::plugins::{PhysicsPlugins};
+use bevy_xpbd_3d::components::RigidBody;
+use bevy_xpbd_3d::plugins::{PhysicsDebugPlugin, PhysicsPlugins};
 use big_brain::BigBrainPlugin;
 use pathfinding::grid::Grid;
 use crate::player::systems::spawn_players::spawn_players;
@@ -21,8 +23,8 @@ use crate::camera::components::camera::CameraOffset;
 use crate::camera::systems::camera_follow::camera_follow;
 use crate::enemy::components::general::AlienCounter;
 use crate::enemy::systems::spawn_aliens::{alien_spawner_system, spawn_aliens};
-use crate::general::components::Health;
-use crate::general::components::map_components::CurrentTile;
+use crate::general::components::{CollisionLayer, Health};
+use crate::general::components::map_components::{CurrentTile, ModelDefinition, ModelDefinitions};
 use crate::general::events::map_events::AlienReachedGoal;
 use crate::general::resources::map_resources::MapGraph;
 use crate::general::systems::dynamic_movement_system::dynamic_movement;
@@ -32,8 +34,8 @@ use crate::general::systems::lights_systems::spawn_lights;
 use crate::general::systems::map_systems::{update_current_tile_system, load_map_one, map_loader, TileDefinitions};
 use crate::general::systems::throwing_system::throwing;
 use crate::player::components::general::Controller;
-use crate::player::events::building_events::{AddTile, EnterBuildMode, ExecuteBuild, ExitBuildMode, RemoveTile};
-use crate::player::systems::build_systems::{add_tile_to_map, building_mode, enter_build_mode, execute_build, exit_build_mode, remove_tile_from_map};
+use crate::player::events::building_events::{AddTile, ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode, RemoveTile};
+use crate::player::systems::build_systems::{add_tile_to_map, building_mode, change_build_indicator, enter_build_mode, execute_build, exit_build_mode, remove_tile_from_map};
 use crate::player::systems::keyboard_control::input_control;
 
 pub(crate) mod player;
@@ -53,6 +55,7 @@ fn main() {
         .add_event::<EnterBuildMode>()
         .add_event::<ExitBuildMode>()
         .add_event::<ExecuteBuild>()
+        .add_event::<ChangeBuildIndicator>()
         .add_event::<RemoveTile>()
         .add_event::<AddTile>()
         .register_type::<CameraOffset>()
@@ -61,12 +64,64 @@ fn main() {
         .register_type::<Health>()
         .register_type::<AvoidWallsData>()
         .register_type::<ApproachAndAttackPlayerData>()
-        .insert_resource(TileDefinitions::new(2.0, 32.0, 19.0, 1.0))
+        .insert_resource(
+            ModelDefinitions {
+                definitions: HashMap::from(
+                    [
+                        ("wall", ModelDefinition {
+                            file: "map/wall_small.glb#Scene0",
+                            width: 16.0,
+                            height: 19.0,
+                            depth: 1.0,
+                            rigid_body: RigidBody::Static,
+                            group: vec![CollisionLayer::Impassable],
+                            mask: vec![CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player],
+                        }),
+                        ("floor", ModelDefinition {
+                            file: "map/floor_small.glb#Scene0",
+                            width: 16.0,
+                            height: 1.0,
+                            depth: 16.0,
+                            rigid_body: RigidBody::Static,
+                            group: vec![CollisionLayer::Floor],
+                            mask: vec![CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player],
+                        }),
+                        ("obstacle", ModelDefinition {
+                            file: "map/obstacle.glb#Scene0",
+                            width: 16.0,
+                            height: 4.0,
+                            depth: 16.0,
+                            rigid_body: RigidBody::Kinematic,
+                            group: vec![CollisionLayer::Impassable],
+                            mask: vec![CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player],
+                        }),
+                        ("tower", ModelDefinition {
+                            file: "map/tower_balls.glb#Scene0",
+                            width: 16.0,
+                            height: 8.0,
+                            depth: 16.0,
+                            rigid_body: RigidBody::Kinematic,
+                            group: vec![CollisionLayer::Impassable],
+                            mask: vec![CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player],
+                        }),
+                    ]),
+                build_indicators: vec!["obstacle", "tower"],
+
+            }
+        )
+        .insert_resource(
+            TileDefinitions::new(1.0,
+                                 32.0,
+                                 9.5,
+                                 1.0,
+                                 "map/wall_small.glb#Scene0".into(),
+                                 "map/floor_small.glb#Scene0".into(),
+                                 "map/obstacle.glb#Scene0".into()))
         .insert_resource(AlienCounter::new(50))
         .insert_resource(MapGraph {
             path_finding_grid: Grid::new(0, 0),
             occupied_tiles: HashSet::new(),
-            goal: (0,0)
+            goal: (0, 0),
         })
         .insert_resource(Msaa::Sample4)
         .insert_resource(Time::<Fixed>::from_seconds(0.05))
@@ -78,7 +133,7 @@ fn main() {
                     level: log::Level::INFO,
                 }))
         .add_plugins(PhysicsPlugins::default())
-        // .add_plugins(PhysicsDebugPlugin::default())
+        .add_plugins(PhysicsDebugPlugin::default())
         .add_plugins(WorldInspectorPlugin::new())
         .add_plugins(BigBrainPlugin::new(PreUpdate))
         .add_systems(
@@ -110,6 +165,7 @@ fn main() {
                 execute_build,
                 remove_tile_from_map,
                 add_tile_to_map,
+                change_build_indicator,
             ))
         .add_systems(
             FixedUpdate,

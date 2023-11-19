@@ -1,5 +1,9 @@
-use bevy::prelude::Component;
+use bevy::prelude::{Component, Resource};
 use bevy::reflect::Reflect;
+use bevy::utils::HashMap;
+use bevy_xpbd_3d::components::{CollisionLayers, RigidBody};
+use bevy_xpbd_3d::prelude::PhysicsLayer;
+use crate::general::components::CollisionLayer;
 
 #[derive(Component)]
 pub struct Wall {}
@@ -8,6 +12,28 @@ pub struct Wall {}
 pub struct AlienGoal {
     pub x: usize,
     pub y: usize
+}
+
+pub struct ModelDefinition {
+    pub file: &'static str,
+    pub width: f32,
+    pub height: f32,
+    pub depth: f32,
+    pub rigid_body: RigidBody,
+    pub group: Vec<CollisionLayer>,
+    pub mask: Vec<CollisionLayer>,
+}
+
+impl ModelDefinition {
+    pub fn create_collision_layers(&self) -> CollisionLayers {
+        CollisionLayers::new(self.group.clone(), self.mask.clone())
+    }
+}
+
+#[derive(Resource)]
+pub struct ModelDefinitions {
+    pub definitions: HashMap<&'static str, ModelDefinition>,
+    pub build_indicators: Vec<&'static str>,
 }
 
 impl AlienGoal {
