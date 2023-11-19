@@ -1,9 +1,10 @@
 use bevy::asset::AssetServer;
 use bevy::core::Name;
 use bevy::hierarchy::DespawnRecursiveExt;
+use bevy::log::info;
 use bevy::math::{Vec2, Vec3, Vec3Swizzles};
-use bevy::prelude::{Commands, EventReader, EventWriter, Query, Res, ResMut, With, Without};
-use bevy::scene::{SceneBundle, SceneInstance};
+use bevy::prelude::{Commands, Entity, EventReader, EventWriter, Query, Res, ResMut, With, Without};
+use bevy::scene::{SceneBundle, SceneInstance, SceneSpawner};
 use bevy_xpbd_3d::components::{CollisionLayers, LockedAxes, RigidBody, Rotation};
 use bevy_xpbd_3d::prelude::{Collider, Position};
 use crate::general::components::CollisionLayer;
@@ -28,27 +29,42 @@ pub fn enter_build_mode(
                     .get_neighbour(current_tile.tile)
                     .to_world_coords(&tile_definitions) + Vec3::new(0.0, -tile_definitions.wall_height * 2.0, 0.0);
 
-            let building_indicator = commands.spawn((
-                Name::from("BuildingIndicator"),
-                IsBuildIndicator {},
-                SceneBundle {
-                    scene: asset_server.load("map/obstacle.glb#Scene0"),
-                    ..Default::default()
-                },
-                RigidBody::Kinematic,
-                tile_definitions.create_collider(16.0, 4.0, 16.0),
-                Position::from(desired_neighbour_pos),
-                CollisionLayers::new([CollisionLayer::BuildIndicator], []),
-                LockedAxes::new().lock_rotation_x().lock_rotation_z().lock_rotation_y(),
-                CurrentTile::default(),
-            )).id();
-
+            let building_indicator = spawn_building_indicator(
+                &mut commands,
+                &asset_server,
+                &desired_neighbour_pos,
+                "map/obstacle.glb#Scene0",
+                &tile_definitions
+            );
             commands.entity(start_event.0).insert(BuildingIndicator(
                 building_indicator,
                 0));
             commands.entity(start_event.0).insert(IsBuilding {});
         }
     }
+}
+
+pub fn spawn_building_indicator(
+    mut commands: &mut Commands,
+    asset_server: &Res<AssetServer>,
+    position: &Vec3,
+    file: &'static str,
+    tile_definitions: &TileDefinitions,
+) -> Entity {
+    commands.spawn((
+        Name::from("BuildingIndicator"),
+        IsBuildIndicator {},
+        SceneBundle {
+            scene: asset_server.load(file),
+            ..Default::default()
+        },
+        RigidBody::Kinematic,
+        tile_definitions.create_collider(16.0, 4.0, 16.0),
+        Position::from(*position),
+        CollisionLayers::new([CollisionLayer::BuildIndicator], []),
+        LockedAxes::new().lock_rotation_x().lock_rotation_z().lock_rotation_y(),
+        CurrentTile::default(),
+    )).id()
 }
 
 pub fn exit_build_mode(
@@ -137,36 +153,45 @@ pub fn building_mode(
 
 pub fn change_build_indicator(
     mut change_build_indicator_evr: EventReader<ChangeBuildIndicator>,
-    mut builder_query: Query<(&mut BuildingIndicator), With<IsBuilding>>,
+    mut builder_query: Query<(&mut BuildingIndicator, &Position), With<IsBuilding>>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     model_defs: Res<ModelDefinitions>,
+    tile_defs: Res<TileDefinitions>
 ) {
     for change_build_event in change_build_indicator_evr.read() {
-        if let Ok((mut building_indicator)) = builder_query.get_mut(change_build_event.0) {
+        if let Ok((mut building_indicator, position)) = builder_query.get_mut(change_build_event.0) {
             let current_index = building_indicator.1;
 
-            let next_index = current_index + change_build_event.1;
+            building_indicator.1 = current_index + change_build_event.1;
 
-            building_indicator.1 = if next_index < 0 {
+            building_indicator.1 = if building_indicator.1 < 0 {
                 model_defs.build_indicators.len() as i32 - 1
-            } else if next_index >= model_defs.build_indicators.len() as i32 {
+            } else if building_indicator.1 >= model_defs.build_indicators.len() as i32 {
                 0
             } else {
-                next_index
+                building_indicator.1
             };
+            let indicator_key = model_defs.build_indicators[building_indicator.1 as usize];
+            info!("Changing indicator to {}", indicator_key);
 
-            commands.entity(building_indicator.0).remove::<SceneInstance>();
-            commands.entity(building_indicator.0).insert(SceneBundle {
-                scene: asset_server
-                    .load(
-                        model_defs
-                            .definitions
-                            .get(model_defs.build_indicators[next_index as usize])
-                            .unwrap()
-                            .file),
-                ..Default::default()
-            });
+            /*
+            We need to destroy the entity and re-create it. Buuummer!
+             */
+
+            let p = position.0.clone();
+            commands.entity(building_indicator.0).despawn_recursive();
+            building_indicator.0 = spawn_building_indicator(
+                &mut commands,
+                &asset_server,
+                &p,
+                model_defs
+                    .definitions
+                    .get(indicator_key)
+                    .unwrap()
+                    .file,
+                &tile_defs
+            );
         }
     }
 }
