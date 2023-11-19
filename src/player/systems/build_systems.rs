@@ -102,34 +102,40 @@ pub fn add_tile_to_map(
 
 #[allow(clippy::too_many_arguments)]
 pub fn execute_build(
+    mut commands: Commands,
     mut execute_evr: EventReader<ExecuteBuild>,
     mut exit_build_ew: EventWriter<ExitBuildMode>,
+    mut remove_tile_ew: EventWriter<RemoveTile>,
     player_build_indicator_query: Query<&BuildingIndicator>,
     building_indicator: Query<(&Position, &CurrentTile), With<IsBuildIndicator>>,
-    mut commands: Commands,
     asset_server: Res<AssetServer>,
     tile_definitions: Res<TileDefinitions>,
-    mut remove_tile_we: EventWriter<RemoveTile>,
     map_graph: Res<MapGraph>,
+    model_defs: Res<ModelDefinitions>
 ) {
     for execute_event in execute_evr.read() {
         if let Ok(build_indicator) = player_build_indicator_query.get(execute_event.0) {
             if let Ok((position, current_tile)) = building_indicator.get(build_indicator.0) {
                 if !map_graph.occupied_tiles.contains(&current_tile.tile) {
+
+                    let current_index = build_indicator.1;
+                    let current_key = model_defs.build_indicators[current_index as usize];
+                    let model_def = model_defs.definitions.get(current_key).unwrap();
+
                     commands.spawn((
-                        Name::from("New Building, Bro"),
-                        IsObstacle {},
+                        Name::from(current_key),
+                        IsObstacle {}, // let this be, for now!
                         SceneBundle {
-                            scene: asset_server.load("map/obstacle.glb#Scene0"),
+                            scene: asset_server.load(model_def.file),
                             ..Default::default()
                         },
                         RigidBody::Kinematic,
-                        tile_definitions.create_collider(16.0, 4.0, 16.0),
+                        tile_definitions.create_collider(model_def.width, model_def.height, model_def.depth),
                         *position,
-                        CollisionLayers::new([CollisionLayer::Impassable], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
+                        model_def.create_collision_layers(),
                         CurrentTile::default(),
                     ));
-                    remove_tile_we.send(RemoveTile(current_tile.tile));
+                    remove_tile_ew.send(RemoveTile(current_tile.tile));
                     exit_build_ew.send(ExitBuildMode(execute_event.0));
                 }
             }
