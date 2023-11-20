@@ -34,6 +34,10 @@ pub struct IsBuildIndicator {}
 #[derive(Hash, PartialEq, Eq, Clone, Reflect, Component)]
 pub struct IsObstacle {}
 
+#[derive(Hash, PartialEq, Eq, Clone, Reflect, Component)]
+pub struct ShootingTower {}
+
+
 #[derive(Hash, PartialEq, Eq, Copy, Clone, Debug, Reflect)]
 pub enum ControlRotation {
     Left,

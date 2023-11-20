@@ -13,6 +13,7 @@ use pathfinding::grid::Grid;
 use crate::player::systems::spawn_players::spawn_players;
 use camera::systems::spawn_camera::spawn_camera;
 use general::events::map_events::{LoadMap, SpawnAlien, SpawnPlayer};
+use general::systems::map_systems::{add_tile_to_map, remove_tile_from_map};
 use crate::ai::components::approach_and_attack_player_components::ApproachAndAttackPlayerData;
 use crate::ai::components::avoid_wall_components::AvoidWallsData;
 use crate::ai::systems::approach_and_attack_player_systems::{approach_and_attack_player_scorer_system, approach_player_action_system, attack_player_action_system, can_i_see_player_system};
@@ -31,18 +32,21 @@ use crate::general::systems::dynamic_movement_system::dynamic_movement;
 use crate::general::systems::collision_handling_system::collision_handling_system;
 use crate::general::systems::kinematic_movement_system::kinematic_movement;
 use crate::general::systems::lights_systems::spawn_lights;
-use crate::general::systems::map_systems::{update_current_tile_system, load_map_one, map_loader, TileDefinitions};
+use crate::general::systems::map_systems::{load_map_one, map_loader, TileDefinitions, update_current_tile_system};
 use crate::general::systems::throwing_system::throwing;
 use crate::player::components::general::Controller;
 use crate::player::events::building_events::{AddTile, ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode, RemoveTile};
-use crate::player::systems::build_systems::{add_tile_to_map, building_mode, change_build_indicator, enter_build_mode, execute_build, exit_build_mode, remove_tile_from_map};
+use crate::player::systems::build_systems::{building_mode, change_build_indicator, enter_build_mode, execute_build, exit_build_mode};
 use crate::player::systems::keyboard_control::input_control;
+use crate::towers::events::BuildTower;
+use crate::towers::systems::{alien_in_range_scorer_system, build_tower_system, shoot_alien_system};
 
 pub(crate) mod player;
 pub(crate) mod general;
 pub(crate) mod camera;
 pub(crate) mod enemy;
 pub(crate) mod ai;
+pub(crate) mod towers;
 
 pub const METERS_PER_PIXEL: f64 = 16.0;
 
@@ -58,6 +62,7 @@ fn main() {
         .add_event::<ChangeBuildIndicator>()
         .add_event::<RemoveTile>()
         .add_event::<AddTile>()
+        .add_event::<BuildTower>()
         .register_type::<CameraOffset>()
         .register_type::<CurrentTile>()
         .register_type::<Controller>()
@@ -69,6 +74,7 @@ fn main() {
                 definitions: HashMap::from(
                     [
                         ("wall", ModelDefinition {
+                            name: "wall",
                             file: "map/wall_small.glb#Scene0",
                             width: 16.0,
                             height: 19.0,
@@ -78,6 +84,7 @@ fn main() {
                             mask: vec![CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player],
                         }),
                         ("floor", ModelDefinition {
+                            name: "floor",
                             file: "map/floor_small.glb#Scene0",
                             width: 16.0,
                             height: 1.0,
@@ -87,6 +94,7 @@ fn main() {
                             mask: vec![CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player],
                         }),
                         ("obstacle", ModelDefinition {
+                            name: "obstacle",
                             file: "map/obstacle.glb#Scene0",
                             width: 16.0,
                             height: 4.0,
@@ -96,6 +104,7 @@ fn main() {
                             mask: vec![CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player],
                         }),
                         ("tower", ModelDefinition {
+                            name: "tower",
                             file: "map/tower_balls.glb#Scene0",
                             width: 16.0,
                             height: 8.0,
@@ -133,7 +142,7 @@ fn main() {
                     level: log::Level::INFO,
                 }))
         .add_plugins(PhysicsPlugins::default())
-        .add_plugins(PhysicsDebugPlugin::default())
+        // .add_plugins(PhysicsDebugPlugin::default())
         .add_plugins(WorldInspectorPlugin::new())
         .add_plugins(BigBrainPlugin::new(PreUpdate))
         .add_systems(
@@ -168,6 +177,12 @@ fn main() {
                 change_build_indicator,
             ))
         .add_systems(
+            Update,
+            (
+                build_tower_system,
+                shoot_alien_system,
+            ))
+        .add_systems(
             FixedUpdate,
             (
                 avoid_walls_data_system,
@@ -184,7 +199,8 @@ fn main() {
                 approach_player_action_system,
                 attack_player_action_system,
                 move_towards_goal_scorer_system,
-                move_towards_goal_action_system
+                move_towards_goal_action_system,
+                alien_in_range_scorer_system
             ),
         )
         .run();

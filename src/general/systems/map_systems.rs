@@ -8,13 +8,14 @@ use bevy_xpbd_3d::math::PI;
 use bevy_xpbd_3d::prelude::{Collider, Position, RigidBody, Rotation};
 use flagset::{flags, FlagSet};
 use pathfinding::grid::Grid;
-use crate::enemy::components::general::{Alien, AlienCounter};
+use crate::enemy::components::general::AlienCounter;
 use crate::general::components::CollisionLayer;
 use crate::general::components::map_components::{AlienGoal, AlienSpawnPoint, CurrentTile, Floor, ModelDefinitions, Wall};
 use crate::general::events::map_events::{LoadMap, SpawnPlayer};
 use crate::general::resources::map_resources::MapGraph;
 use bevy::math::EulerRot;
-use crate::player::components::general::{IsBuildIndicator, Player};
+use crate::player::components::general::IsBuildIndicator;
+use crate::player::events::building_events::{AddTile, RemoveTile};
 use crate::player::systems::build_systems::ToWorldCoordinates;
 
 flags! {
@@ -418,5 +419,23 @@ pub fn update_current_tile_system(
         if !is_build_indicator {
             map_graph.occupied_tiles.insert(current_tile.tile);
         }
+    }
+}
+
+pub fn remove_tile_from_map(
+    mut remove_tile_evr: EventReader<RemoveTile>,
+    mut map_graph: ResMut<MapGraph>,
+) {
+    for remove_tile_event in remove_tile_evr.read() {
+        map_graph.path_finding_grid.remove_vertex(remove_tile_event.0);
+    }
+}
+
+pub fn add_tile_to_map(
+    mut add_tile_evr: EventReader<AddTile>,
+    mut map_graph: ResMut<MapGraph>,
+) {
+    for add_tile_event in add_tile_evr.read() {
+        map_graph.path_finding_grid.add_vertex(add_tile_event.0);
     }
 }

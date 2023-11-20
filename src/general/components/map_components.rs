@@ -1,9 +1,11 @@
-use bevy::prelude::{Component, Resource};
+use bevy::core::Name;
+use bevy::ecs::system::{EntityCommand, EntityCommands};
+use bevy::prelude::{Commands, Component, Resource};
 use bevy::reflect::Reflect;
 use bevy::utils::HashMap;
 use bevy_xpbd_3d::components::{CollisionLayers, RigidBody};
-use bevy_xpbd_3d::prelude::PhysicsLayer;
 use crate::general::components::CollisionLayer;
+use crate::player::components::general::IsObstacle;
 
 #[derive(Component)]
 pub struct Wall {}
@@ -15,6 +17,7 @@ pub struct AlienGoal {
 }
 
 pub struct ModelDefinition {
+    pub name: &'static str,
     pub file: &'static str,
     pub width: f32,
     pub height: f32,
@@ -23,6 +26,9 @@ pub struct ModelDefinition {
     pub group: Vec<CollisionLayer>,
     pub mask: Vec<CollisionLayer>,
 }
+
+#[derive(Hash, PartialEq, Eq, Clone, Reflect,Component)]
+pub struct Tower {}
 
 impl ModelDefinition {
     pub fn create_collision_layers(&self) -> CollisionLayers {
