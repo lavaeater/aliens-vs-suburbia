@@ -12,7 +12,6 @@ pub struct RemoveTile(pub (usize, usize));
 #[derive(Event)]
 pub struct AddTile(pub (usize, usize));
 
-
 #[derive(Event)]
 pub struct ExitBuildMode(pub Entity);
 

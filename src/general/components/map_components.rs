@@ -34,30 +34,6 @@ impl ModelDefinition {
     pub fn create_collision_layers(&self) -> CollisionLayers {
         CollisionLayers::new(self.group.clone(), self.mask.clone())
     }
-
-    pub fn create_entity(&self, mut commands: Commands) {
-        commands.spawn((
-            Name::from(self.name),
-            match self.name {
-                "obstacle" => {
-                    IsObstacle {}
-                },
-                "tower" => {
-                    Tower {}
-                }
-                _ => {}
-            },
-            SceneBundle {
-                scene: asset_server.load(model_def.file),
-                ..Default::default()
-            },
-            RigidBody::Kinematic,
-            tile_definitions.create_collider(model_def.width, model_def.height, model_def.depth),
-            *position,
-            model_def.create_collision_layers(),
-            CurrentTile::default(),
-        ));
-    }
 }
 
 #[derive(Resource)]

@@ -3,16 +3,17 @@ use bevy::core::Name;
 use bevy::hierarchy::DespawnRecursiveExt;
 use bevy::log::info;
 use bevy::math::{Vec2, Vec3, Vec3Swizzles};
-use bevy::prelude::{Commands, Entity, EventReader, EventWriter, Query, Res, ResMut, With, Without};
-use bevy::scene::{SceneBundle, SceneInstance, SceneSpawner};
+use bevy::prelude::{Commands, Entity, EventReader, EventWriter, Query, Res, With, Without};
+use bevy::scene::{SceneBundle, SceneInstance};
 use bevy_xpbd_3d::components::{CollisionLayers, LockedAxes, RigidBody, Rotation};
-use bevy_xpbd_3d::prelude::{Collider, Position};
+use bevy_xpbd_3d::prelude::Position;
 use crate::general::components::CollisionLayer;
 use crate::general::components::map_components::{CurrentTile, ModelDefinitions};
 use crate::general::resources::map_resources::MapGraph;
 use crate::general::systems::map_systems::TileDefinitions;
-use crate::player::components::general::{BuildingIndicator, IsBuilding, IsBuildIndicator, Controller, ControlCommands, IsObstacle};
-use crate::player::events::building_events::{EnterBuildMode, ExitBuildMode, ExecuteBuild, RemoveTile, AddTile, ChangeBuildIndicator};
+use crate::player::components::general::{BuildingIndicator, ControlCommands, Controller, IsBuildIndicator, IsBuilding, IsObstacle};
+use crate::player::events::building_events::{ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode, RemoveTile};
+use crate::towers::events::BuildTower;
 
 
 pub fn enter_build_mode(
@@ -82,36 +83,15 @@ pub fn exit_build_mode(
     }
 }
 
-pub fn remove_tile_from_map(
-    mut remove_tile_evr: EventReader<RemoveTile>,
-    mut map_graph: ResMut<MapGraph>,
-) {
-    for remove_tile_event in remove_tile_evr.read() {
-        map_graph.path_finding_grid.remove_vertex(remove_tile_event.0);
-    }
-}
-
-pub fn add_tile_to_map(
-    mut add_tile_evr: EventReader<AddTile>,
-    mut map_graph: ResMut<MapGraph>,
-) {
-    for add_tile_event in add_tile_evr.read() {
-        map_graph.path_finding_grid.add_vertex(add_tile_event.0);
-    }
-}
-
-#[allow(clippy::too_many_arguments)]
 pub fn execute_build(
-    mut commands: Commands,
     mut execute_evr: EventReader<ExecuteBuild>,
     mut exit_build_ew: EventWriter<ExitBuildMode>,
     mut remove_tile_ew: EventWriter<RemoveTile>,
     player_build_indicator_query: Query<&BuildingIndicator>,
     building_indicator: Query<(&Position, &CurrentTile), With<IsBuildIndicator>>,
-    asset_server: Res<AssetServer>,
-    tile_definitions: Res<TileDefinitions>,
     map_graph: Res<MapGraph>,
-    model_defs: Res<ModelDefinitions>
+    model_defs: Res<ModelDefinitions>,
+    mut build_tower_ew: EventWriter<BuildTower>,
 ) {
     for execute_event in execute_evr.read() {
         if let Ok(build_indicator) = player_build_indicator_query.get(execute_event.0) {
@@ -120,21 +100,11 @@ pub fn execute_build(
 
                     let current_index = build_indicator.1;
                     let current_key = model_defs.build_indicators[current_index as usize];
-                    let model_def = model_defs.definitions.get(current_key).unwrap();
+                    build_tower_ew.send(BuildTower {
+                        position: position.0.clone(),
+                        model_definition_key: current_key,
+                    });
 
-                    commands.spawn((
-                        Name::from(current_key),
-                        IsObstacle {}, // let this be, for now!
-                        SceneBundle {
-                            scene: asset_server.load(model_def.file),
-                            ..Default::default()
-                        },
-                        RigidBody::Kinematic,
-                        tile_definitions.create_collider(model_def.width, model_def.height, model_def.depth),
-                        *position,
-                        model_def.create_collision_layers(),
-                        CurrentTile::default(),
-                    ));
                     remove_tile_ew.send(RemoveTile(current_tile.tile));
                     exit_build_ew.send(ExitBuildMode(execute_event.0));
                 }
