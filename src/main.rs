@@ -7,7 +7,7 @@ use bevy::time::{Fixed, Time};
 use bevy::utils::HashMap;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_xpbd_3d::components::RigidBody;
-use bevy_xpbd_3d::plugins::PhysicsPlugins;
+use bevy_xpbd_3d::plugins::{PhysicsDebugPlugin, PhysicsPlugins};
 use big_brain::BigBrainPlugin;
 use pathfinding::grid::Grid;
 use crate::player::systems::spawn_players::spawn_players;
@@ -39,7 +39,7 @@ use crate::player::events::building_events::{AddTile, ChangeBuildIndicator, Ente
 use crate::player::systems::build_systems::{building_mode, change_build_indicator, enter_build_mode, execute_build, exit_build_mode};
 use crate::player::systems::keyboard_control::input_control;
 use crate::towers::events::BuildTower;
-use crate::towers::systems::{build_tower_system};
+use crate::towers::systems::{alien_in_range_scorer_system, build_tower_system, shoot_alien_system};
 
 pub(crate) mod player;
 pub(crate) mod general;
@@ -180,6 +180,7 @@ fn main() {
             Update,
             (
                 build_tower_system,
+                shoot_alien_system,
             ))
         .add_systems(
             FixedUpdate,
@@ -198,7 +199,8 @@ fn main() {
                 approach_player_action_system,
                 attack_player_action_system,
                 move_towards_goal_scorer_system,
-                move_towards_goal_action_system
+                move_towards_goal_action_system,
+                alien_in_range_scorer_system
             ),
         )
         .run();
