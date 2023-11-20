@@ -57,6 +57,10 @@ pub fn build_tower_system(
     }
 }
 
+pub fn alien_sensor_collisions() {
+
+}
+
 pub fn create_thinker() -> ThinkerBuilder {
     Thinker::build()
         .label("Tower Thinker")
