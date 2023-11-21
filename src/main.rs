@@ -16,8 +16,10 @@ use general::events::map_events::{LoadMap, SpawnAlien, SpawnPlayer};
 use general::systems::map_systems::{add_tile_to_map, remove_tile_from_map};
 use crate::ai::components::approach_and_attack_player_components::ApproachAndAttackPlayerData;
 use crate::ai::components::avoid_wall_components::AvoidWallsData;
+use crate::ai::components::move_towards_goal_components::{AlienReachedGoal, CantFindPath};
 use crate::ai::systems::approach_and_attack_player_systems::{approach_and_attack_player_scorer_system, approach_player_action_system, attack_player_action_system, can_i_see_player_system};
 use crate::ai::systems::avoid_walls_systems::{avoid_walls_action_system, avoid_walls_data_system, avoid_walls_scorer_system};
+use crate::ai::systems::destroy_the_map_systems::{alien_cant_find_path, destroy_the_map_action_system, destroy_the_map_scorer_system};
 use crate::ai::systems::move_forward_systems::{move_forward_action_system, move_forward_scorer_system};
 use crate::ai::systems::move_towards_goal_systems::{alien_reached_goal_handler, move_towards_goal_action_system, move_towards_goal_scorer_system};
 use crate::camera::components::camera::CameraOffset;
@@ -26,7 +28,6 @@ use crate::enemy::components::general::AlienCounter;
 use crate::enemy::systems::spawn_aliens::{alien_spawner_system, spawn_aliens};
 use crate::general::components::{CollisionLayer, Health};
 use crate::general::components::map_components::{CurrentTile, ModelDefinition, ModelDefinitions};
-use crate::general::events::map_events::AlienReachedGoal;
 use crate::general::resources::map_resources::MapGraph;
 use crate::general::systems::dynamic_movement_system::dynamic_movement;
 use crate::general::systems::collision_handling_system::collision_handling_system;
@@ -55,6 +56,7 @@ fn main() {
         .add_event::<LoadMap>()
         .add_event::<SpawnAlien>()
         .add_event::<AlienReachedGoal>()
+        .add_event::<CantFindPath>()
         .add_event::<SpawnPlayer>()
         .add_event::<EnterBuildMode>()
         .add_event::<ExitBuildMode>()
@@ -181,6 +183,7 @@ fn main() {
             (
                 build_tower_system,
                 shoot_alien_system,
+                alien_cant_find_path
             ))
         .add_systems(
             FixedUpdate,
@@ -200,7 +203,9 @@ fn main() {
                 attack_player_action_system,
                 move_towards_goal_scorer_system,
                 move_towards_goal_action_system,
-                alien_in_range_scorer_system
+                alien_in_range_scorer_system,
+                destroy_the_map_scorer_system,
+                destroy_the_map_action_system
             ),
         )
         .run();

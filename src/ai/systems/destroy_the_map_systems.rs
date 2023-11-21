@@ -1,4 +1,6 @@
+use bevy::ecs::system::lifetimeless::SCommands;
 use bevy::prelude::*;
+use bevy::utils::petgraph::algo::has_path_connecting;
 use bevy_xpbd_3d::components::{Position, Rotation};
 use bevy_xpbd_3d::prelude::LinearVelocity;
 use big_brain::actions::ActionState;
@@ -13,6 +15,7 @@ use pathfinding::directed::astar::astar;
 use crate::ai::components::destroy_the_map_components::{DestroyTheMapAction, DestroyTheMapScore, MustDestroyTheMap, MustDestroyTheMapState};
 use crate::general::systems::map_systems::TileDefinitions;
 use itertools::Itertools;
+use pathfinding::num_traits::Signed;
 use crate::player::systems::build_systems::ToWorldCoordinates;
 
 pub fn alien_cant_find_path(
@@ -25,14 +28,20 @@ pub fn alien_cant_find_path(
 }
 
 pub fn destroy_the_map_scorer_system(
-    mut query: Query<(&Actor, &mut Score, Has<MustDestroyTheMap>), With<DestroyTheMapScore>>,
+    mut query: Query<(&Actor, &mut Score), With<DestroyTheMapScore>>,
+    has_query: Query<&MustDestroyTheMap>,
 ) {
-    for (Actor(_actor), mut score, must_destroy) in query.iter_mut() {
-        score.set(if must_destroy { 1.0 } else { 0.0 });
+    for (Actor(actor), mut score) in query.iter_mut() {
+        if has_query.contains(*actor) {
+            score.set(1.0);
+        } else {
+            score.set(0.0);
+        }
     }
 }
 
 pub fn destroy_the_map_action_system(
+    mut commands: Commands,
     map_graph: Res<MapGraph>,
     mut action_query: Query<(&Actor, &mut ActionState, &ActionSpan), With<DestroyTheMapAction>>,
     mut alien_query: Query<(&mut MustDestroyTheMap, &mut Controller, &Position, &Rotation, &CurrentTile, &LinearVelocity), With<Alien>>,
@@ -119,8 +128,8 @@ pub fn destroy_the_map_action_system(
                                             let alien_direction_vector2 = alien_rotation.0.mul_vec3(Vec3::new(0.0, 0.0, -1.0)).xz();
                                             let alien_to_goal_direction = next_tile_position - alien_position_vector2;
                                             let distance = alien_to_goal_direction.length();
-                                            if distance < 0.5 {
-                                                move_towards_goal_data.path = Some(path[1..].to_vec());
+                                            if distance < 0.25 {
+                                                must_destroy_data.path_of_destruction = Some(path[1..].to_vec());
                                                 return;
                                             }
 
@@ -145,26 +154,22 @@ pub fn destroy_the_map_action_system(
                                                 controller.directions.insert(ControlDirection::Forward);
                                             }
                                         } else {
-                                            move_towards_goal_data.path = None;
+                                            must_destroy_data.path_of_destruction = None;
                                             *action_state = ActionState::Failure;
                                         }
                                     }
                                 }
                             }
-
-
-
-
-                            //If we reached the target
-                            must_destroy_data.state = MustDestroyTheMapState::DestroyingThing;
                         }
                         MustDestroyTheMapState::DestroyingThing => {
                             must_destroy_data.state = MustDestroyTheMapState::Finished;
                         }
                         MustDestroyTheMapState::Finished => {
+                            commands.entity(actor.0).remove::<MustDestroyTheMap>();
                             *action_state = ActionState::Success;
                         }
                         MustDestroyTheMapState::Failed => {
+                            commands.entity(actor.0).remove::<MustDestroyTheMap>();
                             *action_state = ActionState::Failure;
                         }
                     }
@@ -175,21 +180,10 @@ pub fn destroy_the_map_action_system(
                 // You don't need to terminate immediately, by the way, this is only a flag that
                 // the cancellation has been requested. If the actor is balancing on a tightrope,
                 // for instance, you may let them walk off before ending the action.
+                commands.entity(actor.0).remove::<MustDestroyTheMap>();
                 *action_state = ActionState::Failure;
             }
             _ => {}
         }
     }
 }
-
-pub fn alien_reached_goal_handler(
-    mut alien_counter: ResMut<AlienCounter>,
-    mut reached_goal_event_reader: EventReader<AlienReachedGoal>,
-    mut commands: Commands,
-) {
-    for AlienReachedGoal(alien) in reached_goal_event_reader.read() {
-        alien_counter.count -= 1;
-        commands.entity(*alien).despawn_recursive();
-    }
-}
-
