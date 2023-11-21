@@ -87,7 +87,7 @@ pub fn spawn_aliens(
             )).insert((
             CurrentTile::default(),
             Alien {},
-            AvoidWallsData::new(1.0, 0.5, 0.5),
+            AvoidWallsData::new(0.125, 0.125, 0.125, 5.0),
             ApproachAndAttackPlayerData::default(),
             MoveTowardsGoalData { path: None },
             AlienSightShape::default(),

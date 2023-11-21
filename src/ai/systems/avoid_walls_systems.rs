@@ -1,3 +1,4 @@
+use bevy::log::info;
 use bevy::prelude::{Query, Res, With};
 use big_brain::prelude::{ActionSpan, Actor, Score};
 use big_brain::actions::ActionState;
@@ -16,9 +17,10 @@ pub fn avoid_walls_scorer_system(
 ) {
     for (Actor(actor), mut score) in &mut query {
         if let Ok(mut avoid_wall_data) = avoid_wall_data_query.get_mut(*actor) {
-            if avoid_wall_data.forward_distance < avoid_wall_data.max_forward_distance ||
-                avoid_wall_data.left_distance < avoid_wall_data.max_left_distance ||
-                avoid_wall_data.right_distance < avoid_wall_data.max_right_distance {
+            if avoid_wall_data.forward_distance < avoid_wall_data.max_forward_distance
+                // || avoid_wall_data.left_distance < avoid_wall_data.max_left_distance
+                // || avoid_wall_data.right_distance < avoid_wall_data.max_right_distance
+            {
                 score.set(0.91);
             } else {
                 score.set(0.0);
@@ -94,20 +96,22 @@ pub fn avoid_walls_action_system(
             }
             ActionState::Executing => if let Ok((mut controller, mut avoid_walls_data)) = actor_query.get_mut(actor.0) {
                 if avoid_walls_data.left_distance < avoid_walls_data.max_left_distance {
+                    info!("Turn Right, bro");
                     avoid_walls_data.rotation_direction = ControlRotation::Right;
                 } else if avoid_walls_data.right_distance < avoid_walls_data.max_right_distance {
                     avoid_walls_data.rotation_direction = ControlRotation::Left;
+                    info!("Turn Left, bro");
                 } else {
                     avoid_walls_data.cool_down(res.delta_seconds());
                 }
 
                 controller.rotations.clear();
                 controller.rotations.insert(avoid_walls_data.rotation_direction);
-                let speed_factor = avoid_walls_data.forward_distance / avoid_walls_data.max_forward_distance;
+                let speed_factor = (avoid_walls_data.forward_distance / avoid_walls_data.max_forward_distance) * 2.0;
                 controller.speed = controller.max_speed * speed_factor;
                 controller.turn_speed = controller.max_turn_speed;
 
-                //*action_state = ActionState::Success;
+                // *action_state = ActionState::Success;
             },
             ActionState::Cancelled => {
                 // Always treat cancellations, or we might keep doing this forever!
