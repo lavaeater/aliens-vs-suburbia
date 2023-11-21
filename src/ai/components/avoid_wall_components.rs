@@ -1,3 +1,4 @@
+use bevy::log::info;
 use bevy::prelude::Component;
 use bevy::reflect::Reflect;
 use big_brain::prelude::{ActionBuilder, ScorerBuilder};
@@ -23,6 +24,7 @@ impl CoolDown for AvoidWallsData {
         self.rotation_timer -= delta;
         if self.rotation_timer <= 0.0 {
             self.rotation_direction = self.rotation_direction.opposite();
+            info!("Timer expired, new direction is: {:?}", self.rotation_direction);
             self.rotation_timer = self.rotation_timer_max;
             true
         } else {
@@ -32,7 +34,7 @@ impl CoolDown for AvoidWallsData {
 }
 
 impl AvoidWallsData {
-    pub fn new(max_forward_distance: f32, max_left_distance: f32, max_right_distance: f32) -> Self {
+    pub fn new(max_forward_distance: f32, max_left_distance: f32, max_right_distance: f32, rotation_timer: f32) -> Self {
         Self {
             forward_distance: max_forward_distance,
             left_distance: max_left_distance,
@@ -41,8 +43,8 @@ impl AvoidWallsData {
             max_right_distance,
             max_forward_distance,
             rotation_direction: ControlRotation::Left,
-            rotation_timer: 5.0,
-            rotation_timer_max: 5.0,
+            rotation_timer,
+            rotation_timer_max: rotation_timer,
             proto_val: 0.0
         }
     }
