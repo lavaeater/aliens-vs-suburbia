@@ -13,6 +13,3 @@ pub struct SpawnPlayer {
 pub struct SpawnAlien {
     pub position: Vec3,
 }
-
-#[derive(Event)]
-pub struct AlienReachedGoal(pub Entity);

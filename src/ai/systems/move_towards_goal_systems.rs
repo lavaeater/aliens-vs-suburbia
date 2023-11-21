@@ -5,7 +5,7 @@ use bevy_xpbd_3d::prelude::LinearVelocity;
 use big_brain::actions::ActionState;
 use big_brain::scorers::Score;
 use big_brain::thinker::{ActionSpan, Actor};
-use crate::ai::components::move_towards_goal_components::{MoveTowardsGoalAction, MoveTowardsGoalData, MoveTowardsGoalScore};
+use crate::ai::components::move_towards_goal_components::{AlienReachedGoal, MoveTowardsGoalAction, MoveTowardsGoalData, MoveTowardsGoalScore};
 use crate::enemy::components::general::{Alien, AlienCounter};
 use crate::general::components::map_components::{AlienGoal, CurrentTile};
 use crate::general::resources::map_resources::MapGraph;
