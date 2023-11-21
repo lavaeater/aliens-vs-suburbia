@@ -42,7 +42,7 @@ pub fn destroy_the_map_scorer_system(
 
 pub fn destroy_the_map_action_system(
     mut commands: Commands,
-    map_graph: Res<MapGraph>,
+    mut map_graph: ResMut<MapGraph>,
     mut action_query: Query<(&Actor, &mut ActionState, &ActionSpan), With<DestroyTheMapAction>>,
     mut alien_query: Query<(&mut MustDestroyTheMap, &mut Controller, &Position, &Rotation, &CurrentTile, &LinearVelocity), With<Alien>>,
     obstacle_query: Query<(&IsObstacle, &CurrentTile)>,
@@ -82,25 +82,31 @@ pub fn destroy_the_map_action_system(
                                     .collect();
 
                             let mut try_this_one = potential_targets.pop().unwrap();
+                            map_graph.path_finding_grid.add_vertex(try_this_one);
 
                             while need_path {
                                 match astar(
                                     &alien_current_tile.tile,
                                     |t| map_graph.path_finding_grid.neighbours(*t).into_iter().map(|t| (t, 1)),
-                                    |t| map_graph.path_finding_grid.distance(*t, map_graph.goal),
-                                    |t| *t == map_graph.goal) {
+                                    |t| map_graph.path_finding_grid.distance(*t, try_this_one),
+                                    |t| *t == try_this_one) {
                                     None => {
                                         match potential_targets.pop() {
                                             None => {
+                                                map_graph.path_finding_grid.remove_vertex(try_this_one);
                                                 must_destroy_data.state = MustDestroyTheMapState::Failed;
                                                 return;
                                             }
                                             Some(target) => {
+                                                map_graph.path_finding_grid.remove_vertex(try_this_one);
                                                 try_this_one = target;
+                                                map_graph.path_finding_grid.add_vertex(try_this_one);
+
                                             }
                                         }
                                     }
                                     Some(path) => {
+                                        // map_graph.path_finding_grid.remove_vertex(try_this_one);
                                         must_destroy_data.path_of_destruction = Some(path.0[1..].to_vec());
                                         need_path = false;
                                     }
