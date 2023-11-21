@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy::utils::petgraph::matrix_graph::Zero;
 use bevy_xpbd_3d::components::{Position, Rotation};
 use bevy_xpbd_3d::prelude::LinearVelocity;
 use big_brain::actions::ActionState;
@@ -11,9 +10,9 @@ use crate::general::components::map_components::{AlienGoal, CurrentTile};
 use crate::general::resources::map_resources::MapGraph;
 use crate::player::components::general::{ControlDirection, Controller, ControlRotation, IsObstacle};
 use pathfinding::directed::astar::astar;
-use pathfinding::num_traits::Signed;
 use crate::ai::components::destroy_the_map_components::{DestroyTheMapAction, DestroyTheMapScore, MustDestroyTheMap, MustDestroyTheMapState};
 use crate::general::systems::map_systems::TileDefinitions;
+use itertools::Itertools;
 use crate::player::systems::build_systems::ToWorldCoordinates;
 
 pub fn alien_cant_find_path(
@@ -68,49 +67,107 @@ pub fn destroy_the_map_action_system(
                                 obstacle_query
                                     .iter()
                                     .map(|(is_obstacle, current_tile)| current_tile.tile)
-                                    .sort_by(|a, b|   )
-                                    .collect()
-                                    .into_iter()
+                                    .sorted_by(|a, b|
+                                        map_graph.path_finding_grid.distance(*b, alien_current_tile.tile)
+                                            .cmp(&map_graph.path_finding_grid.distance(*a, alien_current_tile.tile)))
+                                    .collect();
 
-                            let try_this_one = potential_targets.pop().unwrap();
+                            let mut try_this_one = potential_targets.pop().unwrap();
 
                             while need_path {
-
-                            }
-
-                            let astar =
-                                astar(
+                                match astar(
                                     &alien_current_tile.tile,
                                     |t| map_graph.path_finding_grid.neighbours(*t).into_iter().map(|t| (t, 1)),
                                     |t| map_graph.path_finding_grid.distance(*t, map_graph.goal),
-                                    |t| *t == map_graph.goal);
-                            match astar {
+                                    |t| *t == map_graph.goal) {
+                                    None => {
+                                        match potential_targets.pop() {
+                                            None => {
+                                                must_destroy_data.state = MustDestroyTheMapState::Failed;
+                                                return;
+                                            }
+                                            Some(target) => {
+                                                try_this_one = target;
+                                            }
+                                        }
+                                    }
+                                    Some(path) => {
+                                        must_destroy_data.path_of_destruction = Some(path.0[1..].to_vec());
+                                        need_path = false;
+                                    }
+                                }
+                            }
+                            must_destroy_data.state = MustDestroyTheMapState::MovingTowardsThingToDestroy;
+                        }
+                        MustDestroyTheMapState::MovingTowardsThingToDestroy => {
+                            match &must_destroy_data.path_of_destruction {
                                 None => {
-                                    *action_state = ActionState::Failure;
+                                    // Get a path, set the path, return here later, eh?
+                                    must_destroy_data.state = MustDestroyTheMapState::Failed;
+                                    return;
                                 }
                                 Some(path) => {
-                                    move_towards_goal_data.path = Some(path.0[1..].to_vec());
+                                    if path.is_empty() {
+                                        must_destroy_data.path_of_destruction = None;
+                                        must_destroy_data.state = MustDestroyTheMapState::DestroyingThing;
+                                    } else {
+                                        let next_tile = path[0];
+                                        if map_graph.path_finding_grid.has_vertex(next_tile) {
+                                            let next_tile_position = next_tile.to_world_coords(&tile_definitions).xz();
+                                            let alien_position_vector2 = alien_position.0.xz();
+
+                                            let alien_direction_vector2 = alien_rotation.0.mul_vec3(Vec3::new(0.0, 0.0, -1.0)).xz();
+                                            let alien_to_goal_direction = next_tile_position - alien_position_vector2;
+                                            let distance = alien_to_goal_direction.length();
+                                            if distance < 0.5 {
+                                                move_towards_goal_data.path = Some(path[1..].to_vec());
+                                                return;
+                                            }
+
+                                            let angle = alien_direction_vector2.angle_between(alien_to_goal_direction).to_degrees();
+                                            controller.rotations.clear();
+                                            controller.directions.clear();
+                                            let angle_speed_value = 90.0;
+                                            let angle_forward_value = 15.0;
+                                            if angle.abs() < angle_speed_value {
+                                                controller.turn_speed = controller.max_turn_speed * (angle.abs() / angle_speed_value);
+                                            } else {
+                                                controller.turn_speed = controller.max_turn_speed;
+                                            }
+                                            if angle.abs() > 1.0 {
+                                                if angle.is_positive() {
+                                                    controller.rotations.insert(ControlRotation::Right);
+                                                } else {
+                                                    controller.rotations.insert(ControlRotation::Left);
+                                                }
+                                            }
+                                            if angle.abs() < angle_forward_value {
+                                                controller.directions.insert(ControlDirection::Forward);
+                                            }
+                                        } else {
+                                            move_towards_goal_data.path = None;
+                                            *action_state = ActionState::Failure;
+                                        }
+                                    }
                                 }
                             }
 
 
-                            must_destroy_data.state = MustDestroyTheMapState::MovingTowardsThingToDestroy;
-                        }
-                        MustDestroyTheMapState::MovingTowardsThingToDestroy => {
 
+
+                            //If we reached the target
                             must_destroy_data.state = MustDestroyTheMapState::DestroyingThing;
                         }
                         MustDestroyTheMapState::DestroyingThing => {
-
                             must_destroy_data.state = MustDestroyTheMapState::Finished;
                         }
                         MustDestroyTheMapState::Finished => {
                             *action_state = ActionState::Success;
                         }
+                        MustDestroyTheMapState::Failed => {
+                            *action_state = ActionState::Failure;
+                        }
                     }
-
-
-
                 }
             }
             ActionState::Cancelled => {
@@ -128,7 +185,7 @@ pub fn destroy_the_map_action_system(
 pub fn alien_reached_goal_handler(
     mut alien_counter: ResMut<AlienCounter>,
     mut reached_goal_event_reader: EventReader<AlienReachedGoal>,
-    mut commands: Commands
+    mut commands: Commands,
 ) {
     for AlienReachedGoal(alien) in reached_goal_event_reader.read() {
         alien_counter.count -= 1;

@@ -7,9 +7,10 @@ pub enum MustDestroyTheMapState {
     MovingTowardsThingToDestroy,
     DestroyingThing,
     Finished,
+    Failed
 }
 
-#[derive(Component, Debug)]
+#[derive(Component)]
 pub struct MustDestroyTheMap {
     pub path_of_destruction: Option<Vec<(usize, usize)>>,
     pub state: MustDestroyTheMapState,

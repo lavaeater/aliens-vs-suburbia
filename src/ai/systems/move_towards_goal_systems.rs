@@ -12,7 +12,6 @@ use crate::general::resources::map_resources::MapGraph;
 use crate::player::components::general::{ControlDirection, Controller, ControlRotation};
 use pathfinding::directed::astar::astar;
 use pathfinding::num_traits::Signed;
-use crate::general::events::map_events::AlienReachedGoal;
 use crate::general::systems::map_systems::TileDefinitions;
 use crate::player::systems::build_systems::ToWorldCoordinates;
 
