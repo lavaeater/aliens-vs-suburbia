@@ -43,11 +43,13 @@ pub fn shoot_alien_system(
         if let Ok((tower_position, colliding_entities, mut tower_shooter)) = tower_query.get_mut(actor.0) {
             if tower_shooter.cool_down(time.delta_seconds()) {
                 let closes_alien = colliding_entities.0.iter().min_by(|a, b| {
-                    let a_pos = alien_query.get(**a).unwrap();
-                    let b_pos = alien_query.get(**b).unwrap();
-                    let a_dist = (a_pos.0 - tower_position.0).length_squared();
-                    let b_dist = (b_pos.0 - tower_position.0).length_squared();
-                    a_dist.partial_cmp(&b_dist).unwrap()
+                    if let (Ok(a_pos), Ok(b_pos)) = (alien_query.get(**a), alien_query.get(**b)) {
+                        let a_dist = (a_pos.0 - tower_position.0).length_squared();
+                        let b_dist = (b_pos.0 - tower_position.0).length_squared();
+                        a_dist.partial_cmp(&b_dist).unwrap()
+                    } else {
+                        std::cmp::Ordering::Equal
+                    }
                 });
                 match closes_alien {
                     None => {
@@ -70,7 +72,16 @@ pub fn shoot_alien_system(
                             RigidBody::Dynamic,
                             Collider::ball(1.0 / 16.0),
                             LinearVelocity(direction * 12.0),
-                            CollisionLayers::new([CollisionLayer::Ball], [CollisionLayer::Impassable, CollisionLayer::Floor, CollisionLayer::Alien, CollisionLayer::Player, CollisionLayer::AlienSpawnPoint, CollisionLayer::AlienGoal]),
+                            CollisionLayers::new(
+                                [CollisionLayer::Ball],
+                                [
+                                    CollisionLayer::Impassable,
+                                    CollisionLayer::Floor,
+                                    CollisionLayer::Alien,
+                                    CollisionLayer::Player,
+                                    CollisionLayer::AlienSpawnPoint,
+                                    CollisionLayer::AlienGoal
+                                ]),
                         ));
                         *action_state = ActionState::Success;
                     }

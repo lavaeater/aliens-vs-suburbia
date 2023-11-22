@@ -16,6 +16,7 @@ use crate::player::events::building_events::{ChangeBuildIndicator, EnterBuildMod
 use crate::towers::components::{TowerSensor, TowerShooter};
 use crate::towers::events::BuildTower;
 use crate::towers::systems;
+use crate::ui::spawn_ui::AddHealthBar;
 
 
 pub fn enter_build_mode(
@@ -85,10 +86,8 @@ pub fn exit_build_mode(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 pub fn execute_build(
     mut execute_evr: EventReader<ExecuteBuild>,
-    mut exit_build_ew: EventWriter<ExitBuildMode>,
     mut remove_tile_ew: EventWriter<RemoveTile>,
     player_build_indicator_query: Query<&BuildingIndicator>,
     building_indicator: Query<(&Position, &CurrentTile), With<IsBuildIndicator>>,
@@ -104,12 +103,11 @@ pub fn execute_build(
                     let current_index = build_indicator.1;
                     let current_key = model_defs.build_indicators[current_index as usize];
                     build_tower_ew.send(BuildTower {
-                        position: position.0.clone(),
+                        position: position.0,
                         model_definition_key: current_key,
                     });
 
                     remove_tile_ew.send(RemoveTile(current_tile.tile));
-                    exit_build_ew.send(ExitBuildMode(execute_event.0));
                 }
             }
         }
@@ -228,6 +226,7 @@ impl ToGridNeighbour for Rotation {
 pub fn build_tower_system(
     mut build_tower_er: EventReader<BuildTower>,
     mut commands: Commands,
+    mut add_health_bar_ew: EventWriter<AddHealthBar>,
     asset_server: Res<AssetServer>,
     model_defs: Res<ModelDefinitions>,
     tile_defs: Res<TileDefinitions>,
@@ -248,6 +247,7 @@ pub fn build_tower_system(
             CurrentTile::default(),
             Health::default(),
         ));
+
         if build_tower.model_definition_key == "tower" {
             ec.with_children(|parent| {
                 parent.spawn((
@@ -262,5 +262,11 @@ pub fn build_tower_system(
                 ));
             });
         }
+
+        let id = ec.id();
+        add_health_bar_ew.send(AddHealthBar {
+            entity: id,
+            name: "OBSTACLE",
+        });
     }
 }
