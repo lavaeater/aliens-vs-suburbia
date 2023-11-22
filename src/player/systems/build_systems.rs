@@ -1,19 +1,21 @@
 use bevy::asset::AssetServer;
 use bevy::core::Name;
-use bevy::hierarchy::DespawnRecursiveExt;
+use bevy::hierarchy::{BuildChildren, DespawnRecursiveExt};
 use bevy::log::info;
 use bevy::math::{Vec2, Vec3, Vec3Swizzles};
 use bevy::prelude::{Commands, Entity, EventReader, EventWriter, Query, Res, With, Without};
 use bevy::scene::{SceneBundle, SceneInstance};
-use bevy_xpbd_3d::components::{CollisionLayers, LockedAxes, RigidBody, Rotation};
+use bevy_xpbd_3d::components::{Collider, CollisionLayers, LockedAxes, RigidBody, Rotation, Sensor};
 use bevy_xpbd_3d::prelude::Position;
-use crate::general::components::CollisionLayer;
+use crate::general::components::{CollisionLayer, Health};
 use crate::general::components::map_components::{CurrentTile, ModelDefinitions};
 use crate::general::resources::map_resources::MapGraph;
 use crate::general::systems::map_systems::TileDefinitions;
 use crate::player::components::general::{BuildingIndicator, ControlCommands, Controller, IsBuildIndicator, IsBuilding, IsObstacle};
 use crate::player::events::building_events::{ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode, RemoveTile};
+use crate::towers::components::{TowerSensor, TowerShooter};
 use crate::towers::events::BuildTower;
+use crate::towers::systems;
 
 
 pub fn enter_build_mode(
@@ -219,5 +221,45 @@ impl ToGridNeighbour for Rotation {
         } + current_tile.1 as i32;
 
         ((if x.is_negative() { 0 } else { x as usize }), if y.is_negative() { 0 } else { y as usize })
+    }
+}
+
+pub fn build_tower_system(
+    mut build_tower_er: EventReader<BuildTower>,
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    model_defs: Res<ModelDefinitions>,
+    tile_defs: Res<TileDefinitions>,
+) {
+    for build_tower in build_tower_er.read() {
+        let model_def = model_defs.definitions.get(build_tower.model_definition_key).unwrap();
+        let mut ec = commands.spawn((
+            Name::from(model_def.name),
+            IsObstacle {}, // let this be, for now!
+            SceneBundle {
+                scene: asset_server.load(model_def.file),
+                ..Default::default()
+            },
+            model_def.rigid_body,
+            tile_defs.create_collider(model_def.width, model_def.height, model_def.depth),
+            Position::from(build_tower.position),
+            model_def.create_collision_layers(),
+            CurrentTile::default(),
+            Health::default(),
+        ));
+        if build_tower.model_definition_key == "tower" {
+            ec.with_children(|parent| {
+                parent.spawn((
+                    Name::from("Sensor"),
+                    Collider::cylinder(0.5, 2.0),
+                    CollisionLayers::new([CollisionLayer::Sensor], [CollisionLayer::Alien]),
+                    Position::from(build_tower.position),
+                    TowerSensor {},
+                    TowerShooter::new(20.0),
+                    Sensor,
+                    systems::create_thinker()
+                ));
+            });
+        }
     }
 }

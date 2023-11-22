@@ -7,13 +7,14 @@ use bevy::time::{Fixed, Time};
 use bevy::utils::HashMap;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_xpbd_3d::components::RigidBody;
-use bevy_xpbd_3d::plugins::{PhysicsDebugPlugin, PhysicsPlugins};
+use bevy_xpbd_3d::plugins::PhysicsPlugins;
 use big_brain::BigBrainPlugin;
 use pathfinding::grid::Grid;
 use crate::player::systems::spawn_players::spawn_players;
 use camera::systems::spawn_camera::spawn_camera;
 use general::events::map_events::{LoadMap, SpawnAlien, SpawnPlayer};
 use general::systems::map_systems::{add_tile_to_map, remove_tile_from_map};
+use player::systems::build_systems::build_tower_system;
 use crate::ai::components::approach_and_attack_player_components::ApproachAndAttackPlayerData;
 use crate::ai::components::avoid_wall_components::AvoidWallsData;
 use crate::ai::components::move_towards_goal_components::{AlienReachedGoal, CantFindPath};
@@ -31,6 +32,7 @@ use crate::general::components::map_components::{CurrentTile, ModelDefinition, M
 use crate::general::resources::map_resources::MapGraph;
 use crate::general::systems::dynamic_movement_system::dynamic_movement;
 use crate::general::systems::collision_handling_system::collision_handling_system;
+use crate::general::systems::health_monitor_system::health_monitor_system;
 use crate::general::systems::kinematic_movement_system::kinematic_movement;
 use crate::general::systems::lights_systems::spawn_lights;
 use crate::general::systems::map_systems::{load_map_one, map_loader, TileDefinitions, update_current_tile_system};
@@ -40,7 +42,7 @@ use crate::player::events::building_events::{AddTile, ChangeBuildIndicator, Ente
 use crate::player::systems::build_systems::{building_mode, change_build_indicator, enter_build_mode, execute_build, exit_build_mode};
 use crate::player::systems::keyboard_control::input_control;
 use crate::towers::events::BuildTower;
-use crate::towers::systems::{alien_in_range_scorer_system, build_tower_system, shoot_alien_system};
+use crate::towers::systems::{alien_in_range_scorer_system, shoot_alien_system};
 
 pub(crate) mod player;
 pub(crate) mod general;
@@ -183,7 +185,8 @@ fn main() {
             (
                 build_tower_system,
                 shoot_alien_system,
-                alien_cant_find_path
+                alien_cant_find_path,
+                health_monitor_system,
             ))
         .add_systems(
             FixedUpdate,
