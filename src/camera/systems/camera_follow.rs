@@ -10,7 +10,7 @@ pub fn camera_follow(
 ) {
 for (mut camera_transform, offset) in camera_query.iter_mut() {
         for player_position in player_position.iter() {
-            camera_transform.translation = player_position.0 + offset.0;
+            camera_transform.translation = camera_transform.translation.lerp(player_position.0 + offset.0, 0.5);
             camera_transform.look_at(player_position.0, Vec3::Y);
         }
     }
