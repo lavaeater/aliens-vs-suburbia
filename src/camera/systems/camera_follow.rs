@@ -1,3 +1,4 @@
+use bevy::math::Vec3;
 use bevy::prelude::{Query, Transform, With};
 use bevy_xpbd_3d::prelude::Position;
 use crate::camera::components::camera::{CameraOffset, GameCamera};
@@ -10,6 +11,7 @@ pub fn camera_follow(
 for (mut camera_transform, offset) in camera_query.iter_mut() {
         for player_position in player_position.iter() {
             camera_transform.translation = player_position.0 + offset.0;
+            camera_transform.look_at(player_position.0, Vec3::Y);
         }
     }
 }
