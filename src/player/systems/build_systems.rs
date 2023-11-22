@@ -85,10 +85,8 @@ pub fn exit_build_mode(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 pub fn execute_build(
     mut execute_evr: EventReader<ExecuteBuild>,
-    mut exit_build_ew: EventWriter<ExitBuildMode>,
     mut remove_tile_ew: EventWriter<RemoveTile>,
     player_build_indicator_query: Query<&BuildingIndicator>,
     building_indicator: Query<(&Position, &CurrentTile), With<IsBuildIndicator>>,
@@ -104,12 +102,11 @@ pub fn execute_build(
                     let current_index = build_indicator.1;
                     let current_key = model_defs.build_indicators[current_index as usize];
                     build_tower_ew.send(BuildTower {
-                        position: position.0.clone(),
+                        position: position.0,
                         model_definition_key: current_key,
                     });
 
                     remove_tile_ew.send(RemoveTile(current_tile.tile));
-                    exit_build_ew.send(ExitBuildMode(execute_event.0));
                 }
             }
         }

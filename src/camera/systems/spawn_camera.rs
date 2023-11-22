@@ -1,7 +1,7 @@
 use bevy::core::Name;
 use bevy::math::{Quat, Rect, Vec2, Vec3};
 use bevy::prelude::{Camera3dBundle, Commands, OrthographicProjection, Transform};
-use bevy::prelude::Projection::{Orthographic, Perspective};
+use bevy::prelude::Projection::{Orthographic};
 use bevy::render::camera::ScalingMode;
 use bevy::utils::default;
 use bevy_xpbd_3d::math::PI;

@@ -9,7 +9,7 @@ pub fn input_control(
     mut query: Query<(Entity, &mut Controller), With<KeyboardController>>,
     mut start_build_ew: EventWriter<EnterBuildMode>,
     mut execute_build: EventWriter<ExecuteBuild>,
-    mut cancel_build: EventWriter<ExitBuildMode>,
+    mut exit_build: EventWriter<ExitBuildMode>,
     mut change_build_indicator: EventWriter<ChangeBuildIndicator>,
 ) {
     if let Ok((entity, mut controller)) = query.get_single_mut() {
@@ -18,7 +18,7 @@ pub fn input_control(
                 ButtonState::Pressed => match ev.key_code {
                     Some(KeyCode::B) => {
                         if controller.triggers.contains(&ControlCommands::Build) {
-                            execute_build.send(ExecuteBuild(entity));
+                            exit_build.send(ExitBuildMode(entity));
                         } else {
                             controller.triggers.insert(ControlCommands::Build);
                             start_build_ew.send(EnterBuildMode(entity));
@@ -26,7 +26,7 @@ pub fn input_control(
                     }
                     Some(KeyCode::Escape) => {
                         if controller.triggers.contains(&ControlCommands::Build) {
-                            cancel_build.send(ExitBuildMode(entity));
+                            exit_build.send(ExitBuildMode(entity));
                         }
                     }
                     Some(KeyCode::A) => {
@@ -42,7 +42,9 @@ pub fn input_control(
                         controller.directions.insert(ControlDirection::Backward);
                     }
                     Some(KeyCode::Space) => {
-                        if controller.triggers.contains(&ControlCommands::Throw) {
+                        if controller.triggers.contains(&ControlCommands::Build) {
+                            execute_build.send(ExecuteBuild(entity));
+                        } else if controller.triggers.contains(&ControlCommands::Throw) {
                             controller.triggers.remove(&ControlCommands::Throw);
                         } else {
                             controller.triggers.insert(ControlCommands::Throw);
