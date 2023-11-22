@@ -5,14 +5,13 @@ use bevy_xpbd_3d::prelude::LinearVelocity;
 use big_brain::actions::ActionState;
 use big_brain::scorers::Score;
 use big_brain::thinker::{ActionSpan, Actor};
-use crate::ai::components::move_towards_goal_components::{MoveTowardsGoalAction, MoveTowardsGoalData, MoveTowardsGoalScore};
+use crate::ai::components::move_towards_goal_components::{AlienReachedGoal, CantFindPath, MoveTowardsGoalAction, MoveTowardsGoalData, MoveTowardsGoalScore};
 use crate::enemy::components::general::{Alien, AlienCounter};
 use crate::general::components::map_components::{AlienGoal, CurrentTile};
 use crate::general::resources::map_resources::MapGraph;
 use crate::player::components::general::{ControlDirection, Controller, ControlRotation};
 use pathfinding::directed::astar::astar;
 use pathfinding::num_traits::Signed;
-use crate::general::events::map_events::AlienReachedGoal;
 use crate::general::systems::map_systems::TileDefinitions;
 use crate::player::systems::build_systems::ToWorldCoordinates;
 
@@ -33,6 +32,7 @@ pub fn move_towards_goal_action_system(
     mut action_query: Query<(&Actor, &mut ActionState, &ActionSpan), With<MoveTowardsGoalAction>>,
     mut alien_query: Query<(&mut MoveTowardsGoalData, &mut Controller, &Position, &Rotation, &CurrentTile, &LinearVelocity), With<Alien>>,
     mut alien_reached_goal_event_writer: EventWriter<AlienReachedGoal>,
+    mut cant_find_path_ew: EventWriter<CantFindPath>,
     tile_definitions: Res<TileDefinitions>,
 ) {
     for (actor, mut action_state, span) in action_query.iter_mut() {
@@ -67,6 +67,7 @@ pub fn move_towards_goal_action_system(
                                     |t| *t == map_graph.goal);
                             match astar {
                                 None => {
+                                    cant_find_path_ew.send(CantFindPath(actor.0));
                                     *action_state = ActionState::Failure;
                                 }
                                 Some(path) => {

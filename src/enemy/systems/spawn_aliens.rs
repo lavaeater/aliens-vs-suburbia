@@ -8,6 +8,7 @@ use big_brain::pickers::Highest;
 use big_brain::thinker::Thinker;
 use crate::ai::components::approach_and_attack_player_components::{ApproachAndAttackPlayerData};
 use crate::ai::components::avoid_wall_components::{AvoidWallsAction, AvoidWallScore, AvoidWallsData};
+use crate::ai::components::destroy_the_map_components::{DestroyTheMapAction, DestroyTheMapScore};
 use crate::ai::components::move_towards_goal_components::{MoveTowardsGoalAction, MoveTowardsGoalData, MoveTowardsGoalScore};
 use crate::enemy::components::general::{Alien, AlienCounter, AlienSightShape};
 use crate::general::components::{Attack, Health, HittableTarget, CollisionLayer};
@@ -52,7 +53,11 @@ pub fn spawn_aliens(
             .when(MoveTowardsGoalScore,
                   Steps::build()
                       .label("Move Towards Goal")
-                      .step(MoveTowardsGoalAction {}));
+                      .step(MoveTowardsGoalAction {}))
+            .when(DestroyTheMapScore,
+                  Steps::build()
+                      .label("Destroy the Map")
+                      .step(DestroyTheMapAction {}));
 
         commands.spawn(
             (

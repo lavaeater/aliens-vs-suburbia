@@ -34,13 +34,9 @@ pub fn collision_handling_system(
                 let ball = (if ball_is_first { ball_query.get( contacts.entity1) } else { ball_query.get(contacts.entity2) }).unwrap();
                 if ball.bounces <= 2 {
                     target_health.health -= 10;
-                    if target_health.health <= 0 {
-                        if is_alien {
-                            alien_counter.count -= 1;
-                        }
-                        if let Some(alien_commands) = commands.get_entity(hittable_entity) {
-                            alien_commands.despawn_recursive();
-                        }
+                    if target_health.health <= 0 && is_alien {
+                        //NO need to despawn here, it is done in health_monitor_system
+                        alien_counter.count -= 1;
                     }
                 }
             }

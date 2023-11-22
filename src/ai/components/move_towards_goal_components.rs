@@ -1,4 +1,4 @@
-use bevy::prelude::{Component};
+use bevy::prelude::{Component, Entity, Event};
 use bevy::reflect::Reflect;
 use big_brain::prelude::{ActionBuilder, ScorerBuilder};
 
@@ -13,5 +13,8 @@ pub struct MoveTowardsGoalScore;
 #[derive(Clone, Component, Debug, ActionBuilder)]
 pub struct MoveTowardsGoalAction {}
 
+#[derive(Event)]
+pub struct AlienReachedGoal(pub Entity);
 
-
+#[derive(Event)]
+pub struct CantFindPath(pub Entity);
