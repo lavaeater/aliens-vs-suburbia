@@ -1,7 +1,6 @@
 use belly::build::{eml, StyleSheet};
-use bevy::prelude::{Camera2dBundle, Commands};
+use bevy::prelude::{Commands};
 use belly::prelude::*;
-use bevy::core_pipeline::clear_color::ClearColorConfig;
 use bevy::prelude::*;
 
 const COLORS: &[&'static str] = &[
@@ -15,22 +14,8 @@ const COLORS: &[&'static str] = &[
     // Yellow  Amber      Orange     Deep Orange
     "#ffeb3b", "#ffc107", "#ff9800", "#ff5722",
 ];
+
 pub fn create_ui(mut commands: Commands) {
-    // let projection = OrthographicProjection {
-    //     far: 1000.,
-    //     near: -1000.,
-    //     ..Default::default()
-    // };
-    //
-    // commands.spawn(UiCameraBundle::default());
-    // commands.spawn(Camera2dBundle {
-    //     projection,
-    //     camera: Camera::default(),
-    //     camera_2d: Camera2d {
-    //         clear_color: ClearColorConfig::None,
-    //     },
-    //     ..default()
-    // });
     commands.add(StyleSheet::load("belly/color-picker.ess"));
     let colorbox = commands.spawn_empty().id();
     commands.add(eml! {
