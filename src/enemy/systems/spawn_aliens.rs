@@ -100,5 +100,10 @@ pub fn spawn_aliens(
             Health::default(),
             thinker
         ));
+
+        // add_health_bar_ew.send(AddHealthBar {
+        //     entity: id,
+        //     name: "ALIEN",
+        // });
     }
 }

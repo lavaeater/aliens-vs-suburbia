@@ -245,6 +245,7 @@ pub fn build_tower_system(
             CurrentTile::default(),
             Health::default(),
         ));
+
         if build_tower.model_definition_key == "tower" {
             ec.with_children(|parent| {
                 parent.spawn((
@@ -259,5 +260,11 @@ pub fn build_tower_system(
                 ));
             });
         }
+
+        // let id = ec.id();
+        // add_health_bar_ew.send(AddHealthBar {
+        //     entity: id,
+        //     name: "OBSTACLE",
+        // });
     }
 }

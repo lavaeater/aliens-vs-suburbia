@@ -44,7 +44,7 @@ use crate::player::systems::build_systems::{building_mode, change_build_indicato
 use crate::player::systems::keyboard_control::input_control;
 use crate::towers::events::BuildTower;
 use crate::towers::systems::{alien_in_range_scorer_system, shoot_alien_system};
-use crate::ui::systems::create_ui;
+use crate::ui::spawn_ui::{add_health_bar, AddHealthBar, spawn_ui};
 
 pub(crate) mod player;
 pub(crate) mod general;
@@ -70,6 +70,7 @@ fn main() {
         .add_event::<RemoveTile>()
         .add_event::<AddTile>()
         .add_event::<BuildTower>()
+        .add_event::<AddHealthBar>()
         .register_type::<CameraOffset>()
         .register_type::<CurrentTile>()
         .register_type::<Controller>()
@@ -159,7 +160,7 @@ fn main() {
                 load_map_one,
                 spawn_camera,
                 spawn_lights,
-                create_ui,
+                spawn_ui,
             ))
         .add_systems(
             Update,
@@ -192,6 +193,7 @@ fn main() {
                 shoot_alien_system,
                 alien_cant_find_path,
                 health_monitor_system,
+                add_health_bar,
             ))
         .add_systems(
             FixedUpdate,
