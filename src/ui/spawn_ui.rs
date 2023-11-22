@@ -1,7 +1,10 @@
-use belly::build::{eml, StyleSheet};
+use belly::build::{eml, FromWorldAndParams, StyleSheet, widget, WidgetContext};
+use belly::core::eml::Params;
 use bevy::prelude::Commands;
 use belly::prelude::*;
 use bevy::prelude::*;
+use bevy::window::PrimaryWindow;
+use crate::camera::components::camera::GameCamera;
 use crate::general::components::Health;
 //
 // const COLORS: &[&'static str] = &[
@@ -17,8 +20,8 @@ use crate::general::components::Health;
 // ];
 
 pub fn spawn_ui(mut commands: Commands) {
-    commands.add(StyleSheet::load("belly/color-picker.ess"));
-
+    // commands.add(StyleSheet::load("belly/color-picker.ess"));
+    //
     commands.add(eml! {
         <body>
         </body>
@@ -70,10 +73,54 @@ pub fn add_health_bar(
         let erp = add_health_bar.entity;
         let name = add_health_bar.name;
         elements.select("body").add_child(eml! {
-                <follow target=erp>
-                    <label value=name />
-                    <progressbar s:width="50px" maximum=100.0 minimum=0.0 bind:value=from!(erp, Health:as_f32()) s:color="#00ff00" />
-                </follow>
-            });
+                <fellow target=erp>
+                    <span><label value=name /></span>
+                    <span><progressbar s:width="50px" maximum=100.0 minimum=0.0 bind:value=from!(erp, Health:as_f32()) s:color="#00ff00" /></span>
+                </fellow>
+        });
+    }
+}
+
+#[derive(Component)]
+pub struct Fellow {
+    pub target: Entity
+}
+
+
+#[widget]
+#[param(target:Entity => Fellow:target)]
+fn fellow(ctx: &mut WidgetContext) {
+    let content = ctx.content();
+    ctx.render(eml! {
+        <span s:left=managed() s:top=managed() s:position-type="absolute">
+            {content}
+        </span>
+    })
+}
+
+impl FromWorldAndParams for Fellow {
+    fn from_world_and_params(_: &mut World, params: &mut Params) -> Self {
+        Fellow {
+            target: params.try_get("target").expect("Missing required `target` param")
+        }
+    }
+}
+
+pub fn fellow_system(
+    mut fellows: Query<(Entity, &Fellow, &mut Style, &Node)>,
+    transforms: Query<&GlobalTransform>,
+    mut commands: Commands,
+    camera_q: Query<(&Camera, &GlobalTransform),With<GameCamera>>,
+) {
+    if let Ok((camera, camera_global_transform)) =camera_q.get_single() {
+        for (entity, follow, mut style, node) in fellows.iter_mut() {
+            let Ok(tr) = transforms.get(follow.target) else {
+                commands.entity(entity).despawn_recursive();
+                continue;
+            };
+            let pos = camera.world_to_viewport(camera_global_transform, tr.translation()).unwrap();
+            style.left = Val::Px(pos.x.round());
+            style.top = Val::Px(pos.y.round());
+        }
     }
 }

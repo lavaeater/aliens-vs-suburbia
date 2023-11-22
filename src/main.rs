@@ -44,7 +44,7 @@ use crate::player::systems::build_systems::{building_mode, change_build_indicato
 use crate::player::systems::keyboard_control::input_control;
 use crate::towers::events::BuildTower;
 use crate::towers::systems::{alien_in_range_scorer_system, shoot_alien_system};
-use crate::ui::spawn_ui::{add_health_bar, AddHealthBar, spawn_ui};
+use crate::ui::spawn_ui::{add_health_bar, AddHealthBar, fellow_system, spawn_ui};
 
 pub(crate) mod player;
 pub(crate) mod general;
@@ -194,7 +194,9 @@ fn main() {
                 alien_cant_find_path,
                 health_monitor_system,
                 add_health_bar,
-            ))
+                fellow_system,
+            ),
+        )
         .add_systems(
             FixedUpdate,
             (

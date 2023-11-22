@@ -16,6 +16,7 @@ use crate::player::events::building_events::{ChangeBuildIndicator, EnterBuildMod
 use crate::towers::components::{TowerSensor, TowerShooter};
 use crate::towers::events::BuildTower;
 use crate::towers::systems;
+use crate::ui::spawn_ui::AddHealthBar;
 
 
 pub fn enter_build_mode(
@@ -225,6 +226,7 @@ impl ToGridNeighbour for Rotation {
 pub fn build_tower_system(
     mut build_tower_er: EventReader<BuildTower>,
     mut commands: Commands,
+    mut add_health_bar_ew: EventWriter<AddHealthBar>,
     asset_server: Res<AssetServer>,
     model_defs: Res<ModelDefinitions>,
     tile_defs: Res<TileDefinitions>,
@@ -261,10 +263,10 @@ pub fn build_tower_system(
             });
         }
 
-        // let id = ec.id();
-        // add_health_bar_ew.send(AddHealthBar {
-        //     entity: id,
-        //     name: "OBSTACLE",
-        // });
+        let id = ec.id();
+        add_health_bar_ew.send(AddHealthBar {
+            entity: id,
+            name: "OBSTACLE",
+        });
     }
 }

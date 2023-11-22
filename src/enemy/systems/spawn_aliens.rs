@@ -15,6 +15,7 @@ use crate::general::components::{Attack, Health, HittableTarget, CollisionLayer}
 use crate::general::components::map_components::{AlienSpawnPoint, CoolDown, CurrentTile};
 use crate::general::events::map_events::SpawnAlien;
 use crate::player::components::general::{Controller, DynamicMovement};
+use crate::ui::spawn_ui::AddHealthBar;
 
 pub fn alien_spawner_system(
     time_res: Res<Time>,
@@ -34,6 +35,7 @@ pub fn spawn_aliens(
     mut alien_counter: ResMut<AlienCounter>,
     mut spawn_alien_event_reader: EventReader<SpawnAlien>,
     mut commands: Commands,
+    mut add_health_bar_ew: EventWriter<AddHealthBar>,
     asset_server: Res<AssetServer>,
 ) {
     if alien_counter.count >= alien_counter.max_count {
@@ -59,7 +61,7 @@ pub fn spawn_aliens(
                       .label("Destroy the Map")
                       .step(DestroyTheMapAction {}));
 
-        commands.spawn(
+        let id = commands.spawn(
             (
                 Name::from("Spider"),
                 // // We rotat the cone since it is defined as a cone pointing up the y axis. Rotating it -90 degrees around the x axis makes it point forward properly. Maybe.
@@ -99,11 +101,11 @@ pub fn spawn_aliens(
             Attack::default(),
             Health::default(),
             thinker
-        ));
+        )).id();
 
-        // add_health_bar_ew.send(AddHealthBar {
-        //     entity: id,
-        //     name: "ALIEN",
-        // });
+        add_health_bar_ew.send(AddHealthBar {
+            entity: id,
+            name: "ALIEN",
+        });
     }
 }
