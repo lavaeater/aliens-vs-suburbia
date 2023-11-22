@@ -1,4 +1,4 @@
-use bevy::prelude::{Entity, Event};
+use bevy::prelude::{Event};
 use bevy::math::Vec3;
 
 #[derive(Event)]

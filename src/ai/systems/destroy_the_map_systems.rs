@@ -1,14 +1,11 @@
-use bevy::ecs::system::lifetimeless::SCommands;
 use bevy::prelude::*;
-use bevy::utils::petgraph::algo::has_path_connecting;
 use bevy_xpbd_3d::components::{Position, Rotation};
-use bevy_xpbd_3d::prelude::LinearVelocity;
 use big_brain::actions::ActionState;
 use big_brain::scorers::Score;
 use big_brain::thinker::{ActionSpan, Actor};
-use crate::ai::components::move_towards_goal_components::{AlienReachedGoal, CantFindPath, MoveTowardsGoalAction, MoveTowardsGoalData, MoveTowardsGoalScore};
-use crate::enemy::components::general::{Alien, AlienCounter};
-use crate::general::components::map_components::{AlienGoal, CurrentTile};
+use crate::ai::components::move_towards_goal_components::{CantFindPath};
+use crate::enemy::components::general::{Alien};
+use crate::general::components::map_components::{CurrentTile};
 use crate::general::resources::map_resources::MapGraph;
 use crate::player::components::general::{ControlDirection, Controller, ControlRotation, IsObstacle};
 use pathfinding::directed::astar::astar;
@@ -45,7 +42,7 @@ pub fn destroy_the_map_action_system(
     mut commands: Commands,
     mut map_graph: ResMut<MapGraph>,
     mut action_query: Query<(&Actor, &mut ActionState, &ActionSpan), With<DestroyTheMapAction>>,
-    mut alien_query: Query<(&mut MustDestroyTheMap, &mut Controller, &Position, &Rotation, &CurrentTile, &LinearVelocity), With<Alien>>,
+    mut alien_query: Query<(&mut MustDestroyTheMap, &mut Controller, &Position, &Rotation, &CurrentTile), With<Alien>>,
     mut obstacle_query: Query<(&IsObstacle, &CurrentTile, &mut Health)>,
     tile_definitions: Res<TileDefinitions>,
 ) {
@@ -61,7 +58,7 @@ pub fn destroy_the_map_action_system(
                               mut controller,
                               alien_position,
                               alien_rotation,
-                              alien_current_tile, linear_velocity)
+                              alien_current_tile)
                 ) = alien_query.get_mut(actor.0)
                 {
                     match must_destroy_data.state {

@@ -127,13 +127,13 @@ impl TileDefinitions {
         Collider::cuboid(width * self.tile_unit * 2.0, height * self.tile_unit * 2.0, depth * self.tile_unit * 2.0)
     }
 
-    pub fn get_position(&self, x: i32, y: i32) -> Vec3 {
-        Vec3::new(self.tile_width * x as f32, 0.0, self.tile_width * y as f32)
-    }
+    // pub fn get_position(&self, x: i32, y: i32) -> Vec3 {
+    //     Vec3::new(self.tile_width * x as f32, 0.0, self.tile_width * y as f32)
+    // }
 
-    pub fn create_floor_collider(&self) -> Collider {
-        Collider::cuboid(self.tile_width, self.tile_depth, self.tile_width)
-    }
+    // pub fn create_floor_collider(&self) -> Collider {
+    //     Collider::cuboid(self.tile_width, self.tile_depth, self.tile_width)
+    // }
 
     pub fn get_floor_position(&self, x: i32, y: i32) -> Vec3 {
         Vec3::new(self.tile_width * x as f32, self.floor_level, self.tile_width * y as f32)
@@ -185,9 +185,29 @@ pub fn map_loader(
 ) {
     for _load_map in load_map_event_reader.read() {
         let m = [
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
-            [9, 1, 1, 1, 17, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+            [17, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 5],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1],
+            [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1],
+            [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
+            [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
+            [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
+            [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
+            [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
+            [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1],
+            [9, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1],
         ];
         let rows = m.len();
         let cols = m[0].len();
@@ -366,7 +386,7 @@ pub fn map_loader(
                 alien_counter.max_count = 100;
                 commands.spawn((
                     Name::from(format!("Alien Spawn Point{}:{}", tile.x, tile.y)),
-                    AlienSpawnPoint::new(1.0),
+                    AlienSpawnPoint::new(20.0),
                     SceneBundle {
                         scene: asset_server.load("player.glb#Scene0"),
                         ..Default::default()

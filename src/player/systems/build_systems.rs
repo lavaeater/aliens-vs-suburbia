@@ -48,7 +48,7 @@ pub fn enter_build_mode(
 }
 
 pub fn spawn_building_indicator(
-    mut commands: &mut Commands,
+    commands: &mut Commands,
     asset_server: &Res<AssetServer>,
     position: &Vec3,
     file: &'static str,
@@ -85,6 +85,7 @@ pub fn exit_build_mode(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn execute_build(
     mut execute_evr: EventReader<ExecuteBuild>,
     mut exit_build_ew: EventWriter<ExitBuildMode>,
@@ -122,7 +123,7 @@ pub fn building_mode(
 ) {
     for (current_tile, rotation, building_indicator) in builder_query.iter() {
         let desired_neighbour = rotation.get_neighbour(current_tile.tile);
-        if let Ok((current_tile, rotation, mut position, scene_instance)) = building_indicator_query.get_mut(building_indicator.0) {
+        if let Ok((_, _, mut position, _)) = building_indicator_query.get_mut(building_indicator.0) {
             let desired_neighbour_pos = desired_neighbour.to_world_coords(&tile_definitions) + Vec3::new(0.0, -tile_definitions.wall_height, 0.0);
             position.0 = desired_neighbour_pos;
         }

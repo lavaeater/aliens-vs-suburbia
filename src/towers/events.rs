@@ -1,6 +1,5 @@
 use bevy::math::Vec3;
 use bevy::prelude::Event;
-use crate::general::components::map_components::ModelDefinition;
 
 #[derive(Event)]
 pub struct BuildTower {
