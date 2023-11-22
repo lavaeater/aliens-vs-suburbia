@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use belly::build::BellyPlugin;
 use bevy::app::{App, FixedUpdate, PluginGroup, PreUpdate, Startup, Update};
 use bevy::{DefaultPlugins, log};
 use bevy::log::LogPlugin;
@@ -43,6 +44,7 @@ use crate::player::systems::build_systems::{building_mode, change_build_indicato
 use crate::player::systems::keyboard_control::input_control;
 use crate::towers::events::BuildTower;
 use crate::towers::systems::{alien_in_range_scorer_system, shoot_alien_system};
+use crate::ui::systems::create_ui;
 
 pub(crate) mod player;
 pub(crate) mod general;
@@ -50,6 +52,7 @@ pub(crate) mod camera;
 pub(crate) mod enemy;
 pub(crate) mod ai;
 pub(crate) mod towers;
+pub(crate) mod ui;
 
 pub const METERS_PER_PIXEL: f64 = 16.0;
 
@@ -149,12 +152,14 @@ fn main() {
         // .add_plugins(PhysicsDebugPlugin::default())
         .add_plugins(WorldInspectorPlugin::new())
         .add_plugins(BigBrainPlugin::new(PreUpdate))
+        .add_plugins(BellyPlugin)
         .add_systems(
             Startup,
             (
                 load_map_one,
                 spawn_camera,
                 spawn_lights,
+                create_ui,
             ))
         .add_systems(
             Update,
