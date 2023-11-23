@@ -26,10 +26,8 @@ pub fn add_health_bar(
 ) {
     for add_health_bar in &mut add_health_bar_er.read() {
         let erp = add_health_bar.entity;
-        let name = add_health_bar.name;
         elements.select("body").add_child(eml! {
                 <fellow target=erp>
-                    <span><label value=name /></span>
                     <span><progressbar s:width="50px" maximum=100.0 minimum=0.0 bind:value=from!(erp, Health:as_f32()) s:color="#00ff00" /></span>
                 </fellow>
         });
@@ -68,14 +66,14 @@ pub fn fellow_system(
     camera_q: Query<(&Camera, &GlobalTransform),With<GameCamera>>,
 ) {
     if let Ok((camera, camera_global_transform)) =camera_q.get_single() {
-        for (entity, follow, mut style, _node) in fellows.iter_mut() {
+        for (entity, follow, mut style, node) in fellows.iter_mut() {
             let Ok(tr) = transforms.get(follow.target) else {
                 commands.entity(entity).despawn_recursive();
                 continue;
             };
             if let Some(pos) = camera.world_to_viewport(camera_global_transform, tr.translation()) {
-                style.left = Val::Px(pos.x.round());
-                style.top = Val::Px(pos.y.round());
+                style.left = Val::Px((pos.x - 0.5 * node.size().x).round());
+                style.top = Val::Px((pos.y - 0.5 * node.size().y).round());
             }
         }
     }
