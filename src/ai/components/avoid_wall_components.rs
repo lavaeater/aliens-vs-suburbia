@@ -2,8 +2,8 @@ use bevy::log::info;
 use bevy::prelude::Component;
 use bevy::reflect::Reflect;
 use big_brain::prelude::{ActionBuilder, ScorerBuilder};
+use crate::control::components::{ControlRotation, Opposite};
 use crate::general::components::map_components::CoolDown;
-use crate::player::components::general::{ControlRotation, Opposite};
 
 #[derive(Clone, Component, Debug, Reflect)]
 pub struct AvoidWallsData {

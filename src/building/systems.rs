@@ -7,11 +7,12 @@ use bevy::prelude::{Commands, Entity, EventReader, EventWriter, Query, Res, With
 use bevy::scene::{SceneBundle, SceneInstance};
 use bevy_xpbd_3d::components::{Collider, CollisionLayers, LockedAxes, RigidBody, Rotation, Sensor};
 use bevy_xpbd_3d::prelude::Position;
+use crate::control::components::{ControlCommands, Controller};
 use crate::general::components::{CollisionLayer, Health};
 use crate::general::components::map_components::{CurrentTile, ModelDefinitions};
 use crate::general::resources::map_resources::MapGraph;
 use crate::general::systems::map_systems::TileDefinitions;
-use crate::player::components::general::{BuildingIndicator, ControlCommands, Controller, IsBuildIndicator, IsBuilding, IsObstacle};
+use crate::player::components::{BuildingIndicator, IsBuildIndicator, IsBuilding, IsObstacle};
 use crate::player::events::building_events::{ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode, RemoveTile};
 use crate::towers::components::{TowerSensor, TowerShooter};
 use crate::towers::events::BuildTower;

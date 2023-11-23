@@ -10,7 +10,7 @@ use big_brain::actions::{ActionState, Steps};
 use big_brain::pickers::Highest;
 use big_brain::scorers::Score;
 use big_brain::thinker::{ActionSpan, Actor, Thinker, ThinkerBuilder};
-use crate::enemy::components::general::Alien;
+use crate::alien::components::general::Alien;
 use crate::general::components::{Ball, CollisionLayer};
 use crate::general::components::map_components::CoolDown;
 use crate::towers::components::{AlienInRangeScore, ShootAlienAction, TowerSensor, TowerShooter};

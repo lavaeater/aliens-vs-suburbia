@@ -14,7 +14,7 @@ pub struct MoveTowardsGoalScore;
 pub struct MoveTowardsGoalAction {}
 
 #[derive(Event)]
-pub struct AlienReachedGoal(pub Entity);
+pub struct AgentReachedGoal(pub Entity);
 
 #[derive(Event)]
-pub struct CantFindPath(pub Entity);
+pub struct AgentCannotFindPath(pub Entity);

@@ -1,7 +1,7 @@
 use bevy::app::{App, Plugin, Update};
 use crate::general::systems::dynamic_movement_system::dynamic_movement;
 use crate::general::systems::kinematic_movement_system::kinematic_movement;
-use crate::player::systems::keyboard_control::input_control;
+use crate::control::systems::input_control;
 
 pub struct ControlPlugin;
 

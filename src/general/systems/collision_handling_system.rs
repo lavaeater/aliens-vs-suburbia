@@ -1,6 +1,6 @@
 use bevy::prelude::{Commands, DespawnRecursiveExt, EventReader, Has, Query, ResMut};
 use bevy_xpbd_3d::prelude::Collision;
-use crate::enemy::components::general::{Alien, AlienCounter};
+use crate::alien::components::general::{Alien, AlienCounter};
 use crate::general::components::{Ball, Health, HittableTarget};
 
 pub fn collision_handling_system(

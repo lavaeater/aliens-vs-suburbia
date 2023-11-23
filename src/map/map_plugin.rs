@@ -3,7 +3,7 @@ use bevy::utils::HashMap;
 use bevy_xpbd_3d::components::RigidBody;
 use pathfinding::grid::Grid;
 use std::collections::HashSet;
-use crate::enemy::components::general::AlienCounter;
+use crate::alien::components::general::AlienCounter;
 use crate::general::components::CollisionLayer;
 use crate::general::components::map_components::{ModelDefinition, ModelDefinitions};
 use crate::general::events::map_events::{LoadMap, SpawnAlien, SpawnPlayer};

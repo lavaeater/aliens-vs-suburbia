@@ -1,8 +1,8 @@
 use bevy::app::{App, Plugin, PostUpdate, Startup};
+use bevy::prelude::IntoSystemConfigs;
 use bevy_xpbd_3d::PhysicsSet;
 use bevy::transform::TransformSystem;
-use crate::camera::systems::camera_follow::camera_follow;
-use crate::camera::systems::spawn_camera::spawn_camera;
+use crate::camera::systems::{camera_follow, spawn_camera};
 
 pub struct CameraPlugin;
 

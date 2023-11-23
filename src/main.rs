@@ -1,5 +1,5 @@
 use belly::build::BellyPlugin;
-use bevy::app::{App, Plugin, PluginGroup, PreUpdate, Startup, Update};
+use bevy::app::{App, PluginGroup, PreUpdate, Startup, Update};
 use bevy::{DefaultPlugins, log};
 use bevy::log::LogPlugin;
 use bevy::prelude::Msaa;
@@ -10,35 +10,33 @@ use big_brain::BigBrainPlugin;
 use crate::player::systems::spawn_players::spawn_players;
 use crate::ai::components::approach_and_attack_player_components::ApproachAndAttackPlayerData;
 use crate::ai::components::avoid_wall_components::AvoidWallsData;
-use crate::camera::components::camera::CameraOffset;
+use camera::components::CameraOffset;
 use crate::general::components::Health;
 use crate::general::components::map_components::CurrentTile;
 use crate::general::systems::collision_handling_system::collision_handling_system;
 use crate::general::systems::health_monitor_system::health_monitor_system;
 use crate::general::systems::lights_systems::spawn_lights;
 use crate::general::systems::throwing_system::throwing;
-use crate::player::components::general::Controller;
+use control::components::Controller;
 use crate::towers::systems::{alien_in_range_scorer_system, shoot_alien_system};
 use crate::ui::spawn_ui::{add_health_bar, AddHealthBar, fellow_system, spawn_ui};
-use bevy::prelude::IntoSystemConfigs;
-use alien_plugin::AlienPlugin;
-use build_mode_plugin::BuildModePlugin;
-use camera_plugin::CameraPlugin;
-use map_plugin::MapPlugin;
-use crate::control_plugin::ControlPlugin;
+use alien::alien_plugin::AlienPlugin;
+use building::build_mode_plugin::BuildModePlugin;
+use camera::camera_plugin::CameraPlugin;
+use ai::ai_plugin::AiPlugin;
+use control::control_plugin::ControlPlugin;
+use crate::map::map_plugin::MapPlugin;
 
 pub(crate) mod player;
 pub(crate) mod general;
 pub(crate) mod camera;
-pub(crate) mod enemy;
+pub(crate) mod alien;
 pub(crate) mod ai;
 pub(crate) mod towers;
 pub(crate) mod ui;
-mod build_mode_plugin;
-mod map_plugin;
-mod alien_plugin;
-mod control_plugin;
-mod camera_plugin;
+mod control;
+mod building;
+mod map;
 
 fn main() {
     App::new()
@@ -65,6 +63,7 @@ fn main() {
         .add_plugins(BellyPlugin)
         .add_plugins(BuildModePlugin)
         .add_plugins(MapPlugin)
+        .add_plugins(AiPlugin)
         .add_plugins(AlienPlugin)
         .add_plugins(ControlPlugin)
         .add_plugins(CameraPlugin)

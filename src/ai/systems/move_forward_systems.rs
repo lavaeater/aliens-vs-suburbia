@@ -2,7 +2,7 @@ use bevy::prelude::{Query, With};
 use big_brain::prelude::{ActionSpan, Actor, Score};
 use big_brain::actions::ActionState;
 use crate::ai::components::move_forward_components::{MoveForwardAction, MoveForwardScore};
-use crate::player::components::general::{ControlDirection, Controller};
+use crate::control::components::{ControlDirection, Controller};
 
 pub fn move_forward_action_system(
     mut action_query: Query<(&Actor, &mut ActionState, &ActionSpan), With<MoveForwardAction>>,

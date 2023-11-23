@@ -5,15 +5,15 @@ use bevy_xpbd_3d::prelude::LinearVelocity;
 use big_brain::actions::ActionState;
 use big_brain::scorers::Score;
 use big_brain::thinker::{ActionSpan, Actor};
-use crate::ai::components::move_towards_goal_components::{AlienReachedGoal, CantFindPath, MoveTowardsGoalAction, MoveTowardsGoalData, MoveTowardsGoalScore};
-use crate::enemy::components::general::{Alien, AlienCounter};
+use crate::ai::components::move_towards_goal_components::{AgentCannotFindPath, AgentReachedGoal, MoveTowardsGoalAction, MoveTowardsGoalData, MoveTowardsGoalScore};
+use crate::alien::components::general::{Alien, AlienCounter};
 use crate::general::components::map_components::{AlienGoal, CurrentTile};
 use crate::general::resources::map_resources::MapGraph;
-use crate::player::components::general::{ControlDirection, Controller, ControlRotation};
 use pathfinding::directed::astar::astar;
 use pathfinding::num_traits::Signed;
+use crate::building::systems::ToWorldCoordinates;
+use crate::control::components::{ControlDirection, Controller, ControlRotation};
 use crate::general::systems::map_systems::TileDefinitions;
-use crate::player::systems::build_systems::ToWorldCoordinates;
 
 pub fn move_towards_goal_scorer_system(
     _approach_player_data: Query<&MoveTowardsGoalData>,
@@ -31,8 +31,8 @@ pub fn move_towards_goal_action_system(
     map_graph: Res<MapGraph>,
     mut action_query: Query<(&Actor, &mut ActionState, &ActionSpan), With<MoveTowardsGoalAction>>,
     mut alien_query: Query<(&mut MoveTowardsGoalData, &mut Controller, &Position, &Rotation, &CurrentTile, &LinearVelocity), With<Alien>>,
-    mut alien_reached_goal_event_writer: EventWriter<AlienReachedGoal>,
-    mut cant_find_path_ew: EventWriter<CantFindPath>,
+    mut alien_reached_goal_event_writer: EventWriter<AgentReachedGoal>,
+    mut cant_find_path_ew: EventWriter<AgentCannotFindPath>,
     tile_definitions: Res<TileDefinitions>,
 ) {
     for (actor, mut action_state, span) in action_query.iter_mut() {
@@ -67,7 +67,7 @@ pub fn move_towards_goal_action_system(
                                     |t| *t == map_graph.goal);
                             match astar {
                                 None => {
-                                    cant_find_path_ew.send(CantFindPath(actor.0));
+                                    cant_find_path_ew.send(AgentCannotFindPath(actor.0));
                                     *action_state = ActionState::Failure;
                                 }
                                 Some(path) => {
@@ -78,7 +78,7 @@ pub fn move_towards_goal_action_system(
                         Some(path) => {
                             if path.is_empty() {
                                 move_towards_goal_data.path = None;
-                                alien_reached_goal_event_writer.send(AlienReachedGoal(actor.0));
+                                alien_reached_goal_event_writer.send(AgentReachedGoal(actor.0));
                                 *action_state = ActionState::Success;
                             } else {
                                 let next_tile = path[0];
@@ -135,12 +135,12 @@ pub fn move_towards_goal_action_system(
     }
 }
 
-pub fn alien_reached_goal_handler(
+pub fn agent_reached_goal_handler(
     mut alien_counter: ResMut<AlienCounter>,
-    mut reached_goal_event_reader: EventReader<AlienReachedGoal>,
+    mut reached_goal_event_reader: EventReader<AgentReachedGoal>,
     mut commands: Commands
 ) {
-    for AlienReachedGoal(alien) in reached_goal_event_reader.read() {
+    for AgentReachedGoal(alien) in reached_goal_event_reader.read() {
         alien_counter.count -= 1;
         commands.entity(*alien).despawn_recursive();
     }

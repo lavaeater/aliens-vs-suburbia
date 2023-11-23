@@ -8,15 +8,15 @@ use bevy_xpbd_3d::math::PI;
 use bevy_xpbd_3d::prelude::{Collider, Position, RigidBody, Rotation};
 use flagset::{flags, FlagSet};
 use pathfinding::grid::Grid;
-use crate::enemy::components::general::AlienCounter;
+use crate::alien::components::general::AlienCounter;
 use crate::general::components::CollisionLayer;
 use crate::general::components::map_components::{AlienGoal, AlienSpawnPoint, CurrentTile, Floor, ModelDefinitions, Wall};
 use crate::general::events::map_events::{LoadMap, SpawnPlayer};
 use crate::general::resources::map_resources::MapGraph;
 use bevy::math::EulerRot;
-use crate::player::components::general::IsBuildIndicator;
+use crate::building::systems::ToWorldCoordinates;
+use crate::player::components::IsBuildIndicator;
 use crate::player::events::building_events::{AddTile, RemoveTile};
-use crate::player::systems::build_systems::ToWorldCoordinates;
 
 flags! {
     pub enum FileFlags: u16 {

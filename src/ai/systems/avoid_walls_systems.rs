@@ -7,9 +7,9 @@ use bevy_xpbd_3d::prelude::{SpatialQuery, SpatialQueryFilter};
 use bevy::math::{EulerRot, Quat, Vec3};
 use bevy::time::Time;
 use crate::ai::components::avoid_wall_components::{AvoidWallsAction, AvoidWallScore, AvoidWallsData};
+use crate::control::components::{Controller, ControlRotation};
 use crate::general::components::CollisionLayer;
 use crate::general::components::map_components::CoolDown;
-use crate::player::components::general::{Controller, ControlRotation};
 
 pub fn avoid_walls_scorer_system(
     mut avoid_wall_data_query: Query<&mut AvoidWallsData>,
