@@ -4,14 +4,51 @@ use bevy::prelude::Commands;
 use belly::prelude::*;
 use bevy::prelude::*;
 use crate::camera::components::GameCamera;
+use crate::game_state::GameState;
 use crate::general::components::Health;
 
+#[derive(Event)]
+pub struct GotoState {
+    pub state: GameState,
+}
+
+pub fn spawn_menu(
+    mut commands: Commands,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    commands.add(eml! {
+        <body>
+          <button on:press=|ctx| next_state.set(GameState::InGame)>
+                    "Press me and look at the logs!"
+                </button>
+        </body>
+    });
+}
+
+pub fn cleanup_menu(
+    mut commands: Commands,
+    elements_query: Query<Entity, With<Element>>,
+) {
+    for entity in elements_query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+}
 
 pub fn spawn_ui(mut commands: Commands) {
     commands.add(eml! {
         <body>
+            <span s:width="100px" s:height="100px" s:background-color="#ff0000">"THIS IS JUST A TEST"</span>
         </body>
     });
+}
+
+pub fn cleanup_ui(
+    mut commands: Commands,
+    elements_query: Query<Entity, With<Element>>,
+) {
+    for entity in elements_query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
 }
 
 #[derive(Event)]

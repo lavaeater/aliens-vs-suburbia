@@ -15,7 +15,7 @@ use crate::general::components::{Ball, CollisionLayer};
 use crate::general::components::map_components::CoolDown;
 use crate::towers::components::{AlienInRangeScore, ShootAlienAction, TowerSensor, TowerShooter};
 
-pub fn alien_in_range_scorer_system(
+pub fn tower_has_alien_in_range_scorer_system(
     mut query: Query<(&Actor, &mut Score), With<AlienInRangeScore>>,
     colliding_entities_query: Query<&CollidingEntities>,
     alien_query: Query<&Alien>,

@@ -1,4 +1,5 @@
 use bevy::app::{App, FixedUpdate, Plugin, PreUpdate, Update};
+use big_brain::BigBrainPlugin;
 use crate::ai::components::move_towards_goal_components::{AgentReachedGoal, AgentCannotFindPath};
 use crate::ai::systems::approach_and_attack_player_systems::{approach_and_attack_player_scorer_system, approach_player_action_system, attack_player_action_system, can_agent_see_player_system};
 use crate::ai::systems::avoid_walls_systems::{avoid_walls_action_system, avoid_walls_data_system, avoid_walls_scorer_system};
@@ -11,6 +12,8 @@ pub struct AiPlugin;
 impl Plugin for AiPlugin {
     fn build(&self, app: &mut App) {
         app
+            .add_plugins(BigBrainPlugin::new(PreUpdate))
+
             .add_event::<AgentReachedGoal>()
             .add_event::<AgentCannotFindPath>()
             .add_systems(

@@ -18,7 +18,7 @@ use crate::general::systems::health_monitor_system::health_monitor_system;
 use crate::general::systems::lights_systems::spawn_lights;
 use crate::general::systems::throwing_system::throwing;
 use control::components::Controller;
-use crate::towers::systems::{alien_in_range_scorer_system, shoot_alien_system};
+use crate::towers::systems::{tower_has_alien_in_range_scorer_system, shoot_alien_system};
 use crate::ui::spawn_ui::{add_health_bar, AddHealthBar, fellow_system, spawn_ui};
 use alien::alien_plugin::AlienPlugin;
 use building::build_mode_plugin::BuildModePlugin;
@@ -62,8 +62,6 @@ fn main() {
         .add_plugins(PhysicsPlugins::default())
         // .add_plugins(PhysicsDebugPlugin::default())
         .add_plugins(WorldInspectorPlugin::new())
-        .add_plugins(BigBrainPlugin::new(PreUpdate))
-        .add_plugins(BellyPlugin)
         .add_plugins(BuildModePlugin)
         .add_plugins(GameStatePlugin)
         .add_plugins(AiPlugin)
@@ -74,7 +72,6 @@ fn main() {
             Startup,
             (
                 spawn_lights,
-                spawn_ui,
             ))
         .add_systems(
             Update,
@@ -95,7 +92,7 @@ fn main() {
         .add_systems(
             PreUpdate,
             (
-                alien_in_range_scorer_system,
+                tower_has_alien_in_range_scorer_system,
             ),
         )
         .run();
