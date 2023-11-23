@@ -7,7 +7,7 @@ use crate::player::components::general::{Controller, ControlDirection, Kinematic
 pub fn kinematic_movement(
     mut query: Query<(&mut LinearVelocity, &mut AngularVelocity, &Rotation, &Controller), With<KinematicMovement>>,
 ) {
-    let force_factor = 0.1;
+    let force_factor =1.0;
     for (
         mut linear_velocity,
         mut angular_velocity,

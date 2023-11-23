@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use belly::build::BellyPlugin;
-use bevy::app::{App, FixedUpdate, PluginGroup, PreUpdate, Startup, Update};
+use bevy::app::{App, FixedUpdate, PluginGroup, PostUpdate, PreUpdate, Startup, Update};
 use bevy::{DefaultPlugins, log};
 use bevy::log::LogPlugin;
 use bevy::prelude::Msaa;
@@ -45,6 +45,9 @@ use crate::player::systems::keyboard_control::input_control;
 use crate::towers::events::BuildTower;
 use crate::towers::systems::{alien_in_range_scorer_system, shoot_alien_system};
 use crate::ui::spawn_ui::{add_health_bar, AddHealthBar, fellow_system, spawn_ui};
+use bevy::prelude::IntoSystemConfigs;
+use bevy::transform::TransformSystem;
+use bevy_xpbd_3d::PhysicsSet;
 
 pub(crate) mod player;
 pub(crate) mod general;
@@ -165,15 +168,14 @@ fn main() {
         .add_systems(
             Update,
             (
+                input_control,
+                dynamic_movement,
+                kinematic_movement,
                 update_current_tile_system,
                 alien_spawner_system,
                 map_loader,
                 spawn_players,
                 spawn_aliens,
-                camera_follow,
-                input_control,
-                kinematic_movement,
-                dynamic_movement,
                 throwing,
                 collision_handling_system,
                 update_current_tile_system,
@@ -219,6 +221,12 @@ fn main() {
                 destroy_the_map_scorer_system,
                 destroy_the_map_action_system
             ),
+        )
+        .add_systems(
+            PostUpdate,
+            camera_follow
+                .after(PhysicsSet::Sync)
+                .before(TransformSystem::TransformPropagate)
         )
         .run();
 }
