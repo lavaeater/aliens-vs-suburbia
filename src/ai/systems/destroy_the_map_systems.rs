@@ -21,7 +21,9 @@ pub fn alien_cant_find_path(
     mut commands: Commands,
 ) {
     for CantFindPath(alien) in alien_cant_find_path_event_reader.read() {
-        commands.entity(*alien).insert(MustDestroyTheMap::new());
+        if let Some(mut alien_commands) = commands.get_entity(*alien) {
+            alien_commands.insert(MustDestroyTheMap::new());
+        }
     }
 }
 
