@@ -73,9 +73,10 @@ pub fn fellow_system(
                 commands.entity(entity).despawn_recursive();
                 continue;
             };
-            let pos = camera.world_to_viewport(camera_global_transform, tr.translation()).unwrap();
-            style.left = Val::Px(pos.x.round());
-            style.top = Val::Px(pos.y.round());
+            if let Some(pos) = camera.world_to_viewport(camera_global_transform, tr.translation()) {
+                style.left = Val::Px(pos.x.round());
+                style.top = Val::Px(pos.y.round());
+            }
         }
     }
 }

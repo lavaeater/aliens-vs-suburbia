@@ -9,12 +9,12 @@ use crate::camera::components::camera::{CameraOffset, GameCamera};
 pub fn spawn_camera(mut commands: Commands) {
     commands.spawn((
         Name::from("Camera"),
-        CameraOffset(Vec3::new(1.5, 1.0, 1.5)),
+        CameraOffset(Vec3::new(-2.0, 1.5, 2.0)),
         Camera3dBundle {
             projection: Orthographic(OrthographicProjection {
-                scale: 3.0,
-                near: -100.0,
-                far: 1000.0,
+                scale: 5.0,
+                near: -200.0,
+                far: 200.0,
                 viewport_origin: Vec2::new(0.5, 0.5),
                 scaling_mode: ScalingMode::FixedVertical(2.0),
                 area: Rect::new(-1.0, -1.0, 1.0, 1.0),
