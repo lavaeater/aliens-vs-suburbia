@@ -37,6 +37,9 @@ pub(crate) mod ui;
 mod control;
 mod building;
 mod map;
+pub(crate) mod game_state;
+
+pub struct G
 
 fn main() {
     App::new()
