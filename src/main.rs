@@ -25,7 +25,8 @@ use building::build_mode_plugin::BuildModePlugin;
 use camera::camera_plugin::CameraPlugin;
 use ai::ai_plugin::AiPlugin;
 use control::control_plugin::ControlPlugin;
-use crate::map::map_plugin::MapPlugin;
+use crate::game_state::game_state_plugin::GameStatePlugin;
+use crate::map::map_plugins::MapPlugin;
 
 pub(crate) mod player;
 pub(crate) mod general;
@@ -39,7 +40,6 @@ mod building;
 mod map;
 pub(crate) mod game_state;
 
-pub struct G
 
 fn main() {
     App::new()
@@ -65,7 +65,7 @@ fn main() {
         .add_plugins(BigBrainPlugin::new(PreUpdate))
         .add_plugins(BellyPlugin)
         .add_plugins(BuildModePlugin)
-        .add_plugins(MapPlugin)
+        .add_plugins(GameStatePlugin)
         .add_plugins(AiPlugin)
         .add_plugins(AlienPlugin)
         .add_plugins(ControlPlugin)

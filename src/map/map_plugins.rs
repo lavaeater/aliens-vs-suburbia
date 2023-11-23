@@ -3,18 +3,21 @@ use bevy::utils::HashMap;
 use bevy_xpbd_3d::components::RigidBody;
 use pathfinding::grid::Grid;
 use std::collections::HashSet;
+use bevy::prelude::{in_state, IntoSystemConfigs, OnEnter};
 use crate::alien::components::general::AlienCounter;
+use crate::game_state::GameState;
 use crate::general::components::CollisionLayer;
 use crate::general::components::map_components::{ModelDefinition, ModelDefinitions};
 use crate::general::events::map_events::{LoadMap, SpawnAlien, SpawnPlayer};
 use crate::general::resources::map_resources::MapGraph;
 use crate::general::systems::map_systems::{load_map_one, map_loader, TileDefinitions, update_current_tile_system};
 
-pub struct MapPlugin;
+pub struct NonStateMapStuff;
 
-impl Plugin for MapPlugin {
+impl Plugin for NonStateMapStuff {
     fn build(&self, app: &mut App) {
-        app.add_event::<LoadMap>()
+        app
+            .add_event::<LoadMap>()
             .add_event::<SpawnPlayer>()
             .add_event::<SpawnAlien>()
             .insert_resource(
@@ -78,7 +81,34 @@ impl Plugin for MapPlugin {
                 path_finding_grid: Grid::new(0, 0),
                 occupied_tiles: HashSet::new(),
                 goal: (0, 0),
-            })
+            });
+    }
+}
+
+pub struct StatefulMapPlugin;
+
+impl Plugin for StatefulMapPlugin {
+    //
+    fn build(&self, app: &mut App) {
+        app
+            .add_plugins(NonStateMapStuff)
+            .add_systems(OnEnter(GameState::InGame), load_map_one)
+            .add_systems(
+                Update, (
+                    update_current_tile_system,
+                    map_loader //Will this read the event from the load_map_one system?
+                )
+                    .run_if(in_state(GameState::InGame)),
+            );
+    }
+}
+
+pub struct MapPlugin;
+
+impl Plugin for MapPlugin {
+    fn build(&self, app: &mut App) {
+        app
+            .add_plugins(NonStateMapStuff)
             .add_systems(
                 Startup,
                 (
@@ -87,7 +117,7 @@ impl Plugin for MapPlugin {
             )
             .add_systems(Update, (
                 update_current_tile_system,
-                map_loader,),
+                map_loader, ),
             );
     }
 }
