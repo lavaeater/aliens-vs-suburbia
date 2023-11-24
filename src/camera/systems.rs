@@ -15,7 +15,7 @@ pub fn spawn_camera(mut commands: Commands) {
         CameraOffset(Vec3::new(-2.0, 1.5, 2.0)),
         Camera3dBundle {
             projection: Orthographic(OrthographicProjection {
-                scale: 5.0,
+                scale: 2.5,
                 near: -1000.0,
                 far: 1000.0,
                 viewport_origin: Vec2::new(0.5, 0.5),

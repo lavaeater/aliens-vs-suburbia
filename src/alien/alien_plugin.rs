@@ -1,6 +1,6 @@
 use bevy::app::{App, Plugin, Update};
 use bevy::prelude::{in_state, IntoSystemConfigs, OnEnter};
-use crate::alien::systems::spawn_aliens::{alien_spawner_system, animate_aliens, load_alien_animations, spawn_aliens};
+use crate::alien::systems::spawn_aliens::{alien_spawner_system, start_some_animations, load_animations, spawn_aliens};
 use crate::game_state::GameState;
 
 pub struct AlienPlugin;
@@ -25,14 +25,14 @@ impl Plugin for StatefulAlienPlugin {
         app
             .add_systems(
                 OnEnter(GameState::InGame),
-                load_alien_animations,
+                load_animations,
             )
             .add_systems(
                 Update,
                 (
                     alien_spawner_system,
                     spawn_aliens,
-                    // animate_aliens
+                    start_some_animations
                 ).run_if(in_state(GameState::InGame)),
             );
     }
