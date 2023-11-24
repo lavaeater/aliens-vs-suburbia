@@ -14,22 +14,30 @@ pub struct GotoState {
 
 pub fn spawn_menu(
     mut commands: Commands,
-    mut next_state: ResMut<NextState<GameState>>,
 ) {
     commands.add(eml! {
         <body>
-          <button on:press=|ctx| next_state.set(GameState::InGame)>
-                    "Press me and look at the logs!"
+          <button on:press=|ctx| ctx.send_event(GotoState { state: GameState::InGame })>
+                    "Start Game"
                 </button>
         </body>
     });
 }
 
+pub fn goto_state_system(
+    mut state: ResMut<NextState<GameState>>,
+    mut goto_state_er: EventReader<GotoState>,
+) {
+    for goto_state in &mut goto_state_er.read() {
+        state.set(goto_state.state.clone());
+    }
+}
+
 pub fn cleanup_menu(
     mut commands: Commands,
-    elements_query: Query<Entity, With<Element>>,
+    entities: Query<Entity, Without<Window>>,
 ) {
-    for entity in elements_query.iter() {
+    for entity in entities.iter() {
         commands.entity(entity).despawn_recursive();
     }
 }
@@ -40,15 +48,6 @@ pub fn spawn_ui(mut commands: Commands) {
             <span s:width="100px" s:height="100px" s:background-color="#ff0000">"THIS IS JUST A TEST"</span>
         </body>
     });
-}
-
-pub fn cleanup_ui(
-    mut commands: Commands,
-    elements_query: Query<Entity, With<Element>>,
-) {
-    for entity in elements_query.iter() {
-        commands.entity(entity).despawn_recursive();
-    }
 }
 
 #[derive(Event)]
