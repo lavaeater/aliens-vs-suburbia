@@ -25,8 +25,6 @@ impl Plugin for UiPlugin {
             .add_systems(
                 OnExit(GameState::Menu),
                 cleanup_menu,
-            )
-
-        ;
+            );
     }
 }

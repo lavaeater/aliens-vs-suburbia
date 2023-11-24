@@ -25,7 +25,7 @@ use building::build_mode_plugin::BuildModePlugin;
 use camera::camera_plugin::CameraPlugin;
 use ai::ai_plugin::AiPlugin;
 use control::control_plugin::ControlPlugin;
-use crate::game_state::game_state_plugin::GameStatePlugin;
+use crate::game_state::game_state_plugin::GamePlugin;
 use crate::map::map_plugins::MapPlugin;
 
 pub(crate) mod player;
@@ -62,10 +62,7 @@ fn main() {
         .add_plugins(PhysicsPlugins::default())
         // .add_plugins(PhysicsDebugPlugin::default())
         .add_plugins(WorldInspectorPlugin::new())
-        .add_plugins(BuildModePlugin)
-        .add_plugins(GameStatePlugin)
-        .add_plugins(AiPlugin)
-        .add_plugins(AlienPlugin)
+        .add_plugins(GamePlugin)
         .add_plugins(ControlPlugin)
         .add_plugins(CameraPlugin)
         .add_systems(
