@@ -35,27 +35,27 @@ pub fn alien_spawner_system(
 }
 
 #[derive(Resource)]
-pub struct Animations(Vec<Handle<AnimationClip>>);
+pub struct AlienAnimations(Vec<Handle<AnimationClip>>);
 
 pub fn load_alien_animations(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
-    commands.insert_resource(Animations(vec![
-        asset_server.load("quaternius/alien.glb#Animation0"),
-        asset_server.load("quaternius/alien.glb#Animation1"),
-        asset_server.load("quaternius/alien.glb#Animation2"),
-        asset_server.load("quaternius/alien.glb#Animation3"),
-        asset_server.load("quaternius/alien.glb#Animation4"),
-        asset_server.load("quaternius/alien.glb#Animation5"),
-        asset_server.load("quaternius/alien.glb#Animation6"),
-        asset_server.load("quaternius/alien.glb#Animation7"),
-        asset_server.load("quaternius/alien.glb#Animation8"),
-        asset_server.load("quaternius/alien.glb#Animation9"),
-        asset_server.load("quaternius/alien.glb#Animation10"),
-        asset_server.load("quaternius/alien.glb#Animation11"),
-        asset_server.load("quaternius/alien.glb#Animation12"),
-        asset_server.load("quaternius/alien.glb#Animation13"),
+    commands.insert_resource(AlienAnimations(vec![
+        asset_server.load("quaternius/alien_rotated.glb#Animation0"),
+        asset_server.load("quaternius/alien_rotated.glb#Animation1"),
+        asset_server.load("quaternius/alien_rotated.glb#Animation2"),
+        asset_server.load("quaternius/alien_rotated.glb#Animation3"),
+        asset_server.load("quaternius/alien_rotated.glb#Animation4"),
+        asset_server.load("quaternius/alien_rotated.glb#Animation5"),
+        asset_server.load("quaternius/alien_rotated.glb#Animation6"),
+        asset_server.load("quaternius/alien_rotated.glb#Animation7"),
+        asset_server.load("quaternius/alien_rotated.glb#Animation8"),
+        asset_server.load("quaternius/alien_rotated.glb#Animation9"),
+        asset_server.load("quaternius/alien_rotated.glb#Animation10"),
+        asset_server.load("quaternius/alien_rotated.glb#Animation11"),
+        asset_server.load("quaternius/alien_rotated.glb#Animation12"),
+        asset_server.load("quaternius/alien_rotated.glb#Animation13"),
     ]));
 }
 
@@ -100,7 +100,7 @@ pub fn spawn_aliens(
                 DynamicMovement {},
                 Controller::new(1.0, 3.0, 1.0),
                 SceneBundle {
-                    scene: asset_server.load("quaternius/alien.glb#Scene0"),
+                    scene: asset_server.load("quaternius/alien_rotated.glb#Scene0"),
                     transform: alien_transform,
                     ..Default::default()
                 },
@@ -142,24 +142,10 @@ pub fn spawn_aliens(
 }
 
 pub fn animate_aliens(
-    animations: Res<Animations>,
+    animations: Res<AlienAnimations>,
     mut players: Query<&mut AnimationPlayer, Added<AnimationPlayer>>,
 ) {
-    for mut player in &mut players {
+    for mut player in players.iter_mut() {
         player.play(animations.0[13].clone_weak()).repeat();
     }
 }
-
-// pub fn animate_aliens(
-//     mut animation_player: Query<&mut AnimationPlayer, With<Alien>>,
-//     animations: Res<Animations>,
-// ) {
-//     for mut player in animation_player.iter_mut() {
-//         if player.is_paused() {
-//             player.play(animations.0.first().unwrap().clone_weak());
-//         } else {
-//             continue;
-//         }
-//         // player.play(animations.0.first().unwrap().clone_weak());
-//     }
-// }

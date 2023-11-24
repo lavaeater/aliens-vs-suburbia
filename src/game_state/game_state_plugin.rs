@@ -13,7 +13,7 @@ use crate::general::systems::health_monitor_system::health_monitor_system;
 use crate::general::systems::lights_systems::spawn_lights;
 use crate::general::systems::throwing_system::throwing;
 use crate::map::map_plugins::StatefulMapPlugin;
-use crate::player::systems::spawn_players::spawn_players;
+use crate::player::player_plugin::PlayerPlugin;
 use crate::towers::systems::{shoot_alien_system, tower_has_alien_in_range_scorer_system};
 use crate::ui::spawn_ui::{add_health_bar, AddHealthBar, fellow_system, GotoState};
 use crate::ui::ui_plugin::UiPlugin;
@@ -35,7 +35,8 @@ impl Plugin for GamePlugin {
                 StatefulAlienPlugin,
                 StatefulControlPlugin,
                 StatefulCameraPlugin,
-                ClearGameEntitiesPlugin
+                ClearGameEntitiesPlugin,
+                PlayerPlugin,
             ))
             .add_systems(
                 OnEnter(GameState::InGame),
@@ -45,7 +46,6 @@ impl Plugin for GamePlugin {
             .add_systems(
                 Update,
                 (
-                    spawn_players,
                     throwing,
                     collision_handling_system,
                 ).run_if(in_state(GameState::InGame)),

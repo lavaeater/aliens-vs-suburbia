@@ -32,7 +32,7 @@ impl Plugin for StatefulAlienPlugin {
                 (
                     alien_spawner_system,
                     spawn_aliens,
-                    animate_aliens
+                    // animate_aliens
                 ).run_if(in_state(GameState::InGame)),
             );
     }
