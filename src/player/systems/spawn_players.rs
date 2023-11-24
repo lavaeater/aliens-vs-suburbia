@@ -1,8 +1,10 @@
-use bevy::asset::AssetServer;
+use bevy::asset::{AssetServer};
 use bevy::core::Name;
+use bevy::math::Vec3;
 use bevy::prelude::{Commands, EventReader, EventWriter, Res, Transform};
 use bevy::scene::SceneBundle;
 use bevy_xpbd_3d::components::{AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
+use crate::alien::systems::spawn_aliens::{AnimationKey, CurrentAnimationKey};
 use crate::control::components::{Controller, DynamicMovement, KeyboardController};
 use crate::general::components::{CollisionLayer, Health};
 use crate::general::components::map_components::CurrentTile;
@@ -24,15 +26,15 @@ pub fn spawn_players(
             Controller::new(3.0, 3.0, 60.0),
             DynamicMovement {},
             SceneBundle {
-                scene: asset_server.load("player.glb#Scene0"),
-                transform: Transform::from_xyz(spawn_player.position.x, spawn_player.position.y, spawn_player.position.z),
+                scene: asset_server.load("quaternius/astronaut_rotated.glb#Scene0"),
+                transform: Transform::from_xyz(spawn_player.position.x, spawn_player.position.y, spawn_player.position.z).with_scale(Vec3::new(0.5, 0.5, 0.5)),
                 ..Default::default()
             },
             Friction::from(0.0),
             AngularDamping(1.0),
             LinearDamping(0.9),
             RigidBody::Dynamic,
-            Collider::capsule(0.25, 0.25),
+            Collider::capsule(0.5, 0.5),
             LockedAxes::new().lock_rotation_x().lock_rotation_z(),
             CollisionLayers::new(
                 [CollisionLayer::Player],
@@ -47,7 +49,10 @@ pub fn spawn_players(
                 ]),
             Health::default(),
             CurrentTile::default(),
-        )).id();
+        )).insert((
+            CurrentAnimationKey::new("players".into(), AnimationKey::Walking),
+        ))
+            .id();
 
         add_health_bar_ew.send(AddHealthBar {
             entity: player,

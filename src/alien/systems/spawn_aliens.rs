@@ -1,7 +1,14 @@
-use bevy::asset::AssetServer;
-use bevy::prelude::{Commands, EventReader, EventWriter, Name, Query, Res, ResMut, Time, Transform};
+use bevy::animation::AnimationClip;
+use bevy::asset::{AssetServer, Handle};
+
+use bevy::hierarchy::Parent;
+use bevy::log::info;
+use bevy::math::Vec3;
+use bevy::prelude::{Added, AnimationPlayer, Commands, Component, Entity, EventReader, EventWriter, Name, Query, Reflect, Res, ResMut, Resource, Time, Transform};
 use bevy::scene::SceneBundle;
+use bevy::utils::{HashMap};
 use bevy_xpbd_3d::components::{AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
+use bevy_xpbd_3d::math::PI;
 use bevy_xpbd_3d::prelude::Position;
 use big_brain::actions::Steps;
 use big_brain::pickers::Highest;
@@ -28,6 +35,72 @@ pub fn alien_spawner_system(
                 position: position.0,
             });
         }
+    }
+}
+
+#[derive(Resource)]
+pub struct AnimationStore<S: Into<String>> {
+    pub anims: HashMap<S, HashMap<AnimationKey, Handle<AnimationClip>>>,
+}
+
+#[derive(Eq, Hash, PartialEq, Copy, Clone, Debug, Reflect)]
+pub enum AnimationKey {
+    Clapping,
+    Death,
+    Idle,
+    IdleHold,
+    Jump,
+    Punch,
+    Run,
+    RunHold,
+    RunningJump,
+    Sitting,
+    Standing,
+    Swimming,
+    SwordSlash,
+    Walking,
+}
+
+pub fn load_animations(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+) {
+    let mut store = AnimationStore::<String> {
+        anims: HashMap::new()
+    };
+    store.anims.insert("aliens".into(),
+                       HashMap::new());
+    let alien_anims = store
+        .anims
+        .get_mut("aliens")
+        .unwrap();
+    alien_anims.insert(AnimationKey::Walking, asset_server.load("quaternius/alien_rotated.glb#Animation13"));
+    alien_anims.insert(AnimationKey::Idle, asset_server.load("quaternius/alien_rotated.glb#Animation2"));
+
+
+    store
+        .anims
+        .insert("players".into(),
+                HashMap::new());
+    let player_anims = store
+        .anims
+        .get_mut("players")
+        .unwrap();
+    player_anims.insert(AnimationKey::Walking, asset_server.load("quaternius/astronaut_rotated.glb#Animation22"));
+    player_anims.insert(AnimationKey::Idle, asset_server.load("quaternius/astronaut_rotated.glb#Animation4"));
+
+    commands.insert_resource(store);
+}
+
+#[derive(Component, Debug, Reflect)]
+pub struct CurrentAnimationKey {
+    pub group: String,
+    pub key: AnimationKey,
+}
+
+impl CurrentAnimationKey {
+    pub fn new(group: String, key: AnimationKey) -> Self {
+        CurrentAnimationKey { group, key }
     }
 }
 
@@ -61,6 +134,9 @@ pub fn spawn_aliens(
                       .label("Destroy the Map")
                       .step(DestroyTheMapAction {}));
 
+        let alien_transform = Transform::from_xyz(spawn_alien.position.x, spawn_alien.position.y, spawn_alien.position.z)
+            .with_scale(Vec3::new(0.25, 0.25, 0.25))
+            .with_rotation(bevy::math::Quat::from_rotation_y(PI * 2.0));
         let id = commands.spawn(
             (
                 Name::from("Spider"),
@@ -69,8 +145,8 @@ pub fn spawn_aliens(
                 DynamicMovement {},
                 Controller::new(1.0, 3.0, 1.0),
                 SceneBundle {
-                    scene: asset_server.load("player.glb#Scene0"),
-                    transform: Transform::from_xyz(spawn_alien.position.x, spawn_alien.position.y, spawn_alien.position.z),
+                    scene: asset_server.load("quaternius/alien_rotated.glb#Scene0"),
+                    transform: alien_transform,
                     ..Default::default()
                 },
                 Friction::from(0.0),
@@ -78,7 +154,7 @@ pub fn spawn_aliens(
                 LinearDamping(0.9),
                 RigidBody::Dynamic,
                 //AsyncCollider(ComputedCollider::ConvexHull),
-                Collider::capsule(0.25, 0.25),
+                Collider::capsule(1.0, 1.0),
                 LockedAxes::new().lock_rotation_x().lock_rotation_z(),
                 CollisionLayers::new(
                     [CollisionLayer::Alien],
@@ -93,6 +169,7 @@ pub fn spawn_aliens(
                     ]),
             )).insert((
             CurrentTile::default(),
+            CurrentAnimationKey::new("aliens".into(), AnimationKey::Walking),
             Alien {},
             AvoidWallsData::new(0.125, 0.125, 0.125, 5.0),
             ApproachAndAttackPlayerData::default(),
@@ -107,5 +184,35 @@ pub fn spawn_aliens(
             entity: id,
             name: "ALIEN",
         });
+    }
+}
+
+pub fn start_some_animations(
+    anim_store: Res<AnimationStore<String>>,
+    mut players: Query<(Entity, &mut AnimationPlayer), Added<AnimationPlayer>>,
+    anim_key_query: Query<&CurrentAnimationKey>,
+    parent_query: Query<&Parent>,
+    name: Query<&Name>,
+) {
+    for (entity, mut anim_player) in players.iter_mut() {
+        if let Some(super_ent) = get_parent_recursive(entity, &parent_query, &name) {
+            if let Ok(anim_key) = anim_key_query.get(super_ent) {
+                if let Some(anim) = anim_store.anims.get(&anim_key.group).unwrap().get(&anim_key.key) {
+                    anim_player.play(anim.clone_weak()).repeat();
+                }
+            }
+        }
+    }
+}
+
+pub fn get_parent_recursive(entity: Entity, parent_query: &Query<&Parent>, name_query: &Query<&Name>) -> Option<Entity> {
+    match parent_query.get(entity) {
+        Ok(parent) => {
+            get_parent_recursive(parent.get(), parent_query, name_query)
+        }
+        Err(_) => {
+            info!("THis is the parent: {:?}", name_query.get(entity).unwrap());
+            Some(entity)
+        }
     }
 }
