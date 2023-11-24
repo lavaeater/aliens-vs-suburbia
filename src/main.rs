@@ -2,8 +2,6 @@ use bevy::app::{App, PluginGroup};
 use bevy::{DefaultPlugins, log};
 use bevy::log::LogPlugin;
 use bevy::prelude::Msaa;
-use bevy::time::{Fixed, Time};
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_xpbd_3d::plugins::PhysicsPlugins;
 use crate::ai::components::approach_and_attack_player_components::ApproachAndAttackPlayerData;
 use crate::ai::components::avoid_wall_components::AvoidWallsData;
@@ -11,7 +9,6 @@ use camera::components::CameraOffset;
 use crate::general::components::Health;
 use crate::general::components::map_components::CurrentTile;
 use control::components::Controller;
-use crate::ui::spawn_ui::{AddHealthBar};
 use crate::game_state::game_state_plugin::GamePlugin;
 
 pub(crate) mod player;
@@ -29,15 +26,12 @@ pub(crate) mod game_state;
 
 fn main() {
     App::new()
-        .add_event::<AddHealthBar>()
         .register_type::<CameraOffset>()
         .register_type::<CurrentTile>()
         .register_type::<Controller>()
         .register_type::<Health>()
         .register_type::<AvoidWallsData>()
         .register_type::<ApproachAndAttackPlayerData>()
-        .insert_resource(Msaa::Sample4)
-        .insert_resource(Time::<Fixed>::from_seconds(0.05))
         .insert_resource(Msaa::Sample4)
         .add_plugins(
             DefaultPlugins.set(
@@ -47,7 +41,7 @@ fn main() {
                 }))
         .add_plugins(PhysicsPlugins::default())
         // .add_plugins(PhysicsDebugPlugin::default())
-        .add_plugins(WorldInspectorPlugin::new())
+        // .add_plugins(WorldInspectorPlugin::new())
         .add_plugins(GamePlugin)
         .run();
 }
