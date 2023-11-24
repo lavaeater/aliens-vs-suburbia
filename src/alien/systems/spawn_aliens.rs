@@ -1,7 +1,7 @@
 use bevy::animation::AnimationClip;
 use bevy::asset::{AssetServer, Handle};
 use bevy::math::Vec3;
-use bevy::prelude::{Added, AnimationPlayer, Commands, EventReader, EventWriter, Name, Query, Res, ResMut, Resource, Time, Transform, With};
+use bevy::prelude::{Added, AnimationPlayer, Commands, EventReader, EventWriter, Name, Query, Res, ResMut, Resource, Time, Transform};
 use bevy::scene::SceneBundle;
 use bevy_xpbd_3d::components::{AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
 use bevy_xpbd_3d::math::PI;
@@ -55,7 +55,7 @@ pub fn load_alien_animations(
         asset_server.load("quaternius/alien.glb#Animation10"),
         asset_server.load("quaternius/alien.glb#Animation11"),
         asset_server.load("quaternius/alien.glb#Animation12"),
-        asset_server.load("quaternius/alien.glb#Animation13")
+        asset_server.load("quaternius/alien.glb#Animation13"),
     ]));
 }
 
@@ -90,7 +90,7 @@ pub fn spawn_aliens(
                       .step(DestroyTheMapAction {}));
 
         let alien_transform = Transform::from_xyz(spawn_alien.position.x, spawn_alien.position.y, spawn_alien.position.z)
-            .with_scale(Vec3::new(0.25,0.25, 0.25))
+            .with_scale(Vec3::new(0.25, 0.25, 0.25))
             .with_rotation(bevy::math::Quat::from_rotation_y(PI * 2.0));
         let id = commands.spawn(
             (
