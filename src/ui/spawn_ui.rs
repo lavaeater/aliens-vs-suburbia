@@ -3,13 +3,49 @@ use belly::core::eml::Params;
 use bevy::prelude::Commands;
 use belly::prelude::*;
 use bevy::prelude::*;
-use crate::camera::components::camera::GameCamera;
+use crate::camera::components::GameCamera;
+use crate::game_state::GameState;
 use crate::general::components::Health;
 
+#[derive(Event)]
+pub struct GotoState {
+    pub state: GameState,
+}
+
+pub fn spawn_menu(
+    mut commands: Commands,
+) {
+    commands.add(eml! {
+        <body>
+          <button on:press=|ctx| ctx.send_event(GotoState { state: GameState::InGame })>
+                    "Start Game"
+                </button>
+        </body>
+    });
+}
+
+pub fn goto_state_system(
+    mut state: ResMut<NextState<GameState>>,
+    mut goto_state_er: EventReader<GotoState>,
+) {
+    for goto_state in &mut goto_state_er.read() {
+        state.set(goto_state.state.clone());
+    }
+}
+
+pub fn cleanup_menu(
+    mut commands: Commands,
+    entities: Query<Entity, Without<Window>>,
+) {
+    for entity in entities.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+}
 
 pub fn spawn_ui(mut commands: Commands) {
     commands.add(eml! {
         <body>
+            <span s:width="100px" s:height="100px" s:background-color="#ff0000">"THIS IS JUST A TEST"</span>
         </body>
     });
 }

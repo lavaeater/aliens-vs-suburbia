@@ -5,9 +5,9 @@ use bevy::scene::SceneBundle;
 use bevy::time::Time;
 use bevy_xpbd_3d::components::{Collider, CollisionLayers, LinearVelocity, Position, RigidBody};
 use bevy_xpbd_3d::prelude::Rotation;
+use crate::control::components::{ControlCommands, Controller};
 use crate::general::components::{Ball, CollisionLayer};
 use crate::general::components::map_components::CoolDown;
-use crate::player::components::general::{Controller, ControlCommands};
 
 pub fn throwing(
     time_res: Res<Time>,

@@ -1,8 +1,8 @@
 use bevy::input::ButtonState;
 use bevy::input::keyboard::KeyboardInput;
 use bevy::prelude::{Entity, EventReader, EventWriter, KeyCode, Query, With};
-use crate::player::components::general::{Controller, ControlDirection, KeyboardController, ControlRotation, ControlCommands};
-use crate::player::events::building_events::{EnterBuildMode, ExitBuildMode, ExecuteBuild, ChangeBuildIndicator};
+use crate::control::components::{ControlCommands, ControlDirection, Controller, ControlRotation, KeyboardController};
+use crate::player::events::building_events::{ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode};
 
 pub fn input_control(
     mut key_evr: EventReader<KeyboardInput>,

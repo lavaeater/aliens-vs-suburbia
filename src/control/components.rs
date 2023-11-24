@@ -1,16 +1,6 @@
-use bevy::prelude::{Component, Entity};
-use bevy::reflect::Reflect;
+use bevy::prelude::{Component, Reflect};
 use bevy::utils::HashSet;
-use bevy_xpbd_3d::math::Vector3;
 use crate::general::components::map_components::CoolDown;
-
-#[derive(Component)]
-pub struct Player {}
-
-#[derive(Component)]
-pub struct FollowCamera {
-    pub offset: Vector3
-}
 
 #[derive(Component, Reflect)]
 pub struct KeyboardController {}
@@ -21,21 +11,6 @@ pub enum ControlCommands {
     Jump,
     Build
 }
-
-#[derive(Hash, PartialEq, Eq, Clone, Reflect, Component)]
-pub struct IsBuilding;
-
-#[derive(Hash, PartialEq, Eq, Clone, Component)]
-pub struct BuildingIndicator(pub Entity, pub i32);
-
-#[derive(Hash, PartialEq, Eq, Clone, Reflect, Component)]
-pub struct IsBuildIndicator {}
-
-#[derive(Hash, PartialEq, Eq, Clone, Reflect, Component)]
-pub struct IsObstacle {}
-
-#[derive(Hash, PartialEq, Eq, Clone, Reflect, Component)]
-pub struct ShootingTower {}
 
 
 #[derive(Hash, PartialEq, Eq, Copy, Clone, Debug, Reflect)]
@@ -117,7 +92,6 @@ impl CoolDown for Controller {
         false
     }
 }
-
 
 
 #[derive(Component)]

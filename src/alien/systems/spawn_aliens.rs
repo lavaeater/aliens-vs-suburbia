@@ -6,15 +6,15 @@ use bevy_xpbd_3d::prelude::Position;
 use big_brain::actions::Steps;
 use big_brain::pickers::Highest;
 use big_brain::thinker::Thinker;
-use crate::ai::components::approach_and_attack_player_components::{ApproachAndAttackPlayerData};
+use crate::ai::components::approach_and_attack_player_components::ApproachAndAttackPlayerData;
 use crate::ai::components::avoid_wall_components::{AvoidWallsAction, AvoidWallScore, AvoidWallsData};
 use crate::ai::components::destroy_the_map_components::{DestroyTheMapAction, DestroyTheMapScore};
 use crate::ai::components::move_towards_goal_components::{MoveTowardsGoalAction, MoveTowardsGoalData, MoveTowardsGoalScore};
-use crate::enemy::components::general::{Alien, AlienCounter, AlienSightShape};
-use crate::general::components::{Attack, Health, HittableTarget, CollisionLayer};
+use crate::alien::components::general::{Alien, AlienCounter, AlienSightShape};
+use crate::control::components::{Controller, DynamicMovement};
+use crate::general::components::{Attack, CollisionLayer, Health, HittableTarget};
 use crate::general::components::map_components::{AlienSpawnPoint, CoolDown, CurrentTile};
 use crate::general::events::map_events::SpawnAlien;
-use crate::player::components::general::{Controller, DynamicMovement};
 use crate::ui::spawn_ui::AddHealthBar;
 
 pub fn alien_spawner_system(

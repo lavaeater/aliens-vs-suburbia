@@ -5,12 +5,13 @@ use bevy_xpbd_3d::prelude::{SpatialQuery, SpatialQueryFilter};
 use big_brain::actions::ActionState;
 use big_brain::scorers::Score;
 use big_brain::thinker::{ActionSpan, Actor};
-use crate::ai::components::approach_and_attack_player_components::{ApproachPlayerAction, ApproachAndAttackPlayerData, ApproachAndAttackPlayerScore, AttackPlayerAction};
-use crate::general::components::{Attack, Health, CollisionLayer};
-use crate::enemy::components::general::{Alien, AlienSightShape};
-use crate::player::components::general::{ControlDirection, Controller, ControlRotation, Player};
+use crate::ai::components::approach_and_attack_player_components::{ApproachAndAttackPlayerData, ApproachAndAttackPlayerScore, ApproachPlayerAction, AttackPlayerAction};
+use crate::general::components::{Attack, CollisionLayer, Health};
+use crate::alien::components::general::{Alien, AlienSightShape};
+use crate::control::components::{ControlDirection, Controller, ControlRotation};
+use crate::player::components::Player;
 
-pub fn can_i_see_player_system(
+pub fn can_agent_see_player_system(
     mut approach_player_query: Query<(&mut ApproachAndAttackPlayerData, &AlienSightShape, &Position, &Rotation)>,
     spatial_query: SpatialQuery,
 ) {

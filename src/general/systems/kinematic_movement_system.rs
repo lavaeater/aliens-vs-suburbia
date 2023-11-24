@@ -1,8 +1,8 @@
 use bevy::prelude::{Query, With};
 use bevy_xpbd_3d::components::{AngularVelocity, LinearVelocity};
 use bevy_xpbd_3d::math::Vector3;
-use bevy_xpbd_3d::prelude::{Rotation};
-use crate::player::components::general::{Controller, ControlDirection, KinematicMovement, ControlRotation};
+use bevy_xpbd_3d::prelude::Rotation;
+use crate::control::components::{ControlDirection, Controller, ControlRotation, KinematicMovement};
 
 pub fn kinematic_movement(
     mut query: Query<(&mut LinearVelocity, &mut AngularVelocity, &Rotation, &Controller), With<KinematicMovement>>,

@@ -3,24 +3,25 @@ use bevy_xpbd_3d::components::{Position, Rotation};
 use big_brain::actions::ActionState;
 use big_brain::scorers::Score;
 use big_brain::thinker::{ActionSpan, Actor};
-use crate::ai::components::move_towards_goal_components::{CantFindPath};
-use crate::enemy::components::general::{Alien};
-use crate::general::components::map_components::{CurrentTile};
+use crate::ai::components::move_towards_goal_components::AgentCannotFindPath;
+use crate::alien::components::general::Alien;
+use crate::general::components::map_components::CurrentTile;
 use crate::general::resources::map_resources::MapGraph;
-use crate::player::components::general::{ControlDirection, Controller, ControlRotation, IsObstacle};
+use crate::player::components::IsObstacle;
 use pathfinding::directed::astar::astar;
 use crate::ai::components::destroy_the_map_components::{DestroyTheMapAction, DestroyTheMapScore, MustDestroyTheMap, MustDestroyTheMapState};
 use crate::general::systems::map_systems::TileDefinitions;
 use itertools::Itertools;
 use pathfinding::num_traits::Signed;
+use crate::building::systems::ToWorldCoordinates;
+use crate::control::components::{ControlDirection, Controller, ControlRotation};
 use crate::general::components::Health;
-use crate::player::systems::build_systems::ToWorldCoordinates;
 
-pub fn alien_cant_find_path(
-    mut alien_cant_find_path_event_reader: EventReader<CantFindPath>,
+pub fn agent_cant_find_path(
+    mut alien_cant_find_path_event_reader: EventReader<AgentCannotFindPath>,
     mut commands: Commands,
 ) {
-    for CantFindPath(alien) in alien_cant_find_path_event_reader.read() {
+    for AgentCannotFindPath(alien) in alien_cant_find_path_event_reader.read() {
         if let Some(mut alien_commands) = commands.get_entity(*alien) {
             alien_commands.insert(MustDestroyTheMap::new());
         }

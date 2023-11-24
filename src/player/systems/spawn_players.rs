@@ -3,10 +3,11 @@ use bevy::core::Name;
 use bevy::prelude::{Commands, EventReader, EventWriter, Res, Transform};
 use bevy::scene::SceneBundle;
 use bevy_xpbd_3d::components::{AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
+use crate::control::components::{Controller, DynamicMovement, KeyboardController};
 use crate::general::components::{CollisionLayer, Health};
 use crate::general::components::map_components::CurrentTile;
 use crate::general::events::map_events::SpawnPlayer;
-use crate::player::components::general::{Controller, DynamicMovement, KeyboardController, Player};
+use crate::player::components::Player;
 use crate::ui::spawn_ui::AddHealthBar;
 
 pub fn spawn_players(

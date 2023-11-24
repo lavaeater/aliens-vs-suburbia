@@ -1,11 +1,14 @@
 use bevy::core::Name;
 use bevy::math::{Quat, Rect, Vec2, Vec3};
-use bevy::prelude::{Camera3dBundle, Commands, OrthographicProjection, Transform};
-use bevy::prelude::Projection::{Orthographic};
+use bevy::prelude::{Camera3dBundle, Commands, OrthographicProjection, Query, Transform, With};
+use bevy::prelude::Projection::Orthographic;
 use bevy::render::camera::ScalingMode;
 use bevy::utils::default;
 use bevy_xpbd_3d::math::PI;
-use crate::camera::components::camera::{CameraOffset, GameCamera};
+use bevy_xpbd_3d::components::Position;
+use crate::camera::components::{CameraOffset, GameCamera};
+use crate::player::components::Player;
+
 pub fn spawn_camera(mut commands: Commands) {
     commands.spawn((
         Name::from("Camera"),
@@ -27,4 +30,16 @@ pub fn spawn_camera(mut commands: Commands) {
         },
         GameCamera {},
     ));
+}
+
+pub fn camera_follow(
+    mut camera_query: Query<(&mut Transform, &CameraOffset), With<GameCamera>>,
+    player_position: Query<&Position, With<Player>>,
+) {
+for (mut camera_transform, offset) in camera_query.iter_mut() {
+        for player_position in player_position.iter() {
+            camera_transform.translation = camera_transform.translation.lerp(player_position.0 + offset.0, 0.9);
+            camera_transform.look_at(player_position.0, Vec3::Y);
+        }
+    }
 }
