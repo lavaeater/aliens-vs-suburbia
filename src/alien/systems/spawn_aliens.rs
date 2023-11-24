@@ -1,7 +1,9 @@
 use bevy::asset::AssetServer;
+use bevy::math::Vec3;
 use bevy::prelude::{Commands, EventReader, EventWriter, Name, Query, Res, ResMut, Time, Transform};
 use bevy::scene::SceneBundle;
 use bevy_xpbd_3d::components::{AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
+use bevy_xpbd_3d::math::PI;
 use bevy_xpbd_3d::prelude::Position;
 use big_brain::actions::Steps;
 use big_brain::pickers::Highest;
@@ -61,6 +63,9 @@ pub fn spawn_aliens(
                       .label("Destroy the Map")
                       .step(DestroyTheMapAction {}));
 
+        let alien_transform = Transform::from_xyz(spawn_alien.position.x, spawn_alien.position.y, spawn_alien.position.z)
+            .with_scale(Vec3::new(0.25,0.25, 0.25))
+            .with_rotation(bevy::math::Quat::from_rotation_y(PI * 2.0));
         let id = commands.spawn(
             (
                 Name::from("Spider"),
@@ -69,8 +74,8 @@ pub fn spawn_aliens(
                 DynamicMovement {},
                 Controller::new(1.0, 3.0, 1.0),
                 SceneBundle {
-                    scene: asset_server.load("player.glb#Scene0"),
-                    transform: Transform::from_xyz(spawn_alien.position.x, spawn_alien.position.y, spawn_alien.position.z),
+                    scene: asset_server.load("quaternius/alien.glb#Scene0"),
+                    transform: alien_transform,
                     ..Default::default()
                 },
                 Friction::from(0.0),
