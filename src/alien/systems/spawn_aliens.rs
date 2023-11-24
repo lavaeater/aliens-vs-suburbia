@@ -1,6 +1,7 @@
-use bevy::asset::AssetServer;
+use bevy::animation::AnimationClip;
+use bevy::asset::{AssetServer, Handle};
 use bevy::math::Vec3;
-use bevy::prelude::{Commands, EventReader, EventWriter, Name, Query, Res, ResMut, Time, Transform};
+use bevy::prelude::{Added, AnimationPlayer, Commands, EventReader, EventWriter, Name, Query, Res, ResMut, Resource, Time, Transform, With};
 use bevy::scene::SceneBundle;
 use bevy_xpbd_3d::components::{AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
 use bevy_xpbd_3d::math::PI;
@@ -31,6 +32,31 @@ pub fn alien_spawner_system(
             });
         }
     }
+}
+
+#[derive(Resource)]
+pub struct Animations(Vec<Handle<AnimationClip>>);
+
+pub fn load_alien_animations(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+) {
+    commands.insert_resource(Animations(vec![
+        asset_server.load("quaternius/alien.glb#Animation0"),
+        asset_server.load("quaternius/alien.glb#Animation1"),
+        asset_server.load("quaternius/alien.glb#Animation2"),
+        asset_server.load("quaternius/alien.glb#Animation3"),
+        asset_server.load("quaternius/alien.glb#Animation4"),
+        asset_server.load("quaternius/alien.glb#Animation5"),
+        asset_server.load("quaternius/alien.glb#Animation6"),
+        asset_server.load("quaternius/alien.glb#Animation7"),
+        asset_server.load("quaternius/alien.glb#Animation8"),
+        asset_server.load("quaternius/alien.glb#Animation9"),
+        asset_server.load("quaternius/alien.glb#Animation10"),
+        asset_server.load("quaternius/alien.glb#Animation11"),
+        asset_server.load("quaternius/alien.glb#Animation12"),
+        asset_server.load("quaternius/alien.glb#Animation13")
+    ]));
 }
 
 pub fn spawn_aliens(
@@ -114,3 +140,26 @@ pub fn spawn_aliens(
         });
     }
 }
+
+pub fn animate_aliens(
+    animations: Res<Animations>,
+    mut players: Query<&mut AnimationPlayer, Added<AnimationPlayer>>,
+) {
+    for mut player in &mut players {
+        player.play(animations.0[13].clone_weak()).repeat();
+    }
+}
+
+// pub fn animate_aliens(
+//     mut animation_player: Query<&mut AnimationPlayer, With<Alien>>,
+//     animations: Res<Animations>,
+// ) {
+//     for mut player in animation_player.iter_mut() {
+//         if player.is_paused() {
+//             player.play(animations.0.first().unwrap().clone_weak());
+//         } else {
+//             continue;
+//         }
+//         // player.play(animations.0.first().unwrap().clone_weak());
+//     }
+// }
