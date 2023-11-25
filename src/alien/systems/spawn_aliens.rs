@@ -3,7 +3,7 @@ use bevy::asset::{AssetServer, Handle};
 
 use bevy::hierarchy::Parent;
 use bevy::log::info;
-use bevy::math::Vec3;
+use bevy::math::{EulerRot, Quat, Vec3};
 use bevy::prelude::{Added, AnimationPlayer, Commands, Component, Entity, EventReader, EventWriter, Name, Query, Reflect, Res, ResMut, Resource, Time, Transform};
 use bevy::scene::SceneBundle;
 use bevy::utils::{HashMap};
@@ -22,6 +22,7 @@ use crate::control::components::{Controller, DynamicMovement};
 use crate::general::components::{Attack, CollisionLayer, Health, HittableTarget};
 use crate::general::components::map_components::{AlienSpawnPoint, CoolDown, CurrentTile};
 use crate::general::events::map_events::SpawnAlien;
+use crate::player::systems::spawn_players::FixSceneTransform;
 use crate::ui::spawn_ui::AddHealthBar;
 
 pub fn alien_spawner_system(
@@ -74,8 +75,8 @@ pub fn load_animations(
         .anims
         .get_mut("aliens")
         .unwrap();
-    alien_anims.insert(AnimationKey::Walking, asset_server.load("quaternius/alien_rotated.glb#Animation13"));
-    alien_anims.insert(AnimationKey::Idle, asset_server.load("quaternius/alien_rotated.glb#Animation2"));
+    alien_anims.insert(AnimationKey::Walking, asset_server.load("quaternius/alien.glb#Animation13"));
+    alien_anims.insert(AnimationKey::Idle, asset_server.load("quaternius/alien.glb#Animation2"));
 
 
     store
@@ -86,8 +87,8 @@ pub fn load_animations(
         .anims
         .get_mut("players")
         .unwrap();
-    player_anims.insert(AnimationKey::Walking, asset_server.load("quaternius/astronaut_rotated.glb#Animation22"));
-    player_anims.insert(AnimationKey::Idle, asset_server.load("quaternius/astronaut_rotated.glb#Animation4"));
+    player_anims.insert(AnimationKey::Walking, asset_server.load("quaternius/worker.glb#Animation22"));
+    player_anims.insert(AnimationKey::Idle, asset_server.load("quaternius/worker.glb#Animation4"));
 
     commands.insert_resource(store);
 }
@@ -143,9 +144,16 @@ pub fn spawn_aliens(
                 // // We rotat the cone since it is defined as a cone pointing up the y axis. Rotating it -90 degrees around the x axis makes it point forward properly. Maybe.
                 HittableTarget {},
                 DynamicMovement {},
+                FixSceneTransform::new(
+                    Vec3::new(0.0, -0.35, 0.0),
+                    Quat::from_euler(
+                        EulerRot::YXZ,
+                        180.0f32.to_radians(), 0.0, 0.0),
+                    Vec3::new(0.5, 0.5, 0.5),
+                ),
                 Controller::new(1.0, 3.0, 1.0),
                 SceneBundle {
-                    scene: asset_server.load("quaternius/alien_rotated.glb#Scene0"),
+                    scene: asset_server.load("quaternius/alien.glb#Scene0"),
                     transform: alien_transform,
                     ..Default::default()
                 },
@@ -192,10 +200,9 @@ pub fn start_some_animations(
     mut players: Query<(Entity, &mut AnimationPlayer), Added<AnimationPlayer>>,
     anim_key_query: Query<&CurrentAnimationKey>,
     parent_query: Query<&Parent>,
-    name: Query<&Name>,
 ) {
     for (entity, mut anim_player) in players.iter_mut() {
-        if let Some(super_ent) = get_parent_recursive(entity, &parent_query, &name) {
+        if let Some(super_ent) = get_parent_recursive(entity, &parent_query) {
             if let Ok(anim_key) = anim_key_query.get(super_ent) {
                 if let Some(anim) = anim_store.anims.get(&anim_key.group).unwrap().get(&anim_key.key) {
                     anim_player.play(anim.clone_weak()).repeat();
@@ -205,13 +212,12 @@ pub fn start_some_animations(
     }
 }
 
-pub fn get_parent_recursive(entity: Entity, parent_query: &Query<&Parent>, name_query: &Query<&Name>) -> Option<Entity> {
+pub fn get_parent_recursive(entity: Entity, parent_query: &Query<&Parent>) -> Option<Entity> {
     match parent_query.get(entity) {
         Ok(parent) => {
-            get_parent_recursive(parent.get(), parent_query, name_query)
+            get_parent_recursive(parent.get(), parent_query)
         }
         Err(_) => {
-            info!("THis is the parent: {:?}", name_query.get(entity).unwrap());
             Some(entity)
         }
     }
