@@ -79,7 +79,7 @@ pub fn spawn_players(
             CurrentAnimationKey::new("players".into(), AnimationKey::Walking),
         )).with_children(|children|
             { // Spawn the child colliders positioned relative to the rigid body
-                children.spawn((Collider::capsule(0.3, 0.2), Transform::from_xyz(0.0, 0.0, 0.0)));
+                children.spawn((Collider::capsule(0.4, 0.2), Transform::from_xyz(0.0, 0.0, 0.0)));
             }).id();
         add_health_bar_ew.send(AddHealthBar {
             entity: player,
