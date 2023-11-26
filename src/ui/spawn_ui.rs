@@ -45,7 +45,6 @@ pub fn cleanup_menu(
 pub fn spawn_ui(mut commands: Commands) {
     commands.add(eml! {
         <body>
-            <span s:width="100px" s:height="100px" s:background-color="#ff0000">"THIS IS JUST A TEST"</span>
         </body>
     });
 }
