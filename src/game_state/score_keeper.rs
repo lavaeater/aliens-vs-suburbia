@@ -48,8 +48,6 @@ impl Default for LevelTracker {
     }
 }
 
-
-
 impl LevelTracker {
     pub fn update(level_name: String, aliens_to_spawn: u32, spawn_rate_per_minute: f32) -> Self {
         LevelTracker {
