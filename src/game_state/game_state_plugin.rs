@@ -8,6 +8,7 @@ use crate::camera::camera_plugin::StatefulCameraPlugin;
 use crate::control::control_plugin::StatefulControlPlugin;
 use crate::game_state::clear_game_entities_plugin::ClearGameEntitiesPlugin;
 use crate::game_state::GameState;
+use crate::game_state::score_keeper::ScoreKeeperPlugin;
 use crate::general::systems::collision_handling_system::collision_handling_system;
 use crate::general::systems::health_monitor_system::health_monitor_system;
 use crate::general::systems::lights_systems::spawn_lights;
@@ -37,6 +38,7 @@ impl Plugin for GamePlugin {
                 StatefulCameraPlugin,
                 ClearGameEntitiesPlugin,
                 PlayerPlugin,
+                ScoreKeeperPlugin,
             ))
             .add_systems(
                 OnEnter(GameState::InGame),

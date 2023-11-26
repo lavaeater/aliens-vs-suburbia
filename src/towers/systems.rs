@@ -63,7 +63,7 @@ pub fn shoot_alien_system(
 
                         commands.spawn((
                             Name::from("Ball"),
-                            Ball::default(),
+                            Ball::new("Tower".into()),
                             SceneBundle {
                                 scene: asset_server.load("ball_fab.glb#Scene0"),
                                 transform: Transform::from_xyz(launch_p.x, launch_p.y, launch_p.z),

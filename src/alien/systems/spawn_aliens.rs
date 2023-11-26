@@ -2,7 +2,6 @@ use bevy::animation::AnimationClip;
 use bevy::asset::{AssetServer, Handle};
 
 use bevy::hierarchy::Parent;
-use bevy::log::info;
 use bevy::math::{EulerRot, Quat, Vec3};
 use bevy::prelude::{Added, AnimationPlayer, Commands, Component, Entity, EventReader, EventWriter, Name, Query, Reflect, Res, ResMut, Resource, Time, Transform};
 use bevy::scene::SceneBundle;

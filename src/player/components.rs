@@ -2,7 +2,9 @@ use bevy::prelude::{Component, Entity};
 use bevy::reflect::Reflect;
 
 #[derive(Component)]
-pub struct Player {}
+pub struct Player {
+    pub key: String
+}
 
 #[derive(Hash, PartialEq, Eq, Clone, Reflect, Component)]
 pub struct IsBuilding;

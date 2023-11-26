@@ -2,7 +2,6 @@ use bevy::app::{App, PluginGroup};
 use bevy::{DefaultPlugins, log};
 use bevy::log::LogPlugin;
 use bevy::prelude::Msaa;
-use bevy::scene::SceneInstance;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_xpbd_3d::plugins::{PhysicsPlugins};
 use bevy_xpbd_3d::prelude::PhysicsDebugPlugin;

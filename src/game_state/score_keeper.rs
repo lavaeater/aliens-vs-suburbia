@@ -1,15 +1,20 @@
-use bevy::app::{App, Plugin};
-use bevy::prelude::{Component, Entity, Event, Resource};
+use bevy::app::{App, Plugin, Update};
+use bevy::prelude::{Component, Entity, Event, EventReader, in_state, IntoSystemConfigs, Resource};
+use bevy::utils::HashMap;
+use crate::game_state::GameState;
 
 #[derive(Debug, Component)]
 pub struct Shooter(Entity);
 
-#[derive(Debug, Resource)]
-pub struct ScoreKeeper {
+#[derive(Debug)]
+pub struct Score {
     pub kills: u32,
     pub shots_fired: u32,
     pub shots_hit: u32,
 }
+
+#[derive(Debug, Resource)]
+pub struct ScoreKeeper(HashMap<String, Score>);
 
 
 #[derive(Debug)]
@@ -58,8 +63,29 @@ impl LevelTracker {
     }
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub enum GameEvent {
+    PlayerAdded,
+    PlayerRemoved,
+    AlienKilled,
+    ShotFired,
+    ShotHit,
+}
+
 #[derive(Debug, Event)]
-pub struct ShotFired;
+pub struct GameTrackingEvent {
+    pub player_key: String,
+    pub event_type: GameEvent,
+}
+
+impl GameTrackingEvent {
+    pub fn new(player_key: String, event_type: GameEvent) -> Self {
+        Self {
+            player_key,
+            event_type,
+        }
+    }
+}
 
 #[derive(Debug, Event)]
 pub struct ShotHit;
@@ -69,11 +95,45 @@ pub struct ScoreKeeperPlugin;
 impl Plugin for ScoreKeeperPlugin {
     fn build(&self, app: &mut App) {
         app
-            .insert_resource(ScoreKeeper {
-                kills: 0,
-                shots_fired: 0,
-                shots_hit: 0,
-            })
-            .insert_resource(LevelTracker::default());
+            .add_event::<GameTrackingEvent>()
+            .insert_resource(ScoreKeeper(HashMap::new()))
+            .insert_resource(LevelTracker::default())
+            .add_systems(Update,(game_tracking_event_system).run_if(in_state(GameState::InGame)))
+        ;
+    }
+}
+
+pub fn game_tracking_event_system(
+    mut score_keeper: bevy::prelude::ResMut<ScoreKeeper>,
+    mut game_tracking_events: EventReader<GameTrackingEvent>,
+) {
+    for event in game_tracking_events.read() {
+        match event.event_type.clone() {
+            GameEvent::PlayerAdded => {
+                score_keeper.0.insert(event.player_key.clone(), Score {
+                    kills: 0,
+                    shots_fired: 0,
+                    shots_hit: 0
+                });
+            }
+            GameEvent::PlayerRemoved => {
+                score_keeper.0.remove(&event.player_key);
+            }
+            GameEvent::AlienKilled => {
+                if let Some(score) = score_keeper.0.get_mut(&event.player_key) {
+                    score.kills += 1;
+                }
+            }
+            GameEvent::ShotFired => {
+                if let Some(score) = score_keeper.0.get_mut(&event.player_key) {
+                    score.shots_fired += 1;
+                }
+            }
+            GameEvent::ShotHit => {
+                if let Some(score) = score_keeper.0.get_mut(&event.player_key) {
+                    score.shots_hit += 1;
+                }
+            }
+        }
     }
 }

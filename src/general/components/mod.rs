@@ -5,15 +5,17 @@ use bevy_xpbd_3d::prelude::PhysicsLayer;
 
 #[derive(Component)]
 pub struct Ball {
-    pub bounces: i32,
-    pub bounce_max: i32,
+    pub player_key: String,
+    pub bounces: u32,
+    pub max_bounces: u32,
 }
 
-impl Default for Ball {
-    fn default() -> Self {
+impl Ball {
+    pub(crate) fn new(player_key: String) -> Self {
         Self {
+            player_key,
             bounces: 0,
-            bounce_max: 5,
+            max_bounces: 5,
         }
     }
 }
