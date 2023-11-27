@@ -113,6 +113,8 @@ pub fn game_tracking_event_system(
                     .add_child(eml! {
                         <span c:cell>
                             <label bind:value=from!(p_entity, Score:kills | fmt.c("Kills: {c}") )/>
+                            <label bind:value=from!(p_entity, Score:shots_fired | fmt.c("Shots: {c}") )/>
+                            <label bind:value=from!(p_entity, Score:shots_hit | fmt.c("Hits: {c}") )/>
                         </span>
                     });
             }

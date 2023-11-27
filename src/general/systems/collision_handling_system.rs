@@ -33,8 +33,12 @@ pub fn collision_handling_system(
 
             let hittable_entity = if ball_is_first { contacts.entity2 } else { contacts.entity1 };
             if let Ok((mut target_health, _, is_alien)) = hittable_target_query.get_mut(hittable_entity) {
-                let ball = (if ball_is_first { ball_query.get( contacts.entity1) } else { ball_query.get(contacts.entity2) }).unwrap();
-                game_ew.send(GameTrackingEvent::new(ball.entity, GameEvent::ShotHit));
+                let mut ball = (if ball_is_first { ball_query.get_mut( contacts.entity1) } else { ball_query.get_mut(contacts.entity2) }).unwrap();
+
+                if ball.can_score {
+                    ball.can_score = false;
+                    game_ew.send(GameTrackingEvent::new(ball.entity, GameEvent::ShotHit));
+                }
                 if ball.bounces <= 2 {
                     target_health.health -= 10;
                     if target_health.health <= 0 && is_alien {

@@ -8,6 +8,7 @@ pub struct Ball {
     pub entity: Entity,
     pub bounces: u32,
     pub max_bounces: u32,
+    pub can_score: bool,
 }
 
 impl Ball {
@@ -16,6 +17,7 @@ impl Ball {
             entity,
             bounces: 0,
             max_bounces: 5,
+            can_score: true,
         }
     }
 }
