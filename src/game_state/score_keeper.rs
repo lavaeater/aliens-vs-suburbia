@@ -1,6 +1,6 @@
-use belly::build::Elements;
+use belly::build::{Elements, eml};
 use bevy::app::{App, Plugin, Update};
-use bevy::prelude::{Component, Entity, Event, EventReader, in_state, IntoSystemConfigs, OnEnter, Resource};
+use bevy::prelude::{Commands, Component, Entity, Event, EventReader, in_state, IntoSystemConfigs, OnEnter, Resource};
 use bevy::utils::HashMap;
 use crate::game_state::GameState;
 
@@ -106,6 +106,7 @@ pub fn game_tracking_event_system(
     mut score_keeper: bevy::prelude::ResMut<ScoreKeeper>,
     mut game_tracking_events: EventReader<GameTrackingEvent>,
     mut elements: Elements,
+    mut commands: Commands,
 ) {
     for event in game_tracking_events.read() {
         match event.event_type.clone() {
@@ -115,12 +116,7 @@ pub fn game_tracking_event_system(
                     shots_fired: 0,
                     shots_hit: 0,
                 });
-                let erp = add_health_bar.entity;
-                elements.select("body").add_child(eml! {
-                <fellow target=erp>
-                    <span><progressbar s:width="50px" maximum=100.0 minimum=0.0 bind:value=from!(erp, Health:as_f32()) s:color="#00ff00" /></span>
-                </fellow>
-        });
+                // let erp = add_health_bar.entity;
             }
             GameEvent::PlayerRemoved => {
                 score_keeper.0.remove(&event.player_key);
