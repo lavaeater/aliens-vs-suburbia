@@ -18,6 +18,7 @@ use crate::ai::components::destroy_the_map_components::{DestroyTheMapAction, Des
 use crate::ai::components::move_towards_goal_components::{MoveTowardsGoalAction, MoveTowardsGoalData, MoveTowardsGoalScore};
 use crate::alien::components::general::{Alien, AlienCounter, AlienSightShape};
 use crate::control::components::{Controller, DynamicMovement};
+use crate::game_state::score_keeper::LevelTracker;
 use crate::general::components::{Attack, CollisionLayer, Health, HittableTarget};
 use crate::general::components::map_components::{AlienSpawnPoint, CoolDown, CurrentTile};
 use crate::general::events::map_events::SpawnAlien;
@@ -110,6 +111,7 @@ pub fn spawn_aliens(
     mut commands: Commands,
     mut add_health_bar_ew: EventWriter<AddHealthBar>,
     asset_server: Res<AssetServer>,
+    mut level_tracker: ResMut<LevelTracker>
 ) {
     if alien_counter.count >= alien_counter.max_count {
         return;
