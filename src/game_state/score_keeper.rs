@@ -1,6 +1,5 @@
-use belly::build::{Elements, eml};
 use bevy::app::{App, Plugin, Update};
-use bevy::prelude::{Commands, Component, Entity, Event, EventReader, in_state, IntoSystemConfigs, OnEnter, Resource};
+use bevy::prelude::{Component, Entity, Event, EventReader, in_state, IntoSystemConfigs, Resource};
 use bevy::utils::HashMap;
 use crate::game_state::GameState;
 
@@ -61,7 +60,6 @@ impl LevelTracker {
         }
     }
 }
-
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum GameEvent {
     PlayerAdded,
@@ -105,8 +103,6 @@ impl Plugin for ScoreKeeperPlugin {
 pub fn game_tracking_event_system(
     mut score_keeper: bevy::prelude::ResMut<ScoreKeeper>,
     mut game_tracking_events: EventReader<GameTrackingEvent>,
-    mut elements: Elements,
-    mut commands: Commands,
 ) {
     for event in game_tracking_events.read() {
         match event.event_type.clone() {

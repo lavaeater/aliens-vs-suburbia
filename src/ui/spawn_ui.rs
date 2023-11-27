@@ -62,19 +62,20 @@ pub fn spawn_ui(mut commands: Commands) {
             // Set the grid to have 2 columns with sizes [min-content, minmax(0, 1fr)]
             // - The first column will size to the size of it's contents
             // - The second column will take up the remaining available space
-            grid-template-columns: min-content flex(1.0);
+            grid-template-columns: 100%;//min-content; // flex(1.0)
             // Set the grid to have 3 rows with sizes [auto, minmax(0, 1fr), 20px]
             // - The first row will size to the size of it's contents
             // - The second row take up remaining available space (after rows 1 and 3 have both been sized)
             // - The third row will be exactly 20px high
-            grid-template-rows: auto flex(1.0) 20px;
-            background-color: white;
+            grid-template-rows: 20% 60% 20%;
+            // background-color: white;
         }
         .header {
             // Make this node span two grid columns so that it takes up the entire top tow
-            grid-column: span 2;
+            // grid-column: span 2;
+            height: 100%;
             font: bold;
-            font-size: 32px;
+            font-size: 8px;
             color: black;
             display: grid;
             padding: 6px;
@@ -82,21 +83,14 @@ pub fn spawn_ui(mut commands: Commands) {
         .main {
             // Use grid layout for this node
             display: grid;
-            // Make the height of the node fill its parent
             height: 100%;
-            // Make the grid have a 1:1 aspect ratio meaning it will scale as an exact square
-            // As the height is set explicitly, this means the width will adjust to match the height
-            aspect-ratio: 1.0;
+            width: 100%;
             padding: 24px;
-            // Set the grid to have 4 columns all with sizes minmax(0, 1fr)
-            // This creates 4 exactly evenly sized columns
-            grid-template-columns: repeat(4, flex(1.0));
-            // Set the grid to have 4 rows all with sizes minmax(0, 1fr)
-            // This creates 4 exactly evenly sized rows
-            grid-template-rows: repeat(4, flex(1.0));
-            row-gap: 12px;
-            column-gap: 12px;
-            background-color: #2f2f2f;
+            // grid-template-columns: repeat(4, flex(1.0));
+            // grid-template-rows: repeat(4, flex(1.0));
+            // row-gap: 12px;
+            // column-gap: 12px;
+            // background-color: #2f2f2f;
         }
         // Note there is no need to specify the position for each grid item. Grid items that are
         // not given an explicit position will be automatically positioned into the next available
@@ -105,46 +99,47 @@ pub fn spawn_ui(mut commands: Commands) {
         .cell {
             display: grid;
         }
-        .sidebar {
-            display: grid;
-            background-color: black;
-            // Align content towards the start (top) in the vertical axis
-            align-items: start;
-            // Align content towards the center in the horizontal axis
-            justify-items: center;
-            padding: 10px;
-            // Add an fr track to take up all the available space at the bottom of the column so
-            // that the text nodes can be top-aligned. Normally you'd use flexbox for this, but
-            // this is the CSS Grid example so we're using grid.
-            grid-template-rows: auto auto 1fr;
-            row-gap: 10px;
-            height: 100%;
-        }
+        // .sidebar {
+        //     display: grid;
+        //     background-color: black;
+        //     // Align content towards the start (top) in the vertical axis
+        //     align-items: start;
+        //     // Align content towards the center in the horizontal axis
+        //     justify-items: center;
+        //     padding: 10px;
+        //     // Add an fr track to take up all the available space at the bottom of the column so
+        //     // that the text nodes can be top-aligned. Normally you'd use flexbox for this, but
+        //     // this is the CSS Grid example so we're using grid.
+        //     grid-template-rows: auto auto 1fr;
+        //     row-gap: 10px;
+        //     height: 5%;
+        // }
         .text-header {
             font: bold;
             font-size: 24px;
         }
         .footer {
-            // Make this node span two grid column so that it takes up the entire bottom row
-            grid-column: span 2;
+            display: grid;
+            height: 100%;
+            width: 100%;
+            padding: 24px;
+            grid-template-columns: repeat(4, flex(1.0));
+            grid-template-rows: repeat(4, flex(1.0));
+            row-gap: 12px;
+            column-gap: 12px;
+            background-color: #2f2f2faa;
         }
     });
     commands.add(eml! {
         <body>
-        <span c:header>"Belly ESS Grid Layout Example"</span>
+            <span c:header></span>
             <span c:main>
+            </span>
+            <span c:footer>
                 <for color in=COLORS>
                     <span c:cell s:background-color=color/>
                 </for>
             </span>
-            <span c:sidebar>
-                <span c:text-header>"War"</span>
-                <span c:text-content>
-                    "War never changes.\nThe Romans waged war to gather slaves and wealth. Spain built an empire from its lust for gold and territory. Hitler shaped a battered Germany into an economic superpower.\n\nBut war never changes."
-                </span>
-                <span/>
-            </span>
-            <span c:footer></span>
         </body>
     });
 }
@@ -171,12 +166,12 @@ pub fn add_health_bar(
 
 #[derive(Component)]
 pub struct Fellow {
-    pub target: Entity
+    pub target: Entity,
 }
 
 
 #[widget]
-#[param(target:Entity => Fellow:target)]
+#[param(target: Entity => Fellow: target)]
 fn fellow(ctx: &mut WidgetContext) {
     let content = ctx.content();
     ctx.render(eml! {
@@ -198,9 +193,9 @@ pub fn fellow_system(
     mut fellows: Query<(Entity, &Fellow, &mut Style, &Node)>,
     transforms: Query<&GlobalTransform>,
     mut commands: Commands,
-    camera_q: Query<(&Camera, &GlobalTransform),With<GameCamera>>,
+    camera_q: Query<(&Camera, &GlobalTransform), With<GameCamera>>,
 ) {
-    if let Ok((camera, camera_global_transform)) =camera_q.get_single() {
+    if let Ok((camera, camera_global_transform)) = camera_q.get_single() {
         for (entity, follow, mut style, node) in fellows.iter_mut() {
             let Ok(tr) = transforms.get(follow.target) else {
                 commands.entity(entity).despawn_recursive();
