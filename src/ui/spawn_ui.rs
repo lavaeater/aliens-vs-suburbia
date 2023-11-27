@@ -119,6 +119,8 @@ pub fn spawn_ui(mut commands: Commands) {
             font-size: 24px;
         }
         .footer {
+            font: bold;
+            font-size: 24px;
             display: grid;
             height: 100%;
             width: 100%;
@@ -135,10 +137,10 @@ pub fn spawn_ui(mut commands: Commands) {
             <span c:header></span>
             <span c:main>
             </span>
-            <span c:footer>
-                <for color in=COLORS>
-                    <span c:cell s:background-color=color/>
-                </for>
+            <span c:footer id="ui-footer">
+                // <for color in=COLORS>
+                //     <span c:cell s:background-color=color/>
+                // </for>
             </span>
         </body>
     });

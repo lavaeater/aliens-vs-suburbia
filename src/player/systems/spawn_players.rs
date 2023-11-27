@@ -7,7 +7,7 @@ use bevy::scene::SceneBundle;
 use bevy_xpbd_3d::components::{AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
 use crate::alien::systems::spawn_aliens::{AnimationKey, CurrentAnimationKey};
 use crate::control::components::{Controller, DynamicMovement, KeyboardController};
-use crate::game_state::score_keeper::{GameEvent, GameTrackingEvent};
+use crate::game_state::score_keeper::{GameEvent, GameTrackingEvent, Score};
 use crate::general::components::{CollisionLayer, Health};
 use crate::general::components::map_components::CurrentTile;
 use crate::general::events::map_events::SpawnPlayer;
@@ -39,7 +39,6 @@ pub fn spawn_players(
     mut player_addedd_ew: EventWriter<GameTrackingEvent>,
 ) {
     for spawn_player in spawn_player_event_reader.read() {
-        player_addedd_ew.send(GameTrackingEvent::new("Player One".into(), GameEvent::PlayerAdded));
         let player = commands.spawn((
             Name::from("Player"),
             Player {
@@ -82,6 +81,7 @@ pub fn spawn_players(
             CurrentTile::default(),
         )).insert((
             CurrentAnimationKey::new("players".into(), AnimationKey::Walking),
+            Score::default(),
         )).with_children(|children|
             { // Spawn the child colliders positioned relative to the rigid body
                 children.spawn((Collider::capsule(0.4, 0.2), Transform::from_xyz(0.0, 0.0, 0.0)));
@@ -90,6 +90,10 @@ pub fn spawn_players(
             entity: player,
             name: "PLAYER",
         });
+        player_addedd_ew.send(
+            GameTrackingEvent::new(
+                player,
+                GameEvent::PlayerAdded));
     }
 }
 

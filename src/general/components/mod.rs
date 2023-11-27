@@ -1,19 +1,19 @@
 pub (crate) mod map_components;
 
-use bevy::prelude::{Component, Reflect};
+use bevy::prelude::{Component, Entity, Reflect};
 use bevy_xpbd_3d::prelude::PhysicsLayer;
 
 #[derive(Component)]
 pub struct Ball {
-    pub player_key: String,
+    pub entity: Entity,
     pub bounces: u32,
     pub max_bounces: u32,
 }
 
 impl Ball {
-    pub(crate) fn new(player_key: String) -> Self {
+    pub(crate) fn new(entity: Entity) -> Self {
         Self {
-            player_key,
+            entity,
             bounces: 0,
             max_bounces: 5,
         }

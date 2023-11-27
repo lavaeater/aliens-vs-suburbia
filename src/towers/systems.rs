@@ -61,9 +61,8 @@ pub fn shoot_alien_system(
                         let direction = (alien_position.0 - tower_position.0).normalize();
                         let launch_p = tower_position.0 + direction + Vec3::new(0.0, 0.25, 0.0);
 
-                        commands.spawn((
+                        let entity = commands.spawn((
                             Name::from("Ball"),
-                            Ball::new("Tower".into()),
                             SceneBundle {
                                 scene: asset_server.load("ball_fab.glb#Scene0"),
                                 transform: Transform::from_xyz(launch_p.x, launch_p.y, launch_p.z),
@@ -82,7 +81,9 @@ pub fn shoot_alien_system(
                                     CollisionLayer::AlienSpawnPoint,
                                     CollisionLayer::AlienGoal
                                 ]),
-                        ));
+                        )).id();
+
+                        commands.entity(entity).insert(Ball::new(entity));
                         *action_state = ActionState::Success;
                     }
                 }
