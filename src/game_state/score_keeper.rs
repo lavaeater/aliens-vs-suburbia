@@ -61,29 +61,24 @@ impl LevelTracker {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub enum GameEvent {
-    PlayerAdded,
-    PlayerRemoved,
-    AlienKilled,
-    ShotFired,
-    ShotHit,
-}
-
 #[derive(Debug, Event)]
-pub struct GameTrackingEvent {
-    pub player_entity: Entity,
-    pub event_type: GameEvent,
+pub enum GameTrackingEvent {
+    PlayerAdded(Entity),
+    PlayerRemoved(Entity),
+    AlienKilled(Entity),
+    ShotFired(Entity),
+    ShotHit(Entity),
+    AlienSpawned,
 }
-
-impl GameTrackingEvent {
-    pub fn new(player_entity: Entity, event_type: GameEvent) -> Self {
-        Self {
-            player_entity,
-            event_type,
-        }
-    }
-}
+//
+// impl GameTrackingEvent {
+//     pub fn new(related_entity: Entity, event_type: GameEvent) -> Self {
+//         Self {
+//             related_entity,
+//             event_type,
+//         }
+//     }
+// }
 
 #[derive(Debug, Event)]
 pub struct ShotHit;
@@ -102,40 +97,40 @@ impl Plugin for ScoreKeeperPlugin {
 
 pub fn game_tracking_event_system(
     mut game_tracking_events: EventReader<GameTrackingEvent>,
+    mut level_tracker: ResMut<LevelTracker>,
     mut score_query: Query<&mut Score>,
     mut elements: Elements,
 ) {
     for event in game_tracking_events.read() {
-        match event.event_type.clone() {
-            GameEvent::PlayerAdded => {
-                let p_entity = event.player_entity;
+        match event {
+            GameTrackingEvent::PlayerAdded(player) => {
+                let p = *player;
                 elements.select("#ui-footer")
                     .add_child(eml! {
                         <span c:cell>
-                            <label bind:value=from!(p_entity, Score:kills | fmt.c("Kills: {c}") )/>
-                            <label bind:value=from!(p_entity, Score:shots_fired | fmt.c("Shots: {c}") )/>
-                            <label bind:value=from!(p_entity, Score:shots_hit | fmt.c("Hits: {c}") )/>
+                            <label bind:value=from!(p, Score:kills | fmt.c("Kills: {c}") )/>
+                            <label bind:value=from!(p, Score:shots_fired | fmt.c("Shots: {c}") )/>
+                            <label bind:value=from!(p, Score:shots_hit | fmt.c("Hits: {c}") )/>
                         </span>
                     });
             }
-            GameEvent::PlayerRemoved => {
-                //remove player from score keeper
-            }
-            GameEvent::AlienKilled => {
-                if let Ok(mut score) = score_query.get_mut(event.player_entity) {
+            GameTrackingEvent::PlayerRemoved(_) => {}
+            GameTrackingEvent::AlienKilled(player) => {
+                if let Ok(mut score) = score_query.get_mut(*player) {
                     score.kills += 1;
                 }
             }
-            GameEvent::ShotFired => {
-                if let Ok(mut score) = score_query.get_mut(event.player_entity) {
+            GameTrackingEvent::ShotFired(player) => {
+                if let Ok(mut score) = score_query.get_mut(*player) {
                     score.shots_fired += 1;
                 }
             }
-            GameEvent::ShotHit => {
-                if let Ok(mut score) = score_query.get_mut(event.player_entity) {
+            GameTrackingEvent::ShotHit(player) => {
+                if let Ok(mut score) = score_query.get_mut(*player) {
                     score.shots_hit += 1;
                 }
             }
+            GameTrackingEvent::AlienSpawned => {}
         }
     }
 }

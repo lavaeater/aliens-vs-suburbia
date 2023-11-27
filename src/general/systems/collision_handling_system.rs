@@ -1,7 +1,7 @@
 use bevy::prelude::{Commands, DespawnRecursiveExt, EventReader, EventWriter, Has, Query, ResMut};
 use bevy_xpbd_3d::prelude::Collision;
 use crate::alien::components::general::{Alien, AlienCounter};
-use crate::game_state::score_keeper::{GameEvent, GameTrackingEvent};
+use crate::game_state::score_keeper::{GameTrackingEvent};
 use crate::general::components::{Ball, Health, HittableTarget};
 
 pub fn collision_handling_system(
@@ -37,12 +37,12 @@ pub fn collision_handling_system(
 
                 if ball.can_score {
                     ball.can_score = false;
-                    game_ew.send(GameTrackingEvent::new(ball.entity, GameEvent::ShotHit));
+                    game_ew.send(GameTrackingEvent::ShotHit(ball.entity));
                 }
                 if ball.bounces <= 2 {
                     target_health.health -= 10;
                     if target_health.health <= 0 && is_alien {
-                        game_ew.send(GameTrackingEvent::new(ball.entity, GameEvent::AlienKilled));
+                        game_ew.send(GameTrackingEvent::AlienKilled(ball.entity));
                         //NO need to despawn here, it is done in health_monitor_system
                         alien_counter.count -= 1;
                     }

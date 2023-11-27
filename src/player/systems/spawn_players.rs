@@ -7,7 +7,7 @@ use bevy::scene::SceneBundle;
 use bevy_xpbd_3d::components::{AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
 use crate::alien::systems::spawn_aliens::{AnimationKey, CurrentAnimationKey};
 use crate::control::components::{Controller, DynamicMovement, KeyboardController};
-use crate::game_state::score_keeper::{GameEvent, GameTrackingEvent, Score};
+use crate::game_state::score_keeper::{GameTrackingEvent, Score};
 use crate::general::components::{CollisionLayer, Health};
 use crate::general::components::map_components::CurrentTile;
 use crate::general::events::map_events::SpawnPlayer;
@@ -91,9 +91,7 @@ pub fn spawn_players(
             name: "PLAYER",
         });
         player_addedd_ew.send(
-            GameTrackingEvent::new(
-                player,
-                GameEvent::PlayerAdded));
+            GameTrackingEvent::PlayerAdded(player));
     }
 }
 

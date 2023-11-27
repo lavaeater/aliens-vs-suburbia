@@ -42,18 +42,6 @@ pub fn cleanup_menu(
     }
 }
 
-const COLORS: &[&str] = &[
-    // from https://colorswall.com/palette/105557
-    // Red     Pink       Purple     Deep Purple
-    "#f44336", "#e81e63", "#9c27b0", "#673ab7",
-    // Indigo  Blue       Light Blue Cyan
-    "#3f51b5", "#2196f3", "#03a9f4", "#00bcd4",
-    // Teal    Green      Light      Green Lime
-    "#009688", "#4caf50", "#8bc34a", "#cddc39",
-    // Yellow  Amber      Orange     Deep Orange
-    "#ffeb3b", "#ffc107", "#ff9800", "#ff5722",
-];
-
 pub fn spawn_ui(mut commands: Commands) {
     commands.add(ess! {
         body {

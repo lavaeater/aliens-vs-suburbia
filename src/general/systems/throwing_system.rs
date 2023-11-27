@@ -6,7 +6,7 @@ use bevy::time::Time;
 use bevy_xpbd_3d::components::{Collider, CollisionLayers, LinearVelocity, Position, RigidBody};
 use bevy_xpbd_3d::prelude::Rotation;
 use crate::control::components::{ControlCommands, Controller};
-use crate::game_state::score_keeper::{GameEvent, GameTrackingEvent};
+use crate::game_state::score_keeper::{GameTrackingEvent};
 use crate::general::components::{Ball, CollisionLayer};
 use crate::general::components::map_components::CoolDown;
 use crate::player::components::Player;
@@ -23,7 +23,7 @@ pub fn throwing(
             if controller.cool_down(time_res.delta_seconds()) {
                 let direction = rotation.mul_vec3(Quat::from_axis_angle(Vec3::X, (2.5f32).to_radians()).mul_vec3(Vec3::new(0.0, 0.0, -1.0)));
                 let launch_p = position.0 + direction * 0.5 + Vec3::new(0.0, 0.25, 0.0);
-                game_ew.send(GameTrackingEvent::new(entity, GameEvent::ShotFired));
+                game_ew.send(GameTrackingEvent::ShotFired(entity));
                 controller.has_thrown = true;
                 commands.spawn((
                     Ball::new(entity),
