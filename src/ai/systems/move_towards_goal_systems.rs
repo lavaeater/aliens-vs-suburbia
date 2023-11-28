@@ -13,6 +13,7 @@ use pathfinding::directed::astar::astar;
 use pathfinding::num_traits::Signed;
 use crate::building::systems::ToWorldCoordinates;
 use crate::control::components::{ControlDirection, Controller, ControlRotation};
+use crate::game_state::score_keeper::GameTrackingEvent;
 use crate::general::systems::map_systems::TileDefinitions;
 
 pub fn move_towards_goal_scorer_system(
@@ -138,11 +139,14 @@ pub fn move_towards_goal_action_system(
 pub fn agent_reached_goal_handler(
     mut alien_counter: ResMut<AlienCounter>,
     mut reached_goal_event_reader: EventReader<AgentReachedGoal>,
-    mut commands: Commands
+    mut commands: Commands,
+    mut game_tracking_event_ew: EventWriter<GameTrackingEvent>
 ) {
     for AgentReachedGoal(alien) in reached_goal_event_reader.read() {
+
         alien_counter.count -= 1;
         commands.entity(*alien).despawn_recursive();
+        game_tracking_event_ew.send(GameTrackingEvent::AlienReachedGoal);
     }
 }
 

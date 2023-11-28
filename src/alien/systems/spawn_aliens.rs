@@ -1,6 +1,5 @@
 use bevy::animation::AnimationClip;
 use bevy::asset::{AssetServer, Handle};
-
 use bevy::hierarchy::Parent;
 use bevy::math::{EulerRot, Quat, Vec3};
 use bevy::prelude::{Added, AnimationPlayer, Commands, Component, Entity, EventReader, EventWriter, Name, Query, Reflect, Res, ResMut, Resource, Time, Transform};
@@ -18,7 +17,7 @@ use crate::ai::components::destroy_the_map_components::{DestroyTheMapAction, Des
 use crate::ai::components::move_towards_goal_components::{MoveTowardsGoalAction, MoveTowardsGoalData, MoveTowardsGoalScore};
 use crate::alien::components::general::{Alien, AlienCounter, AlienSightShape};
 use crate::control::components::{Controller, DynamicMovement};
-use crate::game_state::score_keeper::LevelTracker;
+use crate::game_state::score_keeper::GameTrackingEvent;
 use crate::general::components::{Attack, CollisionLayer, Health, HittableTarget};
 use crate::general::components::map_components::{AlienSpawnPoint, CoolDown, CurrentTile};
 use crate::general::events::map_events::SpawnAlien;
@@ -111,7 +110,7 @@ pub fn spawn_aliens(
     mut commands: Commands,
     mut add_health_bar_ew: EventWriter<AddHealthBar>,
     asset_server: Res<AssetServer>,
-    mut level_tracker: ResMut<LevelTracker>
+    mut game_tracking_event_ew: EventWriter<GameTrackingEvent>
 ) {
     if alien_counter.count >= alien_counter.max_count {
         return;
@@ -193,6 +192,8 @@ pub fn spawn_aliens(
             entity: id,
             name: "ALIEN",
         });
+
+        game_tracking_event_ew.send(GameTrackingEvent::AlienSpawned);
     }
 }
 
