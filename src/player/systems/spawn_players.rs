@@ -1,12 +1,13 @@
 use bevy::asset::{AssetServer};
 use bevy::core::Name;
-use bevy::hierarchy::{BuildChildren, Children, Parent};
+use bevy::hierarchy::{BuildChildren, Children};
 use bevy::math::{EulerRot, Quat, Vec3};
-use bevy::prelude::{Added, Commands, Component, Entity, EventReader, EventWriter, Query, Res, Transform, Visibility, With};
-use bevy::scene::{Scene, SceneBundle, SceneInstance};
+use bevy::prelude::{Commands, Component, Entity, EventReader, EventWriter, Query, Res, Transform, Visibility, With};
+use bevy::scene::SceneBundle;
 use bevy_xpbd_3d::components::{AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
-use crate::alien::systems::spawn_aliens::{AnimationKey, CurrentAnimationKey, get_parent_recursive};
+use crate::alien::systems::spawn_aliens::{AnimationKey, CurrentAnimationKey};
 use crate::control::components::{Controller, DynamicMovement, KeyboardController};
+use crate::game_state::score_keeper::{GameTrackingEvent, Score};
 use crate::general::components::{CollisionLayer, Health};
 use crate::general::components::map_components::CurrentTile;
 use crate::general::events::map_events::SpawnPlayer;
@@ -35,11 +36,14 @@ pub fn spawn_players(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut add_health_bar_ew: EventWriter<AddHealthBar>,
+    mut player_addedd_ew: EventWriter<GameTrackingEvent>,
 ) {
     for spawn_player in spawn_player_event_reader.read() {
         let player = commands.spawn((
             Name::from("Player"),
-            Player {},
+            Player {
+              key: "Player One".into()
+            },
             FixSceneTransform::new(
                 Vec3::new(0.0, -0.35, 0.0),
                 Quat::from_euler(
@@ -77,6 +81,7 @@ pub fn spawn_players(
             CurrentTile::default(),
         )).insert((
             CurrentAnimationKey::new("players".into(), AnimationKey::Walking),
+            Score::default(),
         )).with_children(|children|
             { // Spawn the child colliders positioned relative to the rigid body
                 children.spawn((Collider::capsule(0.4, 0.2), Transform::from_xyz(0.0, 0.0, 0.0)));
@@ -85,6 +90,8 @@ pub fn spawn_players(
             entity: player,
             name: "PLAYER",
         });
+        player_addedd_ew.send(
+            GameTrackingEvent::PlayerAdded(player));
     }
 }
 

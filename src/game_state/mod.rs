@@ -1,5 +1,6 @@
 pub mod game_state_plugin;
-mod clear_game_entities_plugin;
+pub mod clear_game_entities_plugin;
+pub mod score_keeper;
 
 use bevy::prelude::States;
 
