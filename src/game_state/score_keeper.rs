@@ -78,15 +78,6 @@ pub enum GameTrackingEvent {
     AlienSpawned,
     AlienReachedGoal,
 }
-//
-// impl GameTrackingEvent {
-//     pub fn new(related_entity: Entity, event_type: GameEvent) -> Self {
-//         Self {
-//             related_entity,
-//             event_type,
-//         }
-//     }
-// }
 
 #[derive(Debug, Event)]
 pub struct ShotHit;
