@@ -12,10 +12,10 @@ use crate::player::components::Player;
 pub fn spawn_camera(mut commands: Commands) {
     commands.spawn((
         Name::from("Camera"),
-        CameraOffset(Vec3::new(0.0, 1.5, 2.0)),
+        CameraOffset(Vec3::new(2.0, 1.5, 2.0)),
         Camera3dBundle {
             projection: Orthographic(OrthographicProjection {
-                scale: 2.5,
+                scale: 2.0,
                 near: -1000.0,
                 far: 1000.0,
                 viewport_origin: Vec2::new(0.5, 0.5),

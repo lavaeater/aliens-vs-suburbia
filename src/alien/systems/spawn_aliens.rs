@@ -16,6 +16,7 @@ use crate::ai::components::avoid_wall_components::{AvoidWallsAction, AvoidWallSc
 use crate::ai::components::destroy_the_map_components::{DestroyTheMapAction, DestroyTheMapScore};
 use crate::ai::components::move_towards_goal_components::{MoveTowardsGoalAction, MoveTowardsGoalData, MoveTowardsGoalScore};
 use crate::alien::components::general::{Alien, AlienCounter, AlienSightShape};
+use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
 use crate::control::components::{Controller, DynamicMovement};
 use crate::game_state::score_keeper::GameTrackingEvent;
 use crate::general::components::{Attack, CollisionLayer, Health, HittableTarget};
@@ -38,71 +39,6 @@ pub fn alien_spawner_system(
     }
 }
 
-#[derive(Resource)]
-pub struct AnimationStore<S: Into<String>> {
-    pub anims: HashMap<S, HashMap<AnimationKey, Handle<AnimationClip>>>,
-}
-
-#[derive(Eq, Hash, PartialEq, Copy, Clone, Debug, Reflect)]
-pub enum AnimationKey {
-    Clapping,
-    Death,
-    Idle,
-    IdleHold,
-    Jump,
-    Punch,
-    Run,
-    RunHold,
-    RunningJump,
-    Sitting,
-    Standing,
-    Swimming,
-    SwordSlash,
-    Walking,
-}
-
-pub fn load_animations(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-) {
-    let mut store = AnimationStore::<String> {
-        anims: HashMap::new()
-    };
-    store.anims.insert("aliens".into(),
-                       HashMap::new());
-    let alien_anims = store
-        .anims
-        .get_mut("aliens")
-        .unwrap();
-    alien_anims.insert(AnimationKey::Walking, asset_server.load("quaternius/alien.glb#Animation13"));
-    alien_anims.insert(AnimationKey::Idle, asset_server.load("quaternius/alien.glb#Animation2"));
-
-
-    store
-        .anims
-        .insert("players".into(),
-                HashMap::new());
-    let player_anims = store
-        .anims
-        .get_mut("players")
-        .unwrap();
-    player_anims.insert(AnimationKey::Walking, asset_server.load("quaternius/worker.glb#Animation22"));
-    player_anims.insert(AnimationKey::Idle, asset_server.load("quaternius/worker.glb#Animation4"));
-
-    commands.insert_resource(store);
-}
-
-#[derive(Component, Debug, Reflect)]
-pub struct CurrentAnimationKey {
-    pub group: String,
-    pub key: AnimationKey,
-}
-
-impl CurrentAnimationKey {
-    pub fn new(group: String, key: AnimationKey) -> Self {
-        CurrentAnimationKey { group, key }
-    }
-}
 
 pub fn spawn_aliens(
     mut alien_counter: ResMut<AlienCounter>,
@@ -194,33 +130,5 @@ pub fn spawn_aliens(
         });
 
         game_tracking_event_ew.send(GameTrackingEvent::AlienSpawned);
-    }
-}
-
-pub fn start_some_animations(
-    anim_store: Res<AnimationStore<String>>,
-    mut players: Query<(Entity, &mut AnimationPlayer), Added<AnimationPlayer>>,
-    anim_key_query: Query<&CurrentAnimationKey>,
-    parent_query: Query<&Parent>,
-) {
-    for (entity, mut anim_player) in players.iter_mut() {
-        if let Some(super_ent) = get_parent_recursive(entity, &parent_query) {
-            if let Ok(anim_key) = anim_key_query.get(super_ent) {
-                if let Some(anim) = anim_store.anims.get(&anim_key.group).unwrap().get(&anim_key.key) {
-                    anim_player.play(anim.clone_weak()).repeat();
-                }
-            }
-        }
-    }
-}
-
-pub fn get_parent_recursive(entity: Entity, parent_query: &Query<&Parent>) -> Option<Entity> {
-    match parent_query.get(entity) {
-        Ok(parent) => {
-            get_parent_recursive(parent.get(), parent_query)
-        }
-        Err(_) => {
-            Some(entity)
-        }
     }
 }

@@ -22,6 +22,7 @@ mod control;
 mod building;
 mod map;
 pub(crate) mod game_state;
+mod animation;
 
 
 fn main() {
