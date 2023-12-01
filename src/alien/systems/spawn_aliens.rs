@@ -1,10 +1,7 @@
-use bevy::animation::AnimationClip;
-use bevy::asset::{AssetServer, Handle};
-use bevy::hierarchy::Parent;
+use bevy::asset::{AssetServer};
 use bevy::math::{EulerRot, Quat, Vec3};
-use bevy::prelude::{Added, AnimationPlayer, Commands, Component, Entity, EventReader, EventWriter, Name, Query, Reflect, Res, ResMut, Resource, Time, Transform};
+use bevy::prelude::{ Commands, EventReader, EventWriter, Name, Query, Res, ResMut, Time, Transform};
 use bevy::scene::SceneBundle;
-use bevy::utils::{HashMap};
 use bevy_xpbd_3d::components::{AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
 use bevy_xpbd_3d::math::PI;
 use bevy_xpbd_3d::prelude::Position;
@@ -73,7 +70,7 @@ pub fn spawn_aliens(
 
         let alien_transform = Transform::from_xyz(spawn_alien.position.x, spawn_alien.position.y, spawn_alien.position.z)
             .with_scale(Vec3::new(0.25, 0.25, 0.25))
-            .with_rotation(bevy::math::Quat::from_rotation_y(PI * 2.0));
+            .with_rotation(Quat::from_rotation_y(PI * 2.0));
         let id = commands.spawn(
             (
                 Name::from("Spider"),

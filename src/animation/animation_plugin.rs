@@ -13,19 +13,6 @@ pub struct GotoAnimationState(pub Entity, pub AnimationKey);
 #[derive(Event)]
 pub struct LeaveAnimationState(pub Entity, pub AnimationKey);
 
-
-impl GotoAnimationState {
-    pub fn new(entity: Entity, anim_key: AnimationKey) -> Self {
-        GotoAnimationState(entity, anim_key)
-    }
-}
-
-impl LeaveAnimationState {
-    pub fn new(entity: Entity, anim_key: AnimationKey) -> Self {
-        LeaveAnimationState(entity, anim_key)
-    }
-}
-
 #[derive(Component, Debug, Reflect)]
 pub struct CurrentAnimationKey {
     pub group: String,
