@@ -5,8 +5,9 @@ use bevy::math::{EulerRot, Quat, Vec3};
 use bevy::prelude::{Commands, Component, Entity, EventReader, EventWriter, Query, Res, Transform, Visibility, With};
 use bevy::scene::SceneBundle;
 use bevy_xpbd_3d::components::{AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
-use crate::alien::systems::spawn_aliens::{AnimationKey, CurrentAnimationKey};
+use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
 use crate::control::components::{Controller, DynamicMovement, KeyboardController};
+use crate::control::systems::CharacterState;
 use crate::game_state::score_keeper::{GameTrackingEvent, Score};
 use crate::general::components::{CollisionLayer, Health};
 use crate::general::components::map_components::CurrentTile;
@@ -45,7 +46,7 @@ pub fn spawn_players(
               key: "Player One".into()
             },
             FixSceneTransform::new(
-                Vec3::new(0.0, -0.35, 0.0),
+                Vec3::new(0.0, -0.37, 0.0),
                 Quat::from_euler(
                     EulerRot::YXZ,
                     180.0f32.to_radians(), 0.0, 0.0),
@@ -55,7 +56,7 @@ pub fn spawn_players(
             Controller::new(3.0, 3.0, 60.0),
             DynamicMovement {},
             SceneBundle {
-                scene: asset_server.load("quaternius/worker.glb#Scene0"),
+                scene: asset_server.load("girl/girl.glb#Scene0"),
                 transform: Transform::from_xyz(spawn_player.position.x, spawn_player.position.y, spawn_player.position.z),
                 //     .with_rotation(Quat::from_euler(EulerRot::YXZ, 180.0f32.to_radians(), 0.0, 0.0))
                 //     .with_scale(Vec3::new(0.25, 0.25, 0.25)),
@@ -81,6 +82,7 @@ pub fn spawn_players(
             CurrentTile::default(),
         )).insert((
             CurrentAnimationKey::new("players".into(), AnimationKey::Walking),
+            CharacterState::default(),
             Score::default(),
         )).with_children(|children|
             { // Spawn the child colliders positioned relative to the rigid body

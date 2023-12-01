@@ -3,6 +3,7 @@ use bevy::prelude::{in_state, IntoSystemConfigs, OnEnter, Time};
 use bevy::time::Fixed;
 use crate::ai::ai_plugin::StatefulAiPlugin;
 use crate::alien::alien_plugin::StatefulAlienPlugin;
+use crate::animation::animation_plugin::AnimationPlugin;
 use crate::building::build_mode_plugin::StatefulBuildModePlugin;
 use crate::camera::camera_plugin::StatefulCameraPlugin;
 use crate::control::control_plugin::StatefulControlPlugin;
@@ -34,6 +35,7 @@ impl Plugin for GamePlugin {
                 StatefulAiPlugin,
                 StatefulBuildModePlugin,
                 StatefulAlienPlugin,
+                AnimationPlugin,
                 StatefulControlPlugin,
                 StatefulCameraPlugin,
                 ClearGameEntitiesPlugin,
