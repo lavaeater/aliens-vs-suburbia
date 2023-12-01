@@ -1,11 +1,46 @@
 use bevy::input::ButtonState;
 use bevy::input::keyboard::KeyboardInput;
-use bevy::prelude::{Entity, Event, EventReader, EventWriter, KeyCode, Query, With};
-use crate::animation::animation_plugin::{AnimationKey, AnimationKeyUpdated};
+use bevy::prelude::{Component, Entity, Event, EventReader, EventWriter, KeyCode, Query, With};
+use crate::animation::animation_plugin::{AnimationKey, GotoAnimationState, LeaveAnimationState};
 use crate::control::components::{ControlCommands, ControlDirection, Controller, ControlRotation, KeyboardController};
 use crate::player::events::building_events::{ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode};
 
+#[derive(Component)]
+pub struct CharacterState {
+    pub state: Vec<AnimationKey>,
+}
 
+impl CharacterState {
+    pub fn enter_state(&mut self, state: AnimationKey) -> bool {
+        if let Some(latest_state) = self.state.last() {
+            if latest_state != &state {
+                self.state.push(state);
+                return true;
+            }
+        }
+        false
+    }
+
+    pub fn leave_state(&mut self, state: AnimationKey) -> (bool, AnimationKey) {
+        if self.state.len() > 1 {
+            if let Some(latest_state) = self.state.last() {
+                if latest_state == &state {
+                    self.state.pop();
+                    return (true, *self.state.last().unwrap());
+                }
+            }
+        }
+        (false, state)
+    }
+}
+
+impl Default for CharacterState {
+    fn default() -> Self {
+        Self {
+            state: vec![AnimationKey::Idle]
+        }
+    }
+}
 pub fn input_control(
     mut key_evr: EventReader<KeyboardInput>,
     mut query: Query<(Entity, &mut Controller), With<KeyboardController>>,
@@ -13,7 +48,8 @@ pub fn input_control(
     mut execute_build: EventWriter<ExecuteBuild>,
     mut exit_build: EventWriter<ExitBuildMode>,
     mut change_build_indicator: EventWriter<ChangeBuildIndicator>,
-    mut update_animation_key_handler: EventWriter<AnimationKeyUpdated>,
+    mut goto_animation_state_ew: EventWriter<GotoAnimationState>,
+    mut leave_animation_state_ew: EventWriter<LeaveAnimationState>,
 ) {
     if let Ok((entity, mut controller)) = query.get_single_mut() {
         for ev in key_evr.read() {
@@ -21,43 +57,44 @@ pub fn input_control(
                 ButtonState::Pressed => match ev.key_code {
                     Some(KeyCode::B) => {
                         if controller.triggers.contains(&ControlCommands::Build) {
-                            update_animation_key_handler.send(AnimationKeyUpdated(entity, AnimationKey::Idle));
+                            leave_animation_state_ew.send(LeaveAnimationState(entity, AnimationKey::Building));
                             exit_build.send(ExitBuildMode(entity));
                         } else {
                             controller.triggers.insert(ControlCommands::Build);
-                            update_animation_key_handler.send(AnimationKeyUpdated(entity, AnimationKey::Building));
+                            goto_animation_state_ew.send(GotoAnimationState(entity, AnimationKey::Building));
                             start_build_ew.send(EnterBuildMode(entity));
                         }
                     }
                     Some(KeyCode::Escape) => {
                         if controller.triggers.contains(&ControlCommands::Build) {
-                            update_animation_key_handler.send(AnimationKeyUpdated(entity, AnimationKey::Idle));
+                            leave_animation_state_ew.send(LeaveAnimationState(entity, AnimationKey::Building));
                             exit_build.send(ExitBuildMode(entity));
                         }
                     }
                     Some(KeyCode::A) => {
-                        update_animation_key_handler.send(AnimationKeyUpdated(entity, AnimationKey::Walking));
+                        goto_animation_state_ew.send(GotoAnimationState(entity, AnimationKey::Walking));
                         controller.rotations.insert(ControlRotation::Left);
                     }
                     Some(KeyCode::D) => {
-                        update_animation_key_handler.send(AnimationKeyUpdated(entity, AnimationKey::Walking));
+                        goto_animation_state_ew.send(GotoAnimationState(entity, AnimationKey::Walking));
                         controller.rotations.insert(ControlRotation::Right);
                     }
                     Some(KeyCode::W) => {
-                        update_animation_key_handler.send(AnimationKeyUpdated(entity, AnimationKey::Walking));
+                        goto_animation_state_ew.send(GotoAnimationState(entity, AnimationKey::Walking));
                         controller.directions.insert(ControlDirection::Forward);
                     }
                     Some(KeyCode::S) => {
-                        update_animation_key_handler.send(AnimationKeyUpdated(entity, AnimationKey::Walking));
+                        goto_animation_state_ew.send(GotoAnimationState(entity, AnimationKey::Walking));
                         controller.directions.insert(ControlDirection::Backward);
                     }
                     Some(KeyCode::Space) => {
                         if controller.triggers.contains(&ControlCommands::Build) {
                             execute_build.send(ExecuteBuild(entity));
                         } else if controller.triggers.contains(&ControlCommands::Throw) {
+                            leave_animation_state_ew.send(LeaveAnimationState(entity, AnimationKey::Throwing));
                             controller.triggers.remove(&ControlCommands::Throw);
                         } else {
-                            update_animation_key_handler.send(AnimationKeyUpdated(entity, AnimationKey::Throwing));
+                            goto_animation_state_ew.send(GotoAnimationState(entity, AnimationKey::Throwing));
                             controller.triggers.insert(ControlCommands::Throw);
                         }
                     }
@@ -65,19 +102,15 @@ pub fn input_control(
                 },
                 ButtonState::Released => match ev.key_code {
                     Some(KeyCode::A) => {
-                        update_animation_key_handler.send(AnimationKeyUpdated(entity, AnimationKey::Idle));
                         controller.rotations.remove(&ControlRotation::Left);
                     }
                     Some(KeyCode::D) => {
-                        update_animation_key_handler.send(AnimationKeyUpdated(entity, AnimationKey::Idle));
                         controller.rotations.remove(&ControlRotation::Right);
                     }
                     Some(KeyCode::W) => {
-                        update_animation_key_handler.send(AnimationKeyUpdated(entity, AnimationKey::Idle));
                         controller.directions.remove(&ControlDirection::Forward);
                     }
                     Some(KeyCode::S) => {
-                        update_animation_key_handler.send(AnimationKeyUpdated(entity, AnimationKey::Idle));
                         controller.directions.remove(&ControlDirection::Backward);
                     }
                     Some(KeyCode::Left) => {
@@ -88,6 +121,9 @@ pub fn input_control(
                     }
                     _ => {}
                 }
+            }
+            if controller.directions.is_empty() && controller.rotations.is_empty() {
+                leave_animation_state_ew.send(LeaveAnimationState(entity, AnimationKey::Walking));
             }
         }
     }
