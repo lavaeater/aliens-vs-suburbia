@@ -57,34 +57,35 @@ pub fn shoot_alien_system(
                         continue;
                     }
                     Some(alien_entity) => {
-                        let alien_position = alien_query.get(*alien_entity).unwrap();
-                        let direction = (alien_position.0 - tower_position.0).normalize();
-                        let launch_p = tower_position.0 + direction + Vec3::new(0.0, 0.25, 0.0);
+                        if let Ok (alien_position) = alien_query.get(*alien_entity) {
+                            let direction = (alien_position.0 - tower_position.0).normalize();
+                            let launch_p = tower_position.0 + direction + Vec3::new(0.0, 0.25, 0.0);
 
-                        let entity = commands.spawn((
-                            Name::from("Ball"),
-                            SceneBundle {
-                                scene: asset_server.load("ball_fab.glb#Scene0"),
-                                transform: Transform::from_xyz(launch_p.x, launch_p.y, launch_p.z),
-                                ..Default::default()
-                            },
-                            RigidBody::Dynamic,
-                            Collider::ball(1.0 / 16.0),
-                            LinearVelocity(direction * 12.0),
-                            CollisionLayers::new(
-                                [CollisionLayer::Ball],
-                                [
-                                    CollisionLayer::Impassable,
-                                    CollisionLayer::Floor,
-                                    CollisionLayer::Alien,
-                                    CollisionLayer::Player,
-                                    CollisionLayer::AlienSpawnPoint,
-                                    CollisionLayer::AlienGoal
-                                ]),
-                        )).id();
+                            let entity = commands.spawn((
+                                Name::from("Ball"),
+                                SceneBundle {
+                                    scene: asset_server.load("ball_fab.glb#Scene0"),
+                                    transform: Transform::from_xyz(launch_p.x, launch_p.y, launch_p.z),
+                                    ..Default::default()
+                                },
+                                RigidBody::Dynamic,
+                                Collider::ball(1.0 / 16.0),
+                                LinearVelocity(direction * 12.0),
+                                CollisionLayers::new(
+                                    [CollisionLayer::Ball],
+                                    [
+                                        CollisionLayer::Impassable,
+                                        CollisionLayer::Floor,
+                                        CollisionLayer::Alien,
+                                        CollisionLayer::Player,
+                                        CollisionLayer::AlienSpawnPoint,
+                                        CollisionLayer::AlienGoal
+                                    ]),
+                            )).id();
 
-                        commands.entity(entity).insert(Ball::new(entity));
-                        *action_state = ActionState::Success;
+                            commands.entity(entity).insert(Ball::new(entity));
+                            *action_state = ActionState::Success;
+                        }
                     }
                 }
             }
