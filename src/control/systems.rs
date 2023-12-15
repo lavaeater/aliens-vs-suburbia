@@ -2,7 +2,7 @@ use bevy::input::ButtonState;
 use bevy::input::keyboard::KeyboardInput;
 use bevy::prelude::{Component, Entity, EventReader, EventWriter, KeyCode, Query, With};
 use crate::animation::animation_plugin::{AnimationKey, GotoAnimationState, LeaveAnimationState};
-use crate::control::components::{ControlCommands, ControlDirection, Controller, ControlRotation, KeyboardController};
+use crate::control::components::{ControlCommands, ControlDirection, CharacterControl, ControlRotation, InputKeyboard};
 use crate::player::events::building_events::{ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode};
 
 #[derive(Component)]
@@ -43,7 +43,7 @@ impl Default for CharacterState {
 }
 pub fn input_control(
     mut key_evr: EventReader<KeyboardInput>,
-    mut query: Query<(Entity, &mut Controller), With<KeyboardController>>,
+    mut query: Query<(Entity, &mut CharacterControl), With<InputKeyboard>>,
     mut start_build_ew: EventWriter<EnterBuildMode>,
     mut execute_build: EventWriter<ExecuteBuild>,
     mut exit_build: EventWriter<ExitBuildMode>,

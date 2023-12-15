@@ -8,7 +8,7 @@ use big_brain::thinker::{ActionSpan, Actor};
 use crate::ai::components::approach_and_attack_player_components::{ApproachAndAttackPlayerData, ApproachAndAttackPlayerScore, ApproachPlayerAction, AttackPlayerAction};
 use crate::general::components::{Attack, CollisionLayer, Health};
 use crate::alien::components::general::{Alien, AlienSightShape};
-use crate::control::components::{ControlDirection, Controller, ControlRotation};
+use crate::control::components::{ControlDirection, CharacterControl, ControlRotation};
 use crate::player::components::Player;
 
 pub fn can_agent_see_player_system(
@@ -65,7 +65,7 @@ pub fn approach_and_attack_player_scorer_system(
 
 pub fn approach_player_action_system(
     mut action_query: Query<(&Actor, &mut ActionState, &ActionSpan), With<ApproachPlayerAction>>,
-    mut alien_query: Query<(&ApproachAndAttackPlayerData, &mut Controller, &Position, &Rotation), With<Alien>>,
+    mut alien_query: Query<(&ApproachAndAttackPlayerData, &mut CharacterControl, &Position, &Rotation), With<Alien>>,
     player_query: Query<&Position, With<Player>>,
 ) {
     for (Actor(actor), mut action_state, span) in action_query.iter_mut() {
@@ -128,7 +128,7 @@ pub fn approach_player_action_system(
 
 pub fn attack_player_action_system(
     mut action_query: Query<(&Actor, &mut ActionState, &ActionSpan), With<AttackPlayerAction>>,
-    mut alien_query: Query<(&ApproachAndAttackPlayerData, &mut Controller, &Position, &Attack), With<Alien>>,
+    mut alien_query: Query<(&ApproachAndAttackPlayerData, &mut CharacterControl, &Position, &Attack), With<Alien>>,
     mut player_query: Query<(&mut Health, &Position), With<Player>>,
 ) {
     for (Actor(actor), mut action_state, span) in action_query.iter_mut() {

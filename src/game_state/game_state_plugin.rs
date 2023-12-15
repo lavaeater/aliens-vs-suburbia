@@ -4,6 +4,7 @@ use bevy::time::Fixed;
 use crate::ai::ai_plugin::StatefulAiPlugin;
 use crate::alien::alien_plugin::StatefulAlienPlugin;
 use crate::animation::animation_plugin::AnimationPlugin;
+use crate::assets::assets_plugin::AssetsPlugin;
 use crate::building::build_mode_plugin::StatefulBuildModePlugin;
 use crate::camera::camera_plugin::StatefulCameraPlugin;
 use crate::control::control_plugin::StatefulControlPlugin;
@@ -30,6 +31,7 @@ impl Plugin for GamePlugin {
             .add_event::<GotoState>()
             .add_event::<AddHealthBar>()
             .add_plugins((
+                AssetsPlugin,
                 StatefulMapPlugin,
                 UiPlugin,
                 StatefulAiPlugin,
@@ -39,7 +41,7 @@ impl Plugin for GamePlugin {
                 StatefulControlPlugin,
                 StatefulCameraPlugin,
                 ClearGameEntitiesPlugin,
-                PlayerPlugin,
+                PlayerPlugin::default(),
                 ScoreKeeperPlugin,
             ))
             .add_systems(

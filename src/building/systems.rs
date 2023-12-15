@@ -7,9 +7,9 @@ use bevy::prelude::{Commands, Entity, EventReader, EventWriter, Query, Res, With
 use bevy::scene::{SceneBundle, SceneInstance};
 use bevy_xpbd_3d::components::{Collider, CollisionLayers, LockedAxes, RigidBody, Rotation, Sensor};
 use bevy_xpbd_3d::prelude::Position;
-use crate::control::components::{ControlCommands, Controller};
+use crate::control::components::{ControlCommands, CharacterControl};
 use crate::general::components::{CollisionLayer, Health};
-use crate::general::components::map_components::{CurrentTile, ModelDefinitions};
+use crate::general::components::map_components::{CurrentTile, MapModelDefinitions};
 use crate::general::resources::map_resources::MapGraph;
 use crate::general::systems::map_systems::TileDefinitions;
 use crate::player::components::{BuildingIndicator, IsBuildIndicator, IsBuilding, IsObstacle};
@@ -74,7 +74,7 @@ pub fn spawn_building_indicator(
 
 pub fn exit_build_mode(
     mut exit_build_mode_evr: EventReader<ExitBuildMode>,
-    mut player_build_indicator_query: Query<(&BuildingIndicator, &mut Controller), With<IsBuilding>>,
+    mut player_build_indicator_query: Query<(&BuildingIndicator, &mut CharacterControl), With<IsBuilding>>,
     mut commands: Commands,
 ) {
     for stop_event in exit_build_mode_evr.read() {
@@ -93,7 +93,7 @@ pub fn execute_build(
     player_build_indicator_query: Query<&BuildingIndicator>,
     building_indicator: Query<(&Position, &CurrentTile), With<IsBuildIndicator>>,
     map_graph: Res<MapGraph>,
-    model_defs: Res<ModelDefinitions>,
+    model_defs: Res<MapModelDefinitions>,
     mut build_tower_ew: EventWriter<BuildTower>,
 ) {
     for execute_event in execute_evr.read() {
@@ -134,7 +134,7 @@ pub fn change_build_indicator(
     mut builder_query: Query<(&mut BuildingIndicator, &Position), With<IsBuilding>>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    model_defs: Res<ModelDefinitions>,
+    model_defs: Res<MapModelDefinitions>,
     tile_defs: Res<TileDefinitions>
 ) {
     for change_build_event in change_build_indicator_evr.read() {
@@ -229,7 +229,7 @@ pub fn build_tower_system(
     mut commands: Commands,
     mut add_health_bar_ew: EventWriter<AddHealthBar>,
     asset_server: Res<AssetServer>,
-    model_defs: Res<ModelDefinitions>,
+    model_defs: Res<MapModelDefinitions>,
     tile_defs: Res<TileDefinitions>,
 ) {
     for build_tower in build_tower_er.read() {
