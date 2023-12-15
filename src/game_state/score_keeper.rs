@@ -58,7 +58,7 @@ impl Default for LevelTracker {
             spawn_rate_per_minute: 10.0,
             level_state: LevelState::NotStarted,
             aliens_reached_goal: 0,
-            aliens_win_cut_off: 6,
+            aliens_win_cut_off: 600,
         }
     }
 }
