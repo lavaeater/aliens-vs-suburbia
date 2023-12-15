@@ -7,7 +7,7 @@ use crate::control::systems::CharacterState;
 use crate::game_state::score_keeper::Score;
 use crate::general::components::{CollisionLayer, Health};
 use crate::general::components::map_components::CurrentTile;
-use crate::player::components::Player;
+use crate::player::components::{AutoAim, Player};
 
 #[derive(Bundle)]
 pub struct PlayerBundle {
@@ -27,6 +27,7 @@ pub struct PlayerBundle {
     current_animation_key: CurrentAnimationKey,
     character_state: CharacterState,
     score: Score,
+    auto_aim: AutoAim,
 }
 
 impl PlayerBundle {
@@ -60,6 +61,7 @@ impl PlayerBundle {
             current_animation_key: CurrentAnimationKey::new("players".into(), AnimationKey::Walking),
             character_state: CharacterState::default(),
             score: Score::new(),
+            auto_aim: AutoAim,
         }
     }
 }
