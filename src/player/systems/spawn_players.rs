@@ -1,10 +1,11 @@
 use bevy::asset::{AssetServer};
-use bevy::hierarchy::{BuildChildren, Children, Parent};
+use bevy::hierarchy::{BuildChildren, Children};
 use bevy::math::{EulerRot, Quat, Vec3, vec3};
 use bevy::prelude::{Commands, Component, Entity, EventReader, EventWriter, Query, Res, Transform, Visibility, With};
 use bevy::scene::SceneBundle;
 use bevy_xpbd_3d::components::{Collider, CollisionLayers};
 use bevy_xpbd_3d::prelude::Sensor;
+use crate::assets::assets_plugin::GameAssets;
 use crate::game_state::score_keeper::{GameTrackingEvent};
 use crate::general::components::{CollisionLayer};
 use crate::general::events::map_events::SpawnPlayer;
@@ -28,27 +29,10 @@ impl FixSceneTransform {
     }
 }
 
-#[derive(Component)]
-pub struct FixColliderTransform {
-    pub translation: Vec3,
-    pub rotation: Quat,
-    pub scale: Vec3,
-}
-
-impl FixColliderTransform {
-    pub fn new(translation: Vec3, rotation: Quat, scale: Vec3) -> Self {
-        Self {
-            translation,
-            rotation,
-            scale,
-        }
-    }
-}
-
 pub fn spawn_players(
     mut spawn_player_event_reader: EventReader<SpawnPlayer>,
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    game_assets: Res<GameAssets>,
     mut add_health_bar_ew: EventWriter<AddHealthBar>,
     mut player_addedd_ew: EventWriter<GameTrackingEvent>,
 ) {
@@ -62,7 +46,7 @@ pub fn spawn_players(
                 Vec3::new(0.5, 0.5, 0.5),
             ),
             SceneBundle {
-                scene: asset_server.load("girl/girl.glb#Scene0"),
+                scene: game_assets.girl_scene.clone(),
                 transform: Transform::from_xyz(spawn_player.position.x, spawn_player.position.y, spawn_player.position.z),
                 ..Default::default()
             },

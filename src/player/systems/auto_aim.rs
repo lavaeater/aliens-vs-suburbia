@@ -1,7 +1,7 @@
 use bevy::math::{Vec3Swizzles};
-use bevy::prelude::{Color, Gizmos, GlobalTransform, Query, Res, With};
-use bevy::time::Time;
+use bevy::prelude::{Color, Gizmos, GlobalTransform, Query, With};
 use crate::alien::components::general::Alien;
+use crate::constants::PLAYER_FOV_DOT;
 use crate::control::components::{CharacterControl, ControlCommands};
 use crate::player::components::{AutoAim, Player};
 
@@ -19,7 +19,7 @@ pub fn auto_aim(
                             .forward()
                             .xz()
                             .dot(
-                                (t.translation().xz() - player_transform.translation().xz()).normalize()) > 0.8)
+                                (t.translation().xz() - player_transform.translation().xz()).normalize()) > PLAYER_FOV_DOT)
                     .min_by(|a, b|
                         player_transform
                             .translation()

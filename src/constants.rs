@@ -1,1 +1,1 @@
-pub const PLAYER_ANGLE: f32 = 90.0;
+pub const PLAYER_FOV_DOT: f32 = 0.8;

@@ -4,6 +4,7 @@ use bevy::prelude::{Commands, Entity, EventWriter, Query, Res, Transform};
 use bevy::scene::SceneBundle;
 use bevy::time::Time;
 use bevy_xpbd_3d::components::{Collider, CollisionLayers, LinearVelocity, Position, RigidBody};
+use crate::assets::assets_plugin::GameAssets;
 use crate::control::components::{ControlCommands, CharacterControl};
 use crate::game_state::score_keeper::{GameTrackingEvent};
 use crate::general::components::{Ball, CollisionLayer};
@@ -14,7 +15,7 @@ pub fn throwing(
     time_res: Res<Time>,
     mut query: Query<(Entity, &Player, &Position, &AutoAim, &mut CharacterControl)>,
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    game_assets: Res<GameAssets>,
     mut game_ew: EventWriter<GameTrackingEvent>,
 ) {
     for (entity, _player, position, auto_aim, mut controller) in query.iter_mut() {
@@ -26,7 +27,7 @@ pub fn throwing(
                 commands.spawn((
                     Ball::new(entity),
                     SceneBundle {
-                        scene: asset_server.load("ball_fab.glb#Scene0"),
+                        scene: game_assets.ball_scene.clone(),
                         transform: Transform::from_xyz(launch_p.x, launch_p.y, launch_p.z),
                         ..Default::default()
                     },

@@ -10,10 +10,11 @@ use flagset::{flags, FlagSet};
 use pathfinding::grid::Grid;
 use crate::alien::components::general::AlienCounter;
 use crate::general::components::CollisionLayer;
-use crate::general::components::map_components::{AlienGoal, AlienSpawnPoint, CurrentTile, Floor, ModelDefinitions, Wall};
+use crate::general::components::map_components::{AlienGoal, AlienSpawnPoint, CurrentTile, Floor, MapModelDefinitions, Wall};
 use crate::general::events::map_events::{LoadMap, SpawnPlayer};
 use crate::general::resources::map_resources::MapGraph;
 use bevy::math::EulerRot;
+use crate::assets::assets_plugin::GameAssets;
 use crate::building::systems::ToWorldCoordinates;
 use crate::player::components::IsBuildIndicator;
 use crate::player::events::building_events::{AddTile, RemoveTile};
@@ -180,8 +181,9 @@ pub fn map_loader(
     mut alien_counter: ResMut<AlienCounter>,
     mut map_graph: ResMut<MapGraph>,
     asset_server: Res<AssetServer>,
+    game_assets: Res<GameAssets>,
     tile_defs: Res<TileDefinitions>,
-    model_defs: Res<ModelDefinitions>,
+    model_defs: Res<MapModelDefinitions>,
 ) {
     for _load_map in load_map_event_reader.read() {
         let m = [
@@ -392,7 +394,7 @@ pub fn map_loader(
                     Name::from(format!("Alien Spawn Point{}:{}", tile.x, tile.y)),
                     AlienSpawnPoint::new(30.0),
                     SceneBundle {
-                        scene: asset_server.load("player.glb#Scene0"),
+                        scene: game_assets.alien_construct.clone(),
                         ..Default::default()
                     },
                     RigidBody::Static,
@@ -407,7 +409,7 @@ pub fn map_loader(
                     Name::from(format!("Alien Goal {}:{}", tile.x, tile.y)),
                     AlienGoal::new(tile.x as usize, tile.y as usize), //ooh, we need to handle this in the future...
                     SceneBundle {
-                        scene: asset_server.load("player.glb#Scene0"),
+                        scene: game_assets.alien_construct.clone(),
                         ..Default::default()
                     },
                     RigidBody::Static,
