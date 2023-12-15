@@ -13,10 +13,13 @@ pub struct IsBuilding;
 pub struct BuildingIndicator(pub Entity, pub i32);
 
 #[derive(Hash, PartialEq, Eq, Clone, Reflect, Component)]
-pub struct IsBuildIndicator {}
+pub struct IsBuildIndicator;
 
 #[derive(Hash, PartialEq, Eq, Clone, Reflect, Component)]
-pub struct IsObstacle {}
+pub struct IsObstacle;
 
 #[derive(Hash, PartialEq, Eq, Clone, Reflect, Component)]
-pub struct ShootingTower {}
+pub struct ShootingTower;
+
+#[derive(Component)]
+pub struct AutoAim;
