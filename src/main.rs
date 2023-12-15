@@ -8,7 +8,7 @@ use crate::ai::components::avoid_wall_components::AvoidWallsData;
 use camera::components::CameraOffset;
 use crate::general::components::Health;
 use crate::general::components::map_components::CurrentTile;
-use control::components::Controller;
+use control::components::CharacterControl;
 use crate::game_state::game_state_plugin::GamePlugin;
 
 pub(crate) mod player;
@@ -29,7 +29,7 @@ fn main() {
     App::new()
         .register_type::<CameraOffset>()
         .register_type::<CurrentTile>()
-        .register_type::<Controller>()
+        .register_type::<CharacterControl>()
         .register_type::<Health>()
         .register_type::<AvoidWallsData>()
         .register_type::<ApproachAndAttackPlayerData>()

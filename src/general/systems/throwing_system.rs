@@ -5,7 +5,7 @@ use bevy::scene::SceneBundle;
 use bevy::time::Time;
 use bevy_xpbd_3d::components::{Collider, CollisionLayers, LinearVelocity, Position, RigidBody};
 use bevy_xpbd_3d::prelude::Rotation;
-use crate::control::components::{ControlCommands, Controller};
+use crate::control::components::{ControlCommands, CharacterControl};
 use crate::game_state::score_keeper::{GameTrackingEvent};
 use crate::general::components::{Ball, CollisionLayer};
 use crate::general::components::map_components::CoolDown;
@@ -13,7 +13,7 @@ use crate::player::components::Player;
 
 pub fn throwing(
     time_res: Res<Time>,
-    mut query: Query<(Entity, &Player, &Position, &Rotation, &mut Controller)>,
+    mut query: Query<(Entity, &Player, &Position, &Rotation, &mut CharacterControl)>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut game_ew: EventWriter<GameTrackingEvent>,

@@ -6,7 +6,7 @@ use bevy::prelude::{Commands, Component, Entity, EventReader, EventWriter, Query
 use bevy::scene::SceneBundle;
 use bevy_xpbd_3d::components::{AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
 use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
-use crate::control::components::{Controller, DynamicMovement, KeyboardController};
+use crate::control::components::{CharacterControl, DynamicMovement, KeyboardInput};
 use crate::control::systems::CharacterState;
 use crate::game_state::score_keeper::{GameTrackingEvent, Score};
 use crate::general::components::{CollisionLayer, Health};
@@ -52,8 +52,8 @@ pub fn spawn_players(
                     180.0f32.to_radians(), 0.0, 0.0),
                 Vec3::new(0.5, 0.5, 0.5),
             ),
-            KeyboardController {},
-            Controller::new(3.0, 3.0, 60.0),
+            KeyboardInput {},
+            CharacterControl::new(3.0, 3.0, 60.0),
             DynamicMovement {},
             SceneBundle {
                 scene: asset_server.load("girl/girl.glb#Scene0"),

@@ -14,7 +14,7 @@ use crate::ai::components::destroy_the_map_components::{DestroyTheMapAction, Des
 use crate::ai::components::move_towards_goal_components::{MoveTowardsGoalAction, MoveTowardsGoalData, MoveTowardsGoalScore};
 use crate::alien::components::general::{Alien, AlienCounter, AlienSightShape};
 use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
-use crate::control::components::{Controller, DynamicMovement};
+use crate::control::components::{CharacterControl, DynamicMovement};
 use crate::game_state::score_keeper::GameTrackingEvent;
 use crate::general::components::{Attack, CollisionLayer, Health, HittableTarget};
 use crate::general::components::map_components::{AlienSpawnPoint, CoolDown, CurrentTile};
@@ -84,7 +84,7 @@ pub fn spawn_aliens(
                         180.0f32.to_radians(), 0.0, 0.0),
                     Vec3::new(0.5, 0.5, 0.5),
                 ),
-                Controller::new(1.0, 3.0, 1.0),
+                CharacterControl::new(1.0, 3.0, 1.0),
                 SceneBundle {
                     scene: asset_server.load("quaternius/alien.glb#Scene0"),
                     transform: alien_transform,

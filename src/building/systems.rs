@@ -7,7 +7,7 @@ use bevy::prelude::{Commands, Entity, EventReader, EventWriter, Query, Res, With
 use bevy::scene::{SceneBundle, SceneInstance};
 use bevy_xpbd_3d::components::{Collider, CollisionLayers, LockedAxes, RigidBody, Rotation, Sensor};
 use bevy_xpbd_3d::prelude::Position;
-use crate::control::components::{ControlCommands, Controller};
+use crate::control::components::{ControlCommands, CharacterControl};
 use crate::general::components::{CollisionLayer, Health};
 use crate::general::components::map_components::{CurrentTile, ModelDefinitions};
 use crate::general::resources::map_resources::MapGraph;
@@ -74,7 +74,7 @@ pub fn spawn_building_indicator(
 
 pub fn exit_build_mode(
     mut exit_build_mode_evr: EventReader<ExitBuildMode>,
-    mut player_build_indicator_query: Query<(&BuildingIndicator, &mut Controller), With<IsBuilding>>,
+    mut player_build_indicator_query: Query<(&BuildingIndicator, &mut CharacterControl), With<IsBuilding>>,
     mut commands: Commands,
 ) {
     for stop_event in exit_build_mode_evr.read() {

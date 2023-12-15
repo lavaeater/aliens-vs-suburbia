@@ -7,7 +7,7 @@ use bevy_xpbd_3d::prelude::{SpatialQuery, SpatialQueryFilter};
 use bevy::math::{EulerRot, Quat, Vec3};
 use bevy::time::Time;
 use crate::ai::components::avoid_wall_components::{AvoidWallsAction, AvoidWallScore, AvoidWallsData};
-use crate::control::components::{Controller, ControlRotation};
+use crate::control::components::{CharacterControl, ControlRotation};
 use crate::general::components::CollisionLayer;
 use crate::general::components::map_components::CoolDown;
 
@@ -81,7 +81,7 @@ pub fn avoid_walls_action_system(
     // A query on all current MoveToWaterSource actions.
     res: Res<Time>,
     mut action_query: Query<(&Actor, &mut ActionState, &ActionSpan), With<AvoidWallsAction>>,
-    mut actor_query: Query<(&mut Controller, &mut AvoidWallsData)>,
+    mut actor_query: Query<(&mut CharacterControl, &mut AvoidWallsData)>,
 ) {
     // Loop through all actions, just like you'd loop over all entities in any other query.
     for (actor, mut action_state, span) in action_query.iter_mut() {

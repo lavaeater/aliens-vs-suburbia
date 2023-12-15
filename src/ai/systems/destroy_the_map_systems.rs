@@ -14,7 +14,7 @@ use crate::general::systems::map_systems::TileDefinitions;
 use itertools::Itertools;
 use pathfinding::num_traits::Signed;
 use crate::building::systems::ToWorldCoordinates;
-use crate::control::components::{ControlDirection, Controller, ControlRotation};
+use crate::control::components::{ControlDirection, CharacterControl, ControlRotation};
 use crate::general::components::Health;
 
 pub fn agent_cant_find_path(
@@ -45,7 +45,7 @@ pub fn destroy_the_map_action_system(
     mut commands: Commands,
     mut map_graph: ResMut<MapGraph>,
     mut action_query: Query<(&Actor, &mut ActionState, &ActionSpan), With<DestroyTheMapAction>>,
-    mut alien_query: Query<(&mut MustDestroyTheMap, &mut Controller, &Position, &Rotation, &CurrentTile), With<Alien>>,
+    mut alien_query: Query<(&mut MustDestroyTheMap, &mut CharacterControl, &Position, &Rotation, &CurrentTile), With<Alien>>,
     mut obstacle_query: Query<(&IsObstacle, &CurrentTile, &mut Health)>,
     tile_definitions: Res<TileDefinitions>,
 ) {
