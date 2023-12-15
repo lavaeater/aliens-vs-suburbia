@@ -3,7 +3,7 @@ use bevy::utils::HashSet;
 use crate::general::components::map_components::CoolDown;
 
 #[derive(Component, Reflect)]
-pub struct KeyboardInput {}
+pub struct InputKeyboard;
 
 #[derive(Hash, PartialEq, Eq, Clone, Reflect)]
 pub enum ControlCommands {
@@ -95,8 +95,8 @@ impl CoolDown for CharacterControl {
 
 
 #[derive(Component)]
-pub struct DynamicMovement {}
+pub struct DynamicMovement;
 
 
 #[derive(Component)]
-pub struct KinematicMovement {}
+pub struct KinematicMovement;

@@ -1,18 +1,13 @@
 use bevy::asset::{AssetServer};
-use bevy::core::Name;
 use bevy::hierarchy::{BuildChildren, Children};
 use bevy::math::{EulerRot, Quat, Vec3};
 use bevy::prelude::{Commands, Component, Entity, EventReader, EventWriter, Query, Res, Transform, Visibility, With};
 use bevy::scene::SceneBundle;
-use bevy_xpbd_3d::components::{AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
-use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
-use crate::control::components::{CharacterControl, DynamicMovement, KeyboardInput};
-use crate::control::systems::CharacterState;
-use crate::game_state::score_keeper::{GameTrackingEvent, Score};
-use crate::general::components::{CollisionLayer, Health};
-use crate::general::components::map_components::CurrentTile;
+use bevy_xpbd_3d::components::{Collider};
+use crate::game_state::score_keeper::{GameTrackingEvent};
+use crate::general::components::{CollisionLayer};
 use crate::general::events::map_events::SpawnPlayer;
-use crate::player::components::Player;
+use crate::player::bundle::PlayerBundle;
 use crate::ui::spawn_ui::AddHealthBar;
 
 #[derive(Component)]
@@ -41,10 +36,6 @@ pub fn spawn_players(
 ) {
     for spawn_player in spawn_player_event_reader.read() {
         let player = commands.spawn((
-            Name::from("Player"),
-            Player {
-              key: "Player One".into()
-            },
             FixSceneTransform::new(
                 Vec3::new(0.0, -0.37, 0.0),
                 Quat::from_euler(
@@ -52,9 +43,6 @@ pub fn spawn_players(
                     180.0f32.to_radians(), 0.0, 0.0),
                 Vec3::new(0.5, 0.5, 0.5),
             ),
-            KeyboardInput {},
-            CharacterControl::new(3.0, 3.0, 60.0),
-            DynamicMovement {},
             SceneBundle {
                 scene: asset_server.load("girl/girl.glb#Scene0"),
                 transform: Transform::from_xyz(spawn_player.position.x, spawn_player.position.y, spawn_player.position.z),
@@ -62,13 +50,10 @@ pub fn spawn_players(
                 //     .with_scale(Vec3::new(0.25, 0.25, 0.25)),
                 ..Default::default()
             },
-            Friction::from(0.0),
-            AngularDamping(1.0),
-            LinearDamping(0.9),
-            RigidBody::Dynamic,
-            LockedAxes::new().lock_rotation_x().lock_rotation_z(),
-            CollisionLayers::new(
-                [CollisionLayer::Player],
+            PlayerBundle::new(
+                "player",
+                "Player One",
+                [CollisionLayer::Player].into(),
                 [
                     CollisionLayer::Ball,
                     CollisionLayer::Impassable,
@@ -77,13 +62,8 @@ pub fn spawn_players(
                     CollisionLayer::Player,
                     CollisionLayer::AlienSpawnPoint,
                     CollisionLayer::AlienGoal
-                ]),
-            Health::default(),
-            CurrentTile::default(),
-        )).insert((
-            CurrentAnimationKey::new("players".into(), AnimationKey::Walking),
-            CharacterState::default(),
-            Score::default(),
+                ].into()
+            ),
         )).with_children(|children|
             { // Spawn the child colliders positioned relative to the rigid body
                 children.spawn((Collider::capsule(0.4, 0.2), Transform::from_xyz(0.0, 0.0, 0.0)));

@@ -171,7 +171,7 @@ pub fn get_parent_recursive(entity: Entity, parent_query: &Query<&Parent>) -> Op
     }
 }
 
-pub fn get_child_with_component_recursive<T: Component>(entity: Entity, child_query: &Query<&Children>, mut component_query: &Query<&mut T>) -> Option<Entity> {
+pub fn get_child_with_component_recursive<T: Component>(entity: Entity, child_query: &Query<&Children>, component_query: &Query<&mut T>) -> Option<Entity> {
     if component_query.contains(entity) {
         Some(entity)
     } else {

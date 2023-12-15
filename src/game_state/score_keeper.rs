@@ -17,6 +17,16 @@ pub struct Score {
     pub shots_hit: u32,
 }
 
+impl Score {
+    pub fn new() -> Self {
+        Self {
+            kills: 0,
+            shots_fired: 0,
+            shots_hit: 0,
+        }
+    }
+}
+
 
 #[derive(Debug)]
 pub enum LevelState {
