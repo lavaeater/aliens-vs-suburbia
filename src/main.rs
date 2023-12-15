@@ -24,6 +24,7 @@ mod map;
 pub(crate) mod game_state;
 mod animation;
 mod constants;
+mod assets;
 
 
 fn main() {
@@ -42,7 +43,7 @@ fn main() {
                     level: log::Level::INFO,
                 }))
         .add_plugins(PhysicsPlugins::default())
-        .add_plugins(PhysicsDebugPlugin::default())
+        // .add_plugins(PhysicsDebugPlugin::default())
         // .add_plugins(WorldInspectorPlugin::new())
         .add_plugins(GamePlugin)
         .run();

@@ -200,6 +200,7 @@ pub fn map_loader(
             [1, 1, 1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 9, 1, 1, 1],
             [1, 1, 1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1, 1, 1],
@@ -210,7 +211,6 @@ pub fn map_loader(
             [1, 1, 1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1, 1, 1],
-            [1, 9, 1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1, 1, 1],
         ];
         let rows = m.len();
@@ -390,7 +390,7 @@ pub fn map_loader(
                 alien_counter.max_count = 100;
                 commands.spawn((
                     Name::from(format!("Alien Spawn Point{}:{}", tile.x, tile.y)),
-                    AlienSpawnPoint::new(10.0),
+                    AlienSpawnPoint::new(0.1),
                     SceneBundle {
                         scene: asset_server.load("player.glb#Scene0"),
                         ..Default::default()

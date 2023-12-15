@@ -106,7 +106,8 @@ pub fn spawn_aliens(
                         CollisionLayer::Alien,
                         CollisionLayer::Player,
                         CollisionLayer::AlienGoal,
-                        CollisionLayer::Sensor
+                        CollisionLayer::Sensor,
+                        CollisionLayer::PlayerAimSensor,
                     ]),
             )).insert((
             CurrentTile::default(),

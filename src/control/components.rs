@@ -5,7 +5,7 @@ use crate::general::components::map_components::CoolDown;
 #[derive(Component, Reflect)]
 pub struct InputKeyboard;
 
-#[derive(Hash, PartialEq, Eq, Clone, Reflect)]
+#[derive(Hash, PartialEq, Eq, Clone, Reflect, Copy)]
 pub enum ControlCommands {
     Throw,
     Jump,

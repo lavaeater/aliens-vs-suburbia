@@ -3,7 +3,7 @@ use bevy::hierarchy::{BuildChildren, Children, Parent};
 use bevy::math::{EulerRot, Quat, Vec3, vec3};
 use bevy::prelude::{Commands, Component, Entity, EventReader, EventWriter, Query, Res, Transform, Visibility, With};
 use bevy::scene::SceneBundle;
-use bevy_xpbd_3d::components::{Collider};
+use bevy_xpbd_3d::components::{Collider, CollisionLayers};
 use bevy_xpbd_3d::prelude::Sensor;
 use crate::game_state::score_keeper::{GameTrackingEvent};
 use crate::general::components::{CollisionLayer};
@@ -64,8 +64,6 @@ pub fn spawn_players(
             SceneBundle {
                 scene: asset_server.load("girl/girl.glb#Scene0"),
                 transform: Transform::from_xyz(spawn_player.position.x, spawn_player.position.y, spawn_player.position.z),
-                //     .with_rotation(Quat::from_euler(EulerRot::YXZ, 180.0f32.to_radians(), 0.0, 0.0))
-                //     .with_scale(Vec3::new(0.25, 0.25, 0.25)),
                 ..Default::default()
             },
             PlayerBundle::new(
@@ -89,11 +87,16 @@ pub fn spawn_players(
                         Collider::capsule(0.4, 0.2),
                         Transform::from_xyz(0.0, 0.0, 0.0)));
                 children.spawn((
+                    CollisionLayers::new(
+                        [CollisionLayer::PlayerAimSensor],
+                        [
+                            CollisionLayer::Alien,
+                        ]),
                     Sensor,
                     Collider::triangle(vec3(0.0, 0.0, 0.0), vec3(2.0, 0.0, 0.0), vec3(0.0, 0.0, 2.0)),
-                    Transform::from_xyz(0.0, 0.0, 0.0).with_rotation(Quat::from_euler(
+                    Transform::from_xyz(0.0, 0.0, -0.25).with_rotation(Quat::from_euler(
                         EulerRot::YXZ,
-                        135.0f32.to_radians(), 0.0, 0.0),)
+                        135.0f32.to_radians(), 0.0, 0.0), )
                 ));
             }).id();
         add_health_bar_ew.send(AddHealthBar {
@@ -118,21 +121,6 @@ pub fn fix_scene_transform(
                 transform.scale = fix_scene_transform.scale;
                 commands.entity(parent).remove::<FixSceneTransform>();
             }
-        }
-    }
-}
-
-pub fn fix_collider_transform(
-    mut commands: Commands,
-    mut fix_collider_query: Query<(Entity, &FixColliderTransform, &mut Transform, &Parent)>,
-    parent_query: Query<&Transform>,
-) {
-    for (collider_entity, fix_collider, mut collider_transform, parent) in fix_collider_query.iter_mut() {
-        if let Ok(parent) = parent_query.get(parent.get()) {
-            collider_transform.translation = fix_collider.translation;
-            collider_transform.rotation = fix_collider.rotation;
-            collider_transform.scale = fix_collider.scale;
-            commands.entity(collider_entity).remove::<FixColliderTransform>();
         }
     }
 }

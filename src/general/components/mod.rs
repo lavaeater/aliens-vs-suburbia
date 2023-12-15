@@ -36,6 +36,7 @@ pub enum CollisionLayer {
     AlienGoal,
     BuildIndicator,
     Sensor,
+    PlayerAimSensor,
 }
 
 #[derive(Component, Clone, Debug, PartialEq)]
