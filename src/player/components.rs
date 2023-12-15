@@ -1,3 +1,4 @@
+use bevy::math::Vec3;
 use bevy::prelude::{Component, Entity};
 use bevy::reflect::Reflect;
 
@@ -22,4 +23,4 @@ pub struct IsObstacle;
 pub struct ShootingTower;
 
 #[derive(Component)]
-pub struct AutoAim;
+pub struct AutoAim(pub Vec3);

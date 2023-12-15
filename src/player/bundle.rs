@@ -1,4 +1,5 @@
 use bevy::core::Name;
+use bevy::math::Vec3;
 use bevy::prelude::{Bundle};
 use bevy_xpbd_3d::components::{AngularDamping, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
 use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
@@ -61,7 +62,7 @@ impl PlayerBundle {
             current_animation_key: CurrentAnimationKey::new("players".into(), AnimationKey::Walking),
             character_state: CharacterState::default(),
             score: Score::new(),
-            auto_aim: AutoAim,
+            auto_aim: AutoAim(Vec3::Z),
         }
     }
 }

@@ -1,0 +1,1 @@
+pub const PLAYER_ANGLE: f32 = 90.0;
