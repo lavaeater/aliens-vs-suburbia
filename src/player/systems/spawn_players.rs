@@ -1,10 +1,10 @@
-use bevy::asset::{AssetServer};
 use bevy::hierarchy::{BuildChildren, Children};
-use bevy::math::{EulerRot, Quat, Vec3, vec3};
-use bevy::prelude::{Commands, Component, Entity, EventReader, EventWriter, Query, Res, Transform, Visibility, With};
+use bevy::math::{EulerRot, Quat, Vec3};
+use bevy::prelude::{Color, Commands, Component, Entity, EventReader, EventWriter, Query, Res, Transform, Visibility, With};
 use bevy::scene::SceneBundle;
-use bevy_xpbd_3d::components::{Collider, CollisionLayers};
-use bevy_xpbd_3d::prelude::Sensor;
+use bevy::utils::default;
+use bevy_mod_outline::{OutlineBundle, OutlineVolume};
+use bevy_xpbd_3d::components::{Collider};
 use crate::assets::assets_plugin::GameAssets;
 use crate::game_state::score_keeper::{GameTrackingEvent};
 use crate::general::components::{CollisionLayer};
@@ -64,24 +64,20 @@ pub fn spawn_players(
                     CollisionLayer::AlienGoal
                 ].into(),
             ),
+            OutlineBundle {
+                outline: OutlineVolume {
+                    visible: true,
+                    width: 1.0,
+                    colour: Color::BLACK,
+                },
+                ..default()
+            }
         )).with_children(|children|
             { // Spawn the child colliders positioned relative to the rigid body
                 children.spawn(
                     (
                         Collider::capsule(0.4, 0.2),
                         Transform::from_xyz(0.0, 0.0, 0.0)));
-                children.spawn((
-                    CollisionLayers::new(
-                        [CollisionLayer::PlayerAimSensor],
-                        [
-                            CollisionLayer::Alien,
-                        ]),
-                    Sensor,
-                    Collider::triangle(vec3(0.0, 0.0, 0.0), vec3(2.0, 0.0, 0.0), vec3(0.0, 0.0, 2.0)),
-                    Transform::from_xyz(0.0, 0.0, -0.25).with_rotation(Quat::from_euler(
-                        EulerRot::YXZ,
-                        135.0f32.to_radians(), 0.0, 0.0), )
-                ));
             }).id();
         add_health_bar_ew.send(AddHealthBar {
             entity: player,
