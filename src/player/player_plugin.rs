@@ -1,5 +1,5 @@
 use bevy::app::{App, Plugin, Update};
-use bevy::prelude::{Commands, in_state, IntoSystemConfigs, Local, Query, Res, SceneSpawner};
+use bevy::prelude::{Commands, Component, Entity, in_state, IntoSystemConfigs, Query, Res, SceneSpawner, Without};
 use bevy::scene::SceneInstance;
 use bevy_mod_outline::{AutoGenerateOutlineNormalsPlugin, InheritOutlineBundle, OutlinePlugin};
 use crate::game_state::GameState;
@@ -33,22 +33,22 @@ impl Plugin for PlayerPlugin {
     }
 }
 
+#[derive(Component)]
+pub struct OutlineDone;
+
 fn setup_scene_once_loaded(
     mut commands: Commands,
-    scene_query: Query<&SceneInstance>,
+    scene_query: Query<(Entity, &SceneInstance), Without<OutlineDone>>,
     scene_manager: Res<SceneSpawner>,
-    mut done: Local<bool>,
 ) {
-    if !*done {
-        if let Ok(scene) = scene_query.get_single() {
-            if scene_manager.instance_is_ready(**scene) {
-                for entity in scene_manager.iter_instance_entities(**scene) {
-                    commands
-                        .entity(entity)
-                        .insert(InheritOutlineBundle::default());
-                }
-                *done = true;
+    for (scene_entity, scene) in scene_query.iter() {
+        if scene_manager.instance_is_ready(**scene) {
+            for entity in scene_manager.iter_instance_entities(**scene) {
+                commands
+                    .entity(entity)
+                    .insert(InheritOutlineBundle::default());
             }
+            commands.entity(scene_entity).insert(OutlineDone);
         }
     }
 }

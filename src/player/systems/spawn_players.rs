@@ -67,8 +67,8 @@ pub fn spawn_players(
             OutlineBundle {
                 outline: OutlineVolume {
                     visible: true,
-                    width: 3.0,
-                    colour: Color::RED,
+                    width: 1.0,
+                    colour: Color::BLACK,
                 },
                 ..default()
             }
