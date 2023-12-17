@@ -1,10 +1,6 @@
-use bevy::animation::AnimationClip;
-use bevy::asset::{AssetServer, Handle};
-use bevy::hierarchy::Parent;
 use bevy::math::{EulerRot, Quat, Vec3};
-use bevy::prelude::{Added, AnimationPlayer, Commands, Component, Entity, EventReader, EventWriter, Name, Query, Reflect, Res, ResMut, Resource, Time, Transform};
+use bevy::prelude::{ Commands, EventReader, EventWriter, Name, Query, Res, ResMut, Time, Transform};
 use bevy::scene::SceneBundle;
-use bevy::utils::{HashMap};
 use bevy_xpbd_3d::components::{AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
 use bevy_xpbd_3d::math::PI;
 use bevy_xpbd_3d::prelude::Position;
@@ -16,7 +12,9 @@ use crate::ai::components::avoid_wall_components::{AvoidWallsAction, AvoidWallSc
 use crate::ai::components::destroy_the_map_components::{DestroyTheMapAction, DestroyTheMapScore};
 use crate::ai::components::move_towards_goal_components::{MoveTowardsGoalAction, MoveTowardsGoalData, MoveTowardsGoalScore};
 use crate::alien::components::general::{Alien, AlienCounter, AlienSightShape};
-use crate::control::components::{Controller, DynamicMovement};
+use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
+use crate::assets::assets_plugin::GameAssets;
+use crate::control::components::{CharacterControl, DynamicMovement};
 use crate::game_state::score_keeper::GameTrackingEvent;
 use crate::general::components::{Attack, CollisionLayer, Health, HittableTarget};
 use crate::general::components::map_components::{AlienSpawnPoint, CoolDown, CurrentTile};
@@ -38,78 +36,13 @@ pub fn alien_spawner_system(
     }
 }
 
-#[derive(Resource)]
-pub struct AnimationStore<S: Into<String>> {
-    pub anims: HashMap<S, HashMap<AnimationKey, Handle<AnimationClip>>>,
-}
-
-#[derive(Eq, Hash, PartialEq, Copy, Clone, Debug, Reflect)]
-pub enum AnimationKey {
-    Clapping,
-    Death,
-    Idle,
-    IdleHold,
-    Jump,
-    Punch,
-    Run,
-    RunHold,
-    RunningJump,
-    Sitting,
-    Standing,
-    Swimming,
-    SwordSlash,
-    Walking,
-}
-
-pub fn load_animations(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-) {
-    let mut store = AnimationStore::<String> {
-        anims: HashMap::new()
-    };
-    store.anims.insert("aliens".into(),
-                       HashMap::new());
-    let alien_anims = store
-        .anims
-        .get_mut("aliens")
-        .unwrap();
-    alien_anims.insert(AnimationKey::Walking, asset_server.load("quaternius/alien.glb#Animation13"));
-    alien_anims.insert(AnimationKey::Idle, asset_server.load("quaternius/alien.glb#Animation2"));
-
-
-    store
-        .anims
-        .insert("players".into(),
-                HashMap::new());
-    let player_anims = store
-        .anims
-        .get_mut("players")
-        .unwrap();
-    player_anims.insert(AnimationKey::Walking, asset_server.load("quaternius/worker.glb#Animation22"));
-    player_anims.insert(AnimationKey::Idle, asset_server.load("quaternius/worker.glb#Animation4"));
-
-    commands.insert_resource(store);
-}
-
-#[derive(Component, Debug, Reflect)]
-pub struct CurrentAnimationKey {
-    pub group: String,
-    pub key: AnimationKey,
-}
-
-impl CurrentAnimationKey {
-    pub fn new(group: String, key: AnimationKey) -> Self {
-        CurrentAnimationKey { group, key }
-    }
-}
 
 pub fn spawn_aliens(
     mut alien_counter: ResMut<AlienCounter>,
     mut spawn_alien_event_reader: EventReader<SpawnAlien>,
     mut commands: Commands,
     mut add_health_bar_ew: EventWriter<AddHealthBar>,
-    asset_server: Res<AssetServer>,
+    game_assets: Res<GameAssets>,
     mut game_tracking_event_ew: EventWriter<GameTrackingEvent>
 ) {
     if alien_counter.count >= alien_counter.max_count {
@@ -137,7 +70,7 @@ pub fn spawn_aliens(
 
         let alien_transform = Transform::from_xyz(spawn_alien.position.x, spawn_alien.position.y, spawn_alien.position.z)
             .with_scale(Vec3::new(0.25, 0.25, 0.25))
-            .with_rotation(bevy::math::Quat::from_rotation_y(PI * 2.0));
+            .with_rotation(Quat::from_rotation_y(PI * 2.0));
         let id = commands.spawn(
             (
                 Name::from("Spider"),
@@ -151,9 +84,9 @@ pub fn spawn_aliens(
                         180.0f32.to_radians(), 0.0, 0.0),
                     Vec3::new(0.5, 0.5, 0.5),
                 ),
-                Controller::new(1.0, 3.0, 1.0),
+                CharacterControl::new(1.0, 3.0, 1.0),
                 SceneBundle {
-                    scene: asset_server.load("quaternius/alien.glb#Scene0"),
+                    scene: game_assets.alien_scene.clone(),
                     transform: alien_transform,
                     ..Default::default()
                 },
@@ -173,7 +106,8 @@ pub fn spawn_aliens(
                         CollisionLayer::Alien,
                         CollisionLayer::Player,
                         CollisionLayer::AlienGoal,
-                        CollisionLayer::Sensor
+                        CollisionLayer::Sensor,
+                        CollisionLayer::PlayerAimSensor,
                     ]),
             )).insert((
             CurrentTile::default(),
@@ -194,33 +128,5 @@ pub fn spawn_aliens(
         });
 
         game_tracking_event_ew.send(GameTrackingEvent::AlienSpawned);
-    }
-}
-
-pub fn start_some_animations(
-    anim_store: Res<AnimationStore<String>>,
-    mut players: Query<(Entity, &mut AnimationPlayer), Added<AnimationPlayer>>,
-    anim_key_query: Query<&CurrentAnimationKey>,
-    parent_query: Query<&Parent>,
-) {
-    for (entity, mut anim_player) in players.iter_mut() {
-        if let Some(super_ent) = get_parent_recursive(entity, &parent_query) {
-            if let Ok(anim_key) = anim_key_query.get(super_ent) {
-                if let Some(anim) = anim_store.anims.get(&anim_key.group).unwrap().get(&anim_key.key) {
-                    anim_player.play(anim.clone_weak()).repeat();
-                }
-            }
-        }
-    }
-}
-
-pub fn get_parent_recursive(entity: Entity, parent_query: &Query<&Parent>) -> Option<Entity> {
-    match parent_query.get(entity) {
-        Ok(parent) => {
-            get_parent_recursive(parent.get(), parent_query)
-        }
-        Err(_) => {
-            Some(entity)
-        }
     }
 }

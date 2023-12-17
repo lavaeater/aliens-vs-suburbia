@@ -34,7 +34,7 @@ impl ModelDefinition {
 }
 
 #[derive(Resource)]
-pub struct ModelDefinitions {
+pub struct MapModelDefinitions {
     pub definitions: HashMap<&'static str, ModelDefinition>,
     pub build_indicators: Vec<&'static str>,
 }

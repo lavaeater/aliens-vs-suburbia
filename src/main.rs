@@ -2,13 +2,13 @@ use bevy::app::{App, PluginGroup};
 use bevy::{DefaultPlugins, log};
 use bevy::log::LogPlugin;
 use bevy::prelude::Msaa;
-use bevy_xpbd_3d::plugins::{PhysicsPlugins};
+use bevy_xpbd_3d::plugins::{ PhysicsPlugins};
 use crate::ai::components::approach_and_attack_player_components::ApproachAndAttackPlayerData;
 use crate::ai::components::avoid_wall_components::AvoidWallsData;
 use camera::components::CameraOffset;
 use crate::general::components::Health;
 use crate::general::components::map_components::CurrentTile;
-use control::components::Controller;
+use control::components::CharacterControl;
 use crate::game_state::game_state_plugin::GamePlugin;
 
 pub(crate) mod player;
@@ -22,13 +22,16 @@ mod control;
 mod building;
 mod map;
 pub(crate) mod game_state;
+mod animation;
+mod constants;
+mod assets;
 
 
 fn main() {
     App::new()
         .register_type::<CameraOffset>()
         .register_type::<CurrentTile>()
-        .register_type::<Controller>()
+        .register_type::<CharacterControl>()
         .register_type::<Health>()
         .register_type::<AvoidWallsData>()
         .register_type::<ApproachAndAttackPlayerData>()

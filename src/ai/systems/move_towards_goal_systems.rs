@@ -12,7 +12,7 @@ use crate::general::resources::map_resources::MapGraph;
 use pathfinding::directed::astar::astar;
 use pathfinding::num_traits::Signed;
 use crate::building::systems::ToWorldCoordinates;
-use crate::control::components::{ControlDirection, Controller, ControlRotation};
+use crate::control::components::{ControlDirection, CharacterControl, ControlRotation};
 use crate::game_state::score_keeper::GameTrackingEvent;
 use crate::general::systems::map_systems::TileDefinitions;
 
@@ -31,7 +31,7 @@ pub fn move_towards_goal_scorer_system(
 pub fn move_towards_goal_action_system(
     map_graph: Res<MapGraph>,
     mut action_query: Query<(&Actor, &mut ActionState, &ActionSpan), With<MoveTowardsGoalAction>>,
-    mut alien_query: Query<(&mut MoveTowardsGoalData, &mut Controller, &Position, &Rotation, &CurrentTile, &LinearVelocity), With<Alien>>,
+    mut alien_query: Query<(&mut MoveTowardsGoalData, &mut CharacterControl, &Position, &Rotation, &CurrentTile, &LinearVelocity), With<Alien>>,
     mut alien_reached_goal_event_writer: EventWriter<AgentReachedGoal>,
     mut cant_find_path_ew: EventWriter<AgentCannotFindPath>,
     tile_definitions: Res<TileDefinitions>,

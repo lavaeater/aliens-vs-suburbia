@@ -2,11 +2,11 @@ use bevy::prelude::{Query, With};
 use big_brain::prelude::{ActionSpan, Actor, Score};
 use big_brain::actions::ActionState;
 use crate::ai::components::move_forward_components::{MoveForwardAction, MoveForwardScore};
-use crate::control::components::{ControlDirection, Controller};
+use crate::control::components::{ControlDirection, CharacterControl};
 
 pub fn move_forward_action_system(
     mut action_query: Query<(&Actor, &mut ActionState, &ActionSpan), With<MoveForwardAction>>,
-    mut controller_query: Query<&mut Controller>,
+    mut controller_query: Query<&mut CharacterControl>,
 ) {
     for(actor, mut action_state, span) in action_query.iter_mut() {
         let _guard = span.span().enter();

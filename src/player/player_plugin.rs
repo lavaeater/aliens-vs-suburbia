@@ -1,16 +1,21 @@
-use bevy::animation::AnimationPlayer;
 use bevy::app::{App, Plugin, Update};
-use bevy::DefaultPlugins;
 use bevy::prelude::{Commands, in_state, IntoSystemConfigs, Local, Query, Res, SceneSpawner};
 use bevy::scene::SceneInstance;
 use bevy_mod_outline::{AutoGenerateOutlineNormalsPlugin, InheritOutlineBundle, OutlinePlugin};
 use crate::game_state::GameState;
-use crate::player::systems::spawn_players::{fix_model_transforms, spawn_players};
+use crate::player::systems::auto_aim::{auto_aim, debug_gizmos};
+use crate::player::systems::spawn_players::{fix_scene_transform, spawn_players};
 
-pub struct PlayerPlugin;
+#[derive(Default)]
+pub struct PlayerPlugin {
+    pub with_debug: bool,
+}
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
+        if self.with_debug {
+            app.add_systems(Update, (debug_gizmos).run_if(in_state(GameState::InGame)));
+        }
         app
             .add_plugins((
                 OutlinePlugin,
@@ -20,8 +25,9 @@ impl Plugin for PlayerPlugin {
                 Update,
                 (
                     spawn_players,
-                    fix_model_transforms,
                     setup_scene_once_loaded,
+                    fix_scene_transform,
+                    auto_aim,
                 ).run_if(in_state(GameState::InGame)),
             );
     }

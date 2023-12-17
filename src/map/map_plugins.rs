@@ -7,7 +7,7 @@ use bevy::prelude::{in_state, IntoSystemConfigs, OnEnter};
 use crate::alien::components::general::AlienCounter;
 use crate::game_state::GameState;
 use crate::general::components::CollisionLayer;
-use crate::general::components::map_components::{ModelDefinition, ModelDefinitions};
+use crate::general::components::map_components::{ModelDefinition, MapModelDefinitions};
 use crate::general::events::map_events::{LoadMap, SpawnAlien, SpawnPlayer};
 use crate::general::resources::map_resources::MapGraph;
 use crate::general::systems::map_systems::{load_map_one, map_loader, TileDefinitions, update_current_tile_system};
@@ -21,7 +21,7 @@ impl Plugin for NonStateMapStuff {
             .add_event::<SpawnPlayer>()
             .add_event::<SpawnAlien>()
             .insert_resource(
-                ModelDefinitions {
+                MapModelDefinitions {
                     definitions: HashMap::from(
                         [
                             ("wall", ModelDefinition {

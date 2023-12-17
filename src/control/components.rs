@@ -3,9 +3,9 @@ use bevy::utils::HashSet;
 use crate::general::components::map_components::CoolDown;
 
 #[derive(Component, Reflect)]
-pub struct KeyboardController {}
+pub struct InputKeyboard;
 
-#[derive(Hash, PartialEq, Eq, Clone, Reflect)]
+#[derive(Hash, PartialEq, Eq, Clone, Reflect, Copy)]
 pub enum ControlCommands {
     Throw,
     Jump,
@@ -52,7 +52,7 @@ impl Opposite for ControlRotation {
 }
 
 #[derive(Component, Reflect)]
-pub struct Controller {
+pub struct CharacterControl {
     pub triggers: HashSet<ControlCommands>,
     pub rotations: HashSet<ControlRotation>,
     pub directions: HashSet<ControlDirection>,
@@ -65,7 +65,7 @@ pub struct Controller {
     pub fire_cool_down: f32
 }
 
-impl Controller {
+impl CharacterControl {
     pub fn new(speed: f32, turn_speed: f32, rate_of_fire_per_minute: f32, ) -> Self {
         Self {
             triggers: HashSet::default(),
@@ -82,7 +82,7 @@ impl Controller {
     }
 }
 
-impl CoolDown for Controller {
+impl CoolDown for CharacterControl {
     fn cool_down(&mut self, delta: f32) -> bool {
         self.fire_cool_down -= delta;
         if self.fire_cool_down <= 0.0 {
@@ -95,8 +95,8 @@ impl CoolDown for Controller {
 
 
 #[derive(Component)]
-pub struct DynamicMovement {}
+pub struct DynamicMovement;
 
 
 #[derive(Component)]
-pub struct KinematicMovement {}
+pub struct KinematicMovement;
