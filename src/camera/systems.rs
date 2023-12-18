@@ -1,9 +1,10 @@
 use bevy::core::Name;
-use bevy::math::{Quat, Rect, Vec2, Vec3};
+use bevy::math::{Mat3, Quat, Rect, Vec2, Vec3};
 use bevy::prelude::{Camera3dBundle, Commands, OrthographicProjection, Query, Transform, With};
 use bevy::prelude::Projection::Orthographic;
 use bevy::render::camera::ScalingMode;
 use bevy::utils::default;
+use bevy_video_glitch::VideoGlitchSettings;
 use bevy_xpbd_3d::math::PI;
 use bevy_xpbd_3d::components::Position;
 use crate::camera::components::{CameraOffset, GameCamera};
@@ -13,6 +14,10 @@ pub fn spawn_camera(mut commands: Commands) {
     commands.spawn((
         Name::from("Camera"),
         CameraOffset(Vec3::new(2.0, 1.5, 2.0)),
+        VideoGlitchSettings {
+            intensity: 0.05,
+            color_aberration: Mat3::IDENTITY
+        },
         Camera3dBundle {
             projection: Orthographic(OrthographicProjection {
                 scale: 2.0,
