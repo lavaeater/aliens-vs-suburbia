@@ -133,6 +133,7 @@ dependencies = [
  "bevy",
  "bevy_mod_outline",
  "bevy_rand",
+ "bevy_video_glitch",
  "bevy_xpbd_3d",
  "big-brain",
  "flagset",
@@ -1156,6 +1157,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.41",
+]
+
+[[package]]
+name = "bevy_video_glitch"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c0a4b005263cffc0c8145bfc44361f41584c5bbe66b0fadf982c24a150057ca"
+dependencies = [
+ "bevy",
 ]
 
 [[package]]

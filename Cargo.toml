@@ -18,6 +18,7 @@ pathfinding = "4.6.0"
 itertools = "0.12.0"
 belly = { git="https://github.com/jkb0o/belly/", branch="0.12" }
 bevy_mod_outline = "0.6.0"
+bevy_video_glitch = "0.1.1"
 # Enable max optimizations for dependencies, but not for our code:
 [profile.dev.package."*"]
 opt-level = 3
