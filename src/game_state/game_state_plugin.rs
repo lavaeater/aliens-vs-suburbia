@@ -1,6 +1,7 @@
 use bevy::app::{App, Plugin, PreUpdate, Update};
 use bevy::prelude::{in_state, IntoSystemConfigs, OnEnter, Time};
 use bevy::time::Fixed;
+use bevy_video_glitch::VideoGlitchPlugin;
 use crate::ai::ai_plugin::StatefulAiPlugin;
 use crate::alien::alien_plugin::StatefulAlienPlugin;
 use crate::animation::animation_plugin::AnimationPlugin;
@@ -43,6 +44,7 @@ impl Plugin for GamePlugin {
                 ClearGameEntitiesPlugin,
                 PlayerPlugin::default(),
                 ScoreKeeperPlugin,
+                VideoGlitchPlugin,
             ))
             .add_systems(
                 OnEnter(GameState::InGame),
