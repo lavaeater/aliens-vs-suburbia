@@ -1,13 +1,44 @@
 use bevy::app::{App, Plugin, Update};
 use bevy::input::{Axis, Input};
 use bevy::input::gamepad::GamepadEvent;
-use bevy::prelude::{Commands, Component, Entity, EventReader, Gamepad, GamepadAxis, GamepadButton, Query, Res, Resource, Without};
+use bevy::prelude::{Commands, Component, Entity, EventReader, Gamepad, GamepadAxis, GamepadAxisType, GamepadButton, GamepadButtonType, Query, Res, Resource, Without};
+use bevy::utils::HashSet;
 use crate::control::components::{CharacterControl, InputKeyboard};
 
 /// Simple resource to store the ID of the connected gamepad.
 /// We need to know which gamepad to use for player input.
 #[derive(Component)]
-struct InputGamepad(Gamepad);
+struct InputGamepad {
+    gamepad: Gamepad,
+    left_x: GamepadAxis,
+    left_y: GamepadAxis,
+    right_x: GamepadAxis,
+    right_y: GamepadAxis,
+    button_north: GamepadButton,
+    button_east: GamepadButton,
+    button_south: GamepadButton,
+    button_west: GamepadButton,
+    trigger_right: GamepadButton,
+    trigger_left: GamepadButton,
+}
+
+impl InputGamepad {
+    fn new(gamepad: Gamepad) -> Self {
+        InputGamepad {
+            gamepad,
+            left_x: GamepadAxis::new(gamepad, GamepadAxisType::LeftStickX),
+            left_y: GamepadAxis::new(gamepad, GamepadAxisType::LeftStickY),
+            right_x: GamepadAxis::new(gamepad, GamepadAxisType::RightStickX),
+            right_y: GamepadAxis::new(gamepad, GamepadAxisType::RightStickY),
+            button_north: GamepadButton::new(gamepad, GamepadButtonType::North),
+            button_east: GamepadButton::new(gamepad, GamepadButtonType::East),
+            button_south: GamepadButton::new(gamepad, GamepadButtonType::South),
+            button_west: GamepadButton::new(gamepad, GamepadButtonType::West),
+            trigger_right: GamepadButton::new(gamepad, GamepadButtonType::RightTrigger),
+            trigger_left: GamepadButton::new(gamepad, GamepadButtonType::LeftTrigger),
+        }
+    }
+}
 
 pub struct GamepadPlugin;
 impl Plugin for GamepadPlugin {
@@ -21,7 +52,6 @@ impl Plugin for GamepadPlugin {
 
 fn gamepad_connections(
     mut commands: Commands,
-    gamepads: Option<Res<InputGamepad>>,
     mut gamepad_evr: EventReader<GamepadEvent>,
 ) {
     for ev in gamepad_evr.read() {
@@ -30,11 +60,6 @@ fn gamepad_connections(
             GamepadEvent::Connection(info) => {
                 println!("New gamepad connected with ID: {:?}", info.gamepad.id);
                 if info.connected() {
-                    // store the ID of the gamepad
-                    commands.insert_resource(InputGamepad(info.gamepad.clone()));
-                } else {
-                    // remove the resource
-                    commands.remove_resource::<InputGamepad>();
                 }
             }
             // other events are irrelevant
@@ -48,51 +73,15 @@ fn gamepad_game_input(
     buttons: Res<Input<GamepadButton>>,
     player_query: Query<(Entity, &mut CharacterControl, &InputGamepad)>
 ) {
-    for (entity, mut controller, gamepad) in player_query.iter() {
+    for (entity, mut controller, input_gamepad) in player_query.iter() {
         // do something with the gamepad
+        if let (Some(x), Some(y)) = (axes.get(input_gamepad.left_x), axes.get(input_gamepad.left_y)) {
+            if x.abs() > 0.1 || y.abs() > 0.1 {
+                controller.directions.insert(ControlDirection::Forward);
+            } else {
+                controller.directions.remove(&ControlDirection::Forward);
+            }
 
-    }
-
-
-    let gamepad = if let Some(gp) = my_gamepad {
-        // a gamepad is connected, we have the id
-        gp.0
-    } else {
-        // no gamepad is connected
-        return;
-    };
-
-    // The joysticks are represented using a separate axis for X and Y
-    let axis_lx = GamepadAxis {
-        gamepad, axis_type: GamepadAxisType::LeftStickX
-    };
-    let axis_ly = GamepadAxis {
-        gamepad, axis_type: GamepadAxisType::LeftStickY
-    };
-
-    if let (Some(x), Some(y)) = (axes.get(axis_lx), axes.get(axis_ly)) {
-        // combine X and Y into one vector
-        let left_stick_pos = Vec2::new(x, y);
-
-        // Example: check if the stick is pushed up
-        if left_stick_pos.length() > 0.9 && left_stick_pos.y > 0.5 {
-            // do something
         }
-    }
-
-    // In a real game, the buttons would be configurable, but here we hardcode them
-    let jump_button = GamepadButton {
-        gamepad, button_type: GamepadButtonType::South
-    };
-    let heal_button = GamepadButton {
-        gamepad, button_type: GamepadButtonType::East
-    };
-
-    if buttons.just_pressed(jump_button) {
-        // button just pressed: make the player jump
-    }
-
-    if buttons.pressed(heal_button) {
-        // button being held down: heal the player
     }
 }
