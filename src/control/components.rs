@@ -25,8 +25,8 @@ pub enum ControlRotation {
 pub enum ControlDirection {
     Forward,
     Backward,
-    StrafeLeft,
-    StrafeRight
+    Left,
+    Right
 }
 
 pub trait Opposite {
@@ -38,8 +38,8 @@ impl Opposite for ControlDirection {
         match self {
             ControlDirection::Forward => ControlDirection::Backward,
             ControlDirection::Backward => ControlDirection::Forward,
-            ControlDirection::StrafeLeft => ControlDirection::StrafeRight,
-            ControlDirection::StrafeRight => ControlDirection::StrafeLeft,
+            ControlDirection::Left => ControlDirection::Right,
+            ControlDirection::Right => ControlDirection::Left,
         }
     }
 }
@@ -58,8 +58,8 @@ pub struct CharacterControl {
     pub triggers: HashSet<ControlCommands>,
     pub rotations: HashSet<ControlRotation>,
     pub directions: HashSet<ControlDirection>,
-    pub force_vector: Vec3,
-    pub torque_vector: Vec3,
+    pub force: Vec3,
+    pub torque: Vec3,
     pub has_thrown:bool,
     pub speed: f32,
     pub max_speed: f32,
@@ -75,8 +75,8 @@ impl CharacterControl {
             triggers: HashSet::default(),
             rotations: HashSet::default(),
             directions: HashSet::default(),
-            force_vector: Vec3::ZERO,
-            torque_vector: Vec3::ZERO,
+            force: Vec3::ZERO,
+            torque: Vec3::ZERO,
             has_thrown: false,
             speed,
             max_speed: speed,

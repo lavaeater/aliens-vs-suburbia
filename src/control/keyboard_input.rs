@@ -1,5 +1,6 @@
 use bevy::input::ButtonState;
 use bevy::input::keyboard::KeyboardInput;
+use bevy::math::Vec3;
 use bevy::prelude::{Entity, EventReader, EventWriter, KeyCode, Query, With};
 use crate::animation::animation_plugin::{AnimationEvent, AnimationEventType, AnimationKey};
 use crate::control::components::{CharacterControl, ControlCommands, ControlDirection, ControlRotation, InputKeyboard};
@@ -87,6 +88,22 @@ pub fn keyboard_input(
             }
             if controller.directions.is_empty() && controller.rotations.is_empty() {
                 animation_ew.send(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Walking));
+            }
+
+            controller.force = Vec3::ZERO;
+            controller.torque = Vec3::ZERO;
+
+            if controller.directions.contains(&ControlDirection::Forward) {
+                controller.force.z = -1.0;
+            }
+            if controller.directions.contains(&ControlDirection::Backward) {
+                controller.force.z = 1.0;
+            }
+            if controller.rotations.contains(&ControlRotation::Left) {
+                controller.torque.y = 1.0;
+            }
+            if controller.rotations.contains(&ControlRotation::Right) {
+                controller.torque.y = -1.0;
             }
         }
     }
