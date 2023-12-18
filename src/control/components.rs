@@ -1,5 +1,6 @@
 use bevy::prelude::{Component, Reflect};
 use bevy::utils::HashSet;
+use crate::animation::animation_plugin::AnimationKey;
 use crate::general::components::map_components::CoolDown;
 
 #[derive(Component, Reflect)]
@@ -100,3 +101,40 @@ pub struct DynamicMovement;
 
 #[derive(Component)]
 pub struct KinematicMovement;
+
+#[derive(Component)]
+pub struct CharacterState {
+    pub state: Vec<AnimationKey>,
+}
+
+impl CharacterState {
+    pub fn enter_state(&mut self, state: AnimationKey) -> bool {
+        if let Some(latest_state) = self.state.last() {
+            if latest_state != &state {
+                self.state.push(state);
+                return true;
+            }
+        }
+        false
+    }
+
+    pub fn leave_state(&mut self, state: AnimationKey) -> (bool, AnimationKey) {
+        if self.state.len() > 1 {
+            if let Some(latest_state) = self.state.last() {
+                if latest_state == &state {
+                    self.state.pop();
+                    return (true, *self.state.last().unwrap());
+                }
+            }
+        }
+        (false, state)
+    }
+}
+
+impl Default for CharacterState {
+    fn default() -> Self {
+        Self {
+            state: vec![AnimationKey::Idle]
+        }
+    }
+}

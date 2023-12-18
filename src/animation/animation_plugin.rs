@@ -4,7 +4,7 @@ use bevy::animation::{AnimationClip, AnimationPlayer};
 use bevy::hierarchy::Parent;
 use bevy::utils::HashMap;
 use bevy::asset::{AssetServer, Handle};
-use crate::control::systems::CharacterState;
+use crate::control::components::CharacterState;
 use crate::game_state::GameState;
 
 #[derive(PartialEq, Eq, Clone, Copy)]

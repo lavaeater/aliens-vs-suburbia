@@ -1,48 +1,11 @@
 use bevy::input::ButtonState;
 use bevy::input::keyboard::KeyboardInput;
-use bevy::prelude::{Component, Entity, EventReader, EventWriter, KeyCode, Query, With};
-use crate::animation::animation_plugin::{AnimationKey, AnimationEvent, AnimationEventType};
-use crate::control::components::{ControlCommands, ControlDirection, CharacterControl, ControlRotation, InputKeyboard};
+use bevy::prelude::{Entity, EventReader, EventWriter, KeyCode, Query, With};
+use crate::animation::animation_plugin::{AnimationEvent, AnimationEventType, AnimationKey};
+use crate::control::components::{CharacterControl, ControlCommands, ControlDirection, ControlRotation, InputKeyboard};
 use crate::player::events::building_events::{ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode};
 
-#[derive(Component)]
-pub struct CharacterState {
-    pub state: Vec<AnimationKey>,
-}
-
-impl CharacterState {
-    pub fn enter_state(&mut self, state: AnimationKey) -> bool {
-        if let Some(latest_state) = self.state.last() {
-            if latest_state != &state {
-                self.state.push(state);
-                return true;
-            }
-        }
-        false
-    }
-
-    pub fn leave_state(&mut self, state: AnimationKey) -> (bool, AnimationKey) {
-        if self.state.len() > 1 {
-            if let Some(latest_state) = self.state.last() {
-                if latest_state == &state {
-                    self.state.pop();
-                    return (true, *self.state.last().unwrap());
-                }
-            }
-        }
-        (false, state)
-    }
-}
-
-impl Default for CharacterState {
-    fn default() -> Self {
-        Self {
-            state: vec![AnimationKey::Idle]
-        }
-    }
-}
-
-pub fn input_control(
+pub fn keyboard_input(
     mut key_evr: EventReader<KeyboardInput>,
     mut query: Query<(Entity, &mut CharacterControl), With<InputKeyboard>>,
     mut start_build_ew: EventWriter<EnterBuildMode>,
