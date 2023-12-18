@@ -1,7 +1,7 @@
 use bevy::input::ButtonState;
 use bevy::input::keyboard::KeyboardInput;
 use bevy::prelude::{Component, Entity, EventReader, EventWriter, KeyCode, Query, With};
-use crate::animation::animation_plugin::{AnimationKey, GotoAnimationState, LeaveAnimationState};
+use crate::animation::animation_plugin::{AnimationKey, AnimationEvent, AnimationEventType};
 use crate::control::components::{ControlCommands, ControlDirection, CharacterControl, ControlRotation, InputKeyboard};
 use crate::player::events::building_events::{ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode};
 
@@ -41,6 +41,7 @@ impl Default for CharacterState {
         }
     }
 }
+
 pub fn input_control(
     mut key_evr: EventReader<KeyboardInput>,
     mut query: Query<(Entity, &mut CharacterControl), With<InputKeyboard>>,
@@ -48,8 +49,7 @@ pub fn input_control(
     mut execute_build: EventWriter<ExecuteBuild>,
     mut exit_build: EventWriter<ExitBuildMode>,
     mut change_build_indicator: EventWriter<ChangeBuildIndicator>,
-    mut goto_animation_state_ew: EventWriter<GotoAnimationState>,
-    mut leave_animation_state_ew: EventWriter<LeaveAnimationState>,
+    mut animation_ew: EventWriter<AnimationEvent>,
 ) {
     if let Ok((entity, mut controller)) = query.get_single_mut() {
         for ev in key_evr.read() {
@@ -57,44 +57,44 @@ pub fn input_control(
                 ButtonState::Pressed => match ev.key_code {
                     Some(KeyCode::B) => {
                         if controller.triggers.contains(&ControlCommands::Build) {
-                            leave_animation_state_ew.send(LeaveAnimationState(entity, AnimationKey::Building));
+                            animation_ew.send(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Building));
                             exit_build.send(ExitBuildMode(entity));
                         } else {
                             controller.triggers.insert(ControlCommands::Build);
-                            goto_animation_state_ew.send(GotoAnimationState(entity, AnimationKey::Building));
+                            animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Building));
                             start_build_ew.send(EnterBuildMode(entity));
                         }
                     }
                     Some(KeyCode::Escape) => {
                         if controller.triggers.contains(&ControlCommands::Build) {
-                            leave_animation_state_ew.send(LeaveAnimationState(entity, AnimationKey::Building));
+                            animation_ew.send(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Building));
                             exit_build.send(ExitBuildMode(entity));
                         }
                     }
                     Some(KeyCode::A) => {
-                        goto_animation_state_ew.send(GotoAnimationState(entity, AnimationKey::Walking));
+                        animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walking));
                         controller.rotations.insert(ControlRotation::Left);
                     }
                     Some(KeyCode::D) => {
-                        goto_animation_state_ew.send(GotoAnimationState(entity, AnimationKey::Walking));
+                        animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walking));
                         controller.rotations.insert(ControlRotation::Right);
                     }
                     Some(KeyCode::W) => {
-                        goto_animation_state_ew.send(GotoAnimationState(entity, AnimationKey::Walking));
+                        animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walking));
                         controller.directions.insert(ControlDirection::Forward);
                     }
                     Some(KeyCode::S) => {
-                        goto_animation_state_ew.send(GotoAnimationState(entity, AnimationKey::Walking));
+                        animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walking));
                         controller.directions.insert(ControlDirection::Backward);
                     }
                     Some(KeyCode::Space) => {
                         if controller.triggers.contains(&ControlCommands::Build) {
                             execute_build.send(ExecuteBuild(entity));
                         } else if controller.triggers.contains(&ControlCommands::Throw) {
-                            leave_animation_state_ew.send(LeaveAnimationState(entity, AnimationKey::Throwing));
+                            animation_ew.send(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Throwing));
                             controller.triggers.remove(&ControlCommands::Throw);
                         } else {
-                            goto_animation_state_ew.send(GotoAnimationState(entity, AnimationKey::Throwing));
+                            animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Throwing));
                             controller.triggers.insert(ControlCommands::Throw);
                         }
                     }
@@ -123,7 +123,7 @@ pub fn input_control(
                 }
             }
             if controller.directions.is_empty() && controller.rotations.is_empty() {
-                leave_animation_state_ew.send(LeaveAnimationState(entity, AnimationKey::Walking));
+                animation_ew.send(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Walking));
             }
         }
     }
