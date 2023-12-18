@@ -1,11 +1,23 @@
+use bevy::app::{App, Plugin, Update};
 use bevy::input::{Axis, Input};
 use bevy::input::gamepad::GamepadEvent;
-use bevy::prelude::{Commands, EventReader, Gamepad, GamepadAxis, GamepadButton, Res, Resource};
+use bevy::prelude::{Commands, Component, Entity, EventReader, Gamepad, GamepadAxis, GamepadButton, Query, Res, Resource, Without};
+use crate::control::components::{CharacterControl, InputKeyboard};
 
 /// Simple resource to store the ID of the connected gamepad.
 /// We need to know which gamepad to use for player input.
-#[derive(Resource)]
+#[derive(Component)]
 struct InputGamepad(Gamepad);
+
+pub struct GamepadPlugin;
+impl Plugin for GamepadPlugin {
+    fn build(&self, app: &mut App) {
+        app
+            .add_systems(Update, gamepad_connections)
+            .add_systems(gamepad_game_input);
+    }
+}
+
 
 fn gamepad_connections(
     mut commands: Commands,
@@ -31,11 +43,17 @@ fn gamepad_connections(
     }
 }
 
-fn gamepad_input(
+fn gamepad_game_input(
     axes: Res<Axis<GamepadAxis>>,
     buttons: Res<Input<GamepadButton>>,
-    my_gamepad: Option<Res<ControlGamepad>>,
+    player_query: Query<(Entity, &mut CharacterControl, &InputGamepad)>
 ) {
+    for (entity, mut controller, gamepad) in player_query.iter() {
+        // do something with the gamepad
+
+    }
+
+
     let gamepad = if let Some(gp) = my_gamepad {
         // a gamepad is connected, we have the id
         gp.0
