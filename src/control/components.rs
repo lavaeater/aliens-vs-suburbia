@@ -1,3 +1,4 @@
+use bevy::math::Vec3;
 use bevy::prelude::{Component, Reflect};
 use bevy::utils::HashSet;
 use crate::animation::animation_plugin::AnimationKey;
@@ -57,6 +58,8 @@ pub struct CharacterControl {
     pub triggers: HashSet<ControlCommands>,
     pub rotations: HashSet<ControlRotation>,
     pub directions: HashSet<ControlDirection>,
+    pub force_vector: Vec3,
+    pub torque_vector: Vec3,
     pub has_thrown:bool,
     pub speed: f32,
     pub max_speed: f32,
@@ -72,6 +75,8 @@ impl CharacterControl {
             triggers: HashSet::default(),
             rotations: HashSet::default(),
             directions: HashSet::default(),
+            force_vector: Vec3::ZERO,
+            torque_vector: Vec3::ZERO,
             has_thrown: false,
             speed,
             max_speed: speed,
