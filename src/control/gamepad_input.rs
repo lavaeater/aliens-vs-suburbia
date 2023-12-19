@@ -1,6 +1,6 @@
 use bevy::app::{App, Plugin, Update};
 use bevy::input::{Axis, Input};
-use bevy::input::gamepad::GamepadEvent;
+use bevy::input::gamepad::{GamepadButtonChangedEvent, GamepadButtonInput, GamepadEvent};
 use bevy::prelude::{Commands, Component, Entity, EventReader, Gamepad, GamepadAxis, GamepadAxisType, GamepadButton, GamepadButtonType, in_state, IntoSystemConfigs, Query, Res, Resource, Without};
 use bevy::utils::HashSet;
 use crate::control::components::{CharacterControl, ControlDirection, InputKeyboard};
@@ -45,27 +45,20 @@ pub struct GamepadPlugin;
 impl Plugin for GamepadPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_systems(Update, gamepad_connections)
             .add_systems(Update, (
-                gamepad_game_input
+                gamepad_game_input,
+                gamepad_buttons
             )
                 .run_if(in_state(GameState::InGame)))
         ;
     }
 }
 
-
-fn gamepad_connections(
-    mut commands: Commands,
-    mut gamepad_evr: EventReader<GamepadEvent>,
+fn gamepad_buttons(
+    mut gamepad_button_er: EventReader<GamepadButtonInput>,
 ) {
-    for ev in gamepad_evr.read() {
-        // the ID of the gamepad
-        if let GamepadEvent::Connection(info) = &ev {
-            println!("New gamepad connected with ID: {:?}", info.gamepad.id);
-            if info.connected() {
-            }
-        }
+    for event in gamepad_button_er.read() {
+        println!("{:?}", event.button.button_type);
     }
 }
 
