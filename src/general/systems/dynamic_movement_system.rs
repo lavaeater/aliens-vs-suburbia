@@ -1,10 +1,7 @@
-use bevy::input::keyboard::KeyboardInput;
 use bevy::math::{EulerRot, Quat, Vec2, Vec3Swizzles};
-use bevy::prelude::{Has, Query, Transform, With};
+use bevy::prelude::{Query, Transform, With};
 use bevy_xpbd_3d::components::{AngularVelocity, LinearVelocity};
-use bevy_xpbd_3d::math::Vector3;
-use bevy_xpbd_3d::prelude::Rotation;
-use crate::control::components::{ControlDirection, CharacterControl, ControlRotation, DynamicMovement, InputKeyboard, CharacterControlType};
+use crate::control::components::{CharacterControl, DynamicMovement, CharacterControlType};
 
 pub fn dynamic_movement(
     mut query: Query<(&mut LinearVelocity, &mut AngularVelocity, &mut Transform, &CharacterControl), With<DynamicMovement>>,
@@ -23,7 +20,7 @@ pub fn dynamic_movement(
 
                 transform.rotation = Quat::from_euler(
                     EulerRot::YXZ,
-                    controller.walk_direction.xz().angle_between(Vec2::Z),
+                    controller.walk_direction.xz().angle_between(Vec2::Y),
                     0.0,
                     0.0
                 );

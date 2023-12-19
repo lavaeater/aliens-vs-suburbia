@@ -1,9 +1,10 @@
 use bevy::app::{App, Plugin, Update};
 use bevy::input::{Axis, Input};
 use bevy::input::gamepad::GamepadEvent;
-use bevy::prelude::{Commands, Component, Entity, EventReader, Gamepad, GamepadAxis, GamepadAxisType, GamepadButton, GamepadButtonType, Query, Res, Resource, Without};
+use bevy::prelude::{Commands, Component, Entity, EventReader, Gamepad, GamepadAxis, GamepadAxisType, GamepadButton, GamepadButtonType, in_state, IntoSystemConfigs, Query, Res, Resource, Without};
 use bevy::utils::HashSet;
-use crate::control::components::{CharacterControl, InputKeyboard};
+use crate::control::components::{CharacterControl, ControlDirection, InputKeyboard};
+use crate::game_state::GameState;
 
 /// Simple resource to store the ID of the connected gamepad.
 /// We need to know which gamepad to use for player input.
@@ -45,7 +46,11 @@ impl Plugin for GamepadPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_systems(Update, gamepad_connections)
-            .add_systems(gamepad_game_input);
+            .add_systems(Update, (
+                gamepad_game_input
+            )
+                .run_if(in_state(GameState::InGame)))
+        ;
     }
 }
 
@@ -56,14 +61,10 @@ fn gamepad_connections(
 ) {
     for ev in gamepad_evr.read() {
         // the ID of the gamepad
-        match &ev {
-            GamepadEvent::Connection(info) => {
-                println!("New gamepad connected with ID: {:?}", info.gamepad.id);
-                if info.connected() {
-                }
+        if let GamepadEvent::Connection(info) = &ev {
+            println!("New gamepad connected with ID: {:?}", info.gamepad.id);
+            if info.connected() {
             }
-            // other events are irrelevant
-            _ => {}
         }
     }
 }
@@ -71,15 +72,17 @@ fn gamepad_connections(
 fn gamepad_game_input(
     axes: Res<Axis<GamepadAxis>>,
     buttons: Res<Input<GamepadButton>>,
-    player_query: Query<(Entity, &mut CharacterControl, &InputGamepad)>
+    mut player_query: Query<(Entity, &mut CharacterControl, &InputGamepad)>
 ) {
-    for (entity, mut controller, input_gamepad) in player_query.iter() {
+    for (entity, mut controller, input_gamepad) in player_query.iter_mut() {
         // do something with the gamepad
         if let (Some(x), Some(y)) = (axes.get(input_gamepad.left_x), axes.get(input_gamepad.left_y)) {
             if x.abs() > 0.1 || y.abs() > 0.1 {
-                controller.directions.insert(ControlDirection::Forward);
+                controller.walk_direction.x = x;
+                controller.walk_direction.z = y;
             } else {
-                controller.directions.remove(&ControlDirection::Forward);
+                controller.walk_direction.x = 0.0;
+                controller.walk_direction.z = 0.0;
             }
 
         }

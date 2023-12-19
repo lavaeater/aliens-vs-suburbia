@@ -53,6 +53,7 @@ impl Opposite for ControlRotation {
     }
 }
 
+#[derive(Hash, PartialEq, Eq, Clone, Reflect, Copy)]
 pub enum CharacterControlType {
     Keyboard,
     Gamepad
