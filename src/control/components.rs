@@ -53,12 +53,17 @@ impl Opposite for ControlRotation {
     }
 }
 
+pub enum CharacterControlType {
+    Keyboard,
+    Gamepad
+}
+
 #[derive(Component, Reflect)]
 pub struct CharacterControl {
     pub triggers: HashSet<ControlCommands>,
     pub rotations: HashSet<ControlRotation>,
     pub directions: HashSet<ControlDirection>,
-    pub force: Vec3,
+    pub walk_direction: Vec3,
     pub torque: Vec3,
     pub has_thrown:bool,
     pub speed: f32,
@@ -66,7 +71,8 @@ pub struct CharacterControl {
     pub turn_speed: f32,
     pub max_turn_speed: f32,
     pub rate_of_fire_per_minute: f32,
-    pub fire_cool_down: f32
+    pub fire_cool_down: f32,
+    pub control_type: CharacterControlType,
 }
 
 impl CharacterControl {
@@ -75,7 +81,7 @@ impl CharacterControl {
             triggers: HashSet::default(),
             rotations: HashSet::default(),
             directions: HashSet::default(),
-            force: Vec3::ZERO,
+            walk_direction: Vec3::ZERO,
             torque: Vec3::ZERO,
             has_thrown: false,
             speed,
@@ -83,7 +89,8 @@ impl CharacterControl {
             turn_speed,
             max_turn_speed: turn_speed,
             rate_of_fire_per_minute,
-            fire_cool_down: 0.0
+            fire_cool_down: 0.0,
+            control_type: CharacterControlType::Keyboard,
         }
     }
 }

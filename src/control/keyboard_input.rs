@@ -90,14 +90,14 @@ pub fn keyboard_input(
                 animation_ew.send(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Walking));
             }
 
-            controller.force = Vec3::ZERO;
+            controller.walk_direction = Vec3::ZERO;
             controller.torque = Vec3::ZERO;
 
             if controller.directions.contains(&ControlDirection::Forward) {
-                controller.force.z = -1.0;
+                controller.walk_direction.z = -1.0;
             }
             if controller.directions.contains(&ControlDirection::Backward) {
-                controller.force.z = 1.0;
+                controller.walk_direction.z = 1.0;
             }
             if controller.rotations.contains(&ControlRotation::Left) {
                 controller.torque.y = 1.0;
