@@ -1,9 +1,8 @@
 use bevy::app::{App, Plugin, Update};
 use bevy::input::{Axis, Input};
-use bevy::input::gamepad::{GamepadButtonChangedEvent, GamepadButtonInput, GamepadEvent};
-use bevy::prelude::{Commands, Component, Entity, EventReader, Gamepad, GamepadAxis, GamepadAxisType, GamepadButton, GamepadButtonType, in_state, IntoSystemConfigs, Query, Res, Resource, Without};
-use bevy::utils::HashSet;
-use crate::control::components::{CharacterControl, ControlDirection, InputKeyboard};
+use bevy::input::gamepad::GamepadButtonInput;
+use bevy::prelude::{Component, Entity, EventReader, Gamepad, GamepadAxis, GamepadAxisType, GamepadButton, GamepadButtonType, in_state, IntoSystemConfigs, Query, Res};
+use crate::control::components::{CharacterControl};
 use crate::game_state::GameState;
 
 /// Simple resource to store the ID of the connected gamepad.
