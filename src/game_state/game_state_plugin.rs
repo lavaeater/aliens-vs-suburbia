@@ -9,6 +9,7 @@ use crate::assets::assets_plugin::AssetsPlugin;
 use crate::building::build_mode_plugin::StatefulBuildModePlugin;
 use crate::camera::camera_plugin::StatefulCameraPlugin;
 use crate::control::control_plugin::StatefulControlPlugin;
+use crate::control::gamepad_input::GamepadPlugin;
 use crate::game_state::clear_game_entities_plugin::ClearGameEntitiesPlugin;
 use crate::game_state::GameState;
 use crate::game_state::score_keeper::ScoreKeeperPlugin;
@@ -45,6 +46,7 @@ impl Plugin for GamePlugin {
                 PlayerPlugin::default(),
                 ScoreKeeperPlugin,
                 VideoGlitchPlugin,
+                GamepadPlugin,
             ))
             .add_systems(
                 OnEnter(GameState::InGame),

@@ -1,9 +1,10 @@
 use bevy::app::{App, Plugin, Update};
 use bevy::input::{Axis, Input};
 use bevy::input::gamepad::GamepadButtonInput;
-use bevy::prelude::{Component, Entity, EventReader, Gamepad, GamepadAxis, GamepadAxisType, GamepadButton, GamepadButtonType, in_state, IntoSystemConfigs, Query, Res};
-use crate::control::components::{CharacterControl};
+use bevy::prelude::{Commands, Component, Entity, EventReader, Gamepad, GamepadAxis, GamepadAxisType, GamepadButton, GamepadButtonType, in_state, IntoSystemConfigs, Query, Res, With};
+use crate::control::components::{CharacterControl, InputKeyboard};
 use crate::game_state::GameState;
+use crate::player::components::Player;
 
 /// Simple resource to store the ID of the connected gamepad.
 /// We need to know which gamepad to use for player input.
@@ -55,9 +56,16 @@ impl Plugin for GamepadPlugin {
 
 fn gamepad_buttons(
     mut gamepad_button_er: EventReader<GamepadButtonInput>,
+    mut player_query: Query<Entity, With<Player>>,
+    mut commands: Commands,
 ) {
     for event in gamepad_button_er.read() {
-        println!("{:?}", event.button.button_type);
+        if event.button.button_type == GamepadButtonType::Start {
+            if let Ok(entity) = player_query.get_single_mut() {
+                commands.entity(entity).remove::<InputKeyboard>();
+                commands.entity(entity).insert(InputGamepad::new(event.button.gamepad));
+            }
+        }
     }
 }
 
