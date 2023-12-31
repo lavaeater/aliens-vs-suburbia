@@ -9,21 +9,24 @@ pub fn dynamic_movement(
     for (mut linear_velocity, mut angular_velocity, mut transform, controller) in query.iter_mut() {
         match controller.control_type {
             CharacterControlType::Keyboard => {
-                let force = transform.rotation.mul_vec3(controller.walk_direction.clone()) * controller.speed;
+                let force = transform.rotation.mul_vec3(controller.walk_direction) * controller.speed;
                 linear_velocity.x = force.x;
                 linear_velocity.z = force.z;
                 angular_velocity.0 = controller.torque * controller.turn_speed;
             }
             CharacterControlType::Gamepad => {
-                linear_velocity.x = controller.walk_direction.x * controller.speed;
-                linear_velocity.z = controller.walk_direction.z * controller.speed;
+                linear_velocity.x = 0.0;
+                linear_velocity.z = 0.0;
+                let direction = Quat::from_euler(EulerRot::YXZ, 45.0f32.to_radians(), 0.0, 0.0).mul_vec3(controller.walk_direction);
+                linear_velocity.x = direction.x * controller.speed;
+                linear_velocity.z = direction.z * controller.speed;
 
-                transform.rotation = Quat::from_euler(
-                    EulerRot::YXZ,
-                    controller.walk_direction.xz().angle_between(Vec2::Y),
-                    0.0,
-                    0.0
-                );
+                // transform.rotation = Quat::from_euler(
+                //     EulerRot::YXZ,
+                //     controller.walk_direction.xz().angle_between(Vec2::X),
+                //     0.0,
+                //     0.0
+                // );
             }
         }
     }

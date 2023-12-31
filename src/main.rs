@@ -25,6 +25,7 @@ pub(crate) mod game_state;
 mod animation;
 mod constants;
 mod assets;
+mod inspection;
 
 
 fn main() {

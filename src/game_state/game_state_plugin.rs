@@ -17,6 +17,7 @@ use crate::general::systems::collision_handling_system::collision_handling_syste
 use crate::general::systems::health_monitor_system::health_monitor_system;
 use crate::general::systems::lights_systems::spawn_lights;
 use crate::general::systems::throwing_system::throwing;
+use crate::inspection::inspector::InspectorPlugin;
 use crate::map::map_plugins::StatefulMapPlugin;
 use crate::player::player_plugin::PlayerPlugin;
 use crate::towers::systems::{shoot_alien_system, tower_has_alien_in_range_scorer_system};
@@ -47,6 +48,7 @@ impl Plugin for GamePlugin {
                 ScoreKeeperPlugin,
                 VideoGlitchPlugin,
                 GamepadPlugin,
+                InspectorPlugin,
             ))
             .add_systems(
                 OnEnter(GameState::InGame),

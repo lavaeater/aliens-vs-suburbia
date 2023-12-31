@@ -77,11 +77,14 @@ fn gamepad_game_input(
     for (entity, mut controller, input_gamepad) in player_query.iter_mut() {
         // do something with the gamepad
         if let (Some(x), Some(y)) = (axes.get(input_gamepad.left_x), axes.get(input_gamepad.left_y)) {
-            if x.abs() > 0.1 || y.abs() > 0.1 {
+            if x.abs() > 0.1 {
                 controller.walk_direction.x = x;
-                controller.walk_direction.z = y;
             } else {
                 controller.walk_direction.x = 0.0;
+            }
+            if y.abs() > 0.1 {
+                controller.walk_direction.z = -y;
+            } else {
                 controller.walk_direction.z = 0.0;
             }
 
