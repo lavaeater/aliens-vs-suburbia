@@ -1,6 +1,8 @@
 use bevy::math::Vec3;
 use bevy::prelude::{Component, Reflect};
 use bevy::utils::HashSet;
+use bevy_inspector_egui::inspector_egui_impls::InspectorEguiImpl;
+use bevy_inspector_egui::InspectorOptions;
 use crate::animation::animation_plugin::AnimationKey;
 use crate::general::components::map_components::CoolDown;
 
@@ -53,7 +55,7 @@ impl Opposite for ControlRotation {
     }
 }
 
-#[derive(Component, Reflect)]
+#[derive(Component, Reflect, InspectorOptions)]
 pub struct CharacterControl {
     pub triggers: HashSet<ControlCommand>,
     pub rotations: HashSet<ControlRotation>,

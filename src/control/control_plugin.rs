@@ -1,6 +1,6 @@
 use bevy::app::{App, Plugin, Update};
 use bevy::prelude::{in_state, IntoSystemConfigs};
-use crate::general::systems::dynamic_movement_system::dynamic_movement;
+use crate::general::systems::dynamic_movement_system::{dynamic_movement_gamepad, dynamic_movement_keyboard};
 use crate::general::systems::kinematic_movement_system::kinematic_movement;
 use crate::control::keyboard_input::{keyboard_input};
 use crate::game_state::GameState;
@@ -13,7 +13,8 @@ impl Plugin for ControlPlugin {
             Update,
             (
                 keyboard_input,
-                dynamic_movement,
+                dynamic_movement_keyboard,
+                dynamic_movement_gamepad,
                 kinematic_movement,
             ),
         );
@@ -27,7 +28,8 @@ impl Plugin for StatefulControlPlugin {
         app.add_systems(
             Update,
             (keyboard_input,
-             dynamic_movement,
+             dynamic_movement_keyboard,
+             dynamic_movement_gamepad,
              kinematic_movement,
             ).run_if(in_state(GameState::InGame)),
         );
