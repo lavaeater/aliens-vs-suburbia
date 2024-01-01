@@ -7,7 +7,7 @@ use bevy::prelude::{Commands, Entity, EventReader, EventWriter, Query, Res, With
 use bevy::scene::{SceneBundle, SceneInstance};
 use bevy_xpbd_3d::components::{Collider, CollisionLayers, LockedAxes, RigidBody, Rotation, Sensor};
 use bevy_xpbd_3d::prelude::Position;
-use crate::control::components::{ControlCommands, CharacterControl};
+use crate::control::components::{ControlCommand, CharacterControl};
 use crate::general::components::{CollisionLayer, Health};
 use crate::general::components::map_components::{CurrentTile, MapModelDefinitions};
 use crate::general::resources::map_resources::MapGraph;
@@ -79,7 +79,7 @@ pub fn exit_build_mode(
 ) {
     for stop_event in exit_build_mode_evr.read() {
         if let Ok((bulding_indicator, mut controller)) = player_build_indicator_query.get_mut(stop_event.0) {
-            controller.triggers.remove(&ControlCommands::Build);
+            controller.triggers.remove(&ControlCommand::Build);
             commands.entity(bulding_indicator.0).despawn_recursive();
         }
         commands.entity(stop_event.0).remove::<IsBuilding>();

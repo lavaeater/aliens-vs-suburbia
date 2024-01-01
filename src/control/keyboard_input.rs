@@ -3,7 +3,7 @@ use bevy::input::keyboard::KeyboardInput;
 use bevy::math::Vec3;
 use bevy::prelude::{Entity, EventReader, EventWriter, KeyCode, Query, With};
 use crate::animation::animation_plugin::{AnimationEvent, AnimationEventType, AnimationKey};
-use crate::control::components::{CharacterControl, ControlCommands, ControlDirection, ControlRotation, InputKeyboard};
+use crate::control::components::{CharacterControl, ControlCommand, ControlDirection, ControlRotation, InputKeyboard};
 use crate::player::events::building_events::{ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode};
 
 pub fn keyboard_input(
@@ -20,17 +20,17 @@ pub fn keyboard_input(
             match ev.state {
                 ButtonState::Pressed => match ev.key_code {
                     Some(KeyCode::B) => {
-                        if controller.triggers.contains(&ControlCommands::Build) {
+                        if controller.triggers.contains(&ControlCommand::Build) {
                             animation_ew.send(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Building));
                             exit_build.send(ExitBuildMode(entity));
                         } else {
-                            controller.triggers.insert(ControlCommands::Build);
+                            controller.triggers.insert(ControlCommand::Build);
                             animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Building));
                             start_build_ew.send(EnterBuildMode(entity));
                         }
                     }
                     Some(KeyCode::Escape) => {
-                        if controller.triggers.contains(&ControlCommands::Build) {
+                        if controller.triggers.contains(&ControlCommand::Build) {
                             animation_ew.send(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Building));
                             exit_build.send(ExitBuildMode(entity));
                         }
@@ -52,14 +52,14 @@ pub fn keyboard_input(
                         controller.directions.insert(ControlDirection::Backward);
                     }
                     Some(KeyCode::Space) => {
-                        if controller.triggers.contains(&ControlCommands::Build) {
+                        if controller.triggers.contains(&ControlCommand::Build) {
                             execute_build.send(ExecuteBuild(entity));
-                        } else if controller.triggers.contains(&ControlCommands::Throw) {
+                        } else if controller.triggers.contains(&ControlCommand::Throw) {
                             animation_ew.send(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Throwing));
-                            controller.triggers.remove(&ControlCommands::Throw);
+                            controller.triggers.remove(&ControlCommand::Throw);
                         } else {
                             animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Throwing));
-                            controller.triggers.insert(ControlCommands::Throw);
+                            controller.triggers.insert(ControlCommand::Throw);
                         }
                     }
                     _ => {}

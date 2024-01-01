@@ -1,9 +1,10 @@
 use bevy::app::{App, Plugin, Update};
-use bevy::pbr::StandardMaterial;
-use bevy::prelude::{Has, in_state, IntoSystemConfigs, With, World};
+use bevy::prelude::{in_state, IntoSystemConfigs, With, World};
+use bevy::utils::HashSet;
 use bevy::window::PrimaryWindow;
 use bevy_inspector_egui::bevy_egui::{EguiContext, EguiPlugin};
 use bevy_inspector_egui::egui;
+use crate::control::components::{CharacterControl, ControlCommand, ControlDirection, ControlRotation};
 use crate::game_state::GameState;
 use crate::player::components::Player;
 
@@ -11,8 +12,13 @@ pub struct InspectorPlugin;
 
 impl Plugin for InspectorPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(EguiPlugin)
+        app
+            .add_plugins(EguiPlugin)
             .add_plugins(bevy_inspector_egui::DefaultInspectorConfigPlugin) // adds default options and `InspectorEguiImpl`s
+            .register_type::<CharacterControl>()
+            .register_type::<HashSet<ControlCommand>>()
+            .register_type::<HashSet<ControlDirection>>()
+            .register_type::<HashSet<ControlRotation>>()
             .add_systems(Update, (inspector_ui).run_if(in_state(GameState::InGame)));
     }
 }
@@ -36,7 +42,7 @@ fn inspector_ui(world: &mut World) {
             // });
 
             ui.heading("Player");
-            bevy_inspector_egui::bevy_inspector::ui_for_world_entities_filtered::<With<Player>>(world, ui,true);
+            bevy_inspector_egui::bevy_inspector::ui_for_world_entities_filtered::<With<Player>>(world, ui, true);
         });
     });
 }

@@ -8,7 +8,7 @@ use crate::general::components::map_components::CoolDown;
 pub struct InputKeyboard;
 
 #[derive(Hash, PartialEq, Eq, Clone, Reflect, Copy)]
-pub enum ControlCommands {
+pub enum ControlCommand {
     Throw,
     Jump,
     Build
@@ -53,15 +53,9 @@ impl Opposite for ControlRotation {
     }
 }
 
-#[derive(Hash, PartialEq, Eq, Clone, Reflect, Copy)]
-pub enum CharacterControlType {
-    Keyboard,
-    Gamepad
-}
-
 #[derive(Component, Reflect)]
 pub struct CharacterControl {
-    pub triggers: HashSet<ControlCommands>,
+    pub triggers: HashSet<ControlCommand>,
     pub rotations: HashSet<ControlRotation>,
     pub directions: HashSet<ControlDirection>,
     pub walk_direction: Vec3,
@@ -73,7 +67,6 @@ pub struct CharacterControl {
     pub max_turn_speed: f32,
     pub rate_of_fire_per_minute: f32,
     pub fire_cool_down: f32,
-    pub control_type: CharacterControlType,
 }
 
 impl CharacterControl {
@@ -91,7 +84,6 @@ impl CharacterControl {
             max_turn_speed: turn_speed,
             rate_of_fire_per_minute,
             fire_cool_down: 0.0,
-            control_type: CharacterControlType::Keyboard,
         }
     }
 }
