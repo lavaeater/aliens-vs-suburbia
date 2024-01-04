@@ -4,14 +4,17 @@ use bevy::animation::{AnimationClip, AnimationPlayer};
 use bevy::hierarchy::Parent;
 use bevy::utils::HashMap;
 use bevy::asset::{AssetServer, Handle};
-use crate::control::systems::CharacterState;
+use crate::control::components::CharacterState;
 use crate::game_state::GameState;
 
-#[derive(Event)]
-pub struct GotoAnimationState(pub Entity, pub AnimationKey);
+#[derive(PartialEq, Eq, Clone, Copy)]
+pub enum AnimationEventType {
+    GotoAnimState,
+    LeaveAnimState,
+}
 
 #[derive(Event)]
-pub struct LeaveAnimationState(pub Entity, pub AnimationKey);
+pub struct AnimationEvent(pub AnimationEventType, pub Entity, pub AnimationKey);
 
 #[derive(Component, Debug, Reflect)]
 pub struct CurrentAnimationKey {
@@ -30,8 +33,7 @@ pub struct AnimationPlugin;
 impl Plugin for AnimationPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_event::<GotoAnimationState>()
-            .add_event::<LeaveAnimationState>()
+            .add_event::<AnimationEvent>()
             .add_systems(
                 OnEnter(GameState::InGame),
                 load_animations,
@@ -64,20 +66,22 @@ pub enum AnimationKey {
 
 pub fn leave_animation_state_handler(
     anim_store: Res<AnimationStore<String>>,
-    mut update_er: EventReader<LeaveAnimationState>,
+    mut update_er: EventReader<AnimationEvent>,
     mut anim_key_query: Query<(&mut CurrentAnimationKey, &mut CharacterState)>,
     mut player_query: Query<&mut AnimationPlayer>,
     child_query: Query<&Children>,
 ) {
-    for LeaveAnimationState(entity, anim_key) in update_er.read() {
-        if let Ok((mut current_key, mut character_state)) = anim_key_query.get_mut(*entity) {
-            let (changed, new_key) = character_state.leave_state(*anim_key);
-            if changed {
-                if let Some(player_entity) = get_child_with_component_recursive(*entity, &child_query, &player_query) {
-                    if let Ok(mut player) = player_query.get_mut(player_entity) {
-                        current_key.key = new_key;
-                        if let Some(anim) = anim_store.anims.get(&current_key.group).unwrap().get(&current_key.key) {
-                            player.play(anim.clone_weak()).repeat();
+    for AnimationEvent(event_type, entity, anim_key) in update_er.read() {
+        if event_type == &AnimationEventType::LeaveAnimState {
+            if let Ok((mut current_key, mut character_state)) = anim_key_query.get_mut(*entity) {
+                let (changed, new_key) = character_state.leave_state(*anim_key);
+                if changed {
+                    if let Some(player_entity) = get_child_with_component_recursive(*entity, &child_query, &player_query) {
+                        if let Ok(mut player) = player_query.get_mut(player_entity) {
+                            current_key.key = new_key;
+                            if let Some(anim) = anim_store.anims.get(&current_key.group).unwrap().get(&current_key.key) {
+                                player.play(anim.clone_weak()).repeat();
+                            }
                         }
                     }
                 }
@@ -88,19 +92,21 @@ pub fn leave_animation_state_handler(
 
 pub fn goto_animation_state_handler(
     anim_store: Res<AnimationStore<String>>,
-    mut update_er: EventReader<GotoAnimationState>,
+    mut update_er: EventReader<AnimationEvent>,
     mut anim_key_query: Query<(&mut CurrentAnimationKey, &mut CharacterState)>,
     mut player_query: Query<&mut AnimationPlayer>,
     child_query: Query<&Children>,
 ) {
-    for GotoAnimationState(entity, anim_key) in update_er.read() {
-        if let Ok((mut current_key, mut character_state)) = anim_key_query.get_mut(*entity) {
-            if character_state.enter_state(*anim_key) {
-                if let Some(player_entity) = get_child_with_component_recursive(*entity, &child_query, &player_query) {
-                    if let Ok(mut player) = player_query.get_mut(player_entity) {
-                        current_key.key = *anim_key;
-                        if let Some(anim) = anim_store.anims.get(&current_key.group).unwrap().get(&current_key.key) {
-                            player.play(anim.clone_weak()).repeat();
+    for AnimationEvent(event_type, entity, anim_key) in update_er.read() {
+        if event_type == &AnimationEventType::GotoAnimState {
+            if let Ok((mut current_key, mut character_state)) = anim_key_query.get_mut(*entity) {
+                if character_state.enter_state(*anim_key) {
+                    if let Some(player_entity) = get_child_with_component_recursive(*entity, &child_query, &player_query) {
+                        if let Ok(mut player) = player_query.get_mut(player_entity) {
+                            current_key.key = *anim_key;
+                            if let Some(anim) = anim_store.anims.get(&current_key.group).unwrap().get(&current_key.key) {
+                                player.play(anim.clone_weak()).repeat();
+                            }
                         }
                     }
                 }

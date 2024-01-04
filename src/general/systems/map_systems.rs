@@ -392,7 +392,7 @@ pub fn map_loader(
                 alien_counter.max_count = 100;
                 commands.spawn((
                     Name::from(format!("Alien Spawn Point{}:{}", tile.x, tile.y)),
-                    AlienSpawnPoint::new(30.0),
+                    AlienSpawnPoint::new(2.0),
                     SceneBundle {
                         scene: game_assets.alien_construct.clone(),
                         ..Default::default()

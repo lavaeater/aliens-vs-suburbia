@@ -1,101 +1,65 @@
 use bevy::input::ButtonState;
 use bevy::input::keyboard::KeyboardInput;
-use bevy::prelude::{Component, Entity, EventReader, EventWriter, KeyCode, Query, With};
-use crate::animation::animation_plugin::{AnimationKey, GotoAnimationState, LeaveAnimationState};
-use crate::control::components::{ControlCommands, ControlDirection, CharacterControl, ControlRotation, InputKeyboard};
+use bevy::math::Vec3;
+use bevy::prelude::{Entity, EventReader, EventWriter, KeyCode, Query, With};
+use crate::animation::animation_plugin::{AnimationEvent, AnimationEventType, AnimationKey};
+use crate::control::components::{CharacterControl, ControlCommand, ControlDirection, ControlRotation, InputKeyboard};
 use crate::player::events::building_events::{ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode};
 
-#[derive(Component)]
-pub struct CharacterState {
-    pub state: Vec<AnimationKey>,
-}
-
-impl CharacterState {
-    pub fn enter_state(&mut self, state: AnimationKey) -> bool {
-        if let Some(latest_state) = self.state.last() {
-            if latest_state != &state {
-                self.state.push(state);
-                return true;
-            }
-        }
-        false
-    }
-
-    pub fn leave_state(&mut self, state: AnimationKey) -> (bool, AnimationKey) {
-        if self.state.len() > 1 {
-            if let Some(latest_state) = self.state.last() {
-                if latest_state == &state {
-                    self.state.pop();
-                    return (true, *self.state.last().unwrap());
-                }
-            }
-        }
-        (false, state)
-    }
-}
-
-impl Default for CharacterState {
-    fn default() -> Self {
-        Self {
-            state: vec![AnimationKey::Idle]
-        }
-    }
-}
-pub fn input_control(
+pub fn keyboard_input(
     mut key_evr: EventReader<KeyboardInput>,
     mut query: Query<(Entity, &mut CharacterControl), With<InputKeyboard>>,
     mut start_build_ew: EventWriter<EnterBuildMode>,
     mut execute_build: EventWriter<ExecuteBuild>,
     mut exit_build: EventWriter<ExitBuildMode>,
     mut change_build_indicator: EventWriter<ChangeBuildIndicator>,
-    mut goto_animation_state_ew: EventWriter<GotoAnimationState>,
-    mut leave_animation_state_ew: EventWriter<LeaveAnimationState>,
+    mut animation_ew: EventWriter<AnimationEvent>,
 ) {
     if let Ok((entity, mut controller)) = query.get_single_mut() {
         for ev in key_evr.read() {
             match ev.state {
                 ButtonState::Pressed => match ev.key_code {
                     Some(KeyCode::B) => {
-                        if controller.triggers.contains(&ControlCommands::Build) {
-                            leave_animation_state_ew.send(LeaveAnimationState(entity, AnimationKey::Building));
+                        if controller.triggers.contains(&ControlCommand::Build) {
+                            animation_ew.send(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Building));
                             exit_build.send(ExitBuildMode(entity));
                         } else {
-                            controller.triggers.insert(ControlCommands::Build);
-                            goto_animation_state_ew.send(GotoAnimationState(entity, AnimationKey::Building));
+                            controller.triggers.insert(ControlCommand::Build);
+                            animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Building));
                             start_build_ew.send(EnterBuildMode(entity));
                         }
                     }
                     Some(KeyCode::Escape) => {
-                        if controller.triggers.contains(&ControlCommands::Build) {
-                            leave_animation_state_ew.send(LeaveAnimationState(entity, AnimationKey::Building));
+                        if controller.triggers.contains(&ControlCommand::Build) {
+                            animation_ew.send(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Building));
                             exit_build.send(ExitBuildMode(entity));
                         }
                     }
                     Some(KeyCode::A) => {
-                        goto_animation_state_ew.send(GotoAnimationState(entity, AnimationKey::Walking));
+                        animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walking));
                         controller.rotations.insert(ControlRotation::Left);
                     }
                     Some(KeyCode::D) => {
-                        goto_animation_state_ew.send(GotoAnimationState(entity, AnimationKey::Walking));
+                        animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walking));
                         controller.rotations.insert(ControlRotation::Right);
                     }
                     Some(KeyCode::W) => {
-                        goto_animation_state_ew.send(GotoAnimationState(entity, AnimationKey::Walking));
+                        animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walking));
                         controller.directions.insert(ControlDirection::Forward);
                     }
                     Some(KeyCode::S) => {
-                        goto_animation_state_ew.send(GotoAnimationState(entity, AnimationKey::Walking));
+                        animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walking));
                         controller.directions.insert(ControlDirection::Backward);
                     }
                     Some(KeyCode::Space) => {
-                        if controller.triggers.contains(&ControlCommands::Build) {
+                        if controller.triggers.contains(&ControlCommand::Build) {
                             execute_build.send(ExecuteBuild(entity));
-                        } else if controller.triggers.contains(&ControlCommands::Throw) {
-                            leave_animation_state_ew.send(LeaveAnimationState(entity, AnimationKey::Throwing));
-                            controller.triggers.remove(&ControlCommands::Throw);
+                        } else if controller.triggers.contains(&ControlCommand::Throw) {
+                            animation_ew.send(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Throwing));
+                            controller.triggers.remove(&ControlCommand::Throw);
                         } else {
-                            goto_animation_state_ew.send(GotoAnimationState(entity, AnimationKey::Throwing));
-                            controller.triggers.insert(ControlCommands::Throw);
+                            animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Throwing));
+                            controller.triggers.insert(ControlCommand::Throw);
                         }
                     }
                     _ => {}
@@ -123,7 +87,23 @@ pub fn input_control(
                 }
             }
             if controller.directions.is_empty() && controller.rotations.is_empty() {
-                leave_animation_state_ew.send(LeaveAnimationState(entity, AnimationKey::Walking));
+                animation_ew.send(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Walking));
+            }
+
+            controller.walk_direction = Vec3::ZERO;
+            controller.torque = Vec3::ZERO;
+
+            if controller.directions.contains(&ControlDirection::Forward) {
+                controller.walk_direction.z = -1.0;
+            }
+            if controller.directions.contains(&ControlDirection::Backward) {
+                controller.walk_direction.z = 1.0;
+            }
+            if controller.rotations.contains(&ControlRotation::Left) {
+                controller.torque.y = 1.0;
+            }
+            if controller.rotations.contains(&ControlRotation::Right) {
+                controller.torque.y = -1.0;
             }
         }
     }

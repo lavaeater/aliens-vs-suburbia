@@ -1,31 +1,36 @@
-use bevy::prelude::{Query, With};
+use bevy::math::{EulerRot, Quat, Vec3Swizzles};
+use bevy::prelude::{Query, Transform, With};
 use bevy_xpbd_3d::components::{AngularVelocity, LinearVelocity};
-use bevy_xpbd_3d::math::Vector3;
-use bevy_xpbd_3d::prelude::Rotation;
-use crate::control::components::{ControlDirection, CharacterControl, ControlRotation, DynamicMovement};
+use crate::control::components::{CharacterControl, DynamicMovement, InputKeyboard};
+use crate::control::gamepad_input::InputGamepad;
 
-pub fn dynamic_movement(
-    mut query: Query<(&mut LinearVelocity, &mut AngularVelocity, &Rotation, &CharacterControl), With<DynamicMovement>>,
+pub fn dynamic_movement_keyboard(
+    mut query: Query<(&mut LinearVelocity, &mut AngularVelocity, &mut Transform, &CharacterControl), (With<DynamicMovement>, With<InputKeyboard>)>,
 ) {
-    for (mut linear_velocity, mut angular_velocity, rotation, controller) in query.iter_mut() {
-        let mut force = Vector3::ZERO;
-        let mut torque = Vector3::ZERO;
-
-        if controller.directions.contains(&ControlDirection::Forward) {
-            force.z = -1.0;
-        }
-        if controller.directions.contains(&ControlDirection::Backward) {
-            force.z = 1.0;
-        }
-        if controller.rotations.contains(&ControlRotation::Left) {
-            torque.y = 1.0;
-        }
-        if controller.rotations.contains(&ControlRotation::Right) {
-            torque.y = -1.0;
-        }
-        force = rotation.mul_vec3(force) * controller.speed;
+    for (mut linear_velocity, mut angular_velocity, mut transform, controller) in query.iter_mut() {
+        let force = transform.rotation.mul_vec3(controller.walk_direction) * controller.speed;
         linear_velocity.x = force.x;
         linear_velocity.z = force.z;
-        angular_velocity.0 = torque * controller.turn_speed;
+        angular_velocity.0 = controller.torque * controller.turn_speed;
+    }
+}
+
+
+pub fn dynamic_movement_gamepad(
+    mut query: Query<(&mut LinearVelocity, &mut AngularVelocity, &mut Transform, &CharacterControl), (With<DynamicMovement>, With<InputGamepad>)>,
+) {
+    for (mut linear_velocity, mut angular_velocity, mut transform, controller) in query.iter_mut() {
+        linear_velocity.x = 0.0;
+        linear_velocity.z = 0.0;
+        let direction = Quat::from_euler(EulerRot::YXZ, 45.0f32.to_radians(), 0.0, 0.0).mul_vec3(controller.walk_direction);
+        linear_velocity.x = direction.x * controller.speed;
+        linear_velocity.z = direction.z * controller.speed;
+
+        // transform.rotation = Quat::from_euler(
+        //     EulerRot::YXZ,
+        //     controller.walk_direction.xz().angle_between(Vec2::X),
+        //     0.0,
+        //     0.0
+        // );
     }
 }

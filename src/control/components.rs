@@ -1,12 +1,16 @@
+use bevy::math::Vec3;
 use bevy::prelude::{Component, Reflect};
 use bevy::utils::HashSet;
+use bevy_inspector_egui::inspector_egui_impls::InspectorEguiImpl;
+use bevy_inspector_egui::InspectorOptions;
+use crate::animation::animation_plugin::AnimationKey;
 use crate::general::components::map_components::CoolDown;
 
 #[derive(Component, Reflect)]
 pub struct InputKeyboard;
 
 #[derive(Hash, PartialEq, Eq, Clone, Reflect, Copy)]
-pub enum ControlCommands {
+pub enum ControlCommand {
     Throw,
     Jump,
     Build
@@ -23,8 +27,8 @@ pub enum ControlRotation {
 pub enum ControlDirection {
     Forward,
     Backward,
-    StrafeLeft,
-    StrafeRight
+    Left,
+    Right
 }
 
 pub trait Opposite {
@@ -36,8 +40,8 @@ impl Opposite for ControlDirection {
         match self {
             ControlDirection::Forward => ControlDirection::Backward,
             ControlDirection::Backward => ControlDirection::Forward,
-            ControlDirection::StrafeLeft => ControlDirection::StrafeRight,
-            ControlDirection::StrafeRight => ControlDirection::StrafeLeft,
+            ControlDirection::Left => ControlDirection::Right,
+            ControlDirection::Right => ControlDirection::Left,
         }
     }
 }
@@ -51,18 +55,20 @@ impl Opposite for ControlRotation {
     }
 }
 
-#[derive(Component, Reflect)]
+#[derive(Component, Reflect, InspectorOptions)]
 pub struct CharacterControl {
-    pub triggers: HashSet<ControlCommands>,
+    pub triggers: HashSet<ControlCommand>,
     pub rotations: HashSet<ControlRotation>,
     pub directions: HashSet<ControlDirection>,
+    pub walk_direction: Vec3,
+    pub torque: Vec3,
     pub has_thrown:bool,
     pub speed: f32,
     pub max_speed: f32,
     pub turn_speed: f32,
     pub max_turn_speed: f32,
     pub rate_of_fire_per_minute: f32,
-    pub fire_cool_down: f32
+    pub fire_cool_down: f32,
 }
 
 impl CharacterControl {
@@ -71,13 +77,15 @@ impl CharacterControl {
             triggers: HashSet::default(),
             rotations: HashSet::default(),
             directions: HashSet::default(),
+            walk_direction: Vec3::ZERO,
+            torque: Vec3::ZERO,
             has_thrown: false,
             speed,
             max_speed: speed,
             turn_speed,
             max_turn_speed: turn_speed,
             rate_of_fire_per_minute,
-            fire_cool_down: 0.0
+            fire_cool_down: 0.0,
         }
     }
 }
@@ -100,3 +108,40 @@ pub struct DynamicMovement;
 
 #[derive(Component)]
 pub struct KinematicMovement;
+
+#[derive(Component)]
+pub struct CharacterState {
+    pub state: Vec<AnimationKey>,
+}
+
+impl CharacterState {
+    pub fn enter_state(&mut self, state: AnimationKey) -> bool {
+        if let Some(latest_state) = self.state.last() {
+            if latest_state != &state {
+                self.state.push(state);
+                return true;
+            }
+        }
+        false
+    }
+
+    pub fn leave_state(&mut self, state: AnimationKey) -> (bool, AnimationKey) {
+        if self.state.len() > 1 {
+            if let Some(latest_state) = self.state.last() {
+                if latest_state == &state {
+                    self.state.pop();
+                    return (true, *self.state.last().unwrap());
+                }
+            }
+        }
+        (false, state)
+    }
+}
+
+impl Default for CharacterState {
+    fn default() -> Self {
+        Self {
+            state: vec![AnimationKey::Idle]
+        }
+    }
+}

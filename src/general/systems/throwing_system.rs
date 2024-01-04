@@ -4,7 +4,7 @@ use bevy::scene::SceneBundle;
 use bevy::time::Time;
 use bevy_xpbd_3d::components::{Collider, CollisionLayers, LinearVelocity, Position, RigidBody};
 use crate::assets::assets_plugin::GameAssets;
-use crate::control::components::{ControlCommands, CharacterControl};
+use crate::control::components::{ControlCommand, CharacterControl};
 use crate::game_state::score_keeper::{GameTrackingEvent};
 use crate::general::components::{Ball, CollisionLayer};
 use crate::general::components::map_components::CoolDown;
@@ -18,7 +18,7 @@ pub fn throwing(
     mut game_ew: EventWriter<GameTrackingEvent>,
 ) {
     for (entity, _player, position, auto_aim, mut controller) in query.iter_mut() {
-        if controller.triggers.contains(&ControlCommands::Throw) {
+        if controller.triggers.contains(&ControlCommand::Throw) {
             if controller.cool_down(time_res.delta_seconds()) {
                 let launch_p = position.0 + auto_aim.0 * 0.5 + Vec3::new(0.0, 0.25, 0.0);
                 game_ew.send(GameTrackingEvent::ShotFired(entity));

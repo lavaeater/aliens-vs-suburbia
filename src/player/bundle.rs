@@ -4,7 +4,7 @@ use bevy::prelude::{Bundle};
 use bevy_xpbd_3d::components::{AngularDamping, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
 use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
 use crate::control::components::{CharacterControl, DynamicMovement, InputKeyboard};
-use crate::control::systems::CharacterState;
+use crate::control::components::CharacterState;
 use crate::game_state::score_keeper::Score;
 use crate::general::components::{CollisionLayer, Health};
 use crate::general::components::map_components::CurrentTile;
