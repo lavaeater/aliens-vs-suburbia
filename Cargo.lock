@@ -140,6 +140,7 @@ dependencies = [
  "flagset",
  "itertools 0.12.0",
  "pathfinding",
+ "pixelate_mesh",
  "rand_chacha",
  "serde",
  "serde_json",
@@ -3427,6 +3428,14 @@ dependencies = [
  "atomic-waker",
  "fastrand 2.0.1",
  "futures-io",
+]
+
+[[package]]
+name = "pixelate_mesh"
+version = "0.1.0"
+source = "git+https://github.com/lavaeater/pixelate_mesh.git?branch=0.12#143c76637680bdf961774032e86cd7272b36f063"
+dependencies = [
+ "bevy",
 ]
 
 [[package]]
