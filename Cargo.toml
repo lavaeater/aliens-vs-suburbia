@@ -20,6 +20,7 @@ belly = { git="https://github.com/jkb0o/belly/", branch="0.12" }
 bevy_mod_outline = "0.6.0"
 bevy_video_glitch = "0.1.1"
 bevy-inspector-egui = "0.22.0"
+rand = "0.8.5"
 # Enable max optimizations for dependencies, but not for our code:
 [profile.dev.package."*"]
 opt-level = 3

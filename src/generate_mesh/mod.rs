@@ -123,7 +123,11 @@ fn mesh_input_handler(
 
 #[rustfmt::skip]
 fn create_cube_mesh() -> Mesh {
-    let side_length = 1.0;
+    let top_side = 0.5;
+    let bottom_side = 1.0;
+
+    let mut rng = rand::thread_rng();
+    
 
     Mesh::new(PrimitiveTopology::TriangleList)
         .with_inserted_attribute(
@@ -133,35 +137,35 @@ fn create_cube_mesh() -> Mesh {
             // By centering our mesh around the origin, rotating the mesh preserves its center of mass.
             vec![
                 // top (facing towards +y)
-                [-side_length, side_length, -side_length], // vertex with index 0
-                [side_length, side_length, -side_length], // vertex with index 1
-                [side_length, side_length, side_length], // etc. until 23
-                [-side_length, side_length, side_length],
-                // bottom   (-y)
-                [-side_length, -side_length, -side_length],
-                [side_length, -side_length, -side_length],
-                [side_length, -side_length, side_length],
-                [-side_length, -side_length, side_length],
-                // right    (+x)
-                [side_length, -side_length, -side_length],
-                [side_length, -side_length, side_length],
-                [side_length, side_length, side_length], // This vertex is at the same position as vertex with index 2, but they'll have different UV and normal
-                [side_length, side_length, -side_length],
-                // left     (-x)
-                [-side_length, -side_length, -side_length],
-                [-side_length, -side_length, side_length],
-                [-side_length, side_length, side_length],
-                [-side_length, side_length, -side_length],
-                // back     (+z)
-                [-side_length, -side_length, side_length],
-                [-side_length, side_length, side_length],
-                [side_length, side_length, side_length],
-                [side_length, -side_length, side_length],
-                // forward  (-z)
-                [-side_length, -side_length, -side_length],
-                [-side_length, side_length, -side_length],
-                [side_length, side_length, -side_length],
-                [side_length, -side_length, -side_length],
+                [-top_side, top_side, -top_side], // vertex with index 0
+                [top_side, top_side, -top_side], // vertex with index 1
+                [top_side, top_side, top_side], // etc. until 23
+                [-top_side, top_side, top_side],
+                // // bottom   (-y)
+                // [-bottom_side, -top_side, -bottom_side],
+                // [bottom_side, -top_side, -bottom_side],
+                // [bottom_side, -top_side, bottom_side],
+                // [-bottom_side, -top_side, bottom_side],
+                // // right    (+x)
+                // [top_side, -top_side, -top_side],
+                // [top_side, -top_side, top_side],
+                // [top_side, top_side, top_side], // This vertex is at the same position as vertex with index 2, but they'll have different UV and normal
+                // [top_side, top_side, -top_side],
+                // // left     (-x)
+                // [-top_side, -top_side, -top_side],
+                // [-top_side, -top_side, top_side],
+                // [-top_side, top_side, top_side],
+                // [-top_side, top_side, -top_side],
+                // // back     (+z)
+                // [-top_side, -top_side, top_side],
+                // [-top_side, top_side, top_side],
+                // [top_side, top_side, top_side],
+                // [top_side, -top_side, top_side],
+                // // forward  (-z)
+                // [-top_side, -top_side, -top_side],
+                // [-top_side, top_side, -top_side],
+                // [top_side, top_side, -top_side],
+                // [top_side, -top_side, -top_side],
             ],
         )
         // Set-up UV coordinated to point to the upper (V < 0.5), "dirt+grass" part of the texture.
@@ -174,15 +178,15 @@ fn create_cube_mesh() -> Mesh {
                 // Assigning the UV coords for the top side.
                 [0.0, 0.2], [0.0, 0.0], [1.0, 0.0], [1.0, 0.25],
                 // Assigning the UV coords for the bottom side.
-                [0.0, 0.45], [0.0, 0.25], [1.0, 0.25], [1.0, 0.45],
-                // Assigning the UV coords for the right side.
-                [1.0, 0.45], [0.0, 0.45], [0.0, 0.2], [1.0, 0.2],
-                // Assigning the UV coords for the left side.
-                [1.0, 0.45], [0.0, 0.45], [0.0, 0.2], [1.0, 0.2],
-                // Assigning the UV coords for the back side.
-                [0.0, 0.45], [0.0, 0.2], [1.0, 0.2], [1.0, 0.45],
-                // Assigning the UV coords for the forward side.
-                [0.0, 0.45], [0.0, 0.2], [1.0, 0.2], [1.0, 0.45],
+                // [0.0, 0.45], [0.0, 0.25], [1.0, 0.25], [1.0, 0.45],
+                // // Assigning the UV coords for the right side.
+                // [1.0, 0.45], [0.0, 0.45], [0.0, 0.2], [1.0, 0.2],
+                // // Assigning the UV coords for the left side.
+                // [1.0, 0.45], [0.0, 0.45], [0.0, 0.2], [1.0, 0.2],
+                // // Assigning the UV coords for the back side.
+                // [0.0, 0.45], [0.0, 0.2], [1.0, 0.2], [1.0, 0.45],
+                // // Assigning the UV coords for the forward side.
+                // [0.0, 0.45], [0.0, 0.2], [1.0, 0.2], [1.0, 0.45],
             ],
         )
         // For meshes with flat shading, normals are orthogonal (pointing out) from the direction of
@@ -197,31 +201,31 @@ fn create_cube_mesh() -> Mesh {
                 [0.0, 1.0, 0.0],
                 [0.0, 1.0, 0.0],
                 [0.0, 1.0, 0.0],
-                // Normals for the bottom side (towards -y)
-                [0.0, -1.0, 0.0],
-                [0.0, -1.0, 0.0],
-                [0.0, -1.0, 0.0],
-                [0.0, -1.0, 0.0],
-                // Normals for the right side (towards +x)
-                [1.0, 0.0, 0.0],
-                [1.0, 0.0, 0.0],
-                [1.0, 0.0, 0.0],
-                [1.0, 0.0, 0.0],
-                // Normals for the left side (towards -x)
-                [-1.0, 0.0, 0.0],
-                [-1.0, 0.0, 0.0],
-                [-1.0, 0.0, 0.0],
-                [-1.0, 0.0, 0.0],
-                // Normals for the back side (towards +z)
-                [0.0, 0.0, 1.0],
-                [0.0, 0.0, 1.0],
-                [0.0, 0.0, 1.0],
-                [0.0, 0.0, 1.0],
-                // Normals for the forward side (towards -z)
-                [0.0, 0.0, -1.0],
-                [0.0, 0.0, -1.0],
-                [0.0, 0.0, -1.0],
-                [0.0, 0.0, -1.0],
+                // // Normals for the bottom side (towards -y)
+                // [0.0, -1.0, 0.0],
+                // [0.0, -1.0, 0.0],
+                // [0.0, -1.0, 0.0],
+                // [0.0, -1.0, 0.0],
+                // // Normals for the right side (towards +x)
+                // [1.0, 0.0, 0.0],
+                // [1.0, 0.0, 0.0],
+                // [1.0, 0.0, 0.0],
+                // [1.0, 0.0, 0.0],
+                // // Normals for the left side (towards -x)
+                // [-1.0, 0.0, 0.0],
+                // [-1.0, 0.0, 0.0],
+                // [-1.0, 0.0, 0.0],
+                // [-1.0, 0.0, 0.0],
+                // // Normals for the back side (towards +z)
+                // [0.0, 0.0, 1.0],
+                // [0.0, 0.0, 1.0],
+                // [0.0, 0.0, 1.0],
+                // [0.0, 0.0, 1.0],
+                // // Normals for the forward side (towards -z)
+                // [0.0, 0.0, -1.0],
+                // [0.0, 0.0, -1.0],
+                // [0.0, 0.0, -1.0],
+                // [0.0, 0.0, -1.0],
             ],
         )
         // Create the triangles out of the 24 vertices we created.
@@ -233,11 +237,11 @@ fn create_cube_mesh() -> Mesh {
         // further examples and the implementation of the built-in shapes.
         .with_indices(Some(Indices::U32(vec![
             0, 3, 1, 1, 3, 2, // triangles making up the top (+y) facing side.
-            4, 5, 7, 5, 6, 7, // bottom (-y)
-            8, 11, 9, 9, 11, 10, // right (+x)
-            12, 13, 15, 13, 14, 15, // left (-x)
-            16, 19, 17, 17, 19, 18, // back (+z)
-            20, 21, 23, 21, 22, 23, // forward (-z)
+            // 4, 5, 7, 5, 6, 7, // bottom (-y)
+            // 8, 11, 9, 9, 11, 10, // right (+x)
+            // 12, 13, 15, 13, 14, 15, // left (-x)
+            // 16, 19, 17, 17, 19, 18, // back (+z)
+            // 20, 21, 23, 21, 22, 23, // forward (-z)
         ])))
 }
 

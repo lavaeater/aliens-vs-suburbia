@@ -140,6 +140,7 @@ dependencies = [
  "flagset",
  "itertools 0.12.0",
  "pathfinding",
+ "rand",
  "rand_chacha",
  "serde",
  "serde_json",
