@@ -20,6 +20,9 @@ pub fn spawn_menu(
           <button on:press=|ctx| ctx.send_event(GotoState { state: GameState::InGame })>
                     "Start Game"
                 </button>
+        <button on:press=|ctx| ctx.send_event(GotoState { state: GameState::Mesh })>
+                    "Pass the Mesh"
+                </button>
         </body>
     });
 }

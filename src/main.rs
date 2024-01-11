@@ -26,6 +26,7 @@ mod animation;
 mod constants;
 mod assets;
 mod inspection;
+mod generate_mesh;
 
 
 fn main() {

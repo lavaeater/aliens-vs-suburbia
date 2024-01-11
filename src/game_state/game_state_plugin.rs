@@ -23,6 +23,7 @@ use crate::player::player_plugin::PlayerPlugin;
 use crate::towers::systems::{shoot_alien_system, tower_has_alien_in_range_scorer_system};
 use crate::ui::spawn_ui::{add_health_bar, AddHealthBar, fellow_system, GotoState};
 use crate::ui::ui_plugin::UiPlugin;
+use crate::generate_mesh::MeshPlugin;
 
 pub struct GamePlugin;
 
@@ -49,6 +50,9 @@ impl Plugin for GamePlugin {
                 VideoGlitchPlugin,
                 GamepadPlugin,
                 InspectorPlugin,
+            ))
+            .add_plugins((
+                MeshPlugin,
             ))
             .add_systems(
                 OnEnter(GameState::InGame),
