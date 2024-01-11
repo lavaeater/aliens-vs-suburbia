@@ -123,6 +123,8 @@ fn mesh_input_handler(
 
 #[rustfmt::skip]
 fn create_cube_mesh() -> Mesh {
+    let side_length = 1.0;
+
     Mesh::new(PrimitiveTopology::TriangleList)
         .with_inserted_attribute(
             Mesh::ATTRIBUTE_POSITION,
@@ -131,35 +133,35 @@ fn create_cube_mesh() -> Mesh {
             // By centering our mesh around the origin, rotating the mesh preserves its center of mass.
             vec![
                 // top (facing towards +y)
-                [-0.5, 0.5, -0.5], // vertex with index 0
-                [0.5, 0.5, -0.5], // vertex with index 1
-                [0.5, 0.5, 0.5], // etc. until 23
-                [-0.5, 0.5, 0.5],
+                [-side_length, side_length, -side_length], // vertex with index 0
+                [side_length, side_length, -side_length], // vertex with index 1
+                [side_length, side_length, side_length], // etc. until 23
+                [-side_length, side_length, side_length],
                 // bottom   (-y)
-                [-0.5, -0.5, -0.5],
-                [0.5, -0.5, -0.5],
-                [0.5, -0.5, 0.5],
-                [-0.5, -0.5, 0.5],
+                [-side_length, -side_length, -side_length],
+                [side_length, -side_length, -side_length],
+                [side_length, -side_length, side_length],
+                [-side_length, -side_length, side_length],
                 // right    (+x)
-                [0.5, -0.5, -0.5],
-                [0.5, -0.5, 0.5],
-                [0.5, 0.5, 0.5], // This vertex is at the same position as vertex with index 2, but they'll have different UV and normal
-                [0.5, 0.5, -0.5],
+                [side_length, -side_length, -side_length],
+                [side_length, -side_length, side_length],
+                [side_length, side_length, side_length], // This vertex is at the same position as vertex with index 2, but they'll have different UV and normal
+                [side_length, side_length, -side_length],
                 // left     (-x)
-                [-0.5, -0.5, -0.5],
-                [-0.5, -0.5, 0.5],
-                [-0.5, 0.5, 0.5],
-                [-0.5, 0.5, -0.5],
+                [-side_length, -side_length, -side_length],
+                [-side_length, -side_length, side_length],
+                [-side_length, side_length, side_length],
+                [-side_length, side_length, -side_length],
                 // back     (+z)
-                [-0.5, -0.5, 0.5],
-                [-0.5, 0.5, 0.5],
-                [0.5, 0.5, 0.5],
-                [0.5, -0.5, 0.5],
+                [-side_length, -side_length, side_length],
+                [-side_length, side_length, side_length],
+                [side_length, side_length, side_length],
+                [side_length, -side_length, side_length],
                 // forward  (-z)
-                [-0.5, -0.5, -0.5],
-                [-0.5, 0.5, -0.5],
-                [0.5, 0.5, -0.5],
-                [0.5, -0.5, -0.5],
+                [-side_length, -side_length, -side_length],
+                [-side_length, side_length, -side_length],
+                [side_length, side_length, -side_length],
+                [side_length, -side_length, -side_length],
             ],
         )
         // Set-up UV coordinated to point to the upper (V < 0.5), "dirt+grass" part of the texture.
