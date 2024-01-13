@@ -125,8 +125,8 @@ fn mesh_input_handler(
 fn create_cube_mesh() -> Mesh {
     let height = 0.0;
 
-    let rows = 1;
-    let columns = 1;
+    let rows = 2;
+    let columns = 2;
 
     let quad_side = 2;
     let row_points = rows * quad_side;
@@ -134,25 +134,34 @@ fn create_cube_mesh() -> Mesh {
     let total_points = row_points * column_points;
     let quad_count = total_points / (quad_side * quad_side);
 
-    let square_size = 0.5;
+    let square_size = 1.0;
     /*
     1-2-3
     4-5-6
     */
-    let new_vertices = (0..total_points).map(|i| {
-        let x = i / row_points;
-        let z = i % row_points;
-        /*
-        if x is even, then it is left
-        if x is odd, then it is  right
 
-        if z is even, then it is top
-        if z is odd, then it is bottom
-         */
-        let x = x as f32 * square_size;
-        let z = z as f32 * square_size;
-        [x, height, z]
+    let vertices = (0..row_points).flat_map(|r| {
+        (0..column_points).map(|c| {
+            let x = c as f32 * square_size;
+            let z = r as f32 * square_size;
+            [x, height, z]
+        }).collect::<Vec<[f32; 3]>>()
     }).collect::<Vec<[f32; 3]>>();
+
+    // let vertices = (0..total_points).map(|i| {
+    //     let x = i % column_points;
+    //     let z = i / column_points + x;
+    //     /*
+    //     if x is even, then it is left
+    //     if x is odd, then it is  right
+    //
+    //     if z is even, then it is top
+    //     if z is odd, then it is bottom
+    //      */
+    //     let x = x as f32 * square_size;
+    //     let z = z as f32 * square_size;
+    //     [x, height, z]
+    // }).collect::<Vec<[f32; 3]>>();
 
     let new_uvs = (0..quad_count).flat_map(|_i| {
         vec![
@@ -210,16 +219,65 @@ fn create_cube_mesh() -> Mesh {
 
      */
 
-    let face_map = [0, 3, 1, 1, 3, 2];
+    let face_map = [0, 2, 1, 1, 2, 3];
     let stride = 4;
-    let indices = (0..quad_count as u32).flat_map(|i|
-        [face_map[0] + i * stride, face_map[1] + i * stride, face_map[2] + i * stride, face_map[3] + i * stride, face_map[4] + i * stride, face_map[5] + i * stride]
+
+    /*
+    Aha.
+
+    What we WANT to do is to calculate the positions for our other corners
+    and from those positions calculate the indices for the corners in the
+    triangles that we want!
+
+    So, a given index gives a given x and y, these in turn give us x2 and y2,
+    x3 and y3 for the corners and from these we can calculate the indices, right?
+
+    This time we need to stride forth!
+
+    Nah, it is still the quad, bro
+     */
+
+    let tr_one:[[u32;2]; 3] = [[0,0], [0,1], [1,0]];
+    let tr_two:[[u32;2]; 3] = [[1,0], [0,1], [1,1]];
+
+    let indices = (0..row_points as u32).step_by(2).flat_map(|r| {
+        (0..column_points as u32).step_by(2).flat_map(|c| {
+            let p1 = [c + tr_one[0][0],r + tr_one[0][1]];
+            let p2 = [c + tr_one[1][0],r + tr_one[1][1]];
+            let p3 = [c + tr_one[2][0],r + tr_one[2][1]];
+
+            let q1 = [c + tr_two[0][0],r + tr_two[0][1]];
+            let q2 = [c + tr_two[1][0],r + tr_two[1][1]];
+            let q3 = [c + tr_two[2][0],r + tr_two[2][1]];
+            [
+                position_to_index(p1[0], p1[1], column_points),
+                position_to_index(p2[0], p2[1], column_points),
+                position_to_index(p3[0], p3[1], column_points),
+                position_to_index(q1[0], q1[1], column_points),
+                position_to_index(q2[0], q2[1], column_points),
+                position_to_index(q3[0], q3[1], column_points),
+            ]
+
+
+        }).collect::<Vec<u32>>()
+    }
     ).collect::<Vec<u32>>();
+
+
+    // let indices = (0..quad_count as u32).flat_map(|i|
+    //     [
+    //         face_map[0] + i * stride,
+    //         face_map[1] + i * stride,
+    //         face_map[2] + i * stride,
+    //         face_map[3] + i * stride,
+    //         face_map[4] + i * stride,
+    //         face_map[5] + i * stride]
+    // ).collect::<Vec<u32>>();
 
     Mesh::new(PrimitiveTopology::TriangleList)
         .with_inserted_attribute(
             Mesh::ATTRIBUTE_POSITION,
-            new_vertices,
+            vertices,
         )
         .with_inserted_attribute(
             Mesh::ATTRIBUTE_UV_0,
@@ -228,7 +286,12 @@ fn create_cube_mesh() -> Mesh {
         .with_indices(Some(Indices::U32(
             indices
         )))
+        .with_duplicated_vertices()
         .with_computed_flat_normals()
+}
+
+fn position_to_index(x: u32, y: u32, width: u32) -> u32 {
+    y * width + x
 }
 
 // Function that changes the UV mapping of the mesh, to apply the other texture.
