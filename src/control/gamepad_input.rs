@@ -72,10 +72,10 @@ fn gamepad_buttons(
 
 fn gamepad_game_input(
     axes: Res<Axis<GamepadAxis>>,
-    buttons: Res<Input<GamepadButton>>,
+    _buttons: Res<Input<GamepadButton>>,
     mut player_query: Query<(Entity, &mut CharacterControl, &InputGamepad)>
 ) {
-    for (entity, mut controller, input_gamepad) in player_query.iter_mut() {
+    for (_entity, mut controller, input_gamepad) in player_query.iter_mut() {
         // do something with the gamepad
         if let (Some(x), Some(y)) = (axes.get(input_gamepad.left_x), axes.get(input_gamepad.left_y)) {
             if x.abs() > 0.1 {

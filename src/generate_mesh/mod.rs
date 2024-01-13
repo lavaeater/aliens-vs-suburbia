@@ -5,7 +5,6 @@ use bevy::prelude::*;
 use bevy::render::mesh::Indices;
 use bevy::render::mesh::VertexAttributeValues;
 use bevy::render::render_resource::PrimitiveTopology;
-use bevy::utils::petgraph::visit::Walker;
 use crate::game_state::GameState;
 
 // Define a "marker" component to mark the custom mesh. Marker components are often used in Bevy for
@@ -197,33 +196,6 @@ fn create_cube_mesh() -> Mesh {
 
      */
 
-    let triangle_one = [0, 3, 1];
-    let triangle_two = [1, 3, 2];
-
-    let triangles_one = [[1,3],[0,1],[0,3]];
-    let triangles_two = [[3,2],[1,2],[1,3]];
-
-
-    let new_normals = (0..quad_count).flat_map(|index| {
-        let normal_1 =
-            calculate_surface_normal(
-                new_vertices[index + triangle_one[0]],
-                new_vertices[index + triangle_one[1]],
-                new_vertices[index + triangle_one[2]],
-            );
-        let normal_2 = calculate_surface_normal(
-            new_vertices[index + triangle_two[0]],
-            new_vertices[index + triangle_two[1]],
-            new_vertices[index + triangle_two[2]],
-        );
-        vec![
-            normal_1,
-            normal_1,
-            normal_2,
-            normal_2,
-        ]
-    }).collect::<Vec<[f32; 3]>>();
-
     /*
     0---1    4---5
     |i1 |    |i2 |
@@ -253,23 +225,10 @@ fn create_cube_mesh() -> Mesh {
             Mesh::ATTRIBUTE_UV_0,
             new_uvs,
         )
-        .with_inserted_attribute(
-            Mesh::ATTRIBUTE_NORMAL,
-            new_normals,
-        )
         .with_indices(Some(Indices::U32(
             indices
         )))
-}
-
-fn calculate_surface_normal(p1: [f32; 3], p2: [f32; 3], p3: [f32; 3]) -> [f32; 3] {
-    let u = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]];
-    let v = [p3[0] - p1[0], p3[1] - p1[1], p3[2] - p1[2]];
-    [
-        u[1] * v[2] - u[2] * v[1],
-        u[2] * v[0] - u[0] * v[2],
-        u[0] * v[1] - u[1] * v[0],
-    ]
+        .with_computed_flat_normals()
 }
 
 // Function that changes the UV mapping of the mesh, to apply the other texture.
