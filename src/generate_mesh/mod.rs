@@ -141,23 +141,112 @@ fn create_cube_mesh() -> Mesh {
     Ah, we just introduce the concept of STRIDE
     Every square on the plane is four values and the
 
+    Height can only change in the connection between two squares, so we can just
+
+
      */
 
-    let rows = 3;
-    let columns = 3;
-    let total_squares = rows * columns;
+    /*
+    The below structures are reasoning about the map as a collection of SQUARES
+    which is what it is, but a terrain is a collection of vertices connected by triangles,
+    we need to figure out how to connect them all instead, that is what this is all about.
+
+    This can be accomplished by utilizing the stride, again.
+
+     */
+
+    let quad_side = 2;
+    let row_points = 2 * quad_side;
+    let column_points = 2 * quad_side;
+    let total_points = row_points * column_points;
+    let quad_count = total_points / (quad_side * quad_side);
+
     let square_size = 1.0;
-    let vertices = (0..total_squares).flat_map(|i| {
-        let x = i / rows;
-        let z = i % rows;
+    /*
+    1-2-3
+    4-5-6
+    */
+    let new_vertices = (0..total_points).map(|i| {
+        let x = i / row_points;
+        let z = i % row_points;
+        /*
+        if x is even, then it is left
+        if x is odd, then it is  right
+
+        if z is even, then it is top
+        if z is odd, then it is bottom
+         */
         let x = x as f32;
         let z = z as f32;
-        let y = 0.0;
+        [x, height, z]
+    }).collect::<Vec<[f32; 3]>>();
+
+    let new_uvs = (0..quad_count).flat_map(|_i| {
         vec![
-            [x, y, z],
-            [x + square_size, y, z],
-            [x + square_size, y, z + square_size],
-            [x, y, z + square_size],
+            [0.0, 0.25], [0.0, 0.0], [1.0, 0.0], [1.0, 0.25],
+        ]
+    }).collect::<Vec<[f32; 2]>>();
+
+    /*
+    Ah, normals are PER FACE OF A QUAD; I assume, what the fuck is going on?
+    No, they are PER VERTEX - every point has a normal.
+    That "Makes sense" - we don't have triangles etc, we have a bunch of points.
+    The amount of normals equals the amount of vertices.
+    BUT the normal is the SAME for all vertices in a certain triangle
+    Hence we can use a range instead and stride by 3
+
+    0-1
+    | |
+    3-2
+
+     */
+
+    let tr_1 = [0, 3, 1];
+    let tr_2 = [1, 3, 2];
+
+    /*
+    We should do it PER point and then simply use the indexes for a triangle with
+    its... something
+     */
+    let new_normals = (0..quad_count).flat_map(|index| {
+        /*
+        index here is... what?
+        quad_index, so from quadindex we calculate the
+        four normals for this quad's vertices... is that
+        enough then? Sure is, we won't return, will we?
+         */
+        let normal_1 =
+            calculate_surface_normal(
+                new_vertices[index + tr_1[0]],
+                new_vertices[index + tr_1[1]],
+                new_vertices[index + tr_1[2]],
+            );
+        let normal_2 = calculate_surface_normal(
+            new_vertices[index + tr_2[0]],
+            new_vertices[index + tr_2[1]],
+            new_vertices[index + tr_2[2]],
+        );
+        vec![
+            normal_1,
+            normal_1,
+            normal_2,
+            normal_2,
+        ]
+    }).collect::<Vec<[f32; 3]>>();
+
+
+    let mut y = 0.0;
+    let vertices = (0..quad_count).flat_map(|i| {
+        let x = i / row_points;
+        let z = i % row_points;
+        let x = x as f32;
+        let z = z as f32;
+        y += 0.25;
+        vec![
+            [x, y, z], //top left
+            [x + square_size, y, z], //top right
+            [x + square_size, y, z + square_size], //bottom right
+            [x, y, z + square_size], //bottom left
         ]
     }).collect::<Vec<[f32; 3]>>();
 
@@ -177,11 +266,15 @@ fn create_cube_mesh() -> Mesh {
 
     let face_map = [0, 3, 1, 1, 3, 2];
     let stride = 4;
-    let indices = (0..total_squares).flat_map(|i|
+    let indices = (0..quad_count).flat_map(|i|
         [face_map[0] + i * stride, face_map[1] + i * stride, face_map[2] + i * stride, face_map[3] + i * stride, face_map[4] + i * stride, face_map[5] + i * stride]
     ).collect::<Vec<u32>>();
 
-    let normals = (0..total_squares).flat_map(|_i| {
+    /*
+    We also need to calculate the normals, bro.
+     */
+
+    let normals = (0..quad_count).flat_map(|_i| {
         vec![
             [0.0, 1.0, 0.0],
             [0.0, 1.0, 0.0],
@@ -190,7 +283,7 @@ fn create_cube_mesh() -> Mesh {
         ]
     }).collect::<Vec<[f32; 3]>>();
 
-    let uvs = (0..total_squares).flat_map(|_i| {
+    let uvs = (0..quad_count).flat_map(|_i| {
         vec![
             [0.0, 0.25], [0.0, 0.0], [1.0, 0.0], [1.0, 0.25],
         ]
@@ -200,7 +293,7 @@ fn create_cube_mesh() -> Mesh {
     Mesh::new(PrimitiveTopology::TriangleList)
         .with_inserted_attribute(
             Mesh::ATTRIBUTE_POSITION,
-            vertices
+            vertices,
         )
         // Set-up UV coordinated to point to the upper (V < 0.5), "dirt+grass" part of the texture.
         // Take a look at the custom image (assets/textures/array_texture.png)
@@ -216,7 +309,7 @@ fn create_cube_mesh() -> Mesh {
         // Each array represents a normalized vector, which length should be equal to 1.0.
         .with_inserted_attribute(
             Mesh::ATTRIBUTE_NORMAL,
-            normals
+            normals,
         )
         // Create the triangles out of the 24 vertices we created.
         // To construct a square, we need 2 triangles, therefore 12 triangles in total.
@@ -228,6 +321,16 @@ fn create_cube_mesh() -> Mesh {
         .with_indices(Some(Indices::U32(
             indices
         )))
+}
+
+fn calculate_surface_normal(p1: [f32; 3], p2: [f32; 3], p3: [f32; 3]) -> [f32; 3] {
+    let u = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]];
+    let v = [p3[0] - p1[0], p3[1] - p1[1], p3[2] - p1[2]];
+    [
+        u[1] * v[2] - u[2] * v[1],
+        u[2] * v[0] - u[0] * v[2],
+        u[0] * v[1] - u[1] * v[0],
+    ]
 }
 
 // Function that changes the UV mapping of the mesh, to apply the other texture.
