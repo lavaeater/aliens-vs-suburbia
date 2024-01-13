@@ -124,44 +124,18 @@ fn mesh_input_handler(
 
 #[rustfmt::skip]
 fn create_cube_mesh() -> Mesh {
-    let mut height = 0.0;
-    let min_x = -1.0;
-    let min_z = -1.0;
-    let max_x = 1.0;
-    let max_z = 1.0;
+    let height = 0.0;
 
-    /*
-    We could probably create some kind of cool mesh-generating thing pretty simply by just
-    moving along a grid and changing the height every so slightly of all the vertices. We
-    just have to remember the indices and stuff, just like before. It's not that hard, is it?
-
-
-
-    I want to declare a plane
-    Ah, we just introduce the concept of STRIDE
-    Every square on the plane is four values and the
-
-    Height can only change in the connection between two squares, so we can just
-
-
-     */
-
-    /*
-    The below structures are reasoning about the map as a collection of SQUARES
-    which is what it is, but a terrain is a collection of vertices connected by triangles,
-    we need to figure out how to connect them all instead, that is what this is all about.
-
-    This can be accomplished by utilizing the stride, again.
-
-     */
+    let rows = 1;
+    let columns = 1;
 
     let quad_side = 2;
-    let row_points = 2 * quad_side;
-    let column_points = 2 * quad_side;
+    let row_points = rows * quad_side;
+    let column_points = columns * quad_side;
     let total_points = row_points * column_points;
     let quad_count = total_points / (quad_side * quad_side);
 
-    let square_size = 1.0;
+    let square_size = 0.5;
     /*
     1-2-3
     4-5-6
@@ -176,8 +150,8 @@ fn create_cube_mesh() -> Mesh {
         if z is even, then it is top
         if z is odd, then it is bottom
          */
-        let x = x as f32;
-        let z = z as f32;
+        let x = x as f32 * square_size;
+        let z = z as f32 * square_size;
         [x, height, z]
     }).collect::<Vec<[f32; 3]>>();
 
@@ -206,15 +180,6 @@ fn create_cube_mesh() -> Mesh {
     3: 3-1,3-2
     2: 2-1,2-3
 
-     */
-
-    let triangle_one = [0, 3, 1];
-    let triangle_two = [1, 3, 2];
-
-    let triangles_one = [[1,3],[0,1],[0,3]];
-    let triangles_two = [[3,2],[1,2],[1,3]];
-
-    /*
     So, our basic theory is we have some structures that
     1. define triangles in triangle_one and triangle_two
     2. define the corners of triangles in triangles_one and triangles_two
@@ -231,6 +196,14 @@ fn create_cube_mesh() -> Mesh {
     them, eh?
 
      */
+
+    let triangle_one = [0, 3, 1];
+    let triangle_two = [1, 3, 2];
+
+    let triangles_one = [[1,3],[0,1],[0,3]];
+    let triangles_two = [[3,2],[1,2],[1,3]];
+
+
     let new_normals = (0..quad_count).flat_map(|index| {
         let normal_1 =
             calculate_surface_normal(
@@ -248,22 +221,6 @@ fn create_cube_mesh() -> Mesh {
             normal_1,
             normal_2,
             normal_2,
-        ]
-    }).collect::<Vec<[f32; 3]>>();
-
-
-    let mut y = 0.0;
-    let vertices = (0..quad_count).flat_map(|i| {
-        let x = i / row_points;
-        let z = i % row_points;
-        let x = x as f32;
-        let z = z as f32;
-        y += 0.25;
-        vec![
-            [x, y, z], //top left
-            [x + square_size, y, z], //top right
-            [x + square_size, y, z + square_size], //bottom right
-            [x, y, z + square_size], //bottom left
         ]
     }).collect::<Vec<[f32; 3]>>();
 
@@ -287,54 +244,19 @@ fn create_cube_mesh() -> Mesh {
         [face_map[0] + i * stride, face_map[1] + i * stride, face_map[2] + i * stride, face_map[3] + i * stride, face_map[4] + i * stride, face_map[5] + i * stride]
     ).collect::<Vec<u32>>();
 
-    /*
-    We also need to calculate the normals, bro.
-     */
-
-    let normals = (0..quad_count).flat_map(|_i| {
-        vec![
-            [0.0, 1.0, 0.0],
-            [0.0, 1.0, 0.0],
-            [0.0, 1.0, 0.0],
-            [0.0, 1.0, 0.0],
-        ]
-    }).collect::<Vec<[f32; 3]>>();
-
-    let uvs = (0..quad_count).flat_map(|_i| {
-        vec![
-            [0.0, 0.25], [0.0, 0.0], [1.0, 0.0], [1.0, 0.25],
-        ]
-    }).collect::<Vec<[f32; 2]>>();
-
-
     Mesh::new(PrimitiveTopology::TriangleList)
         .with_inserted_attribute(
             Mesh::ATTRIBUTE_POSITION,
             new_vertices,
         )
-        // Set-up UV coordinated to point to the upper (V < 0.5), "dirt+grass" part of the texture.
-        // Take a look at the custom image (assets/textures/array_texture.png)
-        // so the UV coords will make more sense
-        // Note: (0.0, 0.0) = Top-Left in UV mapping, (1.0, 1.0) = Bottom-Right in UV mapping
         .with_inserted_attribute(
             Mesh::ATTRIBUTE_UV_0,
             new_uvs,
         )
-        // For meshes with flat shading, normals are orthogonal (pointing out) from the direction of
-        // the surface.
-        // Normals are required for correct lighting calculations.
-        // Each array represents a normalized vector, which length should be equal to 1.0.
         .with_inserted_attribute(
             Mesh::ATTRIBUTE_NORMAL,
             new_normals,
         )
-        // Create the triangles out of the 24 vertices we created.
-        // To construct a square, we need 2 triangles, therefore 12 triangles in total.
-        // To construct a triangle, we need the indices of its 3 defined vertices, adding them one
-        // by one, in a counter-clockwise order (relative to the position of the viewer, the order
-        // should appear counter-clockwise from the front of the triangle, in this case from outside the cube).
-        // Read more about how to correctly build a mesh manually in the Bevy documentation of a Mesh,
-        // further examples and the implementation of the built-in shapes.
         .with_indices(Some(Indices::U32(
             indices
         )))
