@@ -188,7 +188,6 @@ fn create_cube_mesh() -> Mesh {
     }).collect::<Vec<[f32; 2]>>();
 
     /*
-    Ah, normals are PER FACE OF A QUAD; I assume, what the fuck is going on?
     No, they are PER VERTEX - every point has a normal.
     That "Makes sense" - we don't have triangles etc, we have a bunch of points.
     The amount of normals equals the amount of vertices.
@@ -199,32 +198,50 @@ fn create_cube_mesh() -> Mesh {
     | |
     3-2
 
+    0: 0-1, 0-3
+    3: 3-0, 3-1
+    1: 1-0, 1-3
+
+    1: 1-3,1-2
+    3: 3-1,3-2
+    2: 2-1,2-3
+
      */
 
-    let tr_1 = [0, 3, 1];
-    let tr_2 = [1, 3, 2];
+    let triangle_one = [0, 3, 1];
+    let triangle_two = [1, 3, 2];
+
+    let triangles_one = [[1,3],[0,1],[0,3]];
+    let triangles_two = [[3,2],[1,2],[1,3]];
 
     /*
-    We should do it PER point and then simply use the indexes for a triangle with
-    its... something
+    So, our basic theory is we have some structures that
+    1. define triangles in triangle_one and triangle_two
+    2. define the corners of triangles in triangles_one and triangles_two
+
+    using these we can loop over triangle_one indexes and for each one
+    of those calculate the surface normal for a triangle that has the
+    point as the first point and the other two points as the other two points
+    of the triangle to calculate for.
+
+    This surface normal should always become the same, shouldn't it?
+    The triangle is the same, bro. So what I had already done should suffice?
+
+    But it is the shared points that are interesting. What do we do about
+    them, eh?
+
      */
     let new_normals = (0..quad_count).flat_map(|index| {
-        /*
-        index here is... what?
-        quad_index, so from quadindex we calculate the
-        four normals for this quad's vertices... is that
-        enough then? Sure is, we won't return, will we?
-         */
         let normal_1 =
             calculate_surface_normal(
-                new_vertices[index + tr_1[0]],
-                new_vertices[index + tr_1[1]],
-                new_vertices[index + tr_1[2]],
+                new_vertices[index + triangle_one[0]],
+                new_vertices[index + triangle_one[1]],
+                new_vertices[index + triangle_one[2]],
             );
         let normal_2 = calculate_surface_normal(
-            new_vertices[index + tr_2[0]],
-            new_vertices[index + tr_2[1]],
-            new_vertices[index + tr_2[2]],
+            new_vertices[index + triangle_two[0]],
+            new_vertices[index + triangle_two[1]],
+            new_vertices[index + triangle_two[2]],
         );
         vec![
             normal_1,
@@ -266,7 +283,7 @@ fn create_cube_mesh() -> Mesh {
 
     let face_map = [0, 3, 1, 1, 3, 2];
     let stride = 4;
-    let indices = (0..quad_count).flat_map(|i|
+    let indices = (0..quad_count as u32).flat_map(|i|
         [face_map[0] + i * stride, face_map[1] + i * stride, face_map[2] + i * stride, face_map[3] + i * stride, face_map[4] + i * stride, face_map[5] + i * stride]
     ).collect::<Vec<u32>>();
 
@@ -293,7 +310,7 @@ fn create_cube_mesh() -> Mesh {
     Mesh::new(PrimitiveTopology::TriangleList)
         .with_inserted_attribute(
             Mesh::ATTRIBUTE_POSITION,
-            vertices,
+            new_vertices,
         )
         // Set-up UV coordinated to point to the upper (V < 0.5), "dirt+grass" part of the texture.
         // Take a look at the custom image (assets/textures/array_texture.png)
@@ -301,7 +318,7 @@ fn create_cube_mesh() -> Mesh {
         // Note: (0.0, 0.0) = Top-Left in UV mapping, (1.0, 1.0) = Bottom-Right in UV mapping
         .with_inserted_attribute(
             Mesh::ATTRIBUTE_UV_0,
-            uvs,
+            new_uvs,
         )
         // For meshes with flat shading, normals are orthogonal (pointing out) from the direction of
         // the surface.
@@ -309,7 +326,7 @@ fn create_cube_mesh() -> Mesh {
         // Each array represents a normalized vector, which length should be equal to 1.0.
         .with_inserted_attribute(
             Mesh::ATTRIBUTE_NORMAL,
-            normals,
+            new_normals,
         )
         // Create the triangles out of the 24 vertices we created.
         // To construct a square, we need 2 triangles, therefore 12 triangles in total.
