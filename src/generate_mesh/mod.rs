@@ -21,7 +21,7 @@ impl Plugin for MeshPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_systems(OnEnter(GameState::Mesh), setup_mesh)
-            .add_plugins(WorldIynspectorPlugin::new())
+            .add_plugins(WorldInspectorPlugin::new())
             .add_systems(Update, (mesh_input_handler).run_if(in_state(GameState::Mesh)));
     }
 }
@@ -345,10 +345,10 @@ fn sample_vertex_height(cy: i32, cx: i32, heightmap: &ImageBuffer<Luma<u16>, Vec
 }
 
 fn load_terrain_mesh() -> Result<Mesh, Error> {
-    let filename = "assets/terrain.png";
+    let filename = "assets/terrain_2.png";
 
-    let side_length = 1f32;
-    let max_height = 1f32;
+    let side_length = 0.5f32;
+    let max_height = 2f32;
     let terrain_bitmap = image::io::Reader::open(filename).unwrap().decode().unwrap();
     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
 
