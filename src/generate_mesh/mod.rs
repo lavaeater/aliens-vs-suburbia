@@ -347,8 +347,8 @@ fn sample_vertex_height(cy: i32, cx: i32, heightmap: &ImageBuffer<Luma<u16>, Vec
 fn load_terrain_mesh() -> Result<Mesh, Error> {
     let filename = "assets/terrain_2.png";
 
-    let side_length = 0.5f32;
-    let max_height = 2f32;
+    let side_length = 0.125f32;
+    let max_height = 0.5f32;
     let terrain_bitmap = image::io::Reader::open(filename).unwrap().decode().unwrap();
     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
 
@@ -363,7 +363,8 @@ fn load_terrain_mesh() -> Result<Mesh, Error> {
 
     vertices.resize(vertex_number, [0.0f32, 0.0f32, 0.0f32]);
     normals.resize(vertex_number, [0.0f32, 1.0f32, 0.0f32]);
-    let uvs = vec![[0.0, 0.0]; vertices.len()];
+    let mut uvs = vec![[0.0, 0.25]; vertices.len()];
+
 
 
     let mut vertex_index = 0;
@@ -375,7 +376,11 @@ fn load_terrain_mesh() -> Result<Mesh, Error> {
             vertices[vertex_index] = [cx as f32 * side_length,
                 height * max_height,
                 cy as f32 * side_length];
+
+            uvs[vertex_index] = [cx as f32 * side_length,
+                cy as f32 * side_length];
             vertex_index += 1;
+
         }
     }
 
