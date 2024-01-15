@@ -379,7 +379,7 @@ fn sample_vertex_height(cy: i32, cx: i32, heightmap: &ImageBuffer<Luma<u16>, Vec
 }
 
 fn load_terrain_mesh() -> Result<Mesh, Error> {
-    let filename = "assets/terrain.png";
+    let filename = "assets/terrain_2.png";
 
     let side_length = 0.125f32;
     let max_height = 0.5f32;
