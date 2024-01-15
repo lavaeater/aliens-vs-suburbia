@@ -7,8 +7,10 @@ use bevy::render::mesh::Indices;
 use bevy::render::mesh::VertexAttributeValues;
 use bevy::render::render_resource::PrimitiveTopology;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy_xpbd_3d::components::{Collider, RigidBody};
 use image::{ImageBuffer, Luma};
 use crate::game_state::GameState;
+use crate::towers::systems::BallBundle;
 
 // Define a "marker" component to mark the custom mesh. Marker components are often used in Bevy for
 // filtering entities in queries with With, they're usually not queried directly since they don't contain information within them.
@@ -22,7 +24,7 @@ impl Plugin for MeshPlugin {
         app
             .add_systems(OnEnter(GameState::Mesh), setup_mesh)
             .add_plugins(WorldInspectorPlugin::new())
-            .add_systems(Update, (mesh_input_handler).run_if(in_state(GameState::Mesh)));
+            .add_systems(Update, (mesh_input_handler, spawn_balls).run_if(in_state(GameState::Mesh)));
     }
 }
 
@@ -35,10 +37,13 @@ fn setup_mesh(
     // Import the custom texture.
     let custom_texture_handle: Handle<Image> = asset_server.load("textures/array_texture.png");
     // Create and save a handle to the mesh.
-    let cube_mesh_handle: Handle<Mesh> = meshes.add(load_terrain_mesh().unwrap());
+    let actual_mesh = load_terrain_mesh().unwrap();
+    let cube_mesh_handle: Handle<Mesh> = meshes.add(actual_mesh.clone());
 
     // Render the mesh with the custom texture using a PbrBundle, add the marker.
     commands.spawn((
+        RigidBody::Static,
+        Collider::trimesh_from_mesh(&actual_mesh).unwrap(),
         PbrBundle {
             mesh: cube_mesh_handle,
             material: materials.add(StandardMaterial {
@@ -89,6 +94,15 @@ fn setup_mesh(
     );
 }
 
+fn spawn_balls(
+    mut commands: Commands,
+    asset_server: ResMut<AssetServer>,
+) {
+    commands.spawn(
+        BallBundle::new(Vec3::new(1.0, 1.5, 0.0), Vec3::new(0.01, 0.0,0.01), &asset_server)
+    );
+}
+
 // System to receive input from the user,
 // check out examples/input/ for more examples about user input.
 fn mesh_input_handler(
@@ -121,6 +135,28 @@ fn mesh_input_handler(
     if keyboard_input.pressed(KeyCode::R) {
         for mut transform in &mut query {
             transform.look_to(Vec3::NEG_Z, Vec3::Y);
+        }
+    }
+
+    if keyboard_input.pressed(KeyCode::Up) {
+        for mut transform in &mut query {
+            transform.translation.z += time.delta_seconds() * 2.0;
+        }
+    }
+    if keyboard_input.pressed(KeyCode::Down) {
+        for mut transform in &mut query {
+            transform.translation.z -= time.delta_seconds() * 2.0;
+        }
+    }
+
+    if keyboard_input.pressed(KeyCode::Left) {
+        for mut transform in &mut query {
+            transform.translation.x += time.delta_seconds() * 2.0;
+        }
+    }
+    if keyboard_input.pressed(KeyCode::Right) {
+        for mut transform in &mut query {
+            transform.translation.x -= time.delta_seconds() * 2.0;
         }
     }
 }
@@ -241,18 +277,18 @@ fn create_cube_mesh() -> Mesh {
     Nah, it is still the quad, bro
      */
 
-    let tr_one:[[u32;2]; 3] = [[0,0], [0,1], [1,0]];
-    let tr_two:[[u32;2]; 3] = [[1,0], [0,1], [1,1]];
+    let tr_one: [[u32; 2]; 3] = [[0, 0], [0, 1], [1, 0]];
+    let tr_two: [[u32; 2]; 3] = [[1, 0], [0, 1], [1, 1]];
 
     let indices = (0..row_points as u32).step_by(2).flat_map(|r| {
         (0..column_points as u32).step_by(2).flat_map(|c| {
-            let p1 = [c + tr_one[0][0],r + tr_one[0][1]];
-            let p2 = [c + tr_one[1][0],r + tr_one[1][1]];
-            let p3 = [c + tr_one[2][0],r + tr_one[2][1]];
+            let p1 = [c + tr_one[0][0], r + tr_one[0][1]];
+            let p2 = [c + tr_one[1][0], r + tr_one[1][1]];
+            let p3 = [c + tr_one[2][0], r + tr_one[2][1]];
 
-            let q1 = [c + tr_two[0][0],r + tr_two[0][1]];
-            let q2 = [c + tr_two[1][0],r + tr_two[1][1]];
-            let q3 = [c + tr_two[2][0],r + tr_two[2][1]];
+            let q1 = [c + tr_two[0][0], r + tr_two[0][1]];
+            let q2 = [c + tr_two[1][0], r + tr_two[1][1]];
+            let q3 = [c + tr_two[2][0], r + tr_two[2][1]];
             [
                 position_to_index(p1[0], p1[1], column_points),
                 position_to_index(p2[0], p2[1], column_points),
@@ -261,8 +297,6 @@ fn create_cube_mesh() -> Mesh {
                 position_to_index(q2[0], q2[1], column_points),
                 position_to_index(q3[0], q3[1], column_points),
             ]
-
-
         }).collect::<Vec<u32>>()
     }
     ).collect::<Vec<u32>>();
@@ -328,7 +362,7 @@ fn sample_vertex_height(cy: i32, cx: i32, heightmap: &ImageBuffer<Luma<u16>, Vec
         for dx in [-1, 0].iter() {
             let sy = cy + dy;
             let sx = cx + dx;
-            if    sy < 0
+            if sy < 0
                 || sx < 0
                 || sy >= heightmap.height() as i32
                 || sx >= heightmap.width() as i32 {
@@ -354,22 +388,21 @@ fn load_terrain_mesh() -> Result<Mesh, Error> {
 
     let heightmap = terrain_bitmap.as_luma16().unwrap();
 
-    let mut vertices : Vec::<[f32; 3]> = Vec::new();
-    let mut normals : Vec::<[f32; 3]> = Vec::new();
-    let mut indices : Vec::<u32> = Vec::new();
+    let mut vertices: Vec::<[f32; 3]> = Vec::new();
+    let mut normals: Vec::<[f32; 3]> = Vec::new();
+    let mut indices: Vec::<u32> = Vec::new();
 
-    let vertex_number = ( (heightmap.height() + 1) *
-        (heightmap.width() + 1) ) as usize;
+    let vertex_number = ((heightmap.height() + 1) *
+        (heightmap.width() + 1)) as usize;
 
     vertices.resize(vertex_number, [0.0f32, 0.0f32, 0.0f32]);
     normals.resize(vertex_number, [0.0f32, 1.0f32, 0.0f32]);
     let mut uvs = vec![[0.0, 0.25]; vertices.len()];
 
 
-
     let mut vertex_index = 0;
-    for cy in 0..(heightmap.height() as i32 +1) {
-        for cx in 0..(heightmap.width() as i32 +1) {
+    for cy in 0..(heightmap.height() as i32 + 1) {
+        for cx in 0..(heightmap.width() as i32 + 1) {
             let height = sample_vertex_height(cy, cx, heightmap);
             // println!("sampled height at y={:>3} x={:>3}  = {:>4}", cy, cx, height);
 
@@ -383,14 +416,13 @@ fn load_terrain_mesh() -> Result<Mesh, Error> {
             let mod_y = cy % 2;
             match (mod_x, mod_y)
             {
-                (0, 0) => {uvs[vertex_index] = [0.0, 0.25]}
-                (1, 0) => {uvs[vertex_index] =[0.0, 0.0]}
-                (0, 1) => {uvs[vertex_index] =[1.0, 0.0]}
-                (_, _) => {uvs[vertex_index] =[1.0, 0.25]}
+                (0, 0) => { uvs[vertex_index] = [0.0, 0.25] }
+                (1, 0) => { uvs[vertex_index] = [0.0, 0.0] }
+                (0, 1) => { uvs[vertex_index] = [1.0, 0.0] }
+                (_, _) => { uvs[vertex_index] = [1.0, 0.25] }
             }
 
             vertex_index += 1;
-
         }
     }
 
@@ -419,7 +451,7 @@ fn load_terrain_mesh() -> Result<Mesh, Error> {
 
     // println!(" {} {} ", indices.len() / 3, 2  * heightmap.height() * (heightmap.width()));
 
-    assert!(indices.len() as u32 /  3 == 2  * heightmap.height() * (heightmap.width()) );
+    assert!(indices.len() as u32 / 3 == 2 * heightmap.height() * (heightmap.width()));
 
 
     mesh.insert_attribute(

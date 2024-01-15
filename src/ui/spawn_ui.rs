@@ -23,6 +23,9 @@ pub fn spawn_menu(
         <button on:press=|ctx| ctx.send_event(GotoState { state: GameState::Mesh })>
                     "Pass the Mesh"
                 </button>
+                <button on:press=|ctx| ctx.send_event(GotoState { state: GameState::Playground })>
+                    "Load Level"
+                </button>
         </body>
     });
 }

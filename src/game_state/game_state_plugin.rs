@@ -24,6 +24,7 @@ use crate::towers::systems::{shoot_alien_system, tower_has_alien_in_range_scorer
 use crate::ui::spawn_ui::{add_health_bar, AddHealthBar, fellow_system, GotoState};
 use crate::ui::ui_plugin::UiPlugin;
 use crate::generate_mesh::MeshPlugin;
+use crate::playground::PlaygroundPlugin;
 
 pub struct GamePlugin;
 
@@ -53,6 +54,7 @@ impl Plugin for GamePlugin {
             ))
             .add_plugins((
                 MeshPlugin,
+                PlaygroundPlugin
             ))
             .add_systems(
                 OnEnter(GameState::InGame),

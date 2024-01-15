@@ -10,4 +10,5 @@ pub enum GameState {
     Menu,
     InGame,
     Mesh,
+    Playground
 }

@@ -1,7 +1,7 @@
 use bevy::asset::AssetServer;
 use bevy::core::Name;
 use bevy::math::Vec3;
-use bevy::prelude::{Commands, Query, Res, Transform, With};
+use bevy::prelude::{Bundle, Commands, Query, Res, Transform, With};
 use bevy::scene::SceneBundle;
 use bevy::time::Time;
 use bevy_xpbd_3d::components::{Collider, CollidingEntities, LinearVelocity, Position, RigidBody};
@@ -61,27 +61,9 @@ pub fn shoot_alien_system(
                             let direction = (alien_position.0 - tower_position.0).normalize();
                             let launch_p = tower_position.0 + direction + Vec3::new(0.0, 0.25, 0.0);
 
-                            let entity = commands.spawn((
-                                Name::from("Ball"),
-                                SceneBundle {
-                                    scene: asset_server.load("ball_fab.glb#Scene0"),
-                                    transform: Transform::from_xyz(launch_p.x, launch_p.y, launch_p.z),
-                                    ..Default::default()
-                                },
-                                RigidBody::Dynamic,
-                                Collider::ball(1.0 / 16.0),
-                                LinearVelocity(direction * 12.0),
-                                CollisionLayers::new(
-                                    [CollisionLayer::Ball],
-                                    [
-                                        CollisionLayer::Impassable,
-                                        CollisionLayer::Floor,
-                                        CollisionLayer::Alien,
-                                        CollisionLayer::Player,
-                                        CollisionLayer::AlienSpawnPoint,
-                                        CollisionLayer::AlienGoal
-                                    ]),
-                            )).id();
+                            let entity = commands.spawn(
+                                BallBundle::new(launch_p, direction, &asset_server)
+                            ).id();
 
                             commands.entity(entity).insert(Ball::new(entity));
                             *action_state = ActionState::Success;
@@ -89,6 +71,42 @@ pub fn shoot_alien_system(
                     }
                 }
             }
+        }
+    }
+}
+
+#[derive(Bundle)]
+pub struct BallBundle {
+    name: Name,
+    scene_bundle: SceneBundle,
+    rigid_body: RigidBody,
+    collider: Collider,
+    linear_velocity: LinearVelocity,
+    collision_layers: CollisionLayers,
+}
+
+impl BallBundle {
+    pub fn new(position: Vec3, direction: Vec3, asset_server: &AssetServer) -> Self {
+        Self {
+            name: Name::from("Ball"),
+            scene_bundle: SceneBundle {
+                scene: asset_server.load("ball_fab.glb#Scene0"),
+                transform: Transform::from_xyz(position.x, position.y, position.z),
+                ..Default::default()
+            },
+            rigid_body: RigidBody::Dynamic,
+            collider: Collider::ball(1.0 / 16.0),
+            linear_velocity: LinearVelocity(direction * 12.0),
+            collision_layers: CollisionLayers::new(
+                [CollisionLayer::Ball],
+                [
+                    CollisionLayer::Impassable,
+                    CollisionLayer::Floor,
+                    CollisionLayer::Alien,
+                    CollisionLayer::Player,
+                    CollisionLayer::AlienSpawnPoint,
+                    CollisionLayer::AlienGoal
+                ]),
         }
     }
 }

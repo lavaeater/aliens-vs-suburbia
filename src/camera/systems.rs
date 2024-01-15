@@ -4,6 +4,7 @@ use bevy::prelude::{Camera3dBundle, Commands, OrthographicProjection, Query, Tra
 use bevy::prelude::Projection::Orthographic;
 use bevy::render::camera::ScalingMode;
 use bevy::utils::default;
+use bevy_atmosphere::plugin::AtmosphereCamera;
 use bevy_video_glitch::VideoGlitchSettings;
 use bevy_xpbd_3d::math::PI;
 use bevy_xpbd_3d::components::Position;
@@ -34,6 +35,7 @@ pub fn spawn_camera(mut commands: Commands) {
             ..default()
         },
         GameCamera {},
+        AtmosphereCamera::default(),
     ));
 }
 

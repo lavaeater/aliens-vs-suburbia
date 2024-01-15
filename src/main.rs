@@ -2,7 +2,8 @@ use bevy::app::{App, PluginGroup};
 use bevy::{DefaultPlugins, log};
 use bevy::log::LogPlugin;
 use bevy::prelude::Msaa;
-use bevy_xpbd_3d::plugins::{ PhysicsPlugins};
+use bevy_atmosphere::plugin::AtmospherePlugin;
+use bevy_xpbd_3d::plugins::{PhysicsDebugPlugin, PhysicsPlugins};
 use crate::ai::components::approach_and_attack_player_components::ApproachAndAttackPlayerData;
 use crate::ai::components::avoid_wall_components::AvoidWallsData;
 use camera::components::CameraOffset;
@@ -27,6 +28,7 @@ mod constants;
 mod assets;
 mod inspection;
 mod generate_mesh;
+mod playground;
 
 
 fn main() {
@@ -45,7 +47,8 @@ fn main() {
                     level: log::Level::INFO,
                 }))
         .add_plugins(PhysicsPlugins::default())
-        // .add_plugins(PhysicsDebugPlugin::default())
+        .add_plugins(AtmospherePlugin)
+        .add_plugins(PhysicsDebugPlugin::default())
         // .add_plugins(WorldInspectorPlugin::new())
         .add_plugins(GamePlugin)
         .run();
