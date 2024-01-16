@@ -1,7 +1,5 @@
+
 use std::io::Error;
-// ! This example demonstrates how to create a custom mesh,
-// ! assign a custom UV mapping for a custom texture,
-// ! and how to change the UV mapping at run-time.
 use bevy::prelude::*;
 use bevy::render::mesh::Indices;
 use bevy::render::mesh::VertexAttributeValues;
@@ -9,11 +7,16 @@ use bevy::render::render_resource::PrimitiveTopology;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_xpbd_3d::components::{Collider, RigidBody};
 use image::{ImageBuffer, Luma};
+use noise::{Fbm, NoiseFn, Perlin};
 use crate::game_state::GameState;
+use crate::general::components::map_components::CoolDown;
 use crate::towers::systems::BallBundle;
 
-// Define a "marker" component to mark the custom mesh. Marker components are often used in Bevy for
-// filtering entities in queries with With, they're usually not queried directly since they don't contain information within them.
+pub(crate) mod rtin;
+pub(crate) mod terrain_rtin;
+pub(crate) mod terrain_common;
+
+
 #[derive(Component)]
 struct CustomUV;
 
@@ -22,9 +25,42 @@ pub struct MeshPlugin;
 impl Plugin for MeshPlugin {
     fn build(&self, app: &mut App) {
         app
+            .init_resource::<BallTimer>()
+            .init_resource::<MapBuilder>()
             .add_systems(OnEnter(GameState::Mesh), setup_mesh)
             .add_plugins(WorldInspectorPlugin::new())
             .add_systems(Update, (mesh_input_handler, spawn_balls).run_if(in_state(GameState::Mesh)));
+    }
+}
+
+#[derive(Resource, Default)]
+pub struct BallTimer {
+    pub drop_balls: bool,
+    pub time: f32,
+}
+
+impl CoolDown for BallTimer {
+    fn cool_down(&mut self, delta_time: f32) -> bool {
+        self.time -= delta_time;
+        if self.time < 0.0 {
+            self.time = 1.0;
+            true
+        } else {
+            false
+        }
+    }
+}
+
+#[derive(Resource)]
+pub struct MapBuilder {
+    pub noise_function: Fbm::<Perlin>,
+}
+
+impl Default for MapBuilder {
+    fn default() -> Self {
+        Self {
+            noise_function: Fbm::<Perlin>::new(0)
+        }
     }
 }
 
@@ -33,11 +69,12 @@ fn setup_mesh(
     asset_server: ResMut<AssetServer>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
+    perlin_noise_resource: Res<MapBuilder>
 ) {
     // Import the custom texture.
     let custom_texture_handle: Handle<Image> = asset_server.load("textures/array_texture.png");
     // Create and save a handle to the mesh.
-    let actual_mesh = load_terrain_mesh().unwrap();
+    let actual_mesh = load_terrain_mesh(perlin_noise_resource).unwrap();
     let cube_mesh_handle: Handle<Mesh> = meshes.add(actual_mesh.clone());
 
     // Render the mesh with the custom texture using a PbrBundle, add the marker.
@@ -97,10 +134,14 @@ fn setup_mesh(
 fn spawn_balls(
     mut commands: Commands,
     asset_server: ResMut<AssetServer>,
+    mut ball_timer: ResMut<BallTimer>,
+    time: Res<Time>,
 ) {
-    commands.spawn(
-        BallBundle::new(Vec3::new(1.0, 1.5, 0.0), Vec3::new(0.01, 0.0,0.01), &asset_server)
-    );
+    if ball_timer.drop_balls && ball_timer.cool_down(time.delta_seconds()) {
+        commands.spawn(
+            BallBundle::new(Vec3::new(1.0, 1.5, 0.0), Vec3::new(0.01, 0.0, 0.01), &asset_server)
+        );
+    }
 }
 
 // System to receive input from the user,
@@ -111,11 +152,13 @@ fn mesh_input_handler(
     mut meshes: ResMut<Assets<Mesh>>,
     mut query: Query<&mut Transform, With<CustomUV>>,
     time: Res<Time>,
+    mut ball_timer: ResMut<BallTimer>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) {
-        let mesh_handle = mesh_query.get_single().expect("Query not successful");
-        let mesh = meshes.get_mut(mesh_handle).unwrap();
-        toggle_texture(mesh);
+        ball_timer.drop_balls = !ball_timer.drop_balls;
+        // let mesh_handle = mesh_query.get_single().expect("Query not successful");
+        // let mesh = meshes.get_mut(mesh_handle).unwrap();
+        // toggle_texture(mesh);
     }
     if keyboard_input.pressed(KeyCode::X) {
         for mut transform in &mut query {
@@ -378,8 +421,8 @@ fn sample_vertex_height(cy: i32, cx: i32, heightmap: &ImageBuffer<Luma<u16>, Vec
     height / cnt as f32
 }
 
-fn load_terrain_mesh() -> Result<Mesh, Error> {
-    let filename = "assets/terrain_2.png";
+fn load_terrain_mesh(perlin_noise_resource: Res<MapBuilder>) -> Result<Mesh, Error> {
+    let filename = "assets/terrain_3.png";
 
     let side_length = 0.125f32;
     let max_height = 0.5f32;
@@ -399,15 +442,17 @@ fn load_terrain_mesh() -> Result<Mesh, Error> {
     normals.resize(vertex_number, [0.0f32, 1.0f32, 0.0f32]);
     let mut uvs = vec![[0.0, 0.25]; vertices.len()];
 
-
     let mut vertex_index = 0;
     for cy in 0..(heightmap.height() as i32 + 1) {
         for cx in 0..(heightmap.width() as i32 + 1) {
             let height = sample_vertex_height(cy, cx, heightmap);
             // println!("sampled height at y={:>3} x={:>3}  = {:>4}", cy, cx, height);
 
+
+
             vertices[vertex_index] = [cx as f32 * side_length,
                 height * max_height,
+                // (perlin_noise_resource.noise_function.get([cx as f64, cy as f64]) as f32),
                 cy as f32 * side_length];
 
             //[0.0, 0.25], [0.0, 0.0], [1.0, 0.0], [1.0, 0.25]
