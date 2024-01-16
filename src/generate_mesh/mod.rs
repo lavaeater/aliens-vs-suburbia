@@ -12,11 +12,6 @@ use crate::game_state::GameState;
 use crate::general::components::map_components::CoolDown;
 use crate::towers::systems::BallBundle;
 
-pub(crate) mod rtin;
-pub(crate) mod terrain_rtin;
-pub(crate) mod terrain_common;
-
-
 #[derive(Component)]
 struct CustomUV;
 

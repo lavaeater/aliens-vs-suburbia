@@ -1,7 +1,7 @@
 use bevy::core::Name;
 use bevy::math::{Mat3, Quat, Rect, Vec2, Vec3};
-use bevy::prelude::{Camera3dBundle, Commands, OrthographicProjection, Query, Transform, With};
-use bevy::prelude::Projection::Orthographic;
+use bevy::prelude::{Camera3dBundle, Commands, OrthographicProjection, PerspectiveProjection, Projection, Query, Transform, With};
+use bevy::prelude::Projection::{Orthographic, Perspective};
 use bevy::render::camera::ScalingMode;
 use bevy::utils::default;
 use bevy_atmosphere::plugin::AtmosphereCamera;
@@ -14,19 +14,17 @@ use crate::player::components::Player;
 pub fn spawn_camera(mut commands: Commands) {
     commands.spawn((
         Name::from("Camera"),
-        CameraOffset(Vec3::new(2.0, 1.5, 2.0)),
+        CameraOffset(Vec3::new(0.0, 6.0, 6.0)),
         VideoGlitchSettings {
             intensity: 0.05,
             color_aberration: Mat3::IDENTITY
         },
         Camera3dBundle {
-            projection: Orthographic(OrthographicProjection {
-                scale: 2.0,
-                near: -1000.0,
+            projection: Projection::from(PerspectiveProjection {
+                fov: 57.0,
+                near: 0.1,
                 far: 1000.0,
-                viewport_origin: Vec2::new(0.5, 0.5),
-                scaling_mode: ScalingMode::FixedVertical(2.0),
-                area: Rect::new(-1.0, -1.0, 1.0, 1.0),
+                aspect_ratio: 1.0,
             }),
             transform: Transform {
                 rotation: Quat::from_rotation_x(-PI / 4.),
