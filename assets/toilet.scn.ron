@@ -1,0 +1,98 @@
+(
+  resources: {},
+  entities: {
+    8: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_core::name::Name": (
+          hash: 16877212538123101368,
+          name: "toilet",
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          9,
+        ]),
+      },
+    ),
+    9: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: -0.70710665,
+            y: 0.0,
+            z: 0.0,
+            w: 0.7071069,
+          ),
+          scale: (
+            x: 100.0,
+            y: 100.0,
+            z: 100.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "quaternius/interior/Toilet.glb#Mesh0/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "quaternius/interior/Toilet.glb#Material0",
+        ),
+        "space_bevy_xpbd_plugin::collider::ColliderPrefab": FromMesh,
+        "space_bevy_xpbd_plugin::registry::RigidBodyPrefab": Static,
+        "bevy_xpbd_3d::components::mass_properties::Mass": (0.44258887),
+        "bevy_xpbd_3d::components::Friction": (
+          dynamic_coefficient: 0.3,
+          static_coefficient: 0.3,
+          combine_rule: Average,
+        ),
+        "bevy_xpbd_3d::components::Restitution": (
+          coefficient: 0.3,
+          combine_rule: Average,
+        ),
+        "bevy_xpbd_3d::components::mass_properties::Inertia": ((
+          x_axis: (
+            x: 106.03237,
+            y: -54.29592,
+            z: -49.989105,
+          ),
+          y_axis: (
+            x: -54.29592,
+            y: 90.34287,
+            z: -63.570408,
+          ),
+          z_axis: (
+            x: -49.989105,
+            y: -63.570408,
+            z: 79.85873,
+          ),
+        )),
+        "bevy_xpbd_3d::components::mass_properties::CenterOfMass": ((
+          x: 504.29193,
+          y: 603.43536,
+          z: 721.4987,
+        )),
+      },
+    ),
+  },
+)

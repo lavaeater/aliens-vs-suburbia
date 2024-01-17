@@ -1,0 +1,178 @@
+(
+  resources: {},
+  entities: {
+    4294967360: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: -1.4692795,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_core::name::Name": (
+          hash: 8836493709997199761,
+          name: "ForwardGrip",
+        ),
+      },
+    ),
+    4294967362: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "new/weapons/Submachine Gun.glb#Mesh0/Primitive2",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "new/weapons/Submachine Gun.glb#Material2",
+        ),
+      },
+    ),
+    4294967363: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.10134506,
+            y: -0.6744409,
+            z: 0.8901186,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_core::name::Name": (
+          hash: 8836493709997199761,
+          name: "PistolGrip",
+        ),
+      },
+    ),
+    12884901896: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_core::name::Name": (
+          hash: 8836493709997199761,
+          name: "H&K MP5",
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          12884901897,
+          12884901898,
+          4294967362,
+          4294967363,
+          4294967360,
+        ]),
+      },
+    ),
+    12884901897: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "new/weapons/Submachine Gun.glb#Mesh0/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "new/weapons/Submachine Gun.glb#Material0",
+        ),
+      },
+    ),
+    12884901898: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "new/weapons/Submachine Gun.glb#Mesh0/Primitive1",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "new/weapons/Submachine Gun.glb#Material1",
+        ),
+      },
+    ),
+  },
+)
