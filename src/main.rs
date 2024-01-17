@@ -4,6 +4,9 @@ use bevy::log::LogPlugin;
 use bevy::prelude::Msaa;
 use bevy_atmosphere::plugin::AtmospherePlugin;
 use bevy_xpbd_3d::plugins::{PhysicsDebugPlugin, PhysicsPlugins};
+use space_editor::prelude::simple_editor_setup;
+use space_editor::space_prefab::ext::Startup;
+use space_editor::SpaceEditorPlugin;
 use crate::ai::components::approach_and_attack_player_components::ApproachAndAttackPlayerData;
 use crate::ai::components::avoid_wall_components::AvoidWallsData;
 use camera::components::CameraOffset;
@@ -30,8 +33,15 @@ mod inspection;
 mod generate_mesh;
 mod playground;
 
-
 fn main() {
+    #[cfg(feature = "editor")]
+    App::default()
+        .add_plugins(DefaultPlugins)
+        .add_plugins(SpaceEditorPlugin)
+        .add_systems(Startup, simple_editor_setup)
+        .run();
+
+    #[cfg(feature = "default")]
     App::new()
         .register_type::<CameraOffset>()
         .register_type::<CurrentTile>()

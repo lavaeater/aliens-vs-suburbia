@@ -3,6 +3,10 @@ name = "aliens-vs-suburbia"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = []
+editor = ["space_editor/editor"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -27,6 +31,7 @@ noise = "0.8.2"
 nalgebra = "0.32.3"
 bitintr = "0.3.0"
 palette = "0.7.3"
+space_editor = { git="https://github.com/lavaeater/space_editor.git", branch="main"}
 # Enable max optimizations for dependencies, but not for our code:
 [profile.dev.package."*"]
 opt-level = 3
