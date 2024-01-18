@@ -2,11 +2,15 @@ mod xpbd_plugin;
 
 use bevy::prelude::*;
 use bevy_atmosphere::plugin::AtmosphereCamera;
+use bevy_mod_outline::{OutlineBundle, OutlineVolume};
+use bevy_xpbd_3d::components::Collider;
 use crate::game_state::GameState;
 use space_editor::prelude::{PrefabBundle, PrefabPlugin};
 use space_editor::space_editor_ui::ext::bevy_panorbit_camera;
 use space_editor::space_editor_ui::ext::bevy_panorbit_camera::PanOrbitCameraPlugin;
 use crate::assets::assets_plugin::GameAssets;
+use crate::player::bundle::PlayerBundle;
+use crate::player::systems::spawn_players::FixSceneTransform;
 use crate::playground::xpbd_plugin::CustomXpbdPlugin;
 use crate::ui::spawn_ui::{AddHealthBar};
 
@@ -55,38 +59,43 @@ fn load_level(
             AtmosphereCamera::default(),
         ))
     ;
-    // let player = commands.spawn((
-    //     FixSceneTransform::new(
-    //         Vec3::new(0.0, -0.37, 0.0),
-    //         Quat::from_euler(
-    //             EulerRot::YXZ,
-    //             180.0f32.to_radians(), 0.0, 0.0),
-    //         Vec3::new(0.5, 0.5, 0.5),
-    //     ),
-    //     SceneBundle {
-    //         scene: game_assets.girl_scene.clone(),
-    //         transform: Transform::from_xyz(4.0, 2.0, 4.0),
-    //         ..Default::default()
-    //     },
-    //     PlayerBundle::new(
-    //         "player",
-    //         "Player One",
-    //     ),
-    //     OutlineBundle {
-    //         outline: OutlineVolume {
-    //             visible: true,
-    //             width: 1.0,
-    //             colour: Color::BLACK,
-    //         },
-    //         ..default()
-    //     }
-    // )).with_children(|children|
-    //     { // Spawn the child colliders positioned relative to the rigid body
-    //         children.spawn(
-    //             (
-    //                 Collider::capsule(0.4, 0.2),
-    //                 Transform::from_xyz(0.0, 0.0, 0.0)));
-    //     }).id();
+
+    commands.spawn(
+        PrefabBundle::new("girl/girl_prefab_2.scn.ron"))
+    ;
+
+    let player = commands.spawn((
+        FixSceneTransform::new(
+            Vec3::new(0.0, -0.37, 0.0),
+            Quat::from_euler(
+                EulerRot::YXZ,
+                180.0f32.to_radians(), 0.0, 0.0),
+            Vec3::new(0.5, 0.5, 0.5),
+        ),
+        SceneBundle {
+            scene: game_assets.girl_scene.clone(),
+            transform: Transform::from_xyz(4.0, 2.0, 4.0),
+            ..Default::default()
+        },
+        PlayerBundle::new(
+            "player",
+            "Player One",
+        ),
+        OutlineBundle {
+            outline: OutlineVolume {
+                visible: true,
+                width: 1.0,
+                colour: Color::BLACK,
+            },
+            ..default()
+        }
+    )).with_children(|children|
+        { // Spawn the child colliders positioned relative to the rigid body
+            children.spawn(
+                (
+                    Collider::capsule(0.4, 0.2),
+                    Transform::from_xyz(0.0, 0.0, 0.0)));
+        }).id();
     // add_health_bar_ew.send(AddHealthBar {
     //     entity: player,
     //     name: "PLAYER",
