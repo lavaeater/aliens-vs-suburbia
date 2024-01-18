@@ -1,0 +1,7858 @@
+(
+  resources: {},
+  entities: {
+    4294967538: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh26/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967539: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -1.0866652,
+            y: 13.107514,
+            z: 0.96482086,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          8589934831,
+        ]),
+      },
+    ),
+    4294967540: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh27/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967541: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 11.383978,
+            y: -0.09090911,
+            z: -31.285633,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967540,
+          4294967539,
+        ]),
+      },
+    ),
+    4294967542: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 5.1664777,
+            y: 12.069633,
+            z: -57.451942,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967544,
+          4294967543,
+        ]),
+      },
+    ),
+    4294967543: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -0.79244757,
+            y: 3.7371979,
+            z: 2.3816643,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967538,
+        ]),
+      },
+    ),
+    4294967544: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh25/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967545: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh22/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967546: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh24/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967547: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 1.4766812,
+            y: 3.7371979,
+            z: 2.0297089,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967546,
+        ]),
+      },
+    ),
+    4294967548: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh23/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material3",
+        ),
+      },
+    ),
+    4294967549: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 10.38197,
+            y: -0.005472183,
+            z: 12.682997,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967552,
+          4294967551,
+        ]),
+      },
+    ),
+    4294967550: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -6.761306,
+            y: 14.634859,
+            z: -45.27212,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967545,
+          4294967548,
+          4294967547,
+        ]),
+      },
+    ),
+    4294967551: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh149/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material8",
+        ),
+      },
+    ),
+    4294967552: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh148/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material5",
+        ),
+      },
+    ),
+    4294967553: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 2.3568938,
+            y: 0.0,
+            z: -27.759352,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967555,
+          4294967554,
+        ]),
+      },
+    ),
+    4294967554: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh147/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material8",
+        ),
+      },
+    ),
+    4294967555: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh146/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material5",
+        ),
+      },
+    ),
+    4294967556: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -7.6641774,
+            y: 0.0,
+            z: 7.18984,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967558,
+          4294967557,
+        ]),
+      },
+    ),
+    4294967557: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh145/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material8",
+        ),
+      },
+    ),
+    4294967558: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh144/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material5",
+        ),
+      },
+    ),
+    4294967559: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh142/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material5",
+        ),
+      },
+    ),
+    4294967560: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh143/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material8",
+        ),
+      },
+    ),
+    4294967561: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh141/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material8",
+        ),
+      },
+    ),
+    4294967562: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 5.9818363,
+            y: 0.0,
+            z: 27.89931,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967559,
+          4294967560,
+        ]),
+      },
+    ),
+    4294967563: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -2.7323055,
+            y: 0.0,
+            z: 0.6304797,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967564,
+          4294967561,
+        ]),
+      },
+    ),
+    4294967564: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh140/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material5",
+        ),
+      },
+    ),
+    4294967565: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 3.7890587,
+            y: 0.0,
+            z: 0.358304,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967566,
+        ]),
+      },
+    ),
+    4294967566: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh139/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material10",
+        ),
+      },
+    ),
+    4294967567: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -4.4348283,
+            y: 0.0,
+            z: 24.313787,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967568,
+        ]),
+      },
+    ),
+    4294967568: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh138/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material10",
+        ),
+      },
+    ),
+    4294967569: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 1.7291596,
+            y: 0.0,
+            z: 27.35063,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967570,
+        ]),
+      },
+    ),
+    4294967570: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh137/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material10",
+        ),
+      },
+    ),
+    4294967571: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh135/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967572: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh136/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material5",
+        ),
+      },
+    ),
+    4294967573: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh134/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material5",
+        ),
+      },
+    ),
+    4294967574: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -4.6879606,
+            y: 0.0,
+            z: 7.546239,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967571,
+          4294967572,
+        ]),
+      },
+    ),
+    4294967575: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -4.621126,
+            y: 0.0,
+            z: 21.40649,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967576,
+          4294967573,
+        ]),
+      },
+    ),
+    4294967576: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh133/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967577: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 6.5631123,
+            y: 0.0,
+            z: -2.1701622,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967578,
+        ]),
+      },
+    ),
+    4294967578: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh132/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967579: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 7.1025743,
+            y: 0.0,
+            z: -3.0787299,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967580,
+        ]),
+      },
+    ),
+    4294967580: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh131/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967581: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 6.1514173,
+            y: 0.0,
+            z: -3.2774792,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967582,
+        ]),
+      },
+    ),
+    4294967582: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh130/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967583: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 5.3564205,
+            y: 0.0,
+            z: -1.1338272,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967584,
+        ]),
+      },
+    ),
+    4294967584: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh129/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967585: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 4.7033873,
+            y: 0.0,
+            z: -0.21106309,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967586,
+        ]),
+      },
+    ),
+    4294967586: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh128/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967587: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 4.276767,
+            y: 0.0,
+            z: -1.0766127,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967588,
+        ]),
+      },
+    ),
+    4294967588: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh127/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967589: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 3.667052,
+            y: 0.0,
+            z: -0.53429675,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967590,
+        ]),
+      },
+    ),
+    4294967590: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh126/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967591: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -3.1835501,
+            y: 0.0,
+            z: 7.3677554,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967592,
+        ]),
+      },
+    ),
+    4294967592: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh125/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967593: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -3.1930256,
+            y: 0.0,
+            z: 6.334936,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967594,
+        ]),
+      },
+    ),
+    4294967594: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh124/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967595: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -2.5392225,
+            y: 0.0,
+            z: 6.9224114,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967596,
+        ]),
+      },
+    ),
+    4294967596: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh123/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967597: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -2.3497143,
+            y: 0.0,
+            z: 6.060149,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967598,
+        ]),
+      },
+    ),
+    4294967598: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh122/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967599: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -2.9155824,
+            y: 0.0,
+            z: 13.298548,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967600,
+        ]),
+      },
+    ),
+    4294967600: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh121/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967601: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -3.4462051,
+            y: 0.0,
+            z: 15.5631695,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967602,
+        ]),
+      },
+    ),
+    4294967602: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh120/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967603: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -3.6167624,
+            y: 0.0,
+            z: 16.463333,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967604,
+        ]),
+      },
+    ),
+    4294967604: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh119/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967605: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -4.0490227,
+            y: 0.0,
+            z: 20.569807,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967606,
+        ]),
+      },
+    ),
+    4294967606: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh118/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967607: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -3.4148736,
+            y: 0.0,
+            z: 19.758608,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967608,
+        ]),
+      },
+    ),
+    4294967608: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh117/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967609: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -5.242447,
+            y: 0.0,
+            z: 24.752258,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967610,
+        ]),
+      },
+    ),
+    4294967610: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh116/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967611: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -4.3844314,
+            y: 0.0,
+            z: 23.490974,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967612,
+        ]),
+      },
+    ),
+    4294967612: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh115/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967613: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -4.719057,
+            y: 0.0,
+            z: 22.427034,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967614,
+        ]),
+      },
+    ),
+    4294967614: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh114/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967615: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -5.2338667,
+            y: 0.0,
+            z: 23.439493,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967616,
+        ]),
+      },
+    ),
+    4294967616: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh113/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967617: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 1.2871907,
+            y: 0.0,
+            z: 25.244349,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967618,
+        ]),
+      },
+    ),
+    4294967618: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh112/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967619: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 2.7337596,
+            y: 0.0,
+            z: 21.927229,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967620,
+        ]),
+      },
+    ),
+    4294967620: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh111/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967621: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 1.9963031,
+            y: 0.0,
+            z: 22.445442,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967622,
+        ]),
+      },
+    ),
+    4294967622: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh110/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967623: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 4.4478474,
+            y: 0.0,
+            z: 16.665379,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967624,
+        ]),
+      },
+    ),
+    4294967624: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh109/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967625: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 2.2155466,
+            y: 0.0,
+            z: 18.000772,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967626,
+        ]),
+      },
+    ),
+    4294967626: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh108/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967627: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 2.494584,
+            y: 0.0,
+            z: 16.765034,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967628,
+        ]),
+      },
+    ),
+    4294967628: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh107/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967629: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 1.2389151,
+            y: 0.0,
+            z: 17.422766,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967630,
+        ]),
+      },
+    ),
+    4294967630: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh106/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967631: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 1.15919,
+            y: 0.0,
+            z: 20.173279,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967632,
+        ]),
+      },
+    ),
+    4294967632: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh105/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967633: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.12547186,
+            y: 0.0,
+            z: 21.289429,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967634,
+        ]),
+      },
+    ),
+    4294967634: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh104/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967635: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.44184408,
+            y: 0.0,
+            z: 19.854378,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967636,
+        ]),
+      },
+    ),
+    4294967636: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh103/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967637: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 2.1358216,
+            y: 0.0,
+            z: 25.435131,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967638,
+        ]),
+      },
+    ),
+    4294967638: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh102/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967639: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 3.9700942,
+            y: 0.0,
+            z: 24.714237,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967640,
+        ]),
+      },
+    ),
+    4294967640: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh101/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967641: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 2.6804962,
+            y: 0.0,
+            z: 26.780798,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967642,
+        ]),
+      },
+    ),
+    4294967642: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh100/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967643: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 3.8018856,
+            y: 0.0,
+            z: 27.165276,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967644,
+        ]),
+      },
+    ),
+    4294967644: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh99/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967645: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh97/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material5",
+        ),
+      },
+    ),
+    4294967646: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh98/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material8",
+        ),
+      },
+    ),
+    4294967647: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh96/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material10",
+        ),
+      },
+    ),
+    4294967648: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 4.765803,
+            y: 0.0,
+            z: 18.351292,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967645,
+          4294967646,
+        ]),
+      },
+    ),
+    4294967649: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh95/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967650: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -3.2678766,
+            y: 0.0,
+            z: 20.961992,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967647,
+        ]),
+      },
+    ),
+    4294967651: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh94/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material5",
+        ),
+      },
+    ),
+    4294967652: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 4.5868583,
+            y: 0.0,
+            z: 26.324232,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967649,
+        ]),
+      },
+    ),
+    4294967653: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 3.6170259,
+            y: 0.0,
+            z: 25.925138,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967654,
+          4294967651,
+        ]),
+      },
+    ),
+    4294967654: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh93/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material9",
+        ),
+      },
+    ),
+    4294967655: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh91/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material5",
+        ),
+      },
+    ),
+    4294967656: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh92/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material8",
+        ),
+      },
+    ),
+    4294967657: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh90/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material8",
+        ),
+      },
+    ),
+    4294967658: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -5.556771,
+            y: 0.0,
+            z: 29.741999,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967655,
+          4294967656,
+        ]),
+      },
+    ),
+    4294967659: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 12.637491,
+            y: 0.0,
+            z: -13.71287,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967660,
+          4294967657,
+        ]),
+      },
+    ),
+    4294967660: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh89/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material5",
+        ),
+      },
+    ),
+    4294967661: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -7.550914,
+            y: 4.0424385,
+            z: 20.008415,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967662,
+        ]),
+      },
+    ),
+    4294967662: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh88/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material7",
+        ),
+      },
+    ),
+    4294967663: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -7.0804257,
+            y: 3.979081,
+            z: 20.551481,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967664,
+        ]),
+      },
+    ),
+    4294967664: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh87/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material7",
+        ),
+      },
+    ),
+    4294967665: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh85/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material7",
+        ),
+      },
+    ),
+    4294967666: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh86/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material7",
+        ),
+      },
+    ),
+    4294967667: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 4.4706817,
+            y: 3.01421,
+            z: 24.07209,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967666,
+        ]),
+      },
+    ),
+    4294967668: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh84/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material7",
+        ),
+      },
+    ),
+    4294967669: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -4.466738,
+            y: 1.7657981,
+            z: 21.939266,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967665,
+        ]),
+      },
+    ),
+    4294967670: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh83/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material7",
+        ),
+      },
+    ),
+    4294967671: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.8945791,
+            y: 1.733217,
+            z: -1.6737792,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967668,
+        ]),
+      },
+    ),
+    4294967672: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh82/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material7",
+        ),
+      },
+    ),
+    4294967673: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -4.9685645,
+            y: 1.1119733,
+            z: 19.5456,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967670,
+        ]),
+      },
+    ),
+    4294967674: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh81/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material6",
+        ),
+      },
+    ),
+    4294967675: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -5.7330093,
+            y: 0.5102006,
+            z: 5.2242594,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967672,
+        ]),
+      },
+    ),
+    4294967676: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh80/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material6",
+        ),
+      },
+    ),
+    4294967677: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -6.769837,
+            y: -0.106251955,
+            z: -23.62713,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967674,
+        ]),
+      },
+    ),
+    4294967678: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh79/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material6",
+        ),
+      },
+    ),
+    4294967679: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 4.9131813,
+            y: -0.106251955,
+            z: -8.33612,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967676,
+        ]),
+      },
+    ),
+    4294967680: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh78/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material6",
+        ),
+      },
+    ),
+    4294967681: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -7.227995,
+            y: -0.106251955,
+            z: 2.4878552,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967678,
+        ]),
+      },
+    ),
+    4294967682: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh77/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material6",
+        ),
+      },
+    ),
+    4294967683: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -7.9644837,
+            y: -0.106251955,
+            z: 18.624643,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967680,
+        ]),
+      },
+    ),
+    4294967684: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh76/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material5",
+        ),
+      },
+    ),
+    4294967685: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 4.4483466,
+            y: -0.106251955,
+            z: 22.258818,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967682,
+        ]),
+      },
+    ),
+    4294967686: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967687,
+          4294967684,
+        ]),
+      },
+    ),
+    4294967687: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh75/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material4",
+        ),
+      },
+    ),
+    4294967688: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -4.9196615,
+            y: 0.0,
+            z: -19.277864,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967689,
+        ]),
+      },
+    ),
+    4294967689: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh74/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967690: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -2.858453,
+            y: 0.0,
+            z: -14.085351,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967691,
+        ]),
+      },
+    ),
+    4294967691: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh73/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967692: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh71/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967693: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh72/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967694: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -4.1396065,
+            y: 0.0,
+            z: -18.80426,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967693,
+        ]),
+      },
+    ),
+    4294967695: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -4.0209336,
+            y: 0.0,
+            z: -16.338892,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967697,
+        ]),
+      },
+    ),
+    4294967696: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -4.4006166,
+            y: 0.0,
+            z: -17.323221,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967692,
+        ]),
+      },
+    ),
+    4294967697: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh70/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967698: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh68/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967699: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh69/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967700: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -3.6796823,
+            y: 0.0,
+            z: -14.86609,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967699,
+        ]),
+      },
+    ),
+    4294967701: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh67/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967702: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -3.1370442,
+            y: 0.0,
+            z: -13.193859,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967698,
+        ]),
+      },
+    ),
+    4294967703: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh66/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967704: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -3.471167,
+            y: 0.0,
+            z: -11.979077,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967701,
+        ]),
+      },
+    ),
+    4294967705: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -3.2936194,
+            y: 0.0,
+            z: -9.424528,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967707,
+        ]),
+      },
+    ),
+    4294967706: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -3.3112783,
+            y: 0.0,
+            z: -10.936243,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967703,
+        ]),
+      },
+    ),
+    4294967707: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh65/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967708: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -2.3969173,
+            y: 0.0,
+            z: -8.065334,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967709,
+        ]),
+      },
+    ),
+    4294967709: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh64/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967710: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -2.2417283,
+            y: 0.0,
+            z: -6.8150353,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967711,
+        ]),
+      },
+    ),
+    4294967711: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh63/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967712: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -1.6956557,
+            y: 0.0,
+            z: -5.912332,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967713,
+        ]),
+      },
+    ),
+    4294967713: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh62/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967714: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -1.1019425,
+            y: 0.0,
+            z: -4.5219727,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967715,
+        ]),
+      },
+    ),
+    4294967715: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh61/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967716: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -0.9101664,
+            y: 0.0,
+            z: -2.9547415,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967717,
+        ]),
+      },
+    ),
+    4294967717: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh60/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967718: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -0.7183906,
+            y: 0.0,
+            z: -1.3875103,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967719,
+        ]),
+      },
+    ),
+    4294967719: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh59/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967720: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -2.6834219,
+            y: 0.0,
+            z: 3.271411,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967721,
+        ]),
+      },
+    ),
+    4294967721: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh58/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967722: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -1.6307441,
+            y: 0.0,
+            z: 2.5930185,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967723,
+        ]),
+      },
+    ),
+    4294967723: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh57/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967724: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -0.9757446,
+            y: 0.0,
+            z: 3.2246249,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967725,
+        ]),
+      },
+    ),
+    4294967725: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh56/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967726: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.12371886,
+            y: 0.0,
+            z: 3.364982,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967727,
+        ]),
+      },
+    ),
+    4294967727: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh55/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967728: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 1.3401464,
+            y: 0.0,
+            z: 3.1076608,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967729,
+        ]),
+      },
+    ),
+    4294967729: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh54/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967730: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.521397,
+            y: 0.0,
+            z: -0.7521579,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967731,
+        ]),
+      },
+    ),
+    4294967731: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh53/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967732: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.802111,
+            y: 0.0,
+            z: 0.48766258,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967733,
+        ]),
+      },
+    ),
+    4294967733: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh52/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967734: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 1.2699678,
+            y: 0.0,
+            z: 1.727483,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967735,
+        ]),
+      },
+    ),
+    4294967735: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh51/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967736: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 2.4396098,
+            y: 0.0,
+            z: 2.19534,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967737,
+        ]),
+      },
+    ),
+    4294967737: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh50/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967738: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 4.646641,
+            y: 0.0,
+            z: 8.048656,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967739,
+        ]),
+      },
+    ),
+    4294967739: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh49/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967740: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 4.635008,
+            y: 0.0,
+            z: 6.469778,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967741,
+        ]),
+      },
+    ),
+    4294967741: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh48/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967742: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 4.6233745,
+            y: 0.0,
+            z: 4.8909006,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967743,
+        ]),
+      },
+    ),
+    4294967743: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh47/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967744: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 4.06895,
+            y: 0.0,
+            z: 3.7595541,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967745,
+        ]),
+      },
+    ),
+    4294967745: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh46/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967746: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 3.2583592,
+            y: 0.0,
+            z: 3.0842679,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967747,
+        ]),
+      },
+    ),
+    4294967747: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh45/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967748: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 4.540239,
+            y: 0.0,
+            z: 9.657866,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967749,
+        ]),
+      },
+    ),
+    4294967749: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh44/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967750: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 3.182933,
+            y: 0.0,
+            z: 10.464533,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967751,
+        ]),
+      },
+    ),
+    4294967751: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh43/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967752: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 1.8256274,
+            y: 0.0,
+            z: 11.2712,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967753,
+        ]),
+      },
+    ),
+    4294967753: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh42/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967754: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 1.1285781,
+            y: 0.0,
+            z: 12.320702,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967755,
+        ]),
+      },
+    ),
+    4294967755: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh41/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967756: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.95453215,
+            y: 0.0,
+            z: 13.361267,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967757,
+        ]),
+      },
+    ),
+    4294967757: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh40/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967758: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.4988395,
+            y: 0.0,
+            z: 14.8027725,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967759,
+        ]),
+      },
+    ),
+    4294967759: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh39/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967760: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -0.37698847,
+            y: 0.0,
+            z: 16.116514,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967761,
+        ]),
+      },
+    ),
+    4294967761: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh38/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967762: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -1.2528164,
+            y: 0.0,
+            z: 17.430256,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967763,
+        ]),
+      },
+    ),
+    4294967763: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh37/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967764: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -1.4282627,
+            y: 0.0,
+            z: 18.677874,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967765,
+        ]),
+      },
+    ),
+    4294967765: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh36/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967766: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -1.1358522,
+            y: 0.0,
+            z: 19.691563,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967767,
+        ]),
+      },
+    ),
+    4294967767: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh35/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967768: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -1.9351077,
+            y: 0.0,
+            z: 20.900192,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967769,
+        ]),
+      },
+    ),
+    4294967769: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh34/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967770: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -1.1391014,
+            y: 0.0,
+            z: 22.44347,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967771,
+        ]),
+      },
+    ),
+    4294967771: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh33/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967772: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -1.3827767,
+            y: 0.0,
+            z: 23.873034,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967773,
+        ]),
+      },
+    ),
+    4294967773: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh32/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967774: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -0.7329756,
+            y: 0.0,
+            z: 25.172636,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967775,
+        ]),
+      },
+    ),
+    4294967775: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh31/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967776: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh29/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967777: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh30/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967778: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -0.5380353,
+            y: 0.0,
+            z: 26.520973,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967777,
+        ]),
+      },
+    ),
+    4294967779: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 6.496548,
+            y: 0.0,
+            z: 11.327249,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967781,
+        ]),
+      },
+    ),
+    4294967780: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 27.947937,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967776,
+        ]),
+      },
+    ),
+    4294967781: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh21/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967782: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -2.3004138,
+            y: 0.0,
+            z: -30.504831,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967783,
+        ]),
+      },
+    ),
+    4294967783: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh20/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967784: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 4.56046,
+            y: 0.0,
+            z: -6.5965185,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967785,
+        ]),
+      },
+    ),
+    4294967785: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh19/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967786: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 6.220455,
+            y: 0.0,
+            z: 20.897442,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967787,
+        ]),
+      },
+    ),
+    4294967787: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh18/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967788: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh16/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967789: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh17/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967790: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -4.0891194,
+            y: 0.0,
+            z: -23.915756,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967789,
+        ]),
+      },
+    ),
+    4294967791: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -6.4219136,
+            y: 0.0,
+            z: 19.157946,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967793,
+        ]),
+      },
+    ),
+    4294967792: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -5.4723186,
+            y: 0.0,
+            z: 2.6897686,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967788,
+        ]),
+      },
+    ),
+    4294967793: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh15/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967794: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 3.4819167,
+            y: 0.11592254,
+            z: 19.813007,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967796,
+          4294967795,
+        ]),
+      },
+    ),
+    4294967795: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh14/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material2",
+        ),
+      },
+    ),
+    4294967796: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh13/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967797: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 4.12276,
+            y: 0.12707488,
+            z: 23.18284,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967799,
+          4294967798,
+        ]),
+      },
+    ),
+    4294967798: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh12/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material2",
+        ),
+      },
+    ),
+    4294967799: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh11/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967800: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh8/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967801: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh10/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material2",
+        ),
+      },
+    ),
+    4294967802: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh9/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material1",
+        ),
+      },
+    ),
+    4294967803: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 4.12276,
+            y: 0.1270749,
+            z: 23.18284,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967806,
+          4294967807,
+          4294967805,
+        ]),
+      },
+    ),
+    4294967804: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 3.4819167,
+            y: 0.11592254,
+            z: 19.813007,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967800,
+          4294967802,
+          4294967801,
+        ]),
+      },
+    ),
+    4294967805: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh7/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material2",
+        ),
+      },
+    ),
+    4294967806: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh5/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967807: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh6/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material1",
+        ),
+      },
+    ),
+    4294967808: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh2/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material2",
+        ),
+      },
+    ),
+    4294967809: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh4/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material2",
+        ),
+      },
+    ),
+    4294967810: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 3.886172,
+            y: 0.12707488,
+            z: 21.376884,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967811,
+          4294967809,
+        ]),
+      },
+    ),
+    4294967811: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh3/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    4294967812: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967814,
+          4294967810,
+          4294967803,
+          4294967804,
+          4294967797,
+          4294967794,
+          4294967791,
+          4294967792,
+          4294967790,
+          4294967786,
+          4294967784,
+          4294967782,
+          4294967779,
+          4294967780,
+          4294967778,
+          4294967774,
+          4294967772,
+          4294967770,
+          4294967768,
+          4294967766,
+          4294967764,
+          4294967762,
+          4294967760,
+          4294967758,
+          4294967756,
+          4294967754,
+          4294967752,
+          4294967750,
+          4294967748,
+          4294967746,
+          4294967744,
+          4294967742,
+          4294967740,
+          4294967738,
+          4294967736,
+          4294967734,
+          4294967732,
+          4294967730,
+          4294967728,
+          4294967726,
+          4294967724,
+          4294967722,
+          4294967720,
+          4294967718,
+          4294967716,
+          4294967714,
+          4294967712,
+          4294967710,
+          4294967708,
+          4294967705,
+          4294967706,
+          4294967704,
+          4294967702,
+          4294967700,
+          4294967695,
+          4294967696,
+          4294967694,
+          4294967690,
+          4294967688,
+          4294967686,
+          4294967685,
+          4294967683,
+          4294967681,
+          4294967679,
+          4294967677,
+          4294967675,
+          4294967673,
+          4294967671,
+          4294967669,
+          4294967667,
+          4294967663,
+          4294967661,
+          4294967659,
+          4294967658,
+          4294967653,
+          4294967652,
+          4294967650,
+          4294967648,
+          4294967643,
+          4294967641,
+          4294967639,
+          4294967637,
+          4294967635,
+          4294967633,
+          4294967631,
+          4294967629,
+          4294967627,
+          4294967625,
+          4294967623,
+          4294967621,
+          4294967619,
+          4294967617,
+          4294967615,
+          4294967613,
+          4294967611,
+          4294967609,
+          4294967607,
+          4294967605,
+          4294967603,
+          4294967601,
+          4294967599,
+          4294967597,
+          4294967595,
+          4294967593,
+          4294967591,
+          4294967589,
+          4294967587,
+          4294967585,
+          4294967583,
+          4294967581,
+          4294967579,
+          4294967577,
+          4294967575,
+          4294967574,
+          4294967569,
+          4294967567,
+          4294967565,
+          4294967563,
+          4294967562,
+          4294967556,
+          4294967553,
+          4294967549,
+          4294967550,
+          4294967542,
+          4294967541,
+        ]),
+      },
+    ),
+    4294967813: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh1/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material1",
+        ),
+      },
+    ),
+    4294967814: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 3.886172,
+            y: 0.12707488,
+            z: 21.376884,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967815,
+          4294967813,
+          4294967808,
+        ]),
+      },
+    ),
+    4294967815: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh0/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+    8589934831: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "solarpunk_village.glb#Mesh28/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+  },
+)

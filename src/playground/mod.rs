@@ -1,3 +1,5 @@
+mod xpbd_plugin;
+
 use bevy::prelude::*;
 use bevy_atmosphere::plugin::AtmosphereCamera;
 use crate::game_state::GameState;
@@ -5,7 +7,7 @@ use space_editor::prelude::{PrefabBundle, PrefabPlugin};
 use space_editor::space_editor_ui::ext::bevy_panorbit_camera;
 use space_editor::space_editor_ui::ext::bevy_panorbit_camera::PanOrbitCameraPlugin;
 use crate::assets::assets_plugin::GameAssets;
-use crate::player::components::Player;
+use crate::playground::xpbd_plugin::CustomXpbdPlugin;
 use crate::ui::spawn_ui::{AddHealthBar};
 
 pub struct PlaygroundPlugin;
@@ -13,8 +15,11 @@ pub struct PlaygroundPlugin;
 impl Plugin for PlaygroundPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_plugins(PrefabPlugin)
-            .add_plugins(PanOrbitCameraPlugin)
+            .add_plugins((
+                PanOrbitCameraPlugin,
+                PrefabPlugin,
+                CustomXpbdPlugin,
+            ))
             .add_systems(
                 OnEnter(GameState::Playground),
                 (
@@ -32,11 +37,7 @@ fn load_level(
 
     // Render the mesh with the custom texture using a PbrBundle, add the marker.
     commands.spawn(
-        PrefabBundle::new("solar_punk.scn.ron"))
-        .insert((
-            Name::new("Level"),
-            Player { key: "player".to_string() }
-        ))
+        PrefabBundle::new("levels/solar_punk_village.scn.ron"))
     ;
 
     // Transform for the camera and lighting, looking at (0,0,0) (the position of the mesh).
