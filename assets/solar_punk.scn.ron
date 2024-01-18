@@ -1,7 +1,7 @@
 (
   resources: {},
   entities: {
-    8589934884: (
+    8: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -23,11 +23,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589934888,
+          10,
         ]),
       },
     ),
-    8589934886: (
+    9: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -49,11 +49,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589934890,
+          11,
         ]),
       },
     ),
-    8589934888: (
+    10: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -82,7 +82,7 @@
         ),
       },
     ),
-    8589934890: (
+    11: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -111,7 +111,7 @@
         ),
       },
     ),
-    8589934892: (
+    12: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -133,11 +133,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589934896,
+          14,
         ]),
       },
     ),
-    8589934894: (
+    13: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -159,11 +159,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589934898,
+          15,
         ]),
       },
     ),
-    8589934896: (
+    14: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -192,7 +192,7 @@
         ),
       },
     ),
-    8589934898: (
+    15: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -221,7 +221,7 @@
         ),
       },
     ),
-    8589934900: (
+    16: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -243,11 +243,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589934908,
+          20,
         ]),
       },
     ),
-    8589934902: (
+    17: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -269,11 +269,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589934906,
+          19,
         ]),
       },
     ),
-    8589934904: (
+    18: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -302,7 +302,7 @@
         ),
       },
     ),
-    8589934906: (
+    19: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -331,7 +331,7 @@
         ),
       },
     ),
-    8589934908: (
+    20: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -360,7 +360,7 @@
         ),
       },
     ),
-    8589934910: (
+    21: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -382,11 +382,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589934914,
+          23,
         ]),
       },
     ),
-    8589934912: (
+    22: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -415,7 +415,7 @@
         ),
       },
     ),
-    8589934914: (
+    23: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -444,7 +444,7 @@
         ),
       },
     ),
-    8589934916: (
+    24: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -466,37 +466,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589934904,
+          18,
         ]),
       },
     ),
-    8589934918: (
-      components: {
-        "bevy_transform::components::transform::Transform": (
-          translation: (
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-          ),
-          rotation: (
-            x: -0.70710677,
-            y: 0.0,
-            z: 0.0,
-            w: 0.70710677,
-          ),
-          scale: (
-            x: 1.0,
-            y: 1.0,
-            z: 1.0,
-          ),
-        ),
-        "bevy_render::view::visibility::Visibility": Inherited,
-        "space_prefab::save::ChildrenPrefab": ([
-          12884902146,
-        ]),
-      },
-    ),
-    8589934920: (
+    26: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -518,11 +492,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589934924,
+          28,
         ]),
       },
     ),
-    8589934922: (
+    27: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -544,11 +518,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589934926,
+          29,
         ]),
       },
     ),
-    8589934924: (
+    28: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -577,7 +551,7 @@
         ),
       },
     ),
-    8589934926: (
+    29: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -606,7 +580,7 @@
         ),
       },
     ),
-    8589934928: (
+    30: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -628,11 +602,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589934932,
+          32,
         ]),
       },
     ),
-    8589934930: (
+    31: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -654,11 +628,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589934934,
+          33,
         ]),
       },
     ),
-    8589934932: (
+    32: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -687,7 +661,7 @@
         ),
       },
     ),
-    8589934934: (
+    33: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -716,7 +690,7 @@
         ),
       },
     ),
-    8589934936: (
+    34: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -738,11 +712,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589934940,
+          36,
         ]),
       },
     ),
-    8589934938: (
+    35: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -764,11 +738,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589934942,
+          37,
         ]),
       },
     ),
-    8589934940: (
+    36: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -797,7 +771,7 @@
         ),
       },
     ),
-    8589934942: (
+    37: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -826,7 +800,7 @@
         ),
       },
     ),
-    8589934944: (
+    38: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -848,11 +822,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589934948,
+          40,
         ]),
       },
     ),
-    8589934946: (
+    39: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -874,11 +848,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589934950,
+          41,
         ]),
       },
     ),
-    8589934948: (
+    40: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -907,7 +881,7 @@
         ),
       },
     ),
-    8589934950: (
+    41: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -936,7 +910,7 @@
         ),
       },
     ),
-    8589934952: (
+    42: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -958,11 +932,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589934956,
+          44,
         ]),
       },
     ),
-    8589934954: (
+    43: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -984,11 +958,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589934958,
+          45,
         ]),
       },
     ),
-    8589934956: (
+    44: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1017,7 +991,7 @@
         ),
       },
     ),
-    8589934958: (
+    45: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1046,7 +1020,7 @@
         ),
       },
     ),
-    8589934960: (
+    46: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1068,11 +1042,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589934964,
+          48,
         ]),
       },
     ),
-    8589934962: (
+    47: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1094,11 +1068,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589934967,
+          49,
         ]),
       },
     ),
-    8589934964: (
+    48: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1127,7 +1101,7 @@
         ),
       },
     ),
-    8589934967: (
+    49: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1156,7 +1130,7 @@
         ),
       },
     ),
-    8589934969: (
+    50: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1178,11 +1152,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589934973,
+          52,
         ]),
       },
     ),
-    8589934971: (
+    51: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1204,11 +1178,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589934975,
+          53,
         ]),
       },
     ),
-    8589934973: (
+    52: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1237,7 +1211,7 @@
         ),
       },
     ),
-    8589934975: (
+    53: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1266,7 +1240,7 @@
         ),
       },
     ),
-    8589934977: (
+    54: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1288,11 +1262,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589934981,
+          56,
         ]),
       },
     ),
-    8589934979: (
+    55: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1314,11 +1288,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589934983,
+          57,
         ]),
       },
     ),
-    8589934981: (
+    56: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1347,7 +1321,7 @@
         ),
       },
     ),
-    8589934983: (
+    57: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1376,7 +1350,7 @@
         ),
       },
     ),
-    8589934985: (
+    58: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1398,11 +1372,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589934989,
+          60,
         ]),
       },
     ),
-    8589934987: (
+    59: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1424,11 +1398,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589934991,
+          61,
         ]),
       },
     ),
-    8589934989: (
+    60: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1457,7 +1431,7 @@
         ),
       },
     ),
-    8589934991: (
+    61: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1486,7 +1460,7 @@
         ),
       },
     ),
-    8589934994: (
+    62: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1508,11 +1482,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589935000,
+          64,
         ]),
       },
     ),
-    8589934997: (
+    63: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1534,12 +1508,12 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589935002,
-          8589935007,
+          65,
+          67,
         ]),
       },
     ),
-    8589935000: (
+    64: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1568,7 +1542,7 @@
         ),
       },
     ),
-    8589935002: (
+    65: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1597,7 +1571,7 @@
         ),
       },
     ),
-    8589935004: (
+    66: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1619,11 +1593,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589935009,
+          68,
         ]),
       },
     ),
-    8589935007: (
+    67: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1652,7 +1626,7 @@
         ),
       },
     ),
-    8589935009: (
+    68: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1681,7 +1655,7 @@
         ),
       },
     ),
-    8589935011: (
+    69: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1703,12 +1677,12 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589935015,
-          8589935019,
+          71,
+          73,
         ]),
       },
     ),
-    8589935013: (
+    70: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1730,11 +1704,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589935017,
+          72,
         ]),
       },
     ),
-    8589935015: (
+    71: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1763,7 +1737,7 @@
         ),
       },
     ),
-    8589935017: (
+    72: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1792,7 +1766,7 @@
         ),
       },
     ),
-    8589935019: (
+    73: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1821,7 +1795,7 @@
         ),
       },
     ),
-    8589935021: (
+    74: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1843,11 +1817,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589935025,
+          76,
         ]),
       },
     ),
-    8589935023: (
+    75: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1869,11 +1843,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589935027,
+          77,
         ]),
       },
     ),
-    8589935025: (
+    76: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1902,7 +1876,7 @@
         ),
       },
     ),
-    8589935027: (
+    77: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1931,7 +1905,7 @@
         ),
       },
     ),
-    8589935029: (
+    78: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1953,11 +1927,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589935033,
+          80,
         ]),
       },
     ),
-    8589935031: (
+    79: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -1979,11 +1953,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589935035,
+          81,
         ]),
       },
     ),
-    8589935033: (
+    80: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2012,7 +1986,7 @@
         ),
       },
     ),
-    8589935035: (
+    81: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2041,7 +2015,7 @@
         ),
       },
     ),
-    8589935037: (
+    82: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2067,8 +2041,8 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589935041,
-          8589935045,
+          84,
+          86,
         ]),
         "space_bevy_xpbd_plugin::collider::ColliderPrefab": Primitive(
           pos: (
@@ -2088,7 +2062,7 @@
           )),
         ),
         "space_bevy_xpbd_plugin::registry::RigidBodyPrefab": Static,
-        "bevy_xpbd_3d::components::mass_properties::Mass": (14157.0),
+        "bevy_xpbd_3d::components::mass_properties::Mass": (19757.0),
         "bevy_xpbd_3d::components::Friction": (
           dynamic_coefficient: 0.3,
           static_coefficient: 0.3,
@@ -2100,29 +2074,29 @@
         ),
         "bevy_xpbd_3d::components::mass_properties::Inertia": ((
           x_axis: (
-            x: 5721420.0,
+            x: 8008581.0,
             y: 0.0,
             z: 0.0,
           ),
           y_axis: (
             x: 0.0,
-            y: 7590478.5,
+            y: 10623868.0,
             z: 0.0,
           ),
           z_axis: (
             x: 0.0,
             y: 0.0,
-            z: 1871417.3,
+            z: 2618578.5,
           ),
         )),
         "bevy_xpbd_3d::components::mass_properties::CenterOfMass": ((
           x: 0.0,
-          y: -0.5827577,
+          y: -0.55930054,
           z: 0.0,
         )),
       },
     ),
-    8589935039: (
+    83: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2144,11 +2118,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589935043,
+          85,
         ]),
       },
     ),
-    8589935041: (
+    84: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2177,7 +2151,7 @@
         ),
       },
     ),
-    8589935043: (
+    85: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2206,7 +2180,7 @@
         ),
       },
     ),
-    8589935045: (
+    86: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2235,7 +2209,7 @@
         ),
       },
     ),
-    8589935047: (
+    87: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2257,12 +2231,12 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589935051,
-          8589935055,
+          89,
+          91,
         ]),
       },
     ),
-    8589935049: (
+    88: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2284,11 +2258,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589935053,
+          90,
         ]),
       },
     ),
-    8589935051: (
+    89: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2317,7 +2291,7 @@
         ),
       },
     ),
-    8589935053: (
+    90: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2346,7 +2320,7 @@
         ),
       },
     ),
-    8589935055: (
+    91: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2375,7 +2349,7 @@
         ),
       },
     ),
-    8589935057: (
+    92: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2397,11 +2371,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589935061,
+          94,
         ]),
       },
     ),
-    8589935059: (
+    93: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2423,12 +2397,12 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589935063,
-          8589935067,
+          95,
+          97,
         ]),
       },
     ),
-    8589935061: (
+    94: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2457,7 +2431,7 @@
         ),
       },
     ),
-    8589935063: (
+    95: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2486,7 +2460,7 @@
         ),
       },
     ),
-    8589935065: (
+    96: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2508,11 +2482,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589935069,
+          98,
         ]),
       },
     ),
-    8589935067: (
+    97: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2541,7 +2515,7 @@
         ),
       },
     ),
-    8589935069: (
+    98: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2570,7 +2544,7 @@
         ),
       },
     ),
-    8589935071: (
+    99: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2592,12 +2566,12 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589935075,
-          8589935081,
+          101,
+          103,
         ]),
       },
     ),
-    8589935073: (
+    100: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2619,11 +2593,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589935078,
+          102,
         ]),
       },
     ),
-    8589935075: (
+    101: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2652,7 +2626,7 @@
         ),
       },
     ),
-    8589935078: (
+    102: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2681,7 +2655,7 @@
         ),
       },
     ),
-    8589935081: (
+    103: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2710,7 +2684,7 @@
         ),
       },
     ),
-    8589935083: (
+    104: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2732,11 +2706,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589935087,
+          106,
         ]),
       },
     ),
-    8589935085: (
+    105: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2758,12 +2732,12 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589935090,
-          8589935096,
+          107,
+          109,
         ]),
       },
     ),
-    8589935087: (
+    106: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2792,7 +2766,7 @@
         ),
       },
     ),
-    8589935090: (
+    107: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2821,7 +2795,7 @@
         ),
       },
     ),
-    8589935093: (
+    108: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2843,11 +2817,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589935099,
+          110,
         ]),
       },
     ),
-    8589935096: (
+    109: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2876,7 +2850,7 @@
         ),
       },
     ),
-    8589935099: (
+    110: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2905,7 +2879,7 @@
         ),
       },
     ),
-    8589935102: (
+    111: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2927,11 +2901,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589935107,
+          113,
         ]),
       },
     ),
-    8589935105: (
+    112: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2953,12 +2927,12 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589935109,
-          8589935113,
+          114,
+          116,
         ]),
       },
     ),
-    8589935107: (
+    113: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -2987,7 +2961,7 @@
         ),
       },
     ),
-    8589935109: (
+    114: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3016,7 +2990,7 @@
         ),
       },
     ),
-    8589935111: (
+    115: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3038,11 +3012,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902177,
+          237,
         ]),
       },
     ),
-    8589935113: (
+    116: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3071,7 +3045,7 @@
         ),
       },
     ),
-    12884901902: (
+    117: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3100,7 +3074,7 @@
         ),
       },
     ),
-    12884901904: (
+    118: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3129,7 +3103,7 @@
         ),
       },
     ),
-    12884901905: (
+    119: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3151,11 +3125,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884901904,
+          118,
         ]),
       },
     ),
-    12884901906: (
+    120: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3177,11 +3151,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884901902,
+          117,
         ]),
       },
     ),
-    12884901908: (
+    121: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3210,7 +3184,7 @@
         ),
       },
     ),
-    12884901910: (
+    122: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3239,7 +3213,7 @@
         ),
       },
     ),
-    12884901912: (
+    123: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3261,11 +3235,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884901908,
+          121,
         ]),
       },
     ),
-    12884901914: (
+    124: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3287,11 +3261,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884901910,
+          122,
         ]),
       },
     ),
-    12884901918: (
+    125: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3320,7 +3294,7 @@
         ),
       },
     ),
-    12884901919: (
+    126: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3342,11 +3316,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884901920,
+          127,
         ]),
       },
     ),
-    12884901920: (
+    127: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3375,7 +3349,7 @@
         ),
       },
     ),
-    12884901922: (
+    128: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3397,11 +3371,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884901918,
+          125,
         ]),
       },
     ),
-    12884901924: (
+    129: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3430,7 +3404,7 @@
         ),
       },
     ),
-    12884901929: (
+    130: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3452,11 +3426,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884901924,
+          129,
         ]),
       },
     ),
-    12884901930: (
+    131: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3485,7 +3459,7 @@
         ),
       },
     ),
-    12884901934: (
+    132: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3514,7 +3488,7 @@
         ),
       },
     ),
-    12884901936: (
+    133: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3536,11 +3510,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          17179869471,
+          239,
         ]),
       },
     ),
-    12884901937: (
+    134: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3569,7 +3543,7 @@
         ),
       },
     ),
-    12884901941: (
+    135: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3598,7 +3572,7 @@
         ),
       },
     ),
-    12884901942: (
+    136: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3620,11 +3594,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884901941,
+          135,
         ]),
       },
     ),
-    12884901947: (
+    137: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3653,7 +3627,7 @@
         ),
       },
     ),
-    12884901948: (
+    138: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3682,7 +3656,7 @@
         ),
       },
     ),
-    12884901953: (
+    139: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3704,11 +3678,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884901947,
+          137,
         ]),
       },
     ),
-    12884901955: (
+    140: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3730,11 +3704,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884901948,
+          138,
         ]),
       },
     ),
-    12884901957: (
+    141: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3763,7 +3737,7 @@
         ),
       },
     ),
-    12884901959: (
+    142: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3792,7 +3766,7 @@
         ),
       },
     ),
-    12884901960: (
+    143: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3814,11 +3788,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884901957,
+          141,
         ]),
       },
     ),
-    12884901965: (
+    144: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3840,11 +3814,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884901959,
+          142,
         ]),
       },
     ),
-    12884901967: (
+    145: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3873,7 +3847,7 @@
         ),
       },
     ),
-    12884901969: (
+    146: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3902,7 +3876,7 @@
         ),
       },
     ),
-    12884901971: (
+    147: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3924,11 +3898,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884901967,
+          145,
         ]),
       },
     ),
-    12884901973: (
+    148: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3950,11 +3924,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884901969,
+          146,
         ]),
       },
     ),
-    12884901975: (
+    149: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -3983,7 +3957,7 @@
         ),
       },
     ),
-    12884901977: (
+    150: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4012,7 +3986,7 @@
         ),
       },
     ),
-    12884901979: (
+    151: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4034,11 +4008,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884901975,
+          149,
         ]),
       },
     ),
-    12884901981: (
+    152: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4060,11 +4034,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884901977,
+          150,
         ]),
       },
     ),
-    12884901983: (
+    153: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4093,7 +4067,7 @@
         ),
       },
     ),
-    12884901985: (
+    154: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4122,7 +4096,7 @@
         ),
       },
     ),
-    12884901987: (
+    155: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4144,11 +4118,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884901983,
+          153,
         ]),
       },
     ),
-    12884901989: (
+    156: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4170,11 +4144,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884901985,
+          154,
         ]),
       },
     ),
-    12884901991: (
+    157: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4203,7 +4177,7 @@
         ),
       },
     ),
-    12884901993: (
+    158: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4232,7 +4206,7 @@
         ),
       },
     ),
-    12884901995: (
+    159: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4254,11 +4228,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884901991,
+          157,
         ]),
       },
     ),
-    12884901997: (
+    160: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4280,11 +4254,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884901993,
+          158,
         ]),
       },
     ),
-    12884901999: (
+    161: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4313,7 +4287,7 @@
         ),
       },
     ),
-    12884902001: (
+    162: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4342,7 +4316,7 @@
         ),
       },
     ),
-    12884902003: (
+    163: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4364,11 +4338,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884901999,
+          161,
         ]),
       },
     ),
-    12884902005: (
+    164: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4390,11 +4364,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902001,
+          162,
         ]),
       },
     ),
-    12884902007: (
+    165: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4423,7 +4397,7 @@
         ),
       },
     ),
-    12884902009: (
+    166: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4452,7 +4426,7 @@
         ),
       },
     ),
-    12884902011: (
+    167: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4474,11 +4448,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902007,
+          165,
         ]),
       },
     ),
-    12884902013: (
+    168: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4500,11 +4474,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902009,
+          166,
         ]),
       },
     ),
-    12884902015: (
+    169: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4533,7 +4507,7 @@
         ),
       },
     ),
-    12884902017: (
+    170: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4562,7 +4536,7 @@
         ),
       },
     ),
-    12884902019: (
+    171: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4584,11 +4558,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902015,
+          169,
         ]),
       },
     ),
-    12884902021: (
+    172: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4610,11 +4584,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902017,
+          170,
         ]),
       },
     ),
-    12884902023: (
+    173: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4643,7 +4617,7 @@
         ),
       },
     ),
-    12884902025: (
+    174: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4672,7 +4646,7 @@
         ),
       },
     ),
-    12884902027: (
+    175: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4694,11 +4668,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902023,
+          173,
         ]),
       },
     ),
-    12884902028: (
+    176: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4727,7 +4701,7 @@
         ),
       },
     ),
-    12884902029: (
+    177: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4749,11 +4723,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902025,
+          174,
         ]),
       },
     ),
-    12884902031: (
+    178: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4782,7 +4756,7 @@
         ),
       },
     ),
-    12884902036: (
+    179: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4804,11 +4778,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902028,
+          176,
         ]),
       },
     ),
-    12884902038: (
+    180: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4830,11 +4804,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902031,
+          178,
         ]),
       },
     ),
-    12884902040: (
+    181: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4863,7 +4837,7 @@
         ),
       },
     ),
-    12884902041: (
+    182: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4892,7 +4866,7 @@
         ),
       },
     ),
-    12884902046: (
+    183: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4914,11 +4888,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902040,
+          181,
         ]),
       },
     ),
-    12884902047: (
+    184: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4940,11 +4914,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902041,
+          182,
         ]),
       },
     ),
-    12884902049: (
+    185: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -4973,7 +4947,7 @@
         ),
       },
     ),
-    12884902051: (
+    186: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5002,7 +4976,7 @@
         ),
       },
     ),
-    12884902053: (
+    187: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5024,11 +4998,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902049,
+          185,
         ]),
       },
     ),
-    12884902057: (
+    188: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5050,11 +5024,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902051,
+          186,
         ]),
       },
     ),
-    12884902058: (
+    189: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5083,7 +5057,7 @@
         ),
       },
     ),
-    12884902059: (
+    190: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5112,7 +5086,7 @@
         ),
       },
     ),
-    12884902063: (
+    191: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5134,11 +5108,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902059,
+          190,
         ]),
       },
     ),
-    12884902065: (
+    192: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5167,7 +5141,7 @@
         ),
       },
     ),
-    12884902067: (
+    193: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5196,7 +5170,7 @@
         ),
       },
     ),
-    12884902068: (
+    194: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5218,11 +5192,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902067,
+          193,
         ]),
       },
     ),
-    12884902069: (
+    195: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5244,12 +5218,12 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902065,
-          12884902058,
+          192,
+          189,
         ]),
       },
     ),
-    12884902071: (
+    196: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5278,7 +5252,7 @@
         ),
       },
     ),
-    12884902076: (
+    197: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5307,7 +5281,7 @@
         ),
       },
     ),
-    12884902078: (
+    198: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5329,11 +5303,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902071,
+          196,
         ]),
       },
     ),
-    12884902080: (
+    199: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5355,11 +5329,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902076,
+          197,
         ]),
       },
     ),
-    12884902082: (
+    200: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5388,7 +5362,7 @@
         ),
       },
     ),
-    12884902084: (
+    201: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5417,7 +5391,7 @@
         ),
       },
     ),
-    12884902086: (
+    202: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5439,11 +5413,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902082,
+          200,
         ]),
       },
     ),
-    12884902088: (
+    203: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5465,11 +5439,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902084,
+          201,
         ]),
       },
     ),
-    12884902090: (
+    204: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5498,7 +5472,7 @@
         ),
       },
     ),
-    12884902092: (
+    205: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5527,7 +5501,7 @@
         ),
       },
     ),
-    12884902094: (
+    206: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5556,7 +5530,7 @@
         ),
       },
     ),
-    12884902096: (
+    207: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5578,12 +5552,12 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902094,
-          12884902090,
+          206,
+          204,
         ]),
       },
     ),
-    12884902098: (
+    208: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5605,11 +5579,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902092,
+          205,
         ]),
       },
     ),
-    12884902100: (
+    209: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5638,7 +5612,7 @@
         ),
       },
     ),
-    12884902102: (
+    210: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5667,7 +5641,7 @@
         ),
       },
     ),
-    12884902104: (
+    211: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5696,7 +5670,7 @@
         ),
       },
     ),
-    12884902106: (
+    212: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5718,12 +5692,12 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902102,
-          12884902100,
+          210,
+          209,
         ]),
       },
     ),
-    12884902108: (
+    213: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5745,11 +5719,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902104,
+          211,
         ]),
       },
     ),
-    12884902110: (
+    214: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5778,7 +5752,7 @@
         ),
       },
     ),
-    12884902112: (
+    215: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5807,7 +5781,7 @@
         ),
       },
     ),
-    12884902114: (
+    216: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5836,7 +5810,7 @@
         ),
       },
     ),
-    12884902116: (
+    217: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5858,11 +5832,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902112,
+          215,
         ]),
       },
     ),
-    12884902118: (
+    218: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5884,12 +5858,12 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902114,
-          12884902110,
+          216,
+          214,
         ]),
       },
     ),
-    12884902120: (
+    219: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5918,7 +5892,7 @@
         ),
       },
     ),
-    12884902122: (
+    220: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5947,7 +5921,7 @@
         ),
       },
     ),
-    12884902124: (
+    221: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -5969,11 +5943,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902120,
+          219,
         ]),
       },
     ),
-    12884902126: (
+    222: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -6002,7 +5976,7 @@
         ),
       },
     ),
-    12884902128: (
+    223: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -6024,11 +5998,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902122,
+          220,
         ]),
       },
     ),
-    12884902130: (
+    224: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -6050,11 +6024,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902126,
+          222,
         ]),
       },
     ),
-    12884902132: (
+    225: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -6083,7 +6057,7 @@
         ),
       },
     ),
-    12884902134: (
+    226: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -6112,7 +6086,7 @@
         ),
       },
     ),
-    12884902136: (
+    227: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -6134,11 +6108,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          8589934912,
+          22,
         ]),
       },
     ),
-    12884902138: (
+    228: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -6160,11 +6134,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902132,
+          225,
         ]),
       },
     ),
-    12884902139: (
+    229: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -6193,7 +6167,7 @@
         ),
       },
     ),
-    12884902140: (
+    230: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -6215,11 +6189,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902134,
+          226,
         ]),
       },
     ),
-    12884902144: (
+    231: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -6241,37 +6215,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902139,
+          229,
         ]),
       },
     ),
-    12884902146: (
-      components: {
-        "bevy_transform::components::transform::Transform": (
-          translation: (
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-          ),
-          rotation: (
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-            w: 1.0,
-          ),
-          scale: (
-            x: 1.0,
-            y: 1.0,
-            z: 1.0,
-          ),
-        ),
-        "bevy_render::view::visibility::Visibility": Inherited,
-        "space_prefab::save::ChildrenPrefab": ([
-          12884902148,
-        ]),
-      },
-    ),
-    12884902148: (
+    233: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -6293,119 +6241,119 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884901936,
-          12884902140,
-          12884902128,
-          12884902116,
-          12884902108,
-          12884902098,
-          12884902088,
-          12884902080,
-          12884902068,
-          12884902063,
-          12884902053,
-          12884902046,
-          12884902036,
-          12884902027,
-          12884902019,
-          12884902011,
-          12884902003,
-          12884901995,
-          12884901987,
-          12884901979,
-          12884901971,
-          12884901960,
-          12884901953,
-          17179869192,
-          12884902170,
-          12884901922,
-          12884901914,
-          12884901906,
-          8589934886,
-          8589934894,
-          8589934902,
-          8589934910,
-          8589934920,
-          8589934928,
-          8589934936,
-          8589934944,
-          8589934952,
-          8589934960,
-          8589934969,
-          8589934977,
-          8589934985,
-          8589934994,
-          8589935004,
-          8589935013,
-          8589935021,
-          8589935029,
-          8589935037,
-          8589935049,
-          8589935057,
-          8589935065,
-          8589935073,
-          8589935083,
-          8589935093,
-          8589935102,
-          8589935111,
-          8589934916,
-          12884902136,
-          12884902130,
-          12884902124,
-          12884902118,
-          12884902106,
-          12884902096,
-          12884902086,
-          12884902078,
-          12884902069,
-          12884902057,
-          12884902047,
-          12884902038,
-          12884902029,
-          12884902021,
-          12884902013,
-          12884902005,
-          12884901997,
-          12884901989,
-          12884901981,
-          12884901973,
-          12884901965,
-          12884901955,
-          12884901942,
-          34359738378,
-          12884902167,
-          12884901929,
-          12884901919,
-          12884901912,
-          12884901905,
-          8589934884,
-          8589934892,
-          8589934900,
-          12884902138,
-          12884902144,
-          8589934922,
-          8589934930,
-          8589934938,
-          8589934946,
-          8589934954,
-          8589934962,
-          8589934971,
-          8589934979,
-          8589934987,
-          8589934997,
-          8589935011,
-          8589935023,
-          8589935031,
-          8589935039,
-          8589935047,
-          8589935059,
-          8589935071,
-          8589935085,
-          8589935105,
+          133,
+          230,
+          223,
+          217,
+          213,
+          208,
+          203,
+          199,
+          194,
+          191,
+          187,
+          183,
+          179,
+          175,
+          171,
+          167,
+          163,
+          159,
+          155,
+          151,
+          147,
+          143,
+          139,
+          238,
+          235,
+          128,
+          124,
+          120,
+          9,
+          13,
+          17,
+          21,
+          26,
+          30,
+          34,
+          38,
+          42,
+          46,
+          50,
+          54,
+          58,
+          62,
+          66,
+          70,
+          74,
+          78,
+          82,
+          88,
+          92,
+          96,
+          100,
+          104,
+          108,
+          111,
+          115,
+          24,
+          227,
+          224,
+          221,
+          218,
+          212,
+          207,
+          202,
+          198,
+          195,
+          188,
+          184,
+          180,
+          177,
+          172,
+          168,
+          164,
+          160,
+          156,
+          152,
+          148,
+          144,
+          140,
+          136,
+          240,
+          234,
+          130,
+          126,
+          123,
+          119,
+          8,
+          12,
+          16,
+          228,
+          231,
+          27,
+          31,
+          35,
+          39,
+          43,
+          47,
+          51,
+          55,
+          59,
+          63,
+          69,
+          75,
+          79,
+          83,
+          87,
+          93,
+          99,
+          105,
+          112,
         ]),
       },
     ),
-    12884902167: (
+    234: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -6427,11 +6375,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884901934,
+          132,
         ]),
       },
     ),
-    12884902170: (
+    235: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -6453,88 +6401,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884901930,
+          131,
         ]),
       },
     ),
-    12884902171: (
-      components: {
-        "bevy_transform::components::transform::Transform": (
-          translation: (
-            x: -5.4723186,
-            y: 0.0,
-            z: 2.6897686,
-          ),
-          rotation: (
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-            w: 1.0,
-          ),
-          scale: (
-            x: 1.0,
-            y: 1.0,
-            z: 1.0,
-          ),
-        ),
-        "bevy_core::name::Name": (
-          hash: 5673502437770237009,
-          name: "CarHouse",
-        ),
-        "bevy_render::view::visibility::Visibility": Inherited,
-        "space_bevy_xpbd_plugin::collider::ColliderPrefab": Primitive(
-          pos: (
-            x: -0.4,
-            y: 3.5,
-            z: -0.7,
-          ),
-          rot: (
-            x: 0.0,
-            y: 1.1,
-            z: 0.0,
-          ),
-          primitive: Cuboid((
-            x: 5.2,
-            y: 7.0,
-            z: 5.9,
-          )),
-        ),
-        "space_bevy_xpbd_plugin::registry::RigidBodyPrefab": Static,
-        "bevy_xpbd_3d::components::mass_properties::Mass": (20856.201),
-        "bevy_xpbd_3d::components::Friction": (
-          dynamic_coefficient: 0.3,
-          static_coefficient: 0.3,
-          combine_rule: Average,
-        ),
-        "bevy_xpbd_3d::components::Restitution": (
-          coefficient: 0.3,
-          combine_rule: Average,
-        ),
-        "bevy_xpbd_3d::components::mass_properties::Inertia": ((
-          x_axis: (
-            x: 190325.19,
-            y: 4089.7986,
-            z: 280.55225,
-          ),
-          y_axis: (
-            x: 4089.7986,
-            y: 212824.83,
-            z: -5697.3633,
-          ),
-          z_axis: (
-            x: 280.55316,
-            y: -5697.3633,
-            z: 182424.97,
-          ),
-        )),
-        "bevy_xpbd_3d::components::mass_properties::CenterOfMass": ((
-          x: -0.7061103,
-          y: 1.7428706,
-          z: -0.19729815,
-        )),
-      },
-    ),
-    12884902173: (
+    236: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -6563,7 +6434,7 @@
         ),
       },
     ),
-    12884902177: (
+    237: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -6592,7 +6463,7 @@
         ),
       },
     ),
-    17179869192: (
+    238: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -6614,11 +6485,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884901937,
+          134,
         ]),
       },
     ),
-    17179869471: (
+    239: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -6647,7 +6518,7 @@
         ),
       },
     ),
-    34359738378: (
+    240: (
       components: {
         "bevy_transform::components::transform::Transform": (
           translation: (
@@ -6669,7 +6540,7 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::save::ChildrenPrefab": ([
-          12884902173,
+          236,
         ]),
       },
     ),

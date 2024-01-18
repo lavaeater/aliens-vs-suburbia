@@ -32,6 +32,7 @@ nalgebra = "0.32.3"
 bitintr = "0.3.0"
 palette = "0.7.3"
 space_editor = { git="https://github.com/lavaeater/space_editor.git", branch="main"}
+bevy_panorbit_camera = "0.10.0"
 # Enable max optimizations for dependencies, but not for our code:
 [profile.dev.package."*"]
 opt-level = 3

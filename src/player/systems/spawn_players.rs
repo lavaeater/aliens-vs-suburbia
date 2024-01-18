@@ -53,16 +53,6 @@ pub fn spawn_players(
             PlayerBundle::new(
                 "player",
                 "Player One",
-                [CollisionLayer::Player].into(),
-                [
-                    CollisionLayer::Ball,
-                    CollisionLayer::Impassable,
-                    CollisionLayer::Floor,
-                    CollisionLayer::Alien,
-                    CollisionLayer::Player,
-                    CollisionLayer::AlienSpawnPoint,
-                    CollisionLayer::AlienGoal
-                ].into(),
             ),
             OutlineBundle {
                 outline: OutlineVolume {

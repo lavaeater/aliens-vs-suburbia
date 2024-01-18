@@ -35,8 +35,6 @@ impl PlayerBundle {
     pub fn new(
         name: &str,
         player_key: &str,
-        groups: Vec<CollisionLayer>,
-        masks: Vec<CollisionLayer>
     ) -> Self {
         Self {
             name: Name::new(name.to_string()),
@@ -51,7 +49,17 @@ impl PlayerBundle {
             linear_damping: LinearDamping::from(0.0),
             rigid_body: RigidBody::Dynamic,
             locked_axes: LockedAxes::new().lock_rotation_x().lock_rotation_z(),
-            collision_layers: CollisionLayers::new(groups, masks),
+            collision_layers: CollisionLayers::new(
+                [CollisionLayer::Player],
+                [
+                    CollisionLayer::Ball,
+                    CollisionLayer::Impassable,
+                    CollisionLayer::Floor,
+                    CollisionLayer::Alien,
+                    CollisionLayer::Player,
+                    CollisionLayer::AlienSpawnPoint,
+                    CollisionLayer::AlienGoal
+                ]),
             health: Health {
                 health: 100,
                 max_health: 100,

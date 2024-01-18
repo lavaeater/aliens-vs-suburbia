@@ -13,14 +13,14 @@ impl Plugin for CameraPlugin {
             Startup,
             (
                 spawn_camera,
-            )
+            ),
         )
             .add_systems(
-            PostUpdate,
-            camera_follow
-                .after(PhysicsSet::Sync)
-                .before(TransformSystem::TransformPropagate),
-        );
+                PostUpdate,
+                camera_follow
+                    .after(PhysicsSet::Sync)
+                    .before(TransformSystem::TransformPropagate),
+            );
     }
 }
 
@@ -29,12 +29,13 @@ pub struct StatefulCameraPlugin;
 
 impl Plugin for StatefulCameraPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            OnEnter(GameState::InGame),
-            (
-                spawn_camera,
+        app
+            .add_systems(
+                OnEnter(GameState::InGame),
+                (
+                    spawn_camera,
+                ),
             )
-        )
             .add_systems(
                 PostUpdate,
                 camera_follow
