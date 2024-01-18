@@ -1,12 +1,14 @@
 use bevy::prelude::*;
 use bevy_atmosphere::plugin::AtmosphereCamera;
 use crate::game_state::GameState;
+use space_editor::prelude::PrefabPlugin;
 
 pub struct PlaygroundPlugin;
 
 impl Plugin for PlaygroundPlugin {
     fn build(&self, app: &mut App) {
         app
+            .add_plugins(PrefabPlugin)
             .add_systems(OnEnter(GameState::Playground), load_level);
     }
 }
