@@ -3,7 +3,7 @@ use belly::core::eml::Params;
 use bevy::prelude::Commands;
 use belly::prelude::*;
 use bevy::prelude::*;
-use crate::camera::components::GameCamera;
+use crate::camera::camera_components::GameCamera;
 use crate::game_state::GameState;
 use crate::general::components::Health;
 

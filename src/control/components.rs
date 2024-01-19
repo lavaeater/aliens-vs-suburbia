@@ -5,7 +5,7 @@ use bevy_inspector_egui::InspectorOptions;
 use crate::animation::animation_plugin::AnimationKey;
 use crate::general::components::map_components::CoolDown;
 
-#[derive(Component, Reflect)]
+#[derive(Component, Default, Reflect, Clone)]
 pub struct InputKeyboard;
 
 #[derive(Hash, PartialEq, Eq, Clone, Reflect, Copy)]
@@ -54,7 +54,7 @@ impl Opposite for ControlRotation {
     }
 }
 
-#[derive(Component, Reflect, InspectorOptions)]
+#[derive(Component, Default, Reflect, Clone, InspectorOptions)]
 pub struct CharacterControl {
     pub triggers: HashSet<ControlCommand>,
     pub rotations: HashSet<ControlRotation>,
@@ -100,15 +100,14 @@ impl CoolDown for CharacterControl {
     }
 }
 
-
-#[derive(Component)]
+#[derive(Component, Default, Reflect, Clone)]
 pub struct DynamicMovement;
 
 
 #[derive(Component)]
 pub struct KinematicMovement;
 
-#[derive(Component)]
+#[derive(Component, Reflect, Clone)]
 pub struct CharacterState {
     pub state: Vec<AnimationKey>,
 }

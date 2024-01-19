@@ -1,4 +1,5 @@
 mod xpbd_plugin;
+mod player_prefab;
 
 use bevy::prelude::*;
 use bevy_atmosphere::plugin::AtmosphereCamera;
@@ -7,7 +8,6 @@ use bevy_xpbd_3d::components::Collider;
 use crate::game_state::GameState;
 use space_editor::prelude::{PrefabBundle, PrefabPlugin};
 use space_editor::space_editor_ui::ext::bevy_panorbit_camera;
-use space_editor::space_editor_ui::ext::bevy_panorbit_camera::PanOrbitCameraPlugin;
 use crate::assets::assets_plugin::GameAssets;
 use crate::player::bundle::PlayerBundle;
 use crate::player::systems::spawn_players::FixSceneTransform;
@@ -20,7 +20,6 @@ impl Plugin for PlaygroundPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_plugins((
-                PanOrbitCameraPlugin,
                 PrefabPlugin,
                 CustomXpbdPlugin,
             ))
@@ -60,9 +59,7 @@ fn load_level(
         ))
     ;
 
-    commands.spawn(
-        PrefabBundle::new("girl/girl_prefab_2.scn.ron"))
-    ;
+    
 
     let player = commands.spawn((
         FixSceneTransform::new(

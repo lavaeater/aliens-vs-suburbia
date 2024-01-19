@@ -14,7 +14,9 @@ pub struct PlayerPlugin {
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         if self.with_debug {
-            app.add_systems(Update, (debug_gizmos).run_if(in_state(GameState::InGame)));
+            app
+                .add_systems(Update, (debug_gizmos)
+                    .run_if(in_state(GameState::InGame)));
         }
         app
             .add_plugins((
@@ -25,8 +27,8 @@ impl Plugin for PlayerPlugin {
                 Update,
                 (
                     spawn_players,
-                    setup_scene_once_loaded,
-                    fix_scene_transform,
+                    // setup_scene_once_loaded,
+                    // fix_scene_transform,
                     auto_aim,
                 ).run_if(in_state(GameState::InGame)),
             );

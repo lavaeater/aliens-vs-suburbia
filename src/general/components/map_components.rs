@@ -48,7 +48,7 @@ impl AlienGoal {
     }
 }
 
-#[derive(Component, Debug, Reflect, Default)]
+#[derive(Component, Clone, Copy, Debug, PartialEq, Reflect, Default)]
 pub struct CurrentTile {
     pub tile: (usize, usize)
 }

@@ -3,17 +3,23 @@ use bevy::{DefaultPlugins, log};
 use bevy::log::LogPlugin;
 use bevy::prelude::Msaa;
 use bevy_atmosphere::plugin::AtmospherePlugin;
+use bevy_mod_outline::OutlineBundle;
+use bevy_xpbd_3d::components::{CollisionLayers, LockedAxes};
 use bevy_xpbd_3d::plugins::{PhysicsDebugPlugin, PhysicsPlugins};
-use space_editor::prelude::simple_editor_setup;
+use space_editor::prelude::{EditorRegistryExt, simple_editor_setup};
 use space_editor::space_prefab::ext::Startup;
 use space_editor::SpaceEditorPlugin;
 use crate::ai::components::approach_and_attack_player_components::ApproachAndAttackPlayerData;
 use crate::ai::components::avoid_wall_components::AvoidWallsData;
-use camera::components::CameraOffset;
-use crate::general::components::Health;
+use camera::camera_components::CameraOffset;
+use crate::general::components::{CollisionLayer, Health};
 use crate::general::components::map_components::CurrentTile;
 use control::components::CharacterControl;
+use crate::animation::animation_plugin::CurrentAnimationKey;
+use crate::control::components::{CharacterState, DynamicMovement, InputKeyboard};
 use crate::game_state::game_state_plugin::GamePlugin;
+use crate::game_state::score_keeper::Score;
+use crate::player::components::{AutoAim, Player};
 
 pub(crate) mod player;
 pub(crate) mod general;
@@ -38,6 +44,18 @@ fn main() {
     App::default()
         .add_plugins(DefaultPlugins)
         .add_plugins(SpaceEditorPlugin)
+        .editor_registry::<Player>()
+        .editor_registry::<InputKeyboard>()
+        .editor_registry::<CharacterControl>()
+        .editor_registry::<DynamicMovement>()
+        .editor_registry::<LockedAxes>()
+        .editor_registry::<CollisionLayers>()
+        .editor_registry::<Health>()
+        .editor_registry::<CurrentTile>()
+        .editor_registry::<CurrentAnimationKey>()
+        .editor_registry::<CharacterState>()
+        .editor_registry::<Score>()
+        .editor_registry::<AutoAim>()
         .add_systems(Startup, simple_editor_setup)
         .run();
 

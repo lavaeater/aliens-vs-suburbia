@@ -2,7 +2,7 @@ use bevy::math::Vec3;
 use bevy::prelude::{Component, Entity};
 use bevy::reflect::Reflect;
 
-#[derive(Component)]
+#[derive(Component, Default, Reflect, Clone)]
 pub struct Player {
     pub key: String
 }
@@ -22,5 +22,5 @@ pub struct IsObstacle;
 #[derive(Hash, PartialEq, Eq, Clone, Reflect, Component)]
 pub struct ShootingTower;
 
-#[derive(Component)]
+#[derive(Component, Default, Reflect, Clone)]
 pub struct AutoAim(pub Vec3);

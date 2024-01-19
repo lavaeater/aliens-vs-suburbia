@@ -16,7 +16,7 @@ pub enum AnimationEventType {
 #[derive(Event)]
 pub struct AnimationEvent(pub AnimationEventType, pub Entity, pub AnimationKey);
 
-#[derive(Component, Debug, Reflect)]
+#[derive(Component, Default, Reflect, Clone)]
 pub struct CurrentAnimationKey {
     pub group: String,
     pub key: AnimationKey,
@@ -55,9 +55,10 @@ pub struct AnimationStore<S: Into<String>> {
     pub anims: HashMap<S, HashMap<AnimationKey, Handle<AnimationClip>>>,
 }
 
-#[derive(Eq, Hash, PartialEq, Copy, Clone, Debug, Reflect)]
+#[derive(Eq, Hash, PartialEq, Copy, Clone, Debug, Reflect, Default)]
 pub enum AnimationKey {
     Building,
+    #[default]
     Idle,
     Walking,
     Throwing,

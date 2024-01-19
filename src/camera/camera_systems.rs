@@ -8,7 +8,7 @@ use bevy_atmosphere::plugin::AtmosphereCamera;
 use bevy_video_glitch::VideoGlitchSettings;
 use bevy_xpbd_3d::math::PI;
 use bevy_xpbd_3d::components::Position;
-use crate::camera::components::{CameraOffset, GameCamera};
+use crate::camera::camera_components::{CameraOffset, GameCamera};
 use crate::player::components::Player;
 
 pub fn spawn_camera(mut commands: Commands) {
