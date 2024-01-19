@@ -22,12 +22,16 @@
           ),
         ),
         "bevy_core::name::Name": (
-          hash: 2898630342518497260,
-          name: "girl",
+          hash: 11654665442594356769,
+          name: "Bullshit",
         ),
-        "bevy_render::view::visibility::Visibility": Visible,
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::GltfPrefab": (
+          path: "girl/girl.glb",
+          scene: "Scene0",
+        ),
         "space_prefab::save::ChildrenPrefab": ([
-          9,
+          34359738378,
         ]),
         "space_bevy_xpbd_plugin::collider::ColliderPrefab": Primitive(
           pos: (
@@ -45,8 +49,8 @@
             radius: 0.2,
           ),
         ),
-        "space_bevy_xpbd_plugin::registry::RigidBodyPrefab": Dynamic,
-        "bevy_xpbd_3d::components::mass_properties::Mass": (6.0695567),
+        "space_bevy_xpbd_plugin::registry::RigidBodyPrefab": Static,
+        "bevy_xpbd_3d::components::mass_properties::Mass": (59.177147),
         "bevy_xpbd_3d::components::Friction": (
           dynamic_coefficient: 0.3,
           static_coefficient: 0.3,
@@ -58,70 +62,31 @@
         ),
         "bevy_xpbd_3d::components::mass_properties::Inertia": ((
           x_axis: (
-            x: 2.9514213,
+            x: 45.663,
             y: 0.0,
             z: 0.0,
           ),
           y_axis: (
             x: 0.0,
-            y: 1.7280598,
+            y: 28.977476,
             z: 0.0,
           ),
           z_axis: (
             x: 0.0,
             y: 0.0,
-            z: 2.9514213,
+            z: 45.663,
           ),
         )),
         "bevy_xpbd_3d::components::mass_properties::CenterOfMass": ((
           x: 0.0,
-          y: 0.2530711,
+          y: 0.008069367,
           z: 0.0,
         )),
-        "bevy_xpbd_3d::components::locked_axes::LockedAxes": (5),
-        "bevy_xpbd_3d::components::layers::CollisionLayers": (
-          groups: 4294967295,
-          masks: 4294967295,
-        ),
-        "aliens_vs_suburbia::player::components::AutoAim": ((
+        "bevy_xpbd_3d::components::Position": ((
           x: 0.0,
           y: 0.0,
-          z: 1.0,
+          z: 0.0,
         )),
-      },
-    ),
-    9: (
-      components: {
-        "bevy_transform::components::transform::Transform": (
-          translation: (
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-          ),
-          rotation: (
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-            w: 1.0,
-          ),
-          scale: (
-            x: 1.0,
-            y: 1.0,
-            z: 1.0,
-          ),
-        ),
-        "bevy_core::name::Name": (
-          hash: 2898630342518497260,
-          name: "girl_gltf",
-        ),
-        "bevy_render::view::visibility::Visibility": Inherited,
-        "space_prefab::component::GltfPrefab": (
-          path: "girl/girl.glb",
-          scene: "Scene0",
-        ),
-        "space_prefab::save::ChildrenPrefab": ([
-          8589934602,
-        ]),
       },
     ),
   },

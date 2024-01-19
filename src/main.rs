@@ -5,6 +5,7 @@ use bevy::prelude::Msaa;
 use bevy_atmosphere::plugin::AtmospherePlugin;
 use bevy_xpbd_3d::components::{CollisionLayers, LockedAxes};
 use bevy_xpbd_3d::plugins::{PhysicsDebugPlugin, PhysicsPlugins};
+use bevy_xpbd_3d::prelude::Position;
 use space_editor::prelude::{EditorRegistryExt, simple_editor_setup};
 use space_editor::space_prefab::ext::Startup;
 use space_editor::SpaceEditorPlugin;
@@ -15,7 +16,7 @@ use crate::general::components::{CollisionLayer, Health};
 use crate::general::components::map_components::CurrentTile;
 use control::components::CharacterControl;
 use crate::animation::animation_plugin::CurrentAnimationKey;
-use crate::control::components::{CharacterState, DynamicMovement, InputKeyboard};
+use crate::control::components::{CharacterState, ControllerFlag, DynamicMovement, InputKeyboard};
 use crate::game_state::game_state_plugin::GamePlugin;
 use crate::game_state::score_keeper::Score;
 use crate::player::components::{AutoAim, Player};
@@ -44,6 +45,7 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(SpaceEditorPlugin)
         .register_type::<CollisionLayer>()
+        .register_type::<ControllerFlag>()
         .editor_registry::<Player>()
         .editor_registry::<InputKeyboard>()
         .editor_registry::<CharacterControl>()
@@ -56,17 +58,12 @@ fn main() {
         .editor_registry::<CharacterState>()
         .editor_registry::<Score>()
         .editor_registry::<AutoAim>()
+        .editor_registry::<Position>()
         .add_systems(Startup, simple_editor_setup)
         .run();
 
     #[cfg(feature = "default")]
     App::new()
-        .register_type::<CameraOffset>()
-        .register_type::<CurrentTile>()
-        .register_type::<CharacterControl>()
-        .register_type::<Health>()
-        .register_type::<AvoidWallsData>()
-        .register_type::<ApproachAndAttackPlayerData>()
         .insert_resource(Msaa::Sample4)
         .add_plugins(
             DefaultPlugins.set(

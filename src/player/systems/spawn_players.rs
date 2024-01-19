@@ -1,6 +1,6 @@
 use bevy::hierarchy::{BuildChildren, Children};
 use bevy::math::{EulerRot, Quat, Vec3};
-use bevy::prelude::{Color, Commands, Component, Entity, EventReader, EventWriter, Query, Res, Transform, Visibility, With};
+use bevy::prelude::{Color, Commands, Component, Entity, EventReader, EventWriter, Name, Query, Res, Transform, Visibility, With};
 use bevy::scene::SceneBundle;
 use bevy::utils::default;
 use bevy_mod_outline::{OutlineBundle, OutlineVolume};
@@ -11,6 +11,7 @@ use crate::game_state::score_keeper::{GameTrackingEvent};
 use crate::general::components::{CollisionLayer};
 use crate::general::events::map_events::SpawnPlayer;
 use crate::player::bundle::PlayerBundle;
+use crate::player::components::Player;
 use crate::player::player_prefab::PlayerPrefab;
 use crate::ui::spawn_ui::AddHealthBar;
 
@@ -39,17 +40,12 @@ pub fn spawn_players(
 ) {
     for spawn_player in spawn_player_event_reader.read() {
         let player = commands.spawn((
-            PrefabBundle::new("girl/girl_prefab_2.scn.ron"),
+            PrefabBundle::new("girl_fini.scn.ron"),
         ))
-            .insert(
-                PlayerPrefab::new(
-                    "player",
-                    "Player One",
-                    Transform::from_xyz(
-                        spawn_player.position.x,
-                        spawn_player.position.y,
-                        spawn_player.position.z),
-                ))
+            .insert((
+                Name::new("PLAYER"),
+                Player { key: "PLAYER".to_string() },
+            ))
             .id();
         add_health_bar_ew.send(AddHealthBar {
             entity: player,

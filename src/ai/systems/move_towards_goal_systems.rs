@@ -52,7 +52,7 @@ pub fn move_towards_goal_action_system(
                 ) = alien_query.get_mut(actor.0)
                 {
                     if linear_velocity.length().is_zero() {
-                        info!("We are STANDING STILL!");
+                        // info!("We are STANDING STILL!");
                         move_towards_goal_data.path = None;
                         *action_state = ActionState::Failure;
                         return;
