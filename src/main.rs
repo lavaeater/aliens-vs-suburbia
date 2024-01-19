@@ -2,6 +2,7 @@ use bevy::app::{App, PluginGroup};
 use bevy::{DefaultPlugins, log};
 use bevy::log::LogPlugin;
 use bevy::prelude::Msaa;
+use bevy::utils::HashSet;
 use bevy_atmosphere::plugin::AtmospherePlugin;
 use bevy_mod_outline::OutlineBundle;
 use bevy_xpbd_3d::components::{CollisionLayers, LockedAxes};

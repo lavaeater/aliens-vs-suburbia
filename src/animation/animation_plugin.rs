@@ -1,5 +1,5 @@
 use bevy::app::{App, Plugin, Update};
-use bevy::prelude::{Added, Children, Commands, Component, Entity, Event, EventReader, in_state, IntoSystemConfigs, OnEnter, Query, Reflect, Res, Resource};
+use bevy::prelude::*;
 use bevy::animation::{AnimationClip, AnimationPlayer};
 use bevy::hierarchy::Parent;
 use bevy::utils::HashMap;
@@ -17,6 +17,7 @@ pub enum AnimationEventType {
 pub struct AnimationEvent(pub AnimationEventType, pub Entity, pub AnimationKey);
 
 #[derive(Component, Default, Reflect, Clone)]
+#[reflect(Component)]
 pub struct CurrentAnimationKey {
     pub group: String,
     pub key: AnimationKey,

@@ -1,67 +1,79 @@
 use bevy::math::Vec3;
-use bevy::prelude::{Component, Reflect};
-use bevy::utils::HashSet;
+use bevy::prelude::*;
 use bevy_inspector_egui::InspectorOptions;
 use crate::animation::animation_plugin::AnimationKey;
 use crate::general::components::map_components::CoolDown;
 
 #[derive(Component, Default, Reflect, Clone)]
+#[reflect(Component)]
 pub struct InputKeyboard;
 
-#[derive(Hash, PartialEq, Eq, Clone, Reflect, Copy)]
-pub enum ControlCommand {
-    Throw,
-    Jump,
-    Build
-}
+#[derive(Reflect, Clone, PartialEq, Eq, Hash, Debug, Default, Copy)]
+pub struct ControllerFlag(pub u8);
 
+impl ControllerFlag {
+    pub const NOTHING: Self = ControllerFlag(0);
+    pub const THROW: Self = ControllerFlag(1);
+    pub const JUMP: Self = ControllerFlag(2);
+    pub const BUILD: Self = ControllerFlag(4);
+    pub const LEFT: Self = ControllerFlag(8);
+    pub const RIGHT: Self = ControllerFlag(16);
+    pub const FORWARD: Self = ControllerFlag(32);
+    pub const BACKWARD: Self = ControllerFlag(64);
 
-#[derive(Hash, PartialEq, Eq, Copy, Clone, Debug, Reflect)]
-pub enum ControlRotation {
-    Left,
-    Right
-}
+    pub fn set(&mut self, flag: ControllerFlag) {
+        self.0 |= flag.0;
+    }
 
-#[derive(Hash, PartialEq, Eq, Copy, Clone, Debug, Reflect)]
-pub enum ControlDirection {
-    Forward,
-    Backward,
-    Left,
-    Right
+    pub fn unset(&mut self, flag: ControllerFlag) -> bool {
+        if self.has(flag) {
+            self.0 &= !flag.0;
+            return true;
+        }
+        return false;
+    }
+
+    pub fn has(&self, flag: ControllerFlag) -> bool {
+        self.0 & flag.0 == flag.0
+    }
+
+    pub fn clear(&mut self) {
+        self.0 = 0;
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0 == 0
+    }
 }
 
 pub trait Opposite {
     fn opposite(&self) -> Self;
 }
 
-impl Opposite for ControlDirection {
+impl Opposite for ControllerFlag {
     fn opposite(&self) -> Self {
         match self {
-            ControlDirection::Forward => ControlDirection::Backward,
-            ControlDirection::Backward => ControlDirection::Forward,
-            ControlDirection::Left => ControlDirection::Right,
-            ControlDirection::Right => ControlDirection::Left,
-        }
-    }
-}
-
-impl Opposite for ControlRotation {
-    fn opposite(&self) -> Self {
-        match self {
-            ControlRotation::Left => ControlRotation::Right,
-            ControlRotation::Right => ControlRotation::Left,
+            &ControllerFlag::THROW => { ControllerFlag::NOTHING }
+            &ControllerFlag::JUMP => { ControllerFlag::NOTHING }
+            &ControllerFlag::BUILD => { ControllerFlag::NOTHING }
+            &ControllerFlag::LEFT => { ControllerFlag::RIGHT }
+            &ControllerFlag::RIGHT => { ControllerFlag::LEFT }
+            &ControllerFlag::FORWARD => { ControllerFlag::BACKWARD }
+            &ControllerFlag::BACKWARD => { ControllerFlag::FORWARD }
+            _ => { ControllerFlag::NOTHING }
         }
     }
 }
 
 #[derive(Component, Default, Reflect, Clone, InspectorOptions)]
+#[reflect(Component)]
 pub struct CharacterControl {
-    pub triggers: HashSet<ControlCommand>,
-    pub rotations: HashSet<ControlRotation>,
-    pub directions: HashSet<ControlDirection>,
+    pub rotations: ControllerFlag,
+    pub triggers: ControllerFlag,
+    pub directions: ControllerFlag,
     pub walk_direction: Vec3,
     pub torque: Vec3,
-    pub has_thrown:bool,
+    pub has_thrown: bool,
     pub speed: f32,
     pub max_speed: f32,
     pub turn_speed: f32,
@@ -71,11 +83,11 @@ pub struct CharacterControl {
 }
 
 impl CharacterControl {
-    pub fn new(speed: f32, turn_speed: f32, rate_of_fire_per_minute: f32, ) -> Self {
+    pub fn new(speed: f32, turn_speed: f32, rate_of_fire_per_minute: f32) -> Self {
         Self {
-            triggers: HashSet::default(),
-            rotations: HashSet::default(),
-            directions: HashSet::default(),
+            rotations: ControllerFlag::NOTHING,
+            triggers: ControllerFlag::NOTHING,
+            directions: ControllerFlag::NOTHING,
             walk_direction: Vec3::ZERO,
             torque: Vec3::ZERO,
             has_thrown: false,
@@ -101,6 +113,7 @@ impl CoolDown for CharacterControl {
 }
 
 #[derive(Component, Default, Reflect, Clone)]
+#[reflect(Component)]
 pub struct DynamicMovement;
 
 
@@ -108,6 +121,7 @@ pub struct DynamicMovement;
 pub struct KinematicMovement;
 
 #[derive(Component, Reflect, Clone)]
+#[reflect(Component)]
 pub struct CharacterState {
     pub state: Vec<AnimationKey>,
 }

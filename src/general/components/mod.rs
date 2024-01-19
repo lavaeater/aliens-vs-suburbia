@@ -1,6 +1,6 @@
 pub (crate) mod map_components;
 
-use bevy::prelude::{Component, Entity, Reflect};
+use bevy::prelude::*;
 use bevy_xpbd_3d::prelude::PhysicsLayer;
 
 #[derive(Component)]
@@ -54,6 +54,7 @@ impl Default for Attack {
 
 
 #[derive(Component, Clone, Copy, Debug, PartialEq, Reflect)]
+#[reflect(Component)]
 pub struct Health {
     pub health: i32,
     pub max_health: i32,

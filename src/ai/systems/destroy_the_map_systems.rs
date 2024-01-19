@@ -14,7 +14,7 @@ use crate::general::systems::map_systems::TileDefinitions;
 use itertools::Itertools;
 use pathfinding::num_traits::Signed;
 use crate::building::systems::ToWorldCoordinates;
-use crate::control::components::{ControlDirection, CharacterControl, ControlRotation};
+use crate::control::components::{CharacterControl, ControllerFlag};
 use crate::general::components::Health;
 
 pub fn agent_cant_find_path(
@@ -163,13 +163,13 @@ pub fn destroy_the_map_action_system(
                                                     }
                                                     if angle.abs() > 1.0 {
                                                         if angle.is_positive() {
-                                                            controller.rotations.insert(ControlRotation::Right);
+                                                            controller.rotations.set(ControllerFlag::RIGHT);
                                                         } else {
-                                                            controller.rotations.insert(ControlRotation::Left);
+                                                            controller.rotations.set(ControllerFlag::LEFT);
                                                         }
                                                     }
                                                     if angle.abs() < angle_forward_value {
-                                                        controller.directions.insert(ControlDirection::Forward);
+                                                        controller.directions.set(ControllerFlag::FORWARD);
                                                     }
                                                 } else {
                                                     must_destroy_data.path_of_destruction = None;

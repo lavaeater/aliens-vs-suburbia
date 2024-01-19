@@ -1,4 +1,4 @@
-use bevy::prelude::{Component, Resource};
+use bevy::prelude::*;
 use bevy::reflect::Reflect;
 use bevy::utils::HashMap;
 use bevy_xpbd_3d::components::{CollisionLayers, RigidBody};
@@ -49,6 +49,7 @@ impl AlienGoal {
 }
 
 #[derive(Component, Clone, Copy, Debug, PartialEq, Reflect, Default)]
+#[reflect(Component)]
 pub struct CurrentTile {
     pub tile: (usize, usize)
 }

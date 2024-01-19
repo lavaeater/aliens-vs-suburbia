@@ -23,16 +23,71 @@
         ),
         "bevy_core::name::Name": (
           hash: 2898630342518497260,
-          name: "girl_gltf",
+          name: "girl",
         ),
-        "bevy_render::view::visibility::Visibility": Inherited,
-        "space_prefab::component::GltfPrefab": (
-          path: "girl/girl.glb",
-          scene: "Scene0",
-        ),
+        "bevy_render::view::visibility::Visibility": Visible,
         "space_prefab::save::ChildrenPrefab": ([
-          8589934602,
+          9,
         ]),
+        "space_bevy_xpbd_plugin::collider::ColliderPrefab": Primitive(
+          pos: (
+            x: 0.0,
+            y: 0.7,
+            z: 0.0,
+          ),
+          rot: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          primitive: Capsule(
+            height: 1.0,
+            radius: 0.2,
+          ),
+        ),
+        "space_bevy_xpbd_plugin::registry::RigidBodyPrefab": Dynamic,
+        "bevy_xpbd_3d::components::mass_properties::Mass": (6.0695567),
+        "bevy_xpbd_3d::components::Friction": (
+          dynamic_coefficient: 0.3,
+          static_coefficient: 0.3,
+          combine_rule: Average,
+        ),
+        "bevy_xpbd_3d::components::Restitution": (
+          coefficient: 0.3,
+          combine_rule: Average,
+        ),
+        "bevy_xpbd_3d::components::mass_properties::Inertia": ((
+          x_axis: (
+            x: 2.9514213,
+            y: 0.0,
+            z: 0.0,
+          ),
+          y_axis: (
+            x: 0.0,
+            y: 1.7280598,
+            z: 0.0,
+          ),
+          z_axis: (
+            x: 0.0,
+            y: 0.0,
+            z: 2.9514213,
+          ),
+        )),
+        "bevy_xpbd_3d::components::mass_properties::CenterOfMass": ((
+          x: 0.0,
+          y: 0.2530711,
+          z: 0.0,
+        )),
+        "bevy_xpbd_3d::components::locked_axes::LockedAxes": (5),
+        "bevy_xpbd_3d::components::layers::CollisionLayers": (
+          groups: 4294967295,
+          masks: 4294967295,
+        ),
+        "aliens_vs_suburbia::player::components::AutoAim": ((
+          x: 0.0,
+          y: 0.0,
+          z: 1.0,
+        )),
       },
     ),
     9: (
@@ -57,66 +112,16 @@
         ),
         "bevy_core::name::Name": (
           hash: 2898630342518497260,
-          name: "girl",
+          name: "girl_gltf",
         ),
-        "bevy_render::view::visibility::Visibility": Visible,
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::GltfPrefab": (
+          path: "girl/girl.glb",
+          scene: "Scene0",
+        ),
         "space_prefab::save::ChildrenPrefab": ([
-          8,
+          8589934602,
         ]),
-        "space_bevy_xpbd_plugin::collider::ColliderPrefab": Primitive(
-          pos: (
-            x: 0.0,
-            y: 0.7,
-            z: 0.0,
-          ),
-          rot: (
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-          ),
-          primitive: Capsule(
-            height: 1.0,
-            radius: 0.2,
-          ),
-        ),
-        "space_bevy_xpbd_plugin::registry::RigidBodyPrefab": Dynamic,
-        "bevy_xpbd_3d::components::mass_properties::Mass": (5.592035),
-        "bevy_xpbd_3d::components::Friction": (
-          dynamic_coefficient: 0.3,
-          static_coefficient: 0.3,
-          combine_rule: Average,
-        ),
-        "bevy_xpbd_3d::components::Restitution": (
-          coefficient: 0.3,
-          combine_rule: Average,
-        ),
-        "bevy_xpbd_3d::components::mass_properties::Inertia": ((
-          x_axis: (
-            x: 2.7784266,
-            y: 0.0,
-            z: 0.0,
-          ),
-          y_axis: (
-            x: 0.0,
-            y: 1.5118556,
-            z: 0.0,
-          ),
-          z_axis: (
-            x: 0.0,
-            y: 0.0,
-            z: 2.7784266,
-          ),
-        )),
-        "bevy_xpbd_3d::components::mass_properties::CenterOfMass": ((
-          x: 0.0,
-          y: 0.21490638,
-          z: 0.0,
-        )),
-        "bevy_xpbd_3d::components::locked_axes::LockedAxes": (0),
-        "bevy_xpbd_3d::components::layers::CollisionLayers": (
-          groups: 4294967295,
-          masks: 4294967295,
-        ),
       },
     ),
   },

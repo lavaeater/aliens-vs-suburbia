@@ -4,7 +4,7 @@ use bevy::utils::HashSet;
 use bevy::window::PrimaryWindow;
 use bevy_inspector_egui::bevy_egui::{EguiContext, EguiPlugin};
 use bevy_inspector_egui::{DefaultInspectorConfigPlugin, egui};
-use crate::control::components::{CharacterControl, ControlCommand, ControlDirection, ControlRotation};
+use crate::control::components::{CharacterControl, ControllerFlag};
 use crate::game_state::GameState;
 use crate::player::components::Player;
 
@@ -16,9 +16,7 @@ impl Plugin for InspectorPlugin {
             .add_plugins(EguiPlugin)
             .add_plugins(DefaultInspectorConfigPlugin) // adds default options and `InspectorEguiImpl`s
             .register_type::<CharacterControl>()
-            .register_type::<HashSet<ControlCommand>>()
-            .register_type::<HashSet<ControlDirection>>()
-            .register_type::<HashSet<ControlRotation>>()
+            .register_type::<ControllerFlag>()
             .add_systems(Update, (inspector_ui).run_if(in_state(GameState::InGame)));
     }
 }

@@ -1,3 +1,4 @@
+use std::fmt::Alignment::Right;
 use bevy::log::info;
 use bevy::prelude::{Query, Res, With};
 use big_brain::prelude::{ActionSpan, Actor, Score};
@@ -7,7 +8,7 @@ use bevy_xpbd_3d::prelude::{SpatialQuery, SpatialQueryFilter};
 use bevy::math::{EulerRot, Quat, Vec3};
 use bevy::time::Time;
 use crate::ai::components::avoid_wall_components::{AvoidWallsAction, AvoidWallScore, AvoidWallsData};
-use crate::control::components::{CharacterControl, ControlRotation};
+use crate::control::components::{CharacterControl, ControllerFlag};
 use crate::general::components::CollisionLayer;
 use crate::general::components::map_components::CoolDown;
 
@@ -97,16 +98,16 @@ pub fn avoid_walls_action_system(
             ActionState::Executing => if let Ok((mut controller, mut avoid_walls_data)) = actor_query.get_mut(actor.0) {
                 if avoid_walls_data.left_distance < avoid_walls_data.max_left_distance {
                     info!("Turn Right, bro");
-                    avoid_walls_data.rotation_direction = ControlRotation::Right;
+                    avoid_walls_data.rotation_direction = ControllerFlag::RIGHT;
                 } else if avoid_walls_data.right_distance < avoid_walls_data.max_right_distance {
-                    avoid_walls_data.rotation_direction = ControlRotation::Left;
+                    avoid_walls_data.rotation_direction = ControllerFlag::LEFT;
                     info!("Turn Left, bro");
                 } else {
                     avoid_walls_data.cool_down(res.delta_seconds());
                 }
 
                 controller.rotations.clear();
-                controller.rotations.insert(avoid_walls_data.rotation_direction);
+                controller.rotations.set(avoid_walls_data.rotation_direction);
                 let speed_factor = (avoid_walls_data.forward_distance / avoid_walls_data.max_forward_distance) * 2.0;
                 controller.speed = controller.max_speed * speed_factor;
                 controller.turn_speed = controller.max_turn_speed;
