@@ -2,9 +2,7 @@ use bevy::app::{App, PluginGroup};
 use bevy::{DefaultPlugins, log};
 use bevy::log::LogPlugin;
 use bevy::prelude::Msaa;
-use bevy::utils::HashSet;
 use bevy_atmosphere::plugin::AtmospherePlugin;
-use bevy_mod_outline::OutlineBundle;
 use bevy_xpbd_3d::components::{CollisionLayers, LockedAxes};
 use bevy_xpbd_3d::plugins::{PhysicsDebugPlugin, PhysicsPlugins};
 use space_editor::prelude::{EditorRegistryExt, simple_editor_setup};
@@ -45,6 +43,7 @@ fn main() {
     App::default()
         .add_plugins(DefaultPlugins)
         .add_plugins(SpaceEditorPlugin)
+        .register_type::<CollisionLayer>()
         .editor_registry::<Player>()
         .editor_registry::<InputKeyboard>()
         .editor_registry::<CharacterControl>()
