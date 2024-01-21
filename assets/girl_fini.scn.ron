@@ -1,0 +1,147 @@
+(
+  resources: {},
+  entities: {
+    8: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_core::name::Name": (
+          hash: 11654665442594356769,
+          name: "just-a-girl",
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::GltfPrefab": (
+          path: "girl/girl.glb",
+          scene: "Scene0",
+        ),
+        "space_prefab::save::ChildrenPrefab": ([
+          8589934601,
+        ]),
+        "space_bevy_xpbd_plugin::collider::ColliderPrefab": Primitive(
+          pos: (
+            x: 0.0,
+            y: 0.7,
+            z: 0.0,
+          ),
+          rot: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          primitive: Capsule(
+            height: 1.0,
+            radius: 0.2,
+          ),
+        ),
+        "space_bevy_xpbd_plugin::registry::RigidBodyPrefab": Dynamic,
+        "bevy_xpbd_3d::components::mass_properties::Mass": (59.654675),
+        "bevy_xpbd_3d::components::Friction": (
+          dynamic_coefficient: 0.3,
+          static_coefficient: 0.3,
+          combine_rule: Average,
+        ),
+        "bevy_xpbd_3d::components::Restitution": (
+          coefficient: 0.3,
+          combine_rule: Average,
+        ),
+        "bevy_xpbd_3d::components::mass_properties::Inertia": ((
+          x_axis: (
+            x: 45.95926,
+            y: 0.0,
+            z: 0.0,
+          ),
+          y_axis: (
+            x: 0.0,
+            y: 29.440208,
+            z: 0.0,
+          ),
+          z_axis: (
+            x: 0.0,
+            y: 0.0,
+            z: 45.95926,
+          ),
+        )),
+        "bevy_xpbd_3d::components::mass_properties::CenterOfMass": ((
+          x: 0.0,
+          y: 0.013608114,
+          z: 0.0,
+        )),
+        "bevy_xpbd_3d::components::locked_axes::LockedAxes": (5),
+        "aliens_vs_suburbia::player::components::Player": (
+          key: "Player One",
+        ),
+        "aliens_vs_suburbia::control::components::InputKeyboard": (),
+        "aliens_vs_suburbia::control::components::CharacterControl": (
+          rotations: (0),
+          triggers: (0),
+          directions: (0),
+          walk_direction: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          torque: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          has_thrown: false,
+          speed: 4.0,
+          max_speed: 8.0,
+          turn_speed: 4.0,
+          max_turn_speed: 8.0,
+          rate_of_fire_per_minute: 30.0,
+          fire_cool_down: 0.0,
+        ),
+        "aliens_vs_suburbia::control::components::DynamicMovement": (),
+        "aliens_vs_suburbia::general::components::Health": (
+          health: 100,
+          max_health: 100,
+        ),
+        "aliens_vs_suburbia::general::components::map_components::CurrentTile": (
+          tile: (0, 0),
+        ),
+        "aliens_vs_suburbia::animation::animation_plugin::CurrentAnimationKey": (
+          group: "players",
+          key: Idle,
+        ),
+        "aliens_vs_suburbia::control::components::CharacterState": (
+          state: [
+            Idle,
+          ],
+        ),
+        "aliens_vs_suburbia::game_state::score_keeper::Score": (
+          kills: 0,
+          shots_fired: 0,
+          shots_hit: 0,
+        ),
+        "aliens_vs_suburbia::player::components::AutoAim": ((
+          x: 0.0,
+          y: 0.0,
+          z: 1.0,
+        )),
+        "bevy_xpbd_3d::components::Position": ((
+          x: 0.0,
+          y: 0.0,
+          z: 0.0,
+        )),
+      },
+    ),
+  },
+)

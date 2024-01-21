@@ -8,7 +8,7 @@ use big_brain::thinker::{ActionSpan, Actor};
 use crate::ai::components::approach_and_attack_player_components::{ApproachAndAttackPlayerData, ApproachAndAttackPlayerScore, ApproachPlayerAction, AttackPlayerAction};
 use crate::general::components::{Attack, CollisionLayer, Health};
 use crate::alien::components::general::{Alien, AlienSightShape};
-use crate::control::components::{ControlDirection, CharacterControl, ControlRotation};
+use crate::control::components::{CharacterControl, ControllerFlag};
 use crate::player::components::Player;
 
 pub fn can_agent_see_player_system(
@@ -100,11 +100,11 @@ pub fn approach_player_action_system(
                             let angle = alien_direction_vector2.angle_between(alien_to_player_direction).to_degrees();
                             controller.rotations.clear();
                             if angle.abs() < 15.0 {
-                                controller.directions.insert(ControlDirection::Forward);
+                                controller.directions.set(ControllerFlag::FORWARD);
                             } else if angle > 0.0 {
-                                controller.rotations.insert(ControlRotation::Right);
+                                controller.rotations.set(ControllerFlag::RIGHT);
                             } else {
-                                controller.rotations.insert(ControlRotation::Left);
+                                controller.rotations.set(ControllerFlag::LEFT);
                             }
                             let distance = (player_position_vector2 - alien_position_vector2).length();
                             if distance < approach_player_data.attack_distance {

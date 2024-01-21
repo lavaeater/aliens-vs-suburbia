@@ -4,7 +4,7 @@ use bevy::scene::SceneInstance;
 use bevy_mod_outline::{AutoGenerateOutlineNormalsPlugin, InheritOutlineBundle, OutlinePlugin};
 use crate::game_state::GameState;
 use crate::player::systems::auto_aim::{auto_aim, debug_gizmos};
-use crate::player::systems::spawn_players::{fix_scene_transform, spawn_players};
+use crate::player::systems::spawn_players::{spawn_players};
 
 #[derive(Default)]
 pub struct PlayerPlugin {
@@ -14,7 +14,9 @@ pub struct PlayerPlugin {
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         if self.with_debug {
-            app.add_systems(Update, (debug_gizmos).run_if(in_state(GameState::InGame)));
+            app
+                .add_systems(Update, (debug_gizmos)
+                    .run_if(in_state(GameState::InGame)));
         }
         app
             .add_plugins((
@@ -25,8 +27,6 @@ impl Plugin for PlayerPlugin {
                 Update,
                 (
                     spawn_players,
-                    setup_scene_once_loaded,
-                    fix_scene_transform,
                     auto_aim,
                 ).run_if(in_state(GameState::InGame)),
             );
@@ -36,7 +36,7 @@ impl Plugin for PlayerPlugin {
 #[derive(Component)]
 pub struct OutlineDone;
 
-fn setup_scene_once_loaded(
+fn fix_mod_outline(
     mut commands: Commands,
     scene_query: Query<(Entity, &SceneInstance), Without<OutlineDone>>,
     scene_manager: Res<SceneSpawner>,

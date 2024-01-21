@@ -1,0 +1,114 @@
+(
+  resources: {},
+  entities: {
+    4294967304: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: -5.4723186,
+            y: 0.0,
+            z: 2.6897686,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_core::name::Name": (
+          hash: 5673502437770237009,
+          name: "CarHouse",
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::save::ChildrenPrefab": ([
+          4294967305,
+        ]),
+        "space_bevy_xpbd_plugin::collider::ColliderPrefab": Primitive(
+          pos: (
+            x: -0.4,
+            y: 3.5,
+            z: -0.7,
+          ),
+          rot: (
+            x: 0.0,
+            y: 1.1,
+            z: 0.0,
+          ),
+          primitive: Cuboid((
+            x: 5.2,
+            y: 7.0,
+            z: 5.9,
+          )),
+        ),
+        "space_bevy_xpbd_plugin::registry::RigidBodyPrefab": Static,
+        "bevy_xpbd_3d::components::mass_properties::Mass": (20641.441),
+        "bevy_xpbd_3d::components::Friction": (
+          dynamic_coefficient: 0.3,
+          static_coefficient: 0.3,
+          combine_rule: Average,
+        ),
+        "bevy_xpbd_3d::components::Restitution": (
+          coefficient: 0.3,
+          combine_rule: Average,
+        ),
+        "bevy_xpbd_3d::components::mass_properties::Inertia": ((
+          x_axis: (
+            x: 188170.25,
+            y: 3973.0825,
+            z: 370.15753,
+          ),
+          y_axis: (
+            x: 3973.0825,
+            y: 210302.8,
+            z: -5505.6895,
+          ),
+          z_axis: (
+            x: 370.1584,
+            y: -5505.6895,
+            z: 180153.69,
+          ),
+        )),
+        "bevy_xpbd_3d::components::mass_properties::CenterOfMass": ((
+          x: -0.70929515,
+          y: 1.7245889,
+          z: -0.19206789,
+        )),
+      },
+    ),
+    4294967305: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "levels/solarpunk_village.glb#Mesh16/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "levels/solarpunk_village.glb#Material0",
+        ),
+      },
+    ),
+  },
+)

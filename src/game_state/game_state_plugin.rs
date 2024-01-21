@@ -1,7 +1,6 @@
 use bevy::app::{App, Plugin, PreUpdate, Update};
 use bevy::prelude::{in_state, IntoSystemConfigs, OnEnter, Time};
 use bevy::time::Fixed;
-use bevy_video_glitch::VideoGlitchPlugin;
 use crate::ai::ai_plugin::StatefulAiPlugin;
 use crate::alien::alien_plugin::StatefulAlienPlugin;
 use crate::animation::animation_plugin::AnimationPlugin;
@@ -17,12 +16,13 @@ use crate::general::systems::collision_handling_system::collision_handling_syste
 use crate::general::systems::health_monitor_system::health_monitor_system;
 use crate::general::systems::lights_systems::spawn_lights;
 use crate::general::systems::throwing_system::throwing;
-use crate::inspection::inspector::InspectorPlugin;
 use crate::map::map_plugins::StatefulMapPlugin;
 use crate::player::player_plugin::PlayerPlugin;
 use crate::towers::systems::{shoot_alien_system, tower_has_alien_in_range_scorer_system};
 use crate::ui::spawn_ui::{add_health_bar, AddHealthBar, fellow_system, GotoState};
 use crate::ui::ui_plugin::UiPlugin;
+use crate::generate_mesh::MeshPlugin;
+use crate::playground::PlaygroundPlugin;
 
 pub struct GamePlugin;
 
@@ -46,9 +46,13 @@ impl Plugin for GamePlugin {
                 ClearGameEntitiesPlugin,
                 PlayerPlugin::default(),
                 ScoreKeeperPlugin,
-                VideoGlitchPlugin,
+                // VideoGlitchPlugin,
                 GamepadPlugin,
-                InspectorPlugin,
+                // InspectorPlugin,
+            ))
+            .add_plugins((
+                MeshPlugin,
+                PlaygroundPlugin
             ))
             .add_systems(
                 OnEnter(GameState::InGame),

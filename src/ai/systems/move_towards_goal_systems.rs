@@ -12,7 +12,7 @@ use crate::general::resources::map_resources::MapGraph;
 use pathfinding::directed::astar::astar;
 use pathfinding::num_traits::Signed;
 use crate::building::systems::ToWorldCoordinates;
-use crate::control::components::{ControlDirection, CharacterControl, ControlRotation};
+use crate::control::components::{CharacterControl, ControllerFlag};
 use crate::game_state::score_keeper::GameTrackingEvent;
 use crate::general::systems::map_systems::TileDefinitions;
 
@@ -52,7 +52,7 @@ pub fn move_towards_goal_action_system(
                 ) = alien_query.get_mut(actor.0)
                 {
                     if linear_velocity.length().is_zero() {
-                        info!("We are STANDING STILL!");
+                        // info!("We are STANDING STILL!");
                         move_towards_goal_data.path = None;
                         *action_state = ActionState::Failure;
                         return;
@@ -107,13 +107,13 @@ pub fn move_towards_goal_action_system(
                                     }
                                     if angle.abs() > 1.0 {
                                         if angle.is_positive() {
-                                            controller.rotations.insert(ControlRotation::Right);
+                                            controller.rotations.set(ControllerFlag::RIGHT);
                                         } else {
-                                            controller.rotations.insert(ControlRotation::Left);
+                                            controller.rotations.set(ControllerFlag::LEFT);
                                         }
                                     }
                                     if angle.abs() < angle_forward_value {
-                                        controller.directions.insert(ControlDirection::Forward);
+                                        controller.directions.set(ControllerFlag::FORWARD);
                                     }
                                 } else {
                                     move_towards_goal_data.path = None;
@@ -140,10 +140,9 @@ pub fn agent_reached_goal_handler(
     mut alien_counter: ResMut<AlienCounter>,
     mut reached_goal_event_reader: EventReader<AgentReachedGoal>,
     mut commands: Commands,
-    mut game_tracking_event_ew: EventWriter<GameTrackingEvent>
+    mut game_tracking_event_ew: EventWriter<GameTrackingEvent>,
 ) {
     for AgentReachedGoal(alien) in reached_goal_event_reader.read() {
-
         alien_counter.count -= 1;
         commands.entity(*alien).despawn_recursive();
         game_tracking_event_ew.send(GameTrackingEvent::AlienReachedGoal);

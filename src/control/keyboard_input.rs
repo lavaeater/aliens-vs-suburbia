@@ -3,7 +3,7 @@ use bevy::input::keyboard::KeyboardInput;
 use bevy::math::Vec3;
 use bevy::prelude::{Entity, EventReader, EventWriter, KeyCode, Query, With};
 use crate::animation::animation_plugin::{AnimationEvent, AnimationEventType, AnimationKey};
-use crate::control::components::{CharacterControl, ControlCommand, ControlDirection, ControlRotation, InputKeyboard};
+use crate::control::components::{CharacterControl, ControllerFlag, InputKeyboard};
 use crate::player::events::building_events::{ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode};
 
 pub fn keyboard_input(
@@ -20,62 +20,62 @@ pub fn keyboard_input(
             match ev.state {
                 ButtonState::Pressed => match ev.key_code {
                     Some(KeyCode::B) => {
-                        if controller.triggers.contains(&ControlCommand::Build) {
+                        if controller.triggers.has(ControllerFlag::BUILD) {
                             animation_ew.send(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Building));
                             exit_build.send(ExitBuildMode(entity));
                         } else {
-                            controller.triggers.insert(ControlCommand::Build);
+                            controller.triggers.set(ControllerFlag::BUILD);
                             animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Building));
                             start_build_ew.send(EnterBuildMode(entity));
                         }
                     }
                     Some(KeyCode::Escape) => {
-                        if controller.triggers.contains(&ControlCommand::Build) {
+                        if controller.triggers.has(ControllerFlag::BUILD) {
                             animation_ew.send(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Building));
                             exit_build.send(ExitBuildMode(entity));
                         }
                     }
                     Some(KeyCode::A) => {
                         animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walking));
-                        controller.rotations.insert(ControlRotation::Left);
+                        controller.rotations.set(ControllerFlag::LEFT);
                     }
                     Some(KeyCode::D) => {
                         animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walking));
-                        controller.rotations.insert(ControlRotation::Right);
+                        controller.rotations.set(ControllerFlag::RIGHT);
                     }
                     Some(KeyCode::W) => {
                         animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walking));
-                        controller.directions.insert(ControlDirection::Forward);
+                        controller.directions.set(ControllerFlag::FORWARD);
                     }
                     Some(KeyCode::S) => {
                         animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walking));
-                        controller.directions.insert(ControlDirection::Backward);
+                        controller.directions.set(ControllerFlag::BACKWARD);
                     }
                     Some(KeyCode::Space) => {
-                        if controller.triggers.contains(&ControlCommand::Build) {
+                        if controller.triggers.has(ControllerFlag::BUILD) {
                             execute_build.send(ExecuteBuild(entity));
-                        } else if controller.triggers.contains(&ControlCommand::Throw) {
+                        } else if controller.triggers.has(ControllerFlag::THROW) {
                             animation_ew.send(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Throwing));
-                            controller.triggers.remove(&ControlCommand::Throw);
+                            controller.triggers.unset(ControllerFlag::THROW);
                         } else {
                             animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Throwing));
-                            controller.triggers.insert(ControlCommand::Throw);
+                            controller.triggers.set(ControllerFlag::THROW);
                         }
                     }
                     _ => {}
                 },
                 ButtonState::Released => match ev.key_code {
                     Some(KeyCode::A) => {
-                        controller.rotations.remove(&ControlRotation::Left);
+                        controller.rotations.unset(ControllerFlag::LEFT);
                     }
                     Some(KeyCode::D) => {
-                        controller.rotations.remove(&ControlRotation::Right);
+                        controller.rotations.unset(ControllerFlag::RIGHT);
                     }
                     Some(KeyCode::W) => {
-                        controller.directions.remove(&ControlDirection::Forward);
+                        controller.directions.unset(ControllerFlag::FORWARD);
                     }
                     Some(KeyCode::S) => {
-                        controller.directions.remove(&ControlDirection::Backward);
+                        controller.directions.unset(ControllerFlag::BACKWARD);
                     }
                     Some(KeyCode::Left) => {
                         change_build_indicator.send(ChangeBuildIndicator(entity, -1));
@@ -93,16 +93,16 @@ pub fn keyboard_input(
             controller.walk_direction = Vec3::ZERO;
             controller.torque = Vec3::ZERO;
 
-            if controller.directions.contains(&ControlDirection::Forward) {
-                controller.walk_direction.z = -1.0;
-            }
-            if controller.directions.contains(&ControlDirection::Backward) {
+            if controller.directions.has(ControllerFlag::FORWARD) {
                 controller.walk_direction.z = 1.0;
             }
-            if controller.rotations.contains(&ControlRotation::Left) {
+            if controller.directions.has(ControllerFlag::BACKWARD) {
+                controller.walk_direction.z = -1.0;
+            }
+            if controller.rotations.has(ControllerFlag::LEFT) {
                 controller.torque.y = 1.0;
             }
-            if controller.rotations.contains(&ControlRotation::Right) {
+            if controller.rotations.has(ControllerFlag::RIGHT) {
                 controller.torque.y = -1.0;
             }
         }

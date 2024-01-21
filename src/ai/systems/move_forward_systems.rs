@@ -2,7 +2,7 @@ use bevy::prelude::{Query, With};
 use big_brain::prelude::{ActionSpan, Actor, Score};
 use big_brain::actions::ActionState;
 use crate::ai::components::move_forward_components::{MoveForwardAction, MoveForwardScore};
-use crate::control::components::{ControlDirection, CharacterControl};
+use crate::control::components::{CharacterControl, ControllerFlag};
 
 pub fn move_forward_action_system(
     mut action_query: Query<(&Actor, &mut ActionState, &ActionSpan), With<MoveForwardAction>>,
@@ -22,7 +22,7 @@ pub fn move_forward_action_system(
                 if let Ok(mut controller) = controller_query.get_mut(actor.0) {
                     controller.rotations.clear();
                     controller.speed = controller.max_speed;
-                    controller.directions.insert(ControlDirection::Forward);
+                    controller.directions.set(ControllerFlag::FORWARD);
                 }
             }
             ActionState::Cancelled => {

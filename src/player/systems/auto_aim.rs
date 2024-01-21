@@ -2,7 +2,7 @@ use bevy::math::{Vec3Swizzles};
 use bevy::prelude::{Color, Gizmos, GlobalTransform, Query, With};
 use crate::alien::components::general::Alien;
 use crate::constants::PLAYER_FOV_DOT;
-use crate::control::components::{CharacterControl, ControlCommand};
+use crate::control::components::{CharacterControl, ControllerFlag};
 use crate::player::components::{AutoAim, Player};
 
 pub fn auto_aim(
@@ -10,7 +10,7 @@ pub fn auto_aim(
     alien_query: Query<&GlobalTransform, With<Alien>>,
 ) {
     for (player_transform, mut auto_aim, character_control) in player_query.iter_mut() {
-        if character_control.triggers.contains(&ControlCommand::Throw) {
+        if character_control.triggers.has(ControllerFlag::THROW) {
             let closest =
                 alien_query
                     .iter()

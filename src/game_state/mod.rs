@@ -9,4 +9,6 @@ pub enum GameState {
     #[default]
     Menu,
     InGame,
+    Mesh,
+    Playground
 }

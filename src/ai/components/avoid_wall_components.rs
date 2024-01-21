@@ -2,10 +2,10 @@ use bevy::log::info;
 use bevy::prelude::Component;
 use bevy::reflect::Reflect;
 use big_brain::prelude::{ActionBuilder, ScorerBuilder};
-use crate::control::components::{ControlRotation, Opposite};
+use crate::control::components::{ControllerFlag, Opposite};
 use crate::general::components::map_components::CoolDown;
 
-#[derive(Clone, Component, Debug, Reflect)]
+#[derive(Clone, Component, Debug, Reflect, Copy)]
 pub struct AvoidWallsData {
     pub forward_distance: f32,
     pub left_distance: f32,
@@ -13,7 +13,7 @@ pub struct AvoidWallsData {
     pub max_forward_distance: f32,
     pub max_left_distance: f32,
     pub max_right_distance: f32,
-    pub rotation_direction: ControlRotation,
+    pub rotation_direction: ControllerFlag,
     pub rotation_timer: f32,
     pub rotation_timer_max: f32,
     pub proto_val: f32
@@ -42,7 +42,7 @@ impl AvoidWallsData {
             right_distance: max_right_distance,
             max_right_distance,
             max_forward_distance,
-            rotation_direction: ControlRotation::Left,
+            rotation_direction: ControllerFlag::LEFT,
             rotation_timer,
             rotation_timer_max: rotation_timer,
             proto_val: 0.0

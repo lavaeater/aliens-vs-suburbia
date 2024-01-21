@@ -3,7 +3,7 @@ use belly::core::eml::Params;
 use bevy::prelude::Commands;
 use belly::prelude::*;
 use bevy::prelude::*;
-use crate::camera::components::GameCamera;
+use crate::camera::camera_components::GameCamera;
 use crate::game_state::GameState;
 use crate::general::components::Health;
 
@@ -19,6 +19,12 @@ pub fn spawn_menu(
         <body>
           <button on:press=|ctx| ctx.send_event(GotoState { state: GameState::InGame })>
                     "Start Game"
+                </button>
+        <button on:press=|ctx| ctx.send_event(GotoState { state: GameState::Mesh })>
+                    "Pass the Mesh"
+                </button>
+                <button on:press=|ctx| ctx.send_event(GotoState { state: GameState::Playground })>
+                    "Load Level"
                 </button>
         </body>
     });

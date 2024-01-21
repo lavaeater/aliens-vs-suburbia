@@ -10,7 +10,8 @@ use crate::ui::spawn_ui::GotoState;
 #[derive(Debug, Component)]
 pub struct Shooter(Entity);
 
-#[derive(Debug, Component, Default)]
+#[derive(Debug, Component, Default, Reflect, Clone)]
+#[reflect(Component)]
 pub struct Score {
     pub kills: u32,
     pub shots_fired: u32,
