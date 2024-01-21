@@ -1,4 +1,3 @@
-use std::fmt::Alignment::Right;
 use bevy::log::info;
 use bevy::prelude::{Query, Res, With};
 use big_brain::prelude::{ActionSpan, Actor, Score};

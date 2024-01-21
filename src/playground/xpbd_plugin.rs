@@ -1,23 +1,16 @@
 use bevy::app::{App, Plugin, PreUpdate, Update};
 use bevy::log::info;
-use bevy::prelude::{Changed, Commands, Component, Entity, in_state, IntoSystemConfigs, OnEnter, Or, Query, Reflect, Transform};
+use bevy::prelude::{Changed, Commands, Entity, in_state, IntoSystemConfigs, OnEnter, Or, Query, Transform};
 use bevy_xpbd_3d::components::{AngularDamping, CenterOfMass, Friction, GravityScale, Inertia, LinearDamping, LockedAxes, Mass, Position, Restitution, RigidBody, Rotation, Sensor};
-use bevy_xpbd_3d::plugins::PhysicsPlugins;
 use space_editor::prelude::{ColliderPart, ColliderPrefabCompound, ColliderPrimitive, EditorRegistryExt, EditorState, PrefabSet, register_xpbd_spatial_types, RegisterSettingsBlockExt, RigidBodyPrefab};
 use space_editor::space_bevy_xpbd_plugin::collider;
 use space_editor::space_editor_ui::EditorUiCore;
-
-pub type Vector = bevy_xpbd_3d::math::Vector;
-pub type Scalar = bevy_xpbd_3d::math::Scalar;
 
 pub struct CustomXpbdPlugin;
 
 impl Plugin for CustomXpbdPlugin {
     fn build(&self, app: &mut App) {
         println!("BevyXpbdPlugin::build");
-        // app.add_plugins(PhysicsPlugins::default());
-        // app.add_plugins(bevy_xpbd_3d::plugins::PhysicsDebugPlugin::default());
-
         app
             .editor_registry::<collider::ColliderPrefab>()
             .editor_registry::<RigidBodyPrefab>()

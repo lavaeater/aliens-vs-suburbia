@@ -3,6 +3,7 @@ use bevy::{DefaultPlugins, log};
 use bevy::log::LogPlugin;
 use bevy::prelude::{Msaa, OnEnter};
 use bevy_atmosphere::plugin::AtmospherePlugin;
+use bevy_mod_outline::OutlineBundle;
 use bevy_video_glitch::VideoGlitchSettings;
 use bevy_xpbd_3d::components::{CollisionLayers, LockedAxes};
 use bevy_xpbd_3d::plugins::{PhysicsDebugPlugin, PhysicsPlugins};

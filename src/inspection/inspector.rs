@@ -1,6 +1,5 @@
 use bevy::app::{App, Plugin, Update};
 use bevy::prelude::{in_state, IntoSystemConfigs, With, World};
-use bevy::utils::HashSet;
 use bevy::window::PrimaryWindow;
 use bevy_inspector_egui::bevy_egui::{EguiContext, EguiPlugin};
 use bevy_inspector_egui::{DefaultInspectorConfigPlugin, egui};
@@ -15,7 +14,7 @@ impl Plugin for InspectorPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_plugins(EguiPlugin)
-            // .add_plugins(DefaultInspectorConfigPlugin) // adds default options and `InspectorEguiImpl`s
+            .add_plugins(DefaultInspectorConfigPlugin) // adds default options and `InspectorEguiImpl`s
             .register_type::<CharacterControl>()
             .register_type::<ControllerFlag>()
             .add_systems(Update, (inspector_ui).run_if(in_state(GameState::InGame)));

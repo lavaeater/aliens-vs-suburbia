@@ -6,11 +6,10 @@ use bevy_atmosphere::plugin::AtmosphereCamera;
 use bevy_mod_outline::{OutlineBundle, OutlineVolume};
 use bevy_xpbd_3d::components::{Collider};
 use crate::game_state::GameState;
-use space_editor::prelude::{EditorRegistryExt, PrefabBundle};
+use space_editor::prelude::{PrefabBundle};
 use space_editor::space_editor_ui::ext::bevy_panorbit_camera;use crate::assets::assets_plugin::GameAssets;
 use crate::player::bundle::PlayerBundle;
 use crate::player::systems::spawn_players::FixSceneTransform;
-use crate::ui::spawn_ui::{AddHealthBar};
 
 pub struct PlaygroundPlugin;
 
@@ -30,7 +29,6 @@ impl Plugin for PlaygroundPlugin {
 fn load_level(
     mut commands: Commands,
     game_assets: Res<GameAssets>,
-    mut add_health_bar_ew: EventWriter<AddHealthBar>,
 ) {
 
     // Render the mesh with the custom texture using a PbrBundle, add the marker.
@@ -56,7 +54,7 @@ fn load_level(
 
     
 
-    let player = commands.spawn((
+    commands.spawn((
         FixSceneTransform::new(
             Vec3::new(0.0, -0.37, 0.0),
             Quat::from_euler(
@@ -87,11 +85,7 @@ fn load_level(
                 (
                     Collider::capsule(0.4, 0.2),
                     Transform::from_xyz(0.0, 0.0, 0.0)));
-        }).id();
-    // add_health_bar_ew.send(AddHealthBar {
-    //     entity: player,
-    //     name: "PLAYER",
-    // });
+        });
 
     // Light up the scene.
     commands.spawn(PointLightBundle {

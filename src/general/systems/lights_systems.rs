@@ -22,11 +22,7 @@ pub fn spawn_lights(
 // The default cascade config is designed to handle large scenes.
 // As this example has a much smaller world, we can tighten the shadow
 // bounds for better visual quality.
-            cascade_shadow_config: CascadeShadowConfigBuilder {
-                first_cascade_far_bound: 4.0,
-                maximum_distance: 10.0,
-                ..default()
-            }
+            cascade_shadow_config: CascadeShadowConfigBuilder::default()
                 .into(),
             ..default()
         }));

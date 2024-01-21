@@ -1,17 +1,15 @@
 use bevy::core::Name;
 use bevy::math::{Vec3};
-use bevy::prelude::{Bundle, Color, default, SceneBundle};
+use bevy::prelude::{Bundle, Color, default};
 use bevy_mod_outline::{OutlineBundle, OutlineVolume};
-use bevy_xpbd_3d::components::{CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
+use bevy_xpbd_3d::components::{CollisionLayers, LockedAxes};
 use space_editor::prelude::PrefabBundle;
 use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
 use crate::control::components::{CharacterControl, CharacterState, DynamicMovement, InputKeyboard};
 use crate::game_state::score_keeper::Score;
 use crate::general::components::{CollisionLayer, Health};
 use crate::general::components::map_components::CurrentTile;
-use crate::player::bundle::PlayerBundle;
 use crate::player::components::{AutoAim, Player};
-use crate::player::systems::spawn_players::FixSceneTransform;
 
 #[derive(Bundle)]
 pub struct PlayerPrefab {
