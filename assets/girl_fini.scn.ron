@@ -50,7 +50,7 @@
           ),
         ),
         "space_bevy_xpbd_plugin::registry::RigidBodyPrefab": Dynamic,
-        "bevy_xpbd_3d::components::mass_properties::Mass": (59.4955),
+        "bevy_xpbd_3d::components::mass_properties::Mass": (59.654675),
         "bevy_xpbd_3d::components::Friction": (
           dynamic_coefficient: 0.3,
           static_coefficient: 0.3,
@@ -62,24 +62,24 @@
         ),
         "bevy_xpbd_3d::components::mass_properties::Inertia": ((
           x_axis: (
-            x: 45.860905,
+            x: 45.95926,
             y: 0.0,
             z: 0.0,
           ),
           y_axis: (
             x: 0.0,
-            y: 29.286774,
+            y: 29.440208,
             z: 0.0,
           ),
           z_axis: (
             x: 0.0,
             y: 0.0,
-            z: 45.860905,
+            z: 45.95926,
           ),
         )),
         "bevy_xpbd_3d::components::mass_properties::CenterOfMass": ((
           x: 0.0,
-          y: 0.011771744,
+          y: 0.013608114,
           z: 0.0,
         )),
         "bevy_xpbd_3d::components::locked_axes::LockedAxes": (5),
@@ -110,10 +110,6 @@
           fire_cool_down: 0.0,
         ),
         "aliens_vs_suburbia::control::components::DynamicMovement": (),
-        "bevy_xpbd_3d::components::layers::CollisionLayers": (
-          groups: 0,
-          masks: 0,
-        ),
         "aliens_vs_suburbia::general::components::Health": (
           health: 100,
           max_health: 100,

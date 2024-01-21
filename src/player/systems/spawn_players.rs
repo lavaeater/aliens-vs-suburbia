@@ -5,6 +5,7 @@ use bevy::scene::SceneBundle;
 use bevy::utils::default;
 use bevy_mod_outline::{OutlineBundle, OutlineVolume};
 use bevy_xpbd_3d::components::{Collider};
+use bevy_xpbd_3d::prelude::CollisionLayers;
 use space_editor::prelude::PrefabBundle;
 use crate::assets::assets_plugin::GameAssets;
 use crate::game_state::score_keeper::{GameTrackingEvent};
@@ -41,6 +42,17 @@ pub fn spawn_players(
     for spawn_player in spawn_player_event_reader.read() {
         let player = commands.spawn((
             PrefabBundle::new("girl_fini.scn.ron"),
+            CollisionLayers::new(
+                [CollisionLayer::Player],
+                [
+                    CollisionLayer::Ball,
+                    CollisionLayer::Impassable,
+                    CollisionLayer::Floor,
+                    CollisionLayer::Alien,
+                    CollisionLayer::Player,
+                    CollisionLayer::AlienSpawnPoint,
+                    CollisionLayer::AlienGoal
+                ])
         )).id();
         add_health_bar_ew.send(AddHealthBar {
             entity: player,
