@@ -3,6 +3,7 @@ use bevy::{DefaultPlugins, log};
 use bevy::log::LogPlugin;
 use bevy::prelude::{Msaa, OnEnter};
 use bevy_atmosphere::plugin::AtmospherePlugin;
+use bevy_video_glitch::VideoGlitchSettings;
 use bevy_xpbd_3d::components::{CollisionLayers, LockedAxes};
 use bevy_xpbd_3d::plugins::{PhysicsDebugPlugin, PhysicsPlugins};
 use bevy_xpbd_3d::prelude::Position;
@@ -13,6 +14,7 @@ use crate::general::components::{CollisionLayer, Health};
 use crate::general::components::map_components::CurrentTile;
 use control::components::CharacterControl;
 use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
+use crate::camera::camera_components::CameraOffset;
 use crate::control::components::{CharacterState, ControllerFlag, DynamicMovement, InputKeyboard};
 use crate::game_state::game_state_plugin::GamePlugin;
 use crate::game_state::GameState;
@@ -60,7 +62,6 @@ fn main() {
         .add_plugins(TypeRegisterPlugin)
         .add_plugins(PhysicsPlugins::default())
         .add_plugins(AtmospherePlugin)
-        .add_plugins(PhysicsDebugPlugin::default())
         .add_plugins(GamePlugin)
         .run();
 }
@@ -71,6 +72,7 @@ impl Plugin for TypeRegisterPlugin {
     fn build(&self, app: &mut App) {
         app
             .register_type::<CollisionLayer>()
+            .register_type::<CameraOffset>()
             .register_type::<ControllerFlag>()
             .editor_registry::<Player>()
             .editor_registry::<InputKeyboard>()

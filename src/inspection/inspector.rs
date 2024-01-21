@@ -4,6 +4,7 @@ use bevy::utils::HashSet;
 use bevy::window::PrimaryWindow;
 use bevy_inspector_egui::bevy_egui::{EguiContext, EguiPlugin};
 use bevy_inspector_egui::{DefaultInspectorConfigPlugin, egui};
+use crate::camera::camera_components::GameCamera;
 use crate::control::components::{CharacterControl, ControllerFlag};
 use crate::game_state::GameState;
 use crate::player::components::Player;
@@ -14,7 +15,7 @@ impl Plugin for InspectorPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_plugins(EguiPlugin)
-            .add_plugins(DefaultInspectorConfigPlugin) // adds default options and `InspectorEguiImpl`s
+            // .add_plugins(DefaultInspectorConfigPlugin) // adds default options and `InspectorEguiImpl`s
             .register_type::<CharacterControl>()
             .register_type::<ControllerFlag>()
             .add_systems(Update, (inspector_ui).run_if(in_state(GameState::InGame)));
@@ -39,8 +40,9 @@ fn inspector_ui(world: &mut World) {
             //     bevy_inspector_egui::bevy_inspector::ui_for_assets::<StandardMaterial>(world, ui);
             // });
 
-            ui.heading("Player");
+            ui.heading("Entities of Interest");
             bevy_inspector_egui::bevy_inspector::ui_for_world_entities_filtered::<With<Player>>(world, ui, true);
+            bevy_inspector_egui::bevy_inspector::ui_for_world_entities_filtered::<With<GameCamera>>(world, ui, true);
         });
     });
 }

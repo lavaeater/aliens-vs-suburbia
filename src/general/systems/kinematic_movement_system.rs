@@ -17,10 +17,10 @@ pub fn kinematic_movement(
         let mut torque = Vector3::ZERO;
 
         if controller.rotations.has(ControllerFlag::FORWARD) {
-            force.z = -1.0;
+            force.z = 1.0;
         }
         if controller.rotations.has(ControllerFlag::BACKWARD) {
-            force.z = 1.0;
+            force.z = -1.0;
         }
         if controller.rotations.has(ControllerFlag::LEFT) {
             torque.y = -1.0;

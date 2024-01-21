@@ -93,16 +93,16 @@ pub fn keyboard_input(
             controller.walk_direction = Vec3::ZERO;
             controller.torque = Vec3::ZERO;
 
-            if controller.directions.unset(ControllerFlag::FORWARD) {
-                controller.walk_direction.z = -1.0;
-            }
-            if controller.directions.unset(ControllerFlag::BACKWARD) {
+            if controller.directions.has(ControllerFlag::FORWARD) {
                 controller.walk_direction.z = 1.0;
             }
-            if controller.rotations.unset(ControllerFlag::LEFT) {
+            if controller.directions.has(ControllerFlag::BACKWARD) {
+                controller.walk_direction.z = -1.0;
+            }
+            if controller.rotations.has(ControllerFlag::LEFT) {
                 controller.torque.y = 1.0;
             }
-            if controller.rotations.unset(ControllerFlag::RIGHT) {
+            if controller.rotations.has(ControllerFlag::RIGHT) {
                 controller.torque.y = -1.0;
             }
         }

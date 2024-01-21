@@ -15,10 +15,10 @@ pub fn spawn_camera(mut commands: Commands) {
     commands.spawn((
         Name::from("Camera"),
         CameraOffset(Vec3::new(0.0, 6.0, 6.0)),
-        VideoGlitchSettings {
-            intensity: 0.05,
-            color_aberration: Mat3::IDENTITY
-        },
+        // VideoGlitchSettings {
+        //     intensity: 0.01,
+        //     color_aberration: Mat3::
+        // },
         Camera3dBundle {
             projection: Projection::from(PerspectiveProjection {
                 fov: 57.0,

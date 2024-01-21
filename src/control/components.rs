@@ -30,7 +30,7 @@ impl ControllerFlag {
             self.0 &= !flag.0;
             return true;
         }
-        return false;
+        false
     }
 
     pub fn has(&self, flag: ControllerFlag) -> bool {
@@ -47,19 +47,19 @@ impl ControllerFlag {
 }
 
 pub trait Opposite {
-    fn opposite(&self) -> Self;
+    fn opposite(self) -> Self;
 }
 
 impl Opposite for ControllerFlag {
-    fn opposite(&self) -> Self {
+    fn opposite(self) -> Self {
         match self {
-            &ControllerFlag::THROW => { ControllerFlag::NOTHING }
-            &ControllerFlag::JUMP => { ControllerFlag::NOTHING }
-            &ControllerFlag::BUILD => { ControllerFlag::NOTHING }
-            &ControllerFlag::LEFT => { ControllerFlag::RIGHT }
-            &ControllerFlag::RIGHT => { ControllerFlag::LEFT }
-            &ControllerFlag::FORWARD => { ControllerFlag::BACKWARD }
-            &ControllerFlag::BACKWARD => { ControllerFlag::FORWARD }
+            ControllerFlag::THROW => { ControllerFlag::NOTHING }
+            ControllerFlag::JUMP => { ControllerFlag::NOTHING }
+            ControllerFlag::BUILD => { ControllerFlag::NOTHING }
+            ControllerFlag::LEFT => { ControllerFlag::RIGHT }
+            ControllerFlag::RIGHT => { ControllerFlag::LEFT }
+            ControllerFlag::FORWARD => { ControllerFlag::BACKWARD }
+            ControllerFlag::BACKWARD => { ControllerFlag::FORWARD }
             _ => { ControllerFlag::NOTHING }
         }
     }

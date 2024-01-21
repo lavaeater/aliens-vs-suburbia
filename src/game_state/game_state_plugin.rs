@@ -48,7 +48,7 @@ impl Plugin for GamePlugin {
                 ClearGameEntitiesPlugin,
                 PlayerPlugin::default(),
                 ScoreKeeperPlugin,
-                VideoGlitchPlugin,
+                // VideoGlitchPlugin,
                 GamepadPlugin,
                 InspectorPlugin,
             ))
