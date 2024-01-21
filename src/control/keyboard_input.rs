@@ -94,10 +94,10 @@ pub fn keyboard_input(
             controller.torque = Vec3::ZERO;
 
             if controller.directions.has(ControllerFlag::FORWARD) {
-                controller.walk_direction.z = 1.0;
+                controller.walk_direction.z = -1.0;
             }
             if controller.directions.has(ControllerFlag::BACKWARD) {
-                controller.walk_direction.z = -1.0;
+                controller.walk_direction.z = 1.0;
             }
             if controller.rotations.has(ControllerFlag::LEFT) {
                 controller.torque.y = 1.0;

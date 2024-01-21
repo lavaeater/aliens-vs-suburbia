@@ -16,9 +16,9 @@
             w: 1.0,
           ),
           scale: (
-            x: 1.0,
-            y: 1.0,
-            z: 1.0,
+            x: 0.5,
+            y: 0.5,
+            z: 0.5,
           ),
         ),
         "bevy_core::name::Name": (
@@ -27,11 +27,11 @@
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::component::GltfPrefab": (
-          path: "girl/girl.glb",
+          path: "girl/girl2.glb",
           scene: "Scene0",
         ),
         "space_prefab::save::ChildrenPrefab": ([
-          8589934601,
+          17179869263,
         ]),
         "space_bevy_xpbd_plugin::collider::ColliderPrefab": Primitive(
           pos: (
@@ -50,7 +50,7 @@
           ),
         ),
         "space_bevy_xpbd_plugin::registry::RigidBodyPrefab": Dynamic,
-        "bevy_xpbd_3d::components::mass_properties::Mass": (59.654675),
+        "bevy_xpbd_3d::components::mass_properties::Mass": (59.734264),
         "bevy_xpbd_3d::components::Friction": (
           dynamic_coefficient: 0.3,
           static_coefficient: 0.3,
@@ -62,24 +62,24 @@
         ),
         "bevy_xpbd_3d::components::mass_properties::Inertia": ((
           x_axis: (
-            x: 45.95926,
+            x: 45.971134,
             y: 0.0,
-            z: 0.0,
+            z: -0.00000000000000012490009,
           ),
           y_axis: (
             x: 0.0,
-            y: 29.440208,
+            y: 29.458578,
             z: 0.0,
           ),
           z_axis: (
-            x: 0.0,
+            x: -0.00000000000000012490009,
             y: 0.0,
-            z: 45.95926,
+            z: 45.97113,
           ),
         )),
         "bevy_xpbd_3d::components::mass_properties::CenterOfMass": ((
           x: 0.0,
-          y: 0.013608114,
+          y: 0.014056305,
           z: 0.0,
         )),
         "bevy_xpbd_3d::components::locked_axes::LockedAxes": (5),
