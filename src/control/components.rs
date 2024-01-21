@@ -65,7 +65,7 @@ impl Opposite for ControllerFlag {
     }
 }
 
-#[derive(Component, Default, Reflect, Clone, InspectorOptions)]
+#[derive(Component, Reflect, Clone, InspectorOptions)]
 #[reflect(Component)]
 pub struct CharacterControl {
     pub rotations: ControllerFlag,
@@ -82,8 +82,8 @@ pub struct CharacterControl {
     pub fire_cool_down: f32,
 }
 
-impl CharacterControl {
-    pub fn new(speed: f32, turn_speed: f32, rate_of_fire_per_minute: f32) -> Self {
+impl Default for CharacterControl {
+    fn default() -> Self {
         Self {
             rotations: ControllerFlag::NOTHING,
             triggers: ControllerFlag::NOTHING,
@@ -91,12 +91,25 @@ impl CharacterControl {
             walk_direction: Vec3::ZERO,
             torque: Vec3::ZERO,
             has_thrown: false,
+            speed: 3.0,
+            max_speed: 3.0,
+            turn_speed: 3.0,
+            max_turn_speed: 3.0,
+            rate_of_fire_per_minute: 60.0,
+            fire_cool_down: 0.0,
+        }
+    }
+}
+
+impl CharacterControl {
+    pub fn new(speed: f32, turn_speed: f32, rate_of_fire_per_minute: f32) -> Self {
+        Self {
             speed,
             max_speed: speed,
             turn_speed,
             max_turn_speed: turn_speed,
             rate_of_fire_per_minute,
-            fire_cool_down: 0.0,
+            ..default()
         }
     }
 }

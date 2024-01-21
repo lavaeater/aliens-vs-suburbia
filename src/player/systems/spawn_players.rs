@@ -41,12 +41,7 @@ pub fn spawn_players(
     for spawn_player in spawn_player_event_reader.read() {
         let player = commands.spawn((
             PrefabBundle::new("girl_fini.scn.ron"),
-        ))
-            .insert((
-                Name::new("PLAYER"),
-                Player { key: "PLAYER".to_string() },
-            ))
-            .id();
+        )).id();
         add_health_bar_ew.send(AddHealthBar {
             entity: player,
             name: "PLAYER",

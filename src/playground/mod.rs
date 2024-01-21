@@ -1,26 +1,15 @@
-mod xpbd_plugin;
+pub(crate) mod xpbd_plugin;
 mod player_prefab;
 
 use bevy::prelude::*;
 use bevy_atmosphere::plugin::AtmosphereCamera;
 use bevy_mod_outline::{OutlineBundle, OutlineVolume};
-use bevy_xpbd_3d::components::{Collider, CollisionLayers, LockedAxes, Position};
+use bevy_xpbd_3d::components::{Collider};
 use crate::game_state::GameState;
-use space_editor::prelude::{EditorRegistryExt, PrefabBundle, PrefabPlugin};
-use space_editor::space_editor_ui::ext::bevy_panorbit_camera;
-use crate::ai::components::approach_and_attack_player_components::ApproachAndAttackPlayerData;
-use crate::ai::components::avoid_wall_components::AvoidWallsData;
-use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
-use crate::assets::assets_plugin::GameAssets;
-use crate::camera::camera_components::CameraOffset;
-use crate::control::components::{CharacterControl, CharacterState, ControllerFlag, DynamicMovement, InputKeyboard};
-use crate::game_state::score_keeper::Score;
-use crate::general::components::{CollisionLayer, Health};
-use crate::general::components::map_components::CurrentTile;
+use space_editor::prelude::{EditorRegistryExt, PrefabBundle};
+use space_editor::space_editor_ui::ext::bevy_panorbit_camera;use crate::assets::assets_plugin::GameAssets;
 use crate::player::bundle::PlayerBundle;
-use crate::player::components::{AutoAim, Player};
 use crate::player::systems::spawn_players::FixSceneTransform;
-use crate::playground::xpbd_plugin::CustomXpbdPlugin;
 use crate::ui::spawn_ui::{AddHealthBar};
 
 pub struct PlaygroundPlugin;
@@ -28,28 +17,7 @@ pub struct PlaygroundPlugin;
 impl Plugin for PlaygroundPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_plugins((
-                PrefabPlugin,
-                CustomXpbdPlugin,
-            ))
-            .register_type::<CollisionLayer>()
-            .register_type::<ControllerFlag>()
-            .editor_registry::<Player>()
-            .editor_registry::<InputKeyboard>()
-            .editor_registry::<CharacterControl>()
-            .editor_registry::<DynamicMovement>()
-            .editor_registry::<LockedAxes>()
-            .editor_registry::<CollisionLayers>()
-            .editor_registry::<Health>()
-            .editor_registry::<CurrentTile>()
-            .register_type::<(usize, usize)>()
-            .register_type::<AnimationKey>()
-            .register_type::<Vec<AnimationKey>>()
-            .editor_registry::<CurrentAnimationKey>()
-            .editor_registry::<CharacterState>()
-            .editor_registry::<Score>()
-            .editor_registry::<AutoAim>()
-            .editor_registry::<Position>()
+
            .add_systems(
                 OnEnter(GameState::Playground),
                 (

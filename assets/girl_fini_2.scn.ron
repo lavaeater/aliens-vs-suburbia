@@ -23,7 +23,7 @@
         ),
         "bevy_core::name::Name": (
           hash: 11654665442594356769,
-          name: "just-a-girl",
+          name: "top-level",
         ),
         "bevy_render::view::visibility::Visibility": Inherited,
         "space_prefab::component::GltfPrefab": (
@@ -49,8 +49,8 @@
             radius: 0.2,
           ),
         ),
-        "space_bevy_xpbd_plugin::registry::RigidBodyPrefab": Dynamic,
-        "bevy_xpbd_3d::components::mass_properties::Mass": (59.4955),
+        "space_bevy_xpbd_plugin::registry::RigidBodyPrefab": Static,
+        "bevy_xpbd_3d::components::mass_properties::Mass": (59.336323),
         "bevy_xpbd_3d::components::Friction": (
           dynamic_coefficient: 0.3,
           static_coefficient: 0.3,
@@ -62,27 +62,27 @@
         ),
         "bevy_xpbd_3d::components::mass_properties::Inertia": ((
           x_axis: (
-            x: 45.860905,
+            x: 45.762154,
             y: 0.0,
             z: 0.0,
           ),
           y_axis: (
             x: 0.0,
-            y: 29.286774,
+            y: 29.132532,
             z: 0.0,
           ),
           z_axis: (
             x: 0.0,
             y: 0.0,
-            z: 45.860905,
+            z: 45.762154,
           ),
         )),
         "bevy_xpbd_3d::components::mass_properties::CenterOfMass": ((
           x: 0.0,
-          y: 0.011771744,
+          y: 0.009925522,
           z: 0.0,
         )),
-        "bevy_xpbd_3d::components::locked_axes::LockedAxes": (5),
+        "bevy_xpbd_3d::components::locked_axes::LockedAxes": (0),
         "aliens_vs_suburbia::player::components::Player": (
           key: "Player One",
         ),
@@ -102,17 +102,17 @@
             z: 0.0,
           ),
           has_thrown: false,
-          speed: 4.0,
-          max_speed: 8.0,
-          turn_speed: 4.0,
-          max_turn_speed: 8.0,
-          rate_of_fire_per_minute: 30.0,
+          speed: 0.0,
+          max_speed: 0.0,
+          turn_speed: 0.0,
+          max_turn_speed: 0.0,
+          rate_of_fire_per_minute: 0.0,
           fire_cool_down: 0.0,
         ),
         "aliens_vs_suburbia::control::components::DynamicMovement": (),
         "bevy_xpbd_3d::components::layers::CollisionLayers": (
-          groups: 0,
-          masks: 0,
+          groups: 4294967295,
+          masks: 4294967295,
         ),
         "aliens_vs_suburbia::general::components::Health": (
           health: 100,

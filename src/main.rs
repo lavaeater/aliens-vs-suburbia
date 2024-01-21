@@ -1,25 +1,24 @@
-use bevy::app::{App, PluginGroup};
+use bevy::app::{App, Plugin, PluginGroup};
 use bevy::{DefaultPlugins, log};
 use bevy::log::LogPlugin;
-use bevy::prelude::Msaa;
+use bevy::prelude::{Msaa, OnEnter};
 use bevy_atmosphere::plugin::AtmospherePlugin;
 use bevy_xpbd_3d::components::{CollisionLayers, LockedAxes};
 use bevy_xpbd_3d::plugins::{PhysicsDebugPlugin, PhysicsPlugins};
 use bevy_xpbd_3d::prelude::Position;
-use space_editor::prelude::{EditorRegistryExt, simple_editor_setup};
+use space_editor::prelude::{EditorRegistryExt, PrefabPlugin, simple_editor_setup};
 use space_editor::space_prefab::ext::Startup;
 use space_editor::SpaceEditorPlugin;
-use crate::ai::components::approach_and_attack_player_components::ApproachAndAttackPlayerData;
-use crate::ai::components::avoid_wall_components::AvoidWallsData;
-use camera::camera_components::CameraOffset;
 use crate::general::components::{CollisionLayer, Health};
 use crate::general::components::map_components::CurrentTile;
 use control::components::CharacterControl;
-use crate::animation::animation_plugin::CurrentAnimationKey;
+use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
 use crate::control::components::{CharacterState, ControllerFlag, DynamicMovement, InputKeyboard};
 use crate::game_state::game_state_plugin::GamePlugin;
+use crate::game_state::GameState;
 use crate::game_state::score_keeper::Score;
 use crate::player::components::{AutoAim, Player};
+use crate::playground::xpbd_plugin::CustomXpbdPlugin;
 
 pub(crate) mod player;
 pub(crate) mod general;
@@ -41,40 +40,53 @@ mod playground;
 
 fn main() {
     #[cfg(feature = "editor")]
-    App::default()
+    App::new()
+        .insert_resource(Msaa::Sample4)
         .add_plugins(DefaultPlugins)
         .add_plugins(SpaceEditorPlugin)
-        .register_type::<CollisionLayer>()
-        .register_type::<ControllerFlag>()
-        .editor_registry::<Player>()
-        .editor_registry::<InputKeyboard>()
-        .editor_registry::<CharacterControl>()
-        .editor_registry::<DynamicMovement>()
-        .editor_registry::<LockedAxes>()
-        .editor_registry::<CollisionLayers>()
-        .editor_registry::<Health>()
-        .editor_registry::<CurrentTile>()
-        .editor_registry::<CurrentAnimationKey>()
-        .editor_registry::<CharacterState>()
-        .editor_registry::<Score>()
-        .editor_registry::<AutoAim>()
-        .editor_registry::<Position>()
+        .add_plugins(TypeRegisterPlugin)
         .add_systems(Startup, simple_editor_setup)
         .run();
+
 
     #[cfg(feature = "default")]
     App::new()
         .insert_resource(Msaa::Sample4)
+        .add_plugins(DefaultPlugins)
         .add_plugins(
-            DefaultPlugins.set(
-                LogPlugin {
-                    filter: "wgpu_core=warn,wgpu_hal=warn".into(),
-                    level: log::Level::INFO,
-                }))
+            (PrefabPlugin,
+             CustomXpbdPlugin, )
+        )
+        .add_plugins(TypeRegisterPlugin)
         .add_plugins(PhysicsPlugins::default())
         .add_plugins(AtmospherePlugin)
         .add_plugins(PhysicsDebugPlugin::default())
-        // .add_plugins(WorldInspectorPlugin::new())
         .add_plugins(GamePlugin)
         .run();
+}
+
+pub struct TypeRegisterPlugin;
+
+impl Plugin for TypeRegisterPlugin {
+    fn build(&self, app: &mut App) {
+        app
+            .register_type::<CollisionLayer>()
+            .register_type::<ControllerFlag>()
+            .editor_registry::<Player>()
+            .editor_registry::<InputKeyboard>()
+            .editor_registry::<CharacterControl>()
+            .editor_registry::<DynamicMovement>()
+            .editor_registry::<LockedAxes>()
+            .editor_registry::<CollisionLayers>()
+            .editor_registry::<Health>()
+            .editor_registry::<CurrentTile>()
+            .register_type::<(usize, usize)>()
+            .register_type::<AnimationKey>()
+            .register_type::<Vec<AnimationKey>>()
+            .editor_registry::<CurrentAnimationKey>()
+            .editor_registry::<CharacterState>()
+            .editor_registry::<Score>()
+            .editor_registry::<AutoAim>()
+            .editor_registry::<Position>();
+    }
 }
