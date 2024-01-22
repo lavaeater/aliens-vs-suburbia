@@ -1,5 +1,7 @@
 use bevy::math::{Quat, Vec3};
 use bevy::prelude::{Commands, Component, EventReader, EventWriter};
+use bevy::utils::default;
+use bevy_mod_outline::{OutlineBundle, OutlineVolume};
 use bevy_xpbd_3d::prelude::CollisionLayers;
 use space_editor::prelude::PrefabBundle;
 use crate::game_state::score_keeper::{GameTrackingEvent};
@@ -43,7 +45,15 @@ pub fn spawn_players(
                     CollisionLayer::Player,
                     CollisionLayer::AlienSpawnPoint,
                     CollisionLayer::AlienGoal
-                ])
+                ]),
+            OutlineBundle {
+               outline: OutlineVolume {
+                   visible: true,
+                   width: 1.0,
+                   colour: bevy::prelude::Color::BLACK,
+               },
+                ..default()
+            }
         )).id();
         add_health_bar_ew.send(AddHealthBar {
             entity: player,
