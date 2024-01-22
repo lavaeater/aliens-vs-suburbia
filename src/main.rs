@@ -6,7 +6,7 @@ use bevy_atmosphere::plugin::AtmospherePlugin;
 use bevy_mod_outline::OutlineBundle;
 use bevy_video_glitch::VideoGlitchSettings;
 use bevy_xpbd_3d::components::{CollisionLayers, LockedAxes};
-use bevy_xpbd_3d::plugins::{PhysicsDebugPlugin, PhysicsPlugins};
+use bevy_xpbd_3d::plugins::{PhysicsPlugins};
 use bevy_xpbd_3d::prelude::Position;
 use space_editor::prelude::{EditorRegistryExt, PrefabPlugin, simple_editor_setup};
 use space_editor::space_prefab::ext::Startup;

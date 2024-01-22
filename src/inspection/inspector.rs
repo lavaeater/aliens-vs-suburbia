@@ -6,6 +6,7 @@ use bevy_inspector_egui::{DefaultInspectorConfigPlugin, egui};
 use crate::camera::camera_components::GameCamera;
 use crate::control::components::{CharacterControl, ControllerFlag};
 use crate::game_state::GameState;
+use crate::general::components::map_components::Floor;
 use crate::player::components::Player;
 
 pub struct InspectorPlugin;
@@ -41,6 +42,7 @@ fn inspector_ui(world: &mut World) {
 
             ui.heading("Entities of Interest");
             bevy_inspector_egui::bevy_inspector::ui_for_world_entities_filtered::<With<Player>>(world, ui, true);
+            bevy_inspector_egui::bevy_inspector::ui_for_world_entities_filtered::<With<Floor>>(world, ui, true);
             bevy_inspector_egui::bevy_inspector::ui_for_world_entities_filtered::<With<GameCamera>>(world, ui, true);
         });
     });
