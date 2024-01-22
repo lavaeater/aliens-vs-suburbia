@@ -49,12 +49,13 @@ pub fn spawn_players(
             OutlineBundle {
                outline: OutlineVolume {
                    visible: true,
-                   width: 1.0,
+                   width: 2.0,
                    colour: bevy::prelude::Color::BLACK,
                },
                 ..default()
             }
-        )).id();
+        ))
+            .id();
         add_health_bar_ew.send(AddHealthBar {
             entity: player,
             name: "PLAYER",
