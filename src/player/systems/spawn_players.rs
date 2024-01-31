@@ -34,7 +34,7 @@ pub fn spawn_players(
 ) {
     for _spawn_player in spawn_player_event_reader.read() {
         let player = commands.spawn((
-            PrefabBundle::new("girl_fini.scn.ron"),
+            PrefabBundle::new("hazmat.scn.ron"),
             CollisionLayers::new(
                 [CollisionLayer::Player],
                 [
