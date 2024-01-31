@@ -4,7 +4,6 @@ use bevy::prelude::{Changed, Commands, Entity, in_state, IntoSystemConfigs, OnEn
 use bevy_xpbd_3d::components::{AngularDamping, CenterOfMass, Friction, GravityScale, Inertia, LinearDamping, LockedAxes, Mass, Position, Restitution, RigidBody, Rotation, Sensor};
 use space_editor::prelude::{ColliderPart, ColliderPrefabCompound, ColliderPrimitive, EditorRegistryExt, EditorState, PrefabSet, register_xpbd_spatial_types, RegisterSettingsBlockExt, RigidBodyPrefab};
 use space_editor::space_bevy_xpbd_plugin::collider;
-use space_editor::space_editor_ui::EditorUiCore;
 
 pub struct CustomXpbdPlugin;
 
@@ -66,7 +65,7 @@ impl Plugin for CustomXpbdPlugin {
             (sync_position_spawn).run_if(in_state(EditorState::Editor)),
         );
 
-        if app.is_plugin_added::<EditorUiCore>() {
+        if app.is_plugin_added::<space_editor::prelude::EditorUiCore>() {
             app
                 .register_settings_block("Bevy XPBD 3D", |ui, _, world| {
                     ui.checkbox(

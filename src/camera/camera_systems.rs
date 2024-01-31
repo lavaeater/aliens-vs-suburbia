@@ -11,7 +11,7 @@ use crate::player::components::Player;
 pub fn spawn_camera(mut commands: Commands) {
     commands.spawn((
         Name::from("Camera"),
-        CameraOffset(Vec3::new(12.0, 10.0, 12.0)),
+        CameraOffset(Vec3::new(0.0, 4.0, 4.0)),
         // VideoGlitchSettings {
         //     intensity: 0.01,
         //     color_aberration: Mat3::

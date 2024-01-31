@@ -4,7 +4,6 @@ use bevy::prelude::*;
 use bevy::render::mesh::Indices;
 use bevy::render::mesh::VertexAttributeValues;
 use bevy::render::render_resource::PrimitiveTopology;
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_xpbd_3d::components::{Collider, RigidBody};
 use image::{ImageBuffer, Luma};
 use noise::{Fbm, Perlin};
@@ -23,7 +22,6 @@ impl Plugin for MeshPlugin {
             .init_resource::<BallTimer>()
             .init_resource::<MapBuilder>()
             .add_systems(OnEnter(GameState::Mesh), setup_mesh)
-            .add_plugins(WorldInspectorPlugin::new())
             .add_systems(Update, (mesh_input_handler, spawn_balls).run_if(in_state(GameState::Mesh)));
     }
 }

@@ -27,6 +27,7 @@ impl Plugin for PlayerPlugin {
                 Update,
                 (
                     spawn_players,
+                    // fix_mod_outline,
                     auto_aim,
                 ).run_if(in_state(GameState::InGame)),
             );

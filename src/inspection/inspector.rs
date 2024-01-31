@@ -41,6 +41,7 @@ fn inspector_ui(world: &mut World) {
 
             ui.heading("Entities of Interest");
             bevy_inspector_egui::bevy_inspector::ui_for_world_entities_filtered::<With<Player>>(world, ui, true);
+            // bevy_inspector_egui::bevy_inspector::ui_for_world_entities_filtered::<With<Floor>>(world, ui, true);
             bevy_inspector_egui::bevy_inspector::ui_for_world_entities_filtered::<With<GameCamera>>(world, ui, true);
         });
     });

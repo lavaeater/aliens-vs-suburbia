@@ -1,7 +1,7 @@
 use bevy::asset::AssetServer;
 use bevy::core::Name;
 use bevy::math::{Quat, Vec3};
-use bevy::prelude::{Commands, EventReader, EventWriter, Has, Query, Res, ResMut, Resource};
+use bevy::prelude::{Commands, EventReader, EventWriter, Has, Query, Res, ResMut, Resource, Transform};
 use bevy::scene::SceneBundle;
 use bevy_xpbd_3d::components::CollisionLayers;
 use bevy_xpbd_3d::math::PI;
@@ -14,6 +14,8 @@ use crate::general::components::map_components::{AlienGoal, AlienSpawnPoint, Cur
 use crate::general::events::map_events::{LoadMap, SpawnPlayer};
 use crate::general::resources::map_resources::MapGraph;
 use bevy::math::EulerRot;
+use space_editor::prelude::PrefabBundle;
+use space_editor::space_prefab::load::PrefabLoader;
 use crate::assets::assets_plugin::GameAssets;
 use crate::building::systems::ToWorldCoordinates;
 use crate::player::components::IsBuildIndicator;
@@ -187,7 +189,7 @@ pub fn map_loader(
 ) {
     for _load_map in load_map_event_reader.read() {
         let m = [
-            [17, 1, 1, 1,1, 1, 5],
+            [17, 1, 1, 1, 1, 1, 5],
             [1, 1, 1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1, 1, 1],
@@ -310,17 +312,14 @@ pub fn map_loader(
         for tile in map.tiles.iter() {
             if tile.features.contains(TileFlags::Floor) {
                 let model_def = model_defs.definitions.get("floor").unwrap();
-                commands.spawn((
-                    Name::from(format!("Floor {}:{}", tile.x, tile.y)),
+                let p = tile_defs.get_floor_position(tile.x, tile.y);
+                let floor = commands.spawn((
+                    PrefabBundle::new("floor-laminate-1.scn.ron"),
                     Floor {},
-                    SceneBundle {
-                        scene: asset_server.load(model_def.file),
-                        ..Default::default()
-                    },
-                    model_def.rigid_body,
-                    tile_defs.create_collider(model_def.width, model_def.height, model_def.depth),
-                    Position::from(tile_defs.get_floor_position(tile.x, tile.y)),
                     model_def.create_collision_layers(),
+                )).insert((
+                    Name::from(format!("Floor {}:{}", tile.x, tile.y)),
+                    Transform::from_translation(p),
                 ));
             }
             if tile.features.contains(TileFlags::AnyWall)

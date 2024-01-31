@@ -133,6 +133,7 @@ dependencies = [
  "bevy",
  "bevy-inspector-egui",
  "bevy_atmosphere",
+ "bevy_hanabi",
  "bevy_mod_outline",
  "bevy_panorbit_camera 0.10.0",
  "bevy_rand",
@@ -869,6 +870,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_hanabi"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "127702dc9ccba4eb286c54b3307c0ff18d59b35e4de4e361d8e49fee3abe0b59"
+dependencies = [
+ "anyhow",
+ "bevy",
+ "bitflags 2.4.2",
+ "bytemuck",
+ "copyless",
+ "rand 0.8.5",
+ "rand_pcg",
+ "ron",
+ "serde",
+ "thiserror",
+ "typetag",
+]
+
+[[package]]
 name = "bevy_hierarchy"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1213,7 +1233,7 @@ dependencies = [
  "bevy_reflect_derive",
  "bevy_utils",
  "downcast-rs",
- "erased-serde",
+ "erased-serde 0.3.31",
  "glam",
  "serde",
  "smallvec",
@@ -1894,6 +1914,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "copyless"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2df960f5d869b2dd8532793fde43eb5427cceb126c929747a26823ab0eeb536"
+
+[[package]]
 name = "core-foundation"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2289,6 +2315,15 @@ name = "erased-serde"
 version = "0.3.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c138974f9d5e7fe373eb04df7cae98833802ae4b11c24ac7039a21d5af4b26c"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "erased-serde"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4adbf0983fe06bd3a5c19c8477a637c2389feb0994eca7a59e3b961054aa7c0a"
 dependencies = [
  "serde",
 ]
@@ -2908,6 +2943,12 @@ name = "interpolation"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e9c13ae9d91148fcb4aab6654c4c2a7d02a15395ea9e23f65170f175f8b269ce"
+
+[[package]]
+name = "inventory"
+version = "0.3.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c8573b2b1fb643a372c73b23f4da5f888677feef3305146d68a539250a9bccc7"
 
 [[package]]
 name = "io-kit-sys"
@@ -4464,7 +4505,7 @@ dependencies = [
 [[package]]
 name = "space_bevy_xpbd_plugin"
 version = "0.3.1"
-source = "git+https://github.com/lavaeater/space_editor.git?branch=main#011aaa202a551fe21f066643d97b46bc08ce0a6a"
+source = "git+https://github.com/lavaeater/space_editor.git?branch=main#045ef90cddef524282cddb278037b9e9bea71bda"
 dependencies = [
  "bevy",
  "bevy_xpbd_3d",
@@ -4474,7 +4515,7 @@ dependencies = [
 [[package]]
 name = "space_editor"
 version = "0.3.1"
-source = "git+https://github.com/lavaeater/space_editor.git?branch=main#011aaa202a551fe21f066643d97b46bc08ce0a6a"
+source = "git+https://github.com/lavaeater/space_editor.git?branch=main#045ef90cddef524282cddb278037b9e9bea71bda"
 dependencies = [
  "bevy",
  "space_bevy_xpbd_plugin",
@@ -4485,7 +4526,7 @@ dependencies = [
 [[package]]
 name = "space_editor_core"
 version = "0.3.1"
-source = "git+https://github.com/lavaeater/space_editor.git?branch=main#011aaa202a551fe21f066643d97b46bc08ce0a6a"
+source = "git+https://github.com/lavaeater/space_editor.git?branch=main#045ef90cddef524282cddb278037b9e9bea71bda"
 dependencies = [
  "bevy",
  "space_persistence",
@@ -4497,7 +4538,7 @@ dependencies = [
 [[package]]
 name = "space_editor_ui"
 version = "0.3.1"
-source = "git+https://github.com/lavaeater/space_editor.git?branch=main#011aaa202a551fe21f066643d97b46bc08ce0a6a"
+source = "git+https://github.com/lavaeater/space_editor.git?branch=main#045ef90cddef524282cddb278037b9e9bea71bda"
 dependencies = [
  "bevy",
  "bevy_debug_grid",
@@ -4518,7 +4559,7 @@ dependencies = [
 [[package]]
 name = "space_persistence"
 version = "0.3.1"
-source = "git+https://github.com/lavaeater/space_editor.git?branch=main#011aaa202a551fe21f066643d97b46bc08ce0a6a"
+source = "git+https://github.com/lavaeater/space_editor.git?branch=main#045ef90cddef524282cddb278037b9e9bea71bda"
 dependencies = [
  "bevy",
  "ron",
@@ -4528,7 +4569,7 @@ dependencies = [
 [[package]]
 name = "space_prefab"
 version = "0.3.1"
-source = "git+https://github.com/lavaeater/space_editor.git?branch=main#011aaa202a551fe21f066643d97b46bc08ce0a6a"
+source = "git+https://github.com/lavaeater/space_editor.git?branch=main#045ef90cddef524282cddb278037b9e9bea71bda"
 dependencies = [
  "bevy",
  "bevy-inspector-egui",
@@ -4542,7 +4583,7 @@ dependencies = [
 [[package]]
 name = "space_shared"
 version = "0.3.1"
-source = "git+https://github.com/lavaeater/space_editor.git?branch=main#011aaa202a551fe21f066643d97b46bc08ce0a6a"
+source = "git+https://github.com/lavaeater/space_editor.git?branch=main#045ef90cddef524282cddb278037b9e9bea71bda"
 dependencies = [
  "bevy",
  "bevy-inspector-egui",
@@ -4552,7 +4593,7 @@ dependencies = [
 [[package]]
 name = "space_undo"
 version = "0.3.1"
-source = "git+https://github.com/lavaeater/space_editor.git?branch=main#011aaa202a551fe21f066643d97b46bc08ce0a6a"
+source = "git+https://github.com/lavaeater/space_editor.git?branch=main#045ef90cddef524282cddb278037b9e9bea71bda"
 dependencies = [
  "bevy",
  "pretty-type-name",
@@ -4891,6 +4932,30 @@ name = "typenum"
 version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "497961ef93d974e23eb6f433eb5fe1b7930b659f06d12dec6fc44a8f554c0bba"
+
+[[package]]
+name = "typetag"
+version = "0.2.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "196976efd4a62737b3a2b662cda76efb448d099b1049613d7a5d72743c611ce0"
+dependencies = [
+ "erased-serde 0.4.1",
+ "inventory",
+ "once_cell",
+ "serde",
+ "typetag-impl",
+]
+
+[[package]]
+name = "typetag-impl"
+version = "0.2.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2eea6765137e2414c44c7b1e07c73965a118a72c46148e1e168b3fc9d3ccf3aa"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.41",
+]
 
 [[package]]
 name = "unicode-bidi"

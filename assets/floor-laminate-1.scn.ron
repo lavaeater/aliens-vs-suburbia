@@ -1,0 +1,84 @@
+(
+  resources: {},
+  entities: {
+    8: (
+      components: {
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 0.5,
+            y: 1.0,
+            z: 0.5,
+          ),
+        ),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "space_prefab::component::AssetMesh": (
+          path: "floor_laminate_1.glb#Mesh0/Primitive0",
+        ),
+        "space_prefab::component::AssetMaterial": (
+          path: "floor_laminate_1.glb#Material0",
+        ),
+        "space_bevy_xpbd_plugin::collider::ColliderPrefab": Primitive(
+          pos: (
+            x: 0.0,
+            y: 0.038,
+            z: 0.0,
+          ),
+          rot: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          primitive: Cuboid((
+            x: 2.0,
+            y: 0.05,
+            z: 2.0,
+          )),
+        ),
+        "space_bevy_xpbd_plugin::registry::RigidBodyPrefab": Static,
+        "bevy_xpbd_3d::components::mass_properties::Mass": (0.93499804),
+        "bevy_xpbd_3d::components::Friction": (
+          dynamic_coefficient: 0.3,
+          static_coefficient: 0.3,
+          combine_rule: Average,
+        ),
+        "bevy_xpbd_3d::components::Restitution": (
+          coefficient: 0.3,
+          combine_rule: Average,
+        ),
+        "bevy_xpbd_3d::components::mass_properties::Inertia": ((
+          x_axis: (
+            x: NaN,
+            y: NaN,
+            z: NaN,
+          ),
+          y_axis: (
+            x: NaN,
+            y: NaN,
+            z: NaN,
+          ),
+          z_axis: (
+            x: NaN,
+            y: NaN,
+            z: NaN,
+          ),
+        )),
+        "bevy_xpbd_3d::components::mass_properties::CenterOfMass": ((
+          x: 0.0,
+          y: 0.08962588,
+          z: 0.0,
+        )),
+      },
+    ),
+  },
+)
