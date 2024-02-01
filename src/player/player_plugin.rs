@@ -4,7 +4,7 @@ use bevy::scene::SceneInstance;
 use bevy_mod_outline::{AutoGenerateOutlineNormalsPlugin, InheritOutlineBundle, OutlinePlugin};
 use crate::game_state::GameState;
 use crate::player::systems::auto_aim::{auto_aim, debug_gizmos};
-use crate::player::systems::spawn_players::{spawn_players};
+use crate::player::systems::spawn_players::{check_model_children, spawn_players};
 
 #[derive(Default)]
 pub struct PlayerPlugin {

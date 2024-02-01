@@ -1,5 +1,7 @@
+use bevy::core::Name;
+use bevy::hierarchy::Children;
 use bevy::math::{Quat, Vec3};
-use bevy::prelude::{Commands, Component, EventReader, EventWriter};
+use bevy::prelude::{Commands, Component, EventReader, EventWriter, Query};
 use bevy::utils::default;
 use bevy_mod_outline::{OutlineBundle, OutlineVolume};
 use bevy_xpbd_3d::prelude::CollisionLayers;
@@ -26,6 +28,22 @@ impl FixSceneTransform {
     }
 }
 
+#[derive(Component)]
+pub struct CheckModelChildren;
+
+pub fn check_model_children(
+    query: Query<(&CheckModelChildren, &Children)>,
+    name_query: Query<&Name>,
+) {
+    for (_check_model_children, children) in query.iter() {
+        for child in children.iter() {
+            let name = name_query.get(*child).unwrap();
+            println!("Child: {:?}", child);
+        }
+    }
+
+}
+
 pub fn spawn_players(
     mut spawn_player_event_reader: EventReader<SpawnPlayer>,
     mut commands: Commands,
@@ -35,6 +53,7 @@ pub fn spawn_players(
     for _spawn_player in spawn_player_event_reader.read() {
         let player = commands.spawn((
             PrefabBundle::new("hazmat.scn.ron"),
+            CheckModelChildren,
             CollisionLayers::new(
                 [CollisionLayer::Player],
                 [
