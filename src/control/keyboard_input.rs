@@ -117,24 +117,23 @@ pub fn keyboard_input(
 
 fn key_for_input(key_code: Option<KeyCode>) -> AnimationKey {
     match key_code {
-        Some(KeyCode::Key1) => AnimationKey::Idle,
-        Some(KeyCode::Key2) => AnimationKey::Walk,
-        Some(KeyCode::Key3) => AnimationKey::Yes,
-        Some(KeyCode::Key4) => AnimationKey::Wave,
+        Some(KeyCode::Key1) => AnimationKey::Idle, //OK
+        Some(KeyCode::Key2) => AnimationKey::Walk, //OK
+        Some(KeyCode::Key3) => AnimationKey::Yes, //OK
+        Some(KeyCode::Key4) => AnimationKey::Wave, //OK
         Some(KeyCode::Key5) => AnimationKey::RunGun,
         Some(KeyCode::Key6) => AnimationKey::Run,
         Some(KeyCode::Key7) => AnimationKey::Punch,
-        Some(KeyCode::Key8) => AnimationKey::No,
-        Some(KeyCode::Key9) => AnimationKey::JumpLand,
-        Some(KeyCode::Key0) => AnimationKey::JumpIdle,
-        Some(KeyCode::Numpad0) => AnimationKey::Jump,
-        Some(KeyCode::Numpad1) => AnimationKey::IdleShoot,
-        Some(KeyCode::Numpad2) => AnimationKey::HitReact,
-        Some(KeyCode::Numpad3) => AnimationKey::Duck,
-        Some(KeyCode::Numpad4) => AnimationKey::Death,
-        Some(KeyCode::Numpad5) => AnimationKey::WalkShoot,
-        Some(KeyCode::Numpad6) => AnimationKey::Walk,
-        Some(KeyCode::Numpad7) => AnimationKey::RunShoot,
+        Some(KeyCode::Key8) => AnimationKey::No, //OK
+        Some(KeyCode::Key9) => AnimationKey::JumpLand, //Punch?
+        Some(KeyCode::Key0) => AnimationKey::JumpIdle, //JumpMidAir, JumpIdle, OK?
+        Some(KeyCode::Numpad0) => AnimationKey::Jump, //Run
+        Some(KeyCode::Numpad1) => AnimationKey::IdleShoot, //OK
+        Some(KeyCode::Numpad2) => AnimationKey::HitReact, //OK
+        Some(KeyCode::Numpad3) => AnimationKey::Duck, //OK
+        Some(KeyCode::Numpad4) => AnimationKey::Death, //OK
+        Some(KeyCode::Numpad5) => AnimationKey::WalkShoot, //OK
+        Some(KeyCode::Numpad6) => AnimationKey::RunShoot, //OK
         _ => AnimationKey::Idle
     }
 }

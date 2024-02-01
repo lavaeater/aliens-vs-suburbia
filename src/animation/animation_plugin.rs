@@ -207,9 +207,9 @@ pub fn load_animations(
     hazmat_anims.insert(AnimationKey::RunShoot, asset_server.load("toon-shooter/char-hazmat.glb#Animation12"));
     hazmat_anims.insert(AnimationKey::RunGun, asset_server.load("toon-shooter/char-hazmat.glb#Animation5"));
     hazmat_anims.insert(AnimationKey::Run, asset_server.load("toon-shooter/char-hazmat.glb#Animation10"));
-    hazmat_anims.insert(AnimationKey::Punch, asset_server.load("toon-shooter/char-hazmat.glb#Animation7"));
+    hazmat_anims.insert(AnimationKey::Punch, asset_server.load("toon-shooter/char-hazmat.glb#Animation9"));
     hazmat_anims.insert(AnimationKey::No, asset_server.load("toon-shooter/char-hazmat.glb#Animation8"));
-    hazmat_anims.insert(AnimationKey::JumpLand, asset_server.load("toon-shooter/char-hazmat.glb#Animation9"));
+    hazmat_anims.insert(AnimationKey::JumpLand, asset_server.load("toon-shooter/char-hazmat.glb#Animation7"));
     hazmat_anims.insert(AnimationKey::JumpIdle, asset_server.load("toon-shooter/char-hazmat.glb#Animation6"));
     hazmat_anims.insert(AnimationKey::Jump, asset_server.load("toon-shooter/char-hazmat.glb#Animation11"));
     hazmat_anims.insert(AnimationKey::IdleShoot, asset_server.load("toon-shooter/char-hazmat.glb#Animation4"));
