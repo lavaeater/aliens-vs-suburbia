@@ -66,8 +66,8 @@ pub fn keyboard_input(
                             controller.triggers.set(ControllerFlag::THROW);
                         }
                     }
-                    allOther => {
-                        animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, key_for_input(allOther)));
+                    all_other => {
+                        animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, key_for_input(all_other)));
                     }
                 },
                 ButtonState::Released => match ev.key_code {

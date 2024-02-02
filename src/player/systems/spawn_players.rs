@@ -1,14 +1,17 @@
 use bevy::core::Name;
-use bevy::hierarchy::Children;
+use bevy::hierarchy::{Children, Parent};
 use bevy::math::{Quat, Vec3};
-use bevy::prelude::{Commands, Component, EventReader, EventWriter, Query};
+use bevy::prelude::{Commands, Component, EventReader, EventWriter, Has, Query, With};
+use bevy::scene::SceneInstanceReady;
 use bevy::utils::default;
 use bevy_mod_outline::{OutlineBundle, OutlineVolume};
 use bevy_xpbd_3d::prelude::CollisionLayers;
 use space_editor::prelude::PrefabBundle;
+use space_editor::space_editor_ui::ext::bevy_mod_picking::input::debug::print;
 use crate::game_state::score_keeper::{GameTrackingEvent};
 use crate::general::components::{CollisionLayer};
 use crate::general::events::map_events::SpawnPlayer;
+use crate::player::components::Player;
 use crate::ui::spawn_ui::AddHealthBar;
 
 #[derive(Component)]
@@ -32,7 +35,7 @@ impl FixSceneTransform {
 pub struct CheckModelChildren;
 
 pub fn check_model_children(
-    query: Query<(&CheckModelChildren, &Children)>,
+    query: Query<(&CheckModelChildren, &Children), With<Player>>,
     name_query: Query<&Name>,
 ) {
     for (_check_model_children, children) in query.iter() {
@@ -41,7 +44,35 @@ pub fn check_model_children(
             println!("Child: {:?}", child);
         }
     }
+}
 
+/*
+fn camera_with_parent(
+    q_child: Query<(&Parent, &Transform), With<Camera>>,
+    q_parent: Query<&GlobalTransform>,
+) {
+    for (parent, child_transform) in q_child.iter() {
+        // `parent` contains the Entity ID we can use
+        // to query components from the parent:
+        let parent_global_transform = q_parent.get(parent.get());
+
+        // do something with the components
+    }
+}
+ */
+
+pub fn model_is_ready(
+    mut scene_ready: EventReader<SceneInstanceReady>,
+    p_query: Query<(&Name, &Children, Has<Player>)>,
+) {
+    for scene_ready in scene_ready.read() {
+        if let Ok((name, children, has_player)) = p_query.get(scene_ready.parent) {
+            println!("Scene is ready: {:?}", name);
+            if has_player {
+                println!("Player is READYYYY!");
+            }
+        }
+    }
 }
 
 pub fn spawn_players(
