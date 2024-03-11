@@ -1,10 +1,8 @@
-use belly::build::{Elements, eml};
 use bevy::app::{App, Plugin, Update};
-use bevy::prelude::{Component, Entity, Event, EventReader, in_state, IntoSystemConfigs, Resource};
+use bevy::prelude::{Component, Entity, Event, in_state, IntoSystemConfigs, Resource};
 use crate::game_state::GameState;
 use bevy::prelude::*;
-use belly::prelude::*;
-use crate::ui::spawn_ui::GotoState;
+use crate::game_state::game_state_plugin::GotoState;
 
 
 #[derive(Debug, Component)]
@@ -101,58 +99,11 @@ impl Plugin for ScoreKeeperPlugin {
             .add_event::<GameTrackingEvent>()
             .insert_resource(LevelTracker::default())
             .add_systems(Update, (
-                game_tracking_event_system,
                 level_state_system,
             )
                 .run_if(in_state(GameState::InGame)),
             )
         ;
-    }
-}
-
-pub fn game_tracking_event_system(
-    mut game_tracking_events: EventReader<GameTrackingEvent>,
-    mut level_tracker: ResMut<LevelTracker>,
-    mut score_query: Query<&mut Score>,
-    mut elements: Elements,
-) {
-    for event in game_tracking_events.read() {
-        match event {
-            GameTrackingEvent::PlayerAdded(player) => {
-                let p = *player;
-                elements.select("#ui-footer")
-                    .add_child(eml! {
-                        <span c:cell>
-                            <label bind:value=from!(p, Score:kills | fmt.c("Kills: {c}") )/>
-                            <label bind:value=from!(p, Score:shots_fired | fmt.c("Shots: {c}") )/>
-                            <label bind:value=from!(p, Score:shots_hit | fmt.c("Hits: {c}") )/>
-                        </span>
-                    });
-            }
-            GameTrackingEvent::PlayerRemoved(_) => {}
-            GameTrackingEvent::AlienKilled(player) => {
-                if let Ok(mut score) = score_query.get_mut(*player) {
-                    score.kills += 1;
-                }
-                level_tracker.aliens_killed += 1;
-            }
-            GameTrackingEvent::ShotFired(player) => {
-                if let Ok(mut score) = score_query.get_mut(*player) {
-                    score.shots_fired += 1;
-                }
-            }
-            GameTrackingEvent::ShotHit(player) => {
-                if let Ok(mut score) = score_query.get_mut(*player) {
-                    score.shots_hit += 1;
-                }
-            }
-            GameTrackingEvent::AlienSpawned => {
-                level_tracker.aliens_left_to_spawn -= 1;
-            }
-            GameTrackingEvent::AlienReachedGoal => {
-                level_tracker.aliens_reached_goal += 1;
-            }
-        }
     }
 }
 

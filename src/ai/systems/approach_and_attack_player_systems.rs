@@ -30,10 +30,10 @@ pub fn can_agent_see_player_system(
             &sight_shape.shape, // Shape to cast
             position.0, // Origin
             sight_shape.rotation, // Rotation of shape
-            direction,// Direction
+            Direction3d::new(direction).unwrap(),// Direction
             sight_shape.range, // Maximum time of impact (travel distance)
             true,
-            SpatialQueryFilter::new().with_masks([CollisionLayer::Player]), // Query for players
+            SpatialQueryFilter::from_mask([CollisionLayer::Player]), // Query for players
         ) {
             None => {
                 alien_brain.seen_player = None;

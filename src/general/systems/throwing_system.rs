@@ -2,7 +2,8 @@ use bevy::math::{Vec3};
 use bevy::prelude::{Commands, Entity, EventWriter, Query, Res, Transform};
 use bevy::scene::SceneBundle;
 use bevy::time::Time;
-use bevy_xpbd_3d::components::{Collider, CollisionLayers, LinearVelocity, Position, RigidBody};
+use bevy_xpbd_3d::components::{CollisionLayers, LinearVelocity, Position, RigidBody};
+use bevy_xpbd_3d::prelude::Collider;
 use crate::assets::assets_plugin::GameAssets;
 use crate::control::components::{CharacterControl, ControllerFlag};
 use crate::game_state::score_keeper::{GameTrackingEvent};
@@ -31,7 +32,7 @@ pub fn throwing(
                         ..Default::default()
                     },
                     RigidBody::Dynamic,
-                    Collider::ball(1.0 / 16.0),
+                    Collider::sphere(1.0 / 16.0),
                     LinearVelocity(auto_aim.0 * 12.0),
                     CollisionLayers::new([CollisionLayer::Ball],
                                          [

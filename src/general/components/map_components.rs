@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy::reflect::Reflect;
 use bevy::utils::HashMap;
 use bevy_xpbd_3d::components::{CollisionLayers, RigidBody};
+use bevy_xpbd_3d::prelude::LayerMask;
 use crate::general::components::CollisionLayer;
 
 #[derive(Component)]
@@ -20,8 +21,8 @@ pub struct ModelDefinition {
     pub height: f32,
     pub depth: f32,
     pub rigid_body: RigidBody,
-    pub group: Vec<CollisionLayer>,
-    pub mask: Vec<CollisionLayer>,
+    pub group: LayerMask,
+    pub mask: LayerMask,
 }
 
 #[derive(Hash, PartialEq, Eq, Clone, Reflect,Component)]
@@ -29,7 +30,7 @@ pub struct Tower {}
 
 impl ModelDefinition {
     pub fn create_collision_layers(&self) -> CollisionLayers {
-        CollisionLayers::new(self.group.clone(), self.mask.clone())
+        CollisionLayers::new(self.group, self.mask)
     }
 }
 

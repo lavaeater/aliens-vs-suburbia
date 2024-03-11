@@ -4,8 +4,8 @@ use bevy::math::Vec3;
 use bevy::prelude::{Bundle, Commands, Query, Res, Transform, With};
 use bevy::scene::SceneBundle;
 use bevy::time::Time;
-use bevy_xpbd_3d::components::{Collider, CollidingEntities, LinearVelocity, Position, RigidBody};
-use bevy_xpbd_3d::prelude::CollisionLayers;
+use bevy_xpbd_3d::components::{LinearVelocity, Position, RigidBody};
+use bevy_xpbd_3d::prelude::{Collider, CollidingEntities, CollisionLayers};
 use big_brain::actions::{ActionState, Steps};
 use big_brain::pickers::Highest;
 use big_brain::scorers::Score;
@@ -95,7 +95,7 @@ impl BallBundle {
                 ..Default::default()
             },
             rigid_body: RigidBody::Dynamic,
-            collider: Collider::ball(1.0 / 16.0),
+            collider: Collider::sphere(1.0 / 16.0),
             linear_velocity: LinearVelocity(direction * 12.0),
             collision_layers: CollisionLayers::new(
                 [CollisionLayer::Ball],

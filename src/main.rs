@@ -3,11 +3,10 @@ use bevy::DefaultPlugins;
 use bevy::prelude::Msaa;
 use bevy_atmosphere::plugin::AtmospherePlugin;
 use bevy_xpbd_3d::plugins::PhysicsPlugins;
-use space_editor::prelude::{PrefabPlugin, simple_editor_setup};
+use space_editor::prelude::{PrefabPlugin, simple_editor_setup, XpbdPlugin};
 use space_editor::SpaceEditorPlugin;
 use type_register_plugin::TypeRegisterPlugin;
 use crate::game_state::game_state_plugin::GamePlugin;
-use crate::playground::xpbd_plugin::CustomXpbdPlugin;
 
 pub(crate) mod player;
 pub(crate) mod general;
@@ -15,7 +14,6 @@ pub(crate) mod camera;
 pub(crate) mod alien;
 pub(crate) mod ai;
 pub(crate) mod towers;
-pub(crate) mod ui;
 mod control;
 mod building;
 mod map;
@@ -45,7 +43,7 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(
             (PrefabPlugin,
-             CustomXpbdPlugin, )
+             XpbdPlugin, )
         )
         .add_plugins(TypeRegisterPlugin)
         .add_plugins(PhysicsPlugins::default())

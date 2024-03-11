@@ -1,7 +1,7 @@
 use bevy::app::{App, Plugin, Update};
-use bevy::input::{Axis, Input};
+use bevy::input::{Axis};
 use bevy::input::gamepad::GamepadButtonInput;
-use bevy::prelude::{Commands, Component, Entity, EventReader, Gamepad, GamepadAxis, GamepadAxisType, GamepadButton, GamepadButtonType, in_state, IntoSystemConfigs, Query, Res, With};
+use bevy::prelude::{ButtonInput, Commands, Component, Entity, EventReader, Gamepad, GamepadAxis, GamepadAxisType, GamepadButton, GamepadButtonType, in_state, IntoSystemConfigs, Query, Res, With};
 use bevy::reflect::Reflect;
 use crate::control::components::{CharacterControl, InputKeyboard};
 use crate::game_state::GameState;
@@ -72,7 +72,7 @@ fn gamepad_buttons(
 
 fn gamepad_game_input(
     axes: Res<Axis<GamepadAxis>>,
-    _buttons: Res<Input<GamepadButton>>,
+    _buttons: Res<ButtonInput<GamepadButton>>,
     mut player_query: Query<(Entity, &mut CharacterControl, &InputGamepad)>
 ) {
     for (_entity, mut controller, input_gamepad) in player_query.iter_mut() {

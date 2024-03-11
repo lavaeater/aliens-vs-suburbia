@@ -5,8 +5,8 @@ use bevy::log::info;
 use bevy::math::{Vec2, Vec3, Vec3Swizzles};
 use bevy::prelude::{Commands, Entity, EventReader, EventWriter, Query, Res, With, Without};
 use bevy::scene::{SceneBundle, SceneInstance};
-use bevy_xpbd_3d::components::{Collider, CollisionLayers, LockedAxes, RigidBody, Rotation, Sensor};
-use bevy_xpbd_3d::prelude::Position;
+use bevy_xpbd_3d::components::{CollisionLayers, LockedAxes, RigidBody, Rotation};
+use bevy_xpbd_3d::prelude::{Collider, Position, Sensor};
 use crate::control::components::{CharacterControl, ControllerFlag};
 use crate::general::components::{CollisionLayer, Health};
 use crate::general::components::map_components::{CurrentTile, MapModelDefinitions};
@@ -17,7 +17,7 @@ use crate::player::events::building_events::{ChangeBuildIndicator, EnterBuildMod
 use crate::towers::components::{TowerSensor, TowerShooter};
 use crate::towers::events::BuildTower;
 use crate::towers::systems;
-use crate::ui::spawn_ui::AddHealthBar;
+use crate::towers::systems::create_thinker;
 
 
 pub fn enter_build_mode(
@@ -66,7 +66,7 @@ pub fn spawn_building_indicator(
         RigidBody::Kinematic,
         tile_definitions.create_collider(16.0, 4.0, 16.0),
         Position::from(*position),
-        CollisionLayers::new([CollisionLayer::BuildIndicator], []),
+        CollisionLayers::new([CollisionLayer::BuildIndicator], [CollisionLayer::BuildIndicator; 0]),
         LockedAxes::new().lock_rotation_x().lock_rotation_z().lock_rotation_y(),
         CurrentTile::default(),
     )).id()
@@ -227,7 +227,6 @@ impl ToGridNeighbour for Rotation {
 pub fn build_tower_system(
     mut build_tower_er: EventReader<BuildTower>,
     mut commands: Commands,
-    mut add_health_bar_ew: EventWriter<AddHealthBar>,
     asset_server: Res<AssetServer>,
     model_defs: Res<MapModelDefinitions>,
     tile_defs: Res<TileDefinitions>,
@@ -259,15 +258,11 @@ pub fn build_tower_system(
                     TowerSensor {},
                     TowerShooter::new(20.0),
                     Sensor,
-                    systems::create_thinker()
+                    create_thinker()
                 ));
             });
         }
 
         let id = ec.id();
-        add_health_bar_ew.send(AddHealthBar {
-            entity: id,
-            name: "OBSTACLE",
-        });
     }
 }

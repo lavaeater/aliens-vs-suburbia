@@ -6,6 +6,7 @@ use bevy_xpbd_3d::components::{Position, Rotation};
 use bevy_xpbd_3d::prelude::{SpatialQuery, SpatialQueryFilter};
 use bevy::math::{EulerRot, Quat, Vec3};
 use bevy::time::Time;
+use space_editor::space_prefab::ext::Direction3d;
 use crate::ai::components::avoid_wall_components::{AvoidWallsAction, AvoidWallScore, AvoidWallsData};
 use crate::control::components::{CharacterControl, ControllerFlag};
 use crate::general::components::CollisionLayer;
@@ -47,30 +48,30 @@ pub fn avoid_walls_data_system(
 
         if let Some(hit) = spatial_query.cast_ray(
             position.0, // Origin
-            forward,// Direction
+            Direction3d::new(forward).unwrap(),// Direction
             avoid_wall_data.max_forward_distance, // Maximum time of impact (travel distance)
             true, // Does the ray treat colliders as "solid"
-            SpatialQueryFilter::new().with_masks([CollisionLayer::Impassable]), // Query for players
+            SpatialQueryFilter::from_mask([CollisionLayer::Impassable]), // Query for players
         ) {
             avoid_wall_data.forward_distance = hit.time_of_impact;
         };
 
         if let Some(hit) = spatial_query.cast_ray(
             position.0, // Origin
-            left,// Direction
+            Direction3d::new(left).unwrap(),// Direction
             avoid_wall_data.max_left_distance, // Maximum time of impact (travel distance)
             true, // Does the ray treat colliders as "solid"
-            SpatialQueryFilter::new().with_masks([CollisionLayer::Impassable]), // Query for players
+            SpatialQueryFilter::from_mask([CollisionLayer::Impassable]), // Query for players
         ) {
             avoid_wall_data.left_distance = hit.time_of_impact;
         };
 
         if let Some(hit) = spatial_query.cast_ray(
             position.0, // Origin
-            right,// Direction
+            Direction3d::new(right).unwrap(),// Direction
             avoid_wall_data.max_right_distance, // Maximum time of impact (travel distance)
             true, // Does the ray treat colliders as "solid"
-            SpatialQueryFilter::new().with_masks([CollisionLayer::Impassable]), // Query for players
+            SpatialQueryFilter::from_mask([CollisionLayer::Impassable]), // Query for players
         ) {
             avoid_wall_data.right_distance = hit.time_of_impact;
         };

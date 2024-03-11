@@ -1,6 +1,6 @@
 use bevy::app::{App, Plugin, Startup, Update};
 use bevy::utils::HashMap;
-use bevy_xpbd_3d::components::RigidBody;
+use bevy_xpbd_3d::components::{LayerMask, RigidBody};
 use pathfinding::grid::Grid;
 use std::collections::HashSet;
 use bevy::prelude::{in_state, IntoSystemConfigs, OnEnter};
@@ -31,8 +31,8 @@ impl Plugin for NonStateMapStuff {
                                 height: 19.0,
                                 depth: 1.0,
                                 rigid_body: RigidBody::Static,
-                                group: vec![CollisionLayer::Impassable],
-                                mask: vec![CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player],
+                                group: LayerMask::from([CollisionLayer::Impassable]),
+                                mask: LayerMask::from([CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
                             }),
                             ("floor", ModelDefinition {
                                 name: "floor",
@@ -41,8 +41,8 @@ impl Plugin for NonStateMapStuff {
                                 height: 1.0,
                                 depth: 16.0,
                                 rigid_body: RigidBody::Static,
-                                group: vec![CollisionLayer::Floor],
-                                mask: vec![CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player],
+                                group: LayerMask::from([CollisionLayer::Floor]),
+                                mask: LayerMask::from([CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
                             }),
                             ("obstacle", ModelDefinition {
                                 name: "obstacle",
@@ -51,8 +51,8 @@ impl Plugin for NonStateMapStuff {
                                 height: 4.0,
                                 depth: 16.0,
                                 rigid_body: RigidBody::Kinematic,
-                                group: vec![CollisionLayer::Impassable],
-                                mask: vec![CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player],
+                                group: LayerMask::from([CollisionLayer::Impassable]),
+                                mask: LayerMask::from([CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
                             }),
                             ("tower", ModelDefinition {
                                 name: "tower",
@@ -61,8 +61,8 @@ impl Plugin for NonStateMapStuff {
                                 height: 8.0,
                                 depth: 16.0,
                                 rigid_body: RigidBody::Kinematic,
-                                group: vec![CollisionLayer::Impassable],
-                                mask: vec![CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player],
+                                group: LayerMask::from([CollisionLayer::Impassable]),
+                                mask: LayerMask::from([CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
                             }),
                         ]),
                     build_indicators: vec!["obstacle", "tower"],

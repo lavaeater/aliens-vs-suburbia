@@ -1,10 +1,8 @@
-pub(crate) mod xpbd_plugin;
 mod player_prefab;
 
 use bevy::prelude::*;
 use bevy_atmosphere::plugin::AtmosphereCamera;
-use bevy_mod_outline::{OutlineBundle, OutlineVolume};
-use bevy_xpbd_3d::components::{Collider};
+use bevy_xpbd_3d::prelude::Collider;
 use crate::game_state::GameState;
 use space_editor::prelude::{PrefabBundle};
 use space_editor::space_editor_ui::ext::bevy_panorbit_camera;use crate::assets::assets_plugin::GameAssets;
@@ -71,14 +69,6 @@ fn load_level(
             "player",
             "Player One",
         ),
-        OutlineBundle {
-            outline: OutlineVolume {
-                visible: true,
-                width: 1.0,
-                colour: Color::BLACK,
-            },
-            ..default()
-        }
     )).with_children(|children|
         { // Spawn the child colliders positioned relative to the rigid body
             children.spawn(

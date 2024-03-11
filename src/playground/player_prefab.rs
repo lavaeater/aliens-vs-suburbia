@@ -27,7 +27,6 @@ pub struct PlayerPrefab {
     score: Score,
     auto_aim: AutoAim,
     prefab_bundle: PrefabBundle,
-    pub outline_bundle: OutlineBundle,
 }
 
 impl PlayerPrefab {
@@ -67,14 +66,6 @@ impl PlayerPrefab {
             score: Score::new(),
             auto_aim: AutoAim(Vec3::Z),
             prefab_bundle: PrefabBundle::new("girl/girl_prefab_2.scn.ron"),
-            outline_bundle: OutlineBundle {
-                outline: OutlineVolume {
-                    visible: true,
-                    width: 1.0,
-                    colour: Color::BLACK,
-                },
-                ..default()
-            }
         }
     }
 }

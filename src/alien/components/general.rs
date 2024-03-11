@@ -1,6 +1,6 @@
 use bevy::math::{EulerRot, Quat};
 use bevy::prelude::{Component, Resource};
-use bevy_xpbd_3d::components::Collider;
+use bevy_xpbd_3d::prelude::Collider;
 
 
 #[derive(Component, Clone, Copy, Debug, PartialEq)]

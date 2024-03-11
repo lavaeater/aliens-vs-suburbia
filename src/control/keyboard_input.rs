@@ -19,7 +19,7 @@ pub fn keyboard_input(
         for ev in key_evr.read() {
             match ev.state {
                 ButtonState::Pressed => match ev.key_code {
-                    Some(KeyCode::B) => {
+                    KeyCode::KeyB => {
                         if controller.triggers.has(ControllerFlag::BUILD) {
                             animation_ew.send(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Building));
                             exit_build.send(ExitBuildMode(entity));
@@ -29,33 +29,33 @@ pub fn keyboard_input(
                             start_build_ew.send(EnterBuildMode(entity));
                         }
                     }
-                    Some(KeyCode::Escape) => {
+                    KeyCode::Escape => {
                         if controller.triggers.has(ControllerFlag::BUILD) {
                             animation_ew.send(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Building));
                             exit_build.send(ExitBuildMode(entity));
                         }
                     }
-                    Some(KeyCode::A) => {
+                    KeyCode::KeyA => {
                         animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walk));
                         controller.rotations.set(ControllerFlag::LEFT);
                     }
-                    Some(KeyCode::D) => {
+                    KeyCode::KeyD => {
                         animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walk));
                         controller.rotations.set(ControllerFlag::RIGHT);
                     }
-                    Some(KeyCode::W) => {
+                    KeyCode::KeyW => {
                         animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walk));
                         controller.directions.set(ControllerFlag::FORWARD);
                     }
-                    Some(KeyCode::S) => {
+                    KeyCode::KeyS => {
                         animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walk));
                         controller.directions.set(ControllerFlag::BACKWARD);
                     }
-                    Some(KeyCode::N) => {
+                    KeyCode::KeyN => {
                         animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walking));
                         controller.directions.set(ControllerFlag::BACKWARD);
                     }
-                    Some(KeyCode::Space) => {
+                    KeyCode::Space => {
                         if controller.triggers.has(ControllerFlag::BUILD) {
                             execute_build.send(ExecuteBuild(entity));
                         } else if controller.triggers.has(ControllerFlag::THROW) {
@@ -71,22 +71,22 @@ pub fn keyboard_input(
                     }
                 },
                 ButtonState::Released => match ev.key_code {
-                    Some(KeyCode::A) => {
+                    KeyCode::KeyA => {
                         controller.rotations.unset(ControllerFlag::LEFT);
                     }
-                    Some(KeyCode::D) => {
+                    KeyCode::KeyD => {
                         controller.rotations.unset(ControllerFlag::RIGHT);
                     }
-                    Some(KeyCode::W) => {
+                    KeyCode::KeyW => {
                         controller.directions.unset(ControllerFlag::FORWARD);
                     }
-                    Some(KeyCode::S) => {
+                    KeyCode::KeyS => {
                         controller.directions.unset(ControllerFlag::BACKWARD);
                     }
-                    Some(KeyCode::Left) => {
+                    KeyCode::ArrowLeft => {
                         change_build_indicator.send(ChangeBuildIndicator(entity, -1));
                     }
-                    Some(KeyCode::Right) => {
+                    KeyCode::ArrowRight => {
                         change_build_indicator.send(ChangeBuildIndicator(entity, 1));
                     }
                     _ => {}
@@ -115,25 +115,25 @@ pub fn keyboard_input(
     }
 }
 
-fn key_for_input(key_code: Option<KeyCode>) -> AnimationKey {
+fn key_for_input(key_code: KeyCode) -> AnimationKey {
     match key_code {
-        Some(KeyCode::Key1) => AnimationKey::Idle, //OK
-        Some(KeyCode::Key2) => AnimationKey::Walk, //OK
-        Some(KeyCode::Key3) => AnimationKey::Yes, //OK
-        Some(KeyCode::Key4) => AnimationKey::Wave, //OK
-        Some(KeyCode::Key5) => AnimationKey::RunGun,
-        Some(KeyCode::Key6) => AnimationKey::Run,
-        Some(KeyCode::Key7) => AnimationKey::Punch,
-        Some(KeyCode::Key8) => AnimationKey::No, //OK
-        Some(KeyCode::Key9) => AnimationKey::JumpLand, //Punch?
-        Some(KeyCode::Key0) => AnimationKey::JumpIdle, //JumpMidAir, JumpIdle, OK?
-        Some(KeyCode::Numpad0) => AnimationKey::Jump, //Run
-        Some(KeyCode::Numpad1) => AnimationKey::IdleShoot, //OK
-        Some(KeyCode::Numpad2) => AnimationKey::HitReact, //OK
-        Some(KeyCode::Numpad3) => AnimationKey::Duck, //OK
-        Some(KeyCode::Numpad4) => AnimationKey::Death, //OK
-        Some(KeyCode::Numpad5) => AnimationKey::WalkShoot, //OK
-        Some(KeyCode::Numpad6) => AnimationKey::RunShoot, //OK
+        KeyCode::Digit1 => AnimationKey::Idle, //OK
+        KeyCode::Digit2 => AnimationKey::Walk, //OK
+        KeyCode::Digit3 => AnimationKey::Yes, //OK
+        KeyCode::Digit4 => AnimationKey::Wave, //OK
+        KeyCode::Digit5 => AnimationKey::RunGun,
+        KeyCode::Digit6 => AnimationKey::Run,
+        KeyCode::Digit7 => AnimationKey::Punch,
+        KeyCode::Digit8 => AnimationKey::No, //OK
+        KeyCode::Digit9 => AnimationKey::JumpLand, //Punch?
+        KeyCode::Digit0 => AnimationKey::JumpIdle, //JumpMidAir, JumpIdle, OK?
+        KeyCode::Numpad0 => AnimationKey::Jump, //Run
+        KeyCode::Numpad1 => AnimationKey::IdleShoot, //OK
+        KeyCode::Numpad2 => AnimationKey::HitReact, //OK
+        KeyCode::Numpad3 => AnimationKey::Duck, //OK
+        KeyCode::Numpad4 => AnimationKey::Death, //OK
+        KeyCode::Numpad5 => AnimationKey::WalkShoot, //OK
+        KeyCode::Numpad6 => AnimationKey::RunShoot, //OK
         _ => AnimationKey::Idle
     }
 }

@@ -1,5 +1,5 @@
 use bevy::app::{App, Plugin, PreUpdate, Update};
-use bevy::prelude::{in_state, IntoSystemConfigs, OnEnter, Time};
+use bevy::prelude::{Event, in_state, IntoSystemConfigs, OnEnter, Time};
 use bevy::time::Fixed;
 use crate::ai::ai_plugin::StatefulAiPlugin;
 use crate::alien::alien_plugin::StatefulAlienPlugin;
@@ -19,25 +19,26 @@ use crate::general::systems::throwing_system::throwing;
 use crate::map::map_plugins::StatefulMapPlugin;
 use crate::player::player_plugin::PlayerPlugin;
 use crate::towers::systems::{shoot_alien_system, tower_has_alien_in_range_scorer_system};
-use crate::ui::spawn_ui::{add_health_bar, AddHealthBar, fellow_system, GotoState};
-use crate::ui::ui_plugin::UiPlugin;
 use crate::generate_mesh::MeshPlugin;
 use crate::inspection::inspector::InspectorPlugin;
 use crate::playground::PlaygroundPlugin;
 
 pub struct GamePlugin;
 
+#[derive(Event)]
+pub struct GotoState {
+    pub state: GameState,
+}
+
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app
             .insert_resource(Time::<Fixed>::from_seconds(0.05))
-            .add_state::<GameState>()
+            .init_state::<GameState>()
             .add_event::<GotoState>()
-            .add_event::<AddHealthBar>()
             .add_plugins((
                 AssetsPlugin,
                 StatefulMapPlugin,
-                UiPlugin,
                 StatefulAiPlugin,
                 StatefulBuildModePlugin,
                 StatefulAlienPlugin,
@@ -72,8 +73,6 @@ impl Plugin for GamePlugin {
                 (
                     shoot_alien_system,
                     health_monitor_system,
-                    add_health_bar,
-                    fellow_system,
                 ).run_if(in_state(GameState::InGame)),
             )
             .add_systems(

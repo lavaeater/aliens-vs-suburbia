@@ -26,7 +26,6 @@ pub struct PlayerPrefab {
     character_state: CharacterState,
     score: Score,
     auto_aim: AutoAim,
-    outline_bundle: OutlineBundle,
     transform: Transform,
     position: Position,
     linear_velocity: LinearVelocity,
@@ -70,14 +69,6 @@ impl PlayerPrefab {
             character_state: CharacterState::default(),
             score: Score::new(),
             auto_aim: AutoAim(Vec3::Z),
-            outline_bundle: OutlineBundle {
-                outline: OutlineVolume {
-                    visible: true,
-                    width: 1.0,
-                    colour: Color::BLACK,
-                },
-                ..default()
-            },
             transform,
             position: Position(transform.translation),
             linear_velocity: LinearVelocity::default(),

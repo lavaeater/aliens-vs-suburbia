@@ -35,14 +35,6 @@ impl Plugin for TypeRegisterPlugin {
             .editor_registry::<Score>()
             .editor_registry::<AutoAim>()
             .editor_registry::<Position>()
-            .editor_bundle("Outline", "Outline", OutlineBundle {
-                outline: OutlineVolume {
-                    visible: true,
-                    width: 1.0,
-                    colour: Color::BLACK,
-                },
-                ..default()
-            })
         ;
     }
 }

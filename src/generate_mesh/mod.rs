@@ -3,8 +3,10 @@ use std::io::Error;
 use bevy::prelude::*;
 use bevy::render::mesh::Indices;
 use bevy::render::mesh::VertexAttributeValues;
+use bevy::render::render_asset::RenderAssetUsages;
 use bevy::render::render_resource::PrimitiveTopology;
-use bevy_xpbd_3d::components::{Collider, RigidBody};
+use bevy_xpbd_3d::components::{RigidBody};
+use bevy_xpbd_3d::prelude::Collider;
 use image::{ImageBuffer, Luma};
 use noise::{Fbm, Perlin};
 use crate::game_state::GameState;
@@ -140,7 +142,7 @@ fn spawn_balls(
 // System to receive input from the user,
 // check out examples/input/ for more examples about user input.
 fn mesh_input_handler(
-    keyboard_input: Res<Input<KeyCode>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
     mut query: Query<&mut Transform, With<CustomUV>>,
     time: Res<Time>,
     mut ball_timer: ResMut<BallTimer>,
@@ -151,44 +153,44 @@ fn mesh_input_handler(
         // let mesh = meshes.get_mut(mesh_handle).unwrap();
         // toggle_texture(mesh);
     }
-    if keyboard_input.pressed(KeyCode::X) {
+    if keyboard_input.pressed(KeyCode::KeyX) {
         for mut transform in &mut query {
             transform.rotate_x(time.delta_seconds() / 1.2);
         }
     }
-    if keyboard_input.pressed(KeyCode::Y) {
+    if keyboard_input.pressed(KeyCode::KeyY) {
         for mut transform in &mut query {
             transform.rotate_y(time.delta_seconds() / 1.2);
         }
     }
-    if keyboard_input.pressed(KeyCode::Z) {
+    if keyboard_input.pressed(KeyCode::KeyZ) {
         for mut transform in &mut query {
             transform.rotate_z(time.delta_seconds() / 1.2);
         }
     }
-    if keyboard_input.pressed(KeyCode::R) {
+    if keyboard_input.pressed(KeyCode::KeyR) {
         for mut transform in &mut query {
             transform.look_to(Vec3::NEG_Z, Vec3::Y);
         }
     }
 
-    if keyboard_input.pressed(KeyCode::Up) {
+    if keyboard_input.pressed(KeyCode::ArrowUp) {
         for mut transform in &mut query {
             transform.translation.z += time.delta_seconds() * 2.0;
         }
     }
-    if keyboard_input.pressed(KeyCode::Down) {
+    if keyboard_input.pressed(KeyCode::ArrowDown) {
         for mut transform in &mut query {
             transform.translation.z -= time.delta_seconds() * 2.0;
         }
     }
 
-    if keyboard_input.pressed(KeyCode::Left) {
+    if keyboard_input.pressed(KeyCode::ArrowLeft) {
         for mut transform in &mut query {
             transform.translation.x += time.delta_seconds() * 2.0;
         }
     }
-    if keyboard_input.pressed(KeyCode::Right) {
+    if keyboard_input.pressed(KeyCode::ArrowRight) {
         for mut transform in &mut query {
             transform.translation.x -= time.delta_seconds() * 2.0;
         }
@@ -225,7 +227,7 @@ fn load_terrain_mesh(perlin_noise_resource: Res<MapBuilder>) -> Result<Mesh, Err
     let side_length = 0.125f32;
     let max_height = 0.5f32;
     let terrain_bitmap = image::io::Reader::open(filename).unwrap().decode().unwrap();
-    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
+    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default());
 
     let heightmap = terrain_bitmap.as_luma16().unwrap();
 
@@ -306,7 +308,7 @@ fn load_terrain_mesh(perlin_noise_resource: Res<MapBuilder>) -> Result<Mesh, Err
     mesh.insert_attribute(
         Mesh::ATTRIBUTE_UV_0,
         VertexAttributeValues::Float32x2(uvs));
-    mesh.set_indices(Some(Indices::U32(indices)));
+    mesh.insert_indices(Indices::U32(indices));
 
 
     Ok(mesh)
