@@ -1,7 +1,7 @@
-pub (crate) mod map_components;
+pub(crate) mod map_components;
 
 use bevy::prelude::*;
-use bevy_inspector_egui::{prelude::*};
+use bevy_inspector_egui::prelude::*;
 use bevy_xpbd_3d::prelude::PhysicsLayer;
 
 #[derive(Component)]
@@ -26,7 +26,7 @@ impl Ball {
 #[derive(Component)]
 pub struct HittableTarget {}
 
-#[derive(PhysicsLayer,PartialEq, Eq, Clone, Copy, Reflect, InspectorOptions)]
+#[derive(PhysicsLayer, PartialEq, Eq, Clone, Copy, Reflect, InspectorOptions)]
 #[reflect(InspectorOptions)]
 pub enum CollisionLayer {
     Floor,
@@ -48,12 +48,9 @@ pub struct Attack {
 
 impl Default for Attack {
     fn default() -> Self {
-        Self {
-            damage_range: 5,
-        }
+        Self { damage_range: 5 }
     }
 }
-
 
 #[derive(Component, Clone, Copy, Debug, PartialEq, Reflect)]
 #[reflect(Component)]
@@ -63,7 +60,7 @@ pub struct Health {
 }
 
 impl Health {
-    pub fn as_f32(&self)->f32{
+    pub fn as_f32(&self) -> f32 {
         self.health as f32
     }
 }
@@ -76,5 +73,3 @@ impl Default for Health {
         }
     }
 }
-
-

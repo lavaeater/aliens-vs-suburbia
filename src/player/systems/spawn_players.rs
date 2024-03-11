@@ -1,14 +1,13 @@
 use bevy::core::Name;
-use bevy::hierarchy::{Children, Parent};
+use bevy::hierarchy::Children;
 use bevy::math::{Quat, Vec3};
-use bevy::prelude::{Color, Commands, Component, EventReader, EventWriter, Has, Query, With};
+use bevy::prelude::{Commands, Component, EventReader, EventWriter, Has, Query, With};
 use bevy::scene::SceneInstanceReady;
-use bevy::utils::default;
-use bevy_mod_outline::{OutlineBundle, OutlineVolume};
 use bevy_xpbd_3d::prelude::CollisionLayers;
 use space_editor::prelude::PrefabBundle;
-use crate::game_state::score_keeper::{GameTrackingEvent};
-use crate::general::components::{CollisionLayer};
+
+use crate::game_state::score_keeper::GameTrackingEvent;
+use crate::general::components::CollisionLayer;
 use crate::general::events::map_events::SpawnPlayer;
 use crate::player::components::Player;
 
@@ -79,23 +78,24 @@ pub fn spawn_players(
     mut player_addedd_ew: EventWriter<GameTrackingEvent>,
 ) {
     for _spawn_player in spawn_player_event_reader.read() {
-        let player = commands.spawn((
-            PrefabBundle::new("hazmat.scn.ron"),
-            CheckModelChildren,
-            CollisionLayers::new(
-                [CollisionLayer::Player],
-                [
-                    CollisionLayer::Ball,
-                    CollisionLayer::Impassable,
-                    CollisionLayer::Floor,
-                    CollisionLayer::Alien,
-                    CollisionLayer::Player,
-                    CollisionLayer::AlienSpawnPoint,
-                    CollisionLayer::AlienGoal
-                ]),
-        ))
+        let player = commands
+            .spawn((
+                PrefabBundle::new("hazmat.scn.ron"),
+                CheckModelChildren,
+                CollisionLayers::new(
+                    [CollisionLayer::Player],
+                    [
+                        CollisionLayer::Ball,
+                        CollisionLayer::Impassable,
+                        CollisionLayer::Floor,
+                        CollisionLayer::Alien,
+                        CollisionLayer::Player,
+                        CollisionLayer::AlienSpawnPoint,
+                        CollisionLayer::AlienGoal,
+                    ],
+                ),
+            ))
             .id();
-        player_addedd_ew.send(
-            GameTrackingEvent::PlayerAdded(player));
+        player_addedd_ew.send(GameTrackingEvent::PlayerAdded(player));
     }
 }

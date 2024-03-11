@@ -1,5 +1,5 @@
-use bevy::prelude::{Event};
 use bevy::math::Vec3;
+use bevy::prelude::Event;
 
 #[derive(Event)]
 pub struct LoadMap {}

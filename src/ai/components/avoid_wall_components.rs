@@ -1,9 +1,9 @@
+use crate::control::components::{ControllerFlag, Opposite};
+use crate::general::components::map_components::CoolDown;
 use bevy::log::info;
 use bevy::prelude::Component;
 use bevy::reflect::Reflect;
 use big_brain::prelude::{ActionBuilder, ScorerBuilder};
-use crate::control::components::{ControllerFlag, Opposite};
-use crate::general::components::map_components::CoolDown;
 
 #[derive(Clone, Component, Debug, Reflect, Copy)]
 pub struct AvoidWallsData {
@@ -16,7 +16,7 @@ pub struct AvoidWallsData {
     pub rotation_direction: ControllerFlag,
     pub rotation_timer: f32,
     pub rotation_timer_max: f32,
-    pub proto_val: f32
+    pub proto_val: f32,
 }
 
 impl CoolDown for AvoidWallsData {
@@ -24,7 +24,10 @@ impl CoolDown for AvoidWallsData {
         self.rotation_timer -= delta;
         if self.rotation_timer <= 0.0 {
             self.rotation_direction = self.rotation_direction.opposite();
-            info!("Timer expired, new direction is: {:?}", self.rotation_direction);
+            info!(
+                "Timer expired, new direction is: {:?}",
+                self.rotation_direction
+            );
             self.rotation_timer = self.rotation_timer_max;
             true
         } else {
@@ -34,7 +37,12 @@ impl CoolDown for AvoidWallsData {
 }
 
 impl AvoidWallsData {
-    pub fn new(max_forward_distance: f32, max_left_distance: f32, max_right_distance: f32, rotation_timer: f32) -> Self {
+    pub fn new(
+        max_forward_distance: f32,
+        max_left_distance: f32,
+        max_right_distance: f32,
+        rotation_timer: f32,
+    ) -> Self {
         Self {
             forward_distance: max_forward_distance,
             left_distance: max_left_distance,
@@ -45,7 +53,7 @@ impl AvoidWallsData {
             rotation_direction: ControllerFlag::LEFT,
             rotation_timer,
             rotation_timer_max: rotation_timer,
-            proto_val: 0.0
+            proto_val: 0.0,
         }
     }
 }

@@ -1,3 +1,16 @@
+use crate::control::components::{CharacterControl, ControllerFlag};
+use crate::general::components::map_components::{CurrentTile, MapModelDefinitions};
+use crate::general::components::{CollisionLayer, Health};
+use crate::general::resources::map_resources::MapGraph;
+use crate::general::systems::map_systems::TileDefinitions;
+use crate::player::components::{BuildingIndicator, IsBuildIndicator, IsBuilding, IsObstacle};
+use crate::player::events::building_events::{
+    ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode, RemoveTile,
+};
+use crate::towers::components::{TowerSensor, TowerShooter};
+use crate::towers::events::BuildTower;
+use crate::towers::systems;
+use crate::towers::systems::create_thinker;
 use bevy::asset::AssetServer;
 use bevy::core::Name;
 use bevy::hierarchy::{BuildChildren, DespawnRecursiveExt};
@@ -7,18 +20,6 @@ use bevy::prelude::{Commands, Entity, EventReader, EventWriter, Query, Res, With
 use bevy::scene::{SceneBundle, SceneInstance};
 use bevy_xpbd_3d::components::{CollisionLayers, LockedAxes, RigidBody, Rotation};
 use bevy_xpbd_3d::prelude::{Collider, Position, Sensor};
-use crate::control::components::{CharacterControl, ControllerFlag};
-use crate::general::components::{CollisionLayer, Health};
-use crate::general::components::map_components::{CurrentTile, MapModelDefinitions};
-use crate::general::resources::map_resources::MapGraph;
-use crate::general::systems::map_systems::TileDefinitions;
-use crate::player::components::{BuildingIndicator, IsBuildIndicator, IsBuilding, IsObstacle};
-use crate::player::events::building_events::{ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode, RemoveTile};
-use crate::towers::components::{TowerSensor, TowerShooter};
-use crate::towers::events::BuildTower;
-use crate::towers::systems;
-use crate::towers::systems::create_thinker;
-
 
 pub fn enter_build_mode(
     mut enter_build_mode_evr: EventReader<EnterBuildMode>,
@@ -29,21 +30,21 @@ pub fn enter_build_mode(
 ) {
     for start_event in enter_build_mode_evr.read() {
         if let Ok((current_tile, rotation)) = builder_query.get_mut(start_event.0) {
-            let desired_neighbour_pos =
-                rotation
-                    .get_neighbour(current_tile.tile)
-                    .to_world_coords(&tile_definitions) + Vec3::new(0.0, -tile_definitions.wall_height * 2.0, 0.0);
+            let desired_neighbour_pos = rotation
+                .get_neighbour(current_tile.tile)
+                .to_world_coords(&tile_definitions)
+                + Vec3::new(0.0, -tile_definitions.wall_height * 2.0, 0.0);
 
             let building_indicator = spawn_building_indicator(
                 &mut commands,
                 &asset_server,
                 &desired_neighbour_pos,
                 "map/obstacle.glb#Scene0",
-                &tile_definitions
+                &tile_definitions,
             );
-            commands.entity(start_event.0).insert(BuildingIndicator(
-                building_indicator,
-                0));
+            commands
+                .entity(start_event.0)
+                .insert(BuildingIndicator(building_indicator, 0));
             commands.entity(start_event.0).insert(IsBuilding {});
         }
     }
@@ -56,29 +57,42 @@ pub fn spawn_building_indicator(
     file: &'static str,
     tile_definitions: &TileDefinitions,
 ) -> Entity {
-    commands.spawn((
-        Name::from("BuildingIndicator"),
-        IsBuildIndicator {},
-        SceneBundle {
-            scene: asset_server.load(file),
-            ..Default::default()
-        },
-        RigidBody::Kinematic,
-        tile_definitions.create_collider(16.0, 4.0, 16.0),
-        Position::from(*position),
-        CollisionLayers::new([CollisionLayer::BuildIndicator], [CollisionLayer::BuildIndicator; 0]),
-        LockedAxes::new().lock_rotation_x().lock_rotation_z().lock_rotation_y(),
-        CurrentTile::default(),
-    )).id()
+    commands
+        .spawn((
+            Name::from("BuildingIndicator"),
+            IsBuildIndicator {},
+            SceneBundle {
+                scene: asset_server.load(file),
+                ..Default::default()
+            },
+            RigidBody::Kinematic,
+            tile_definitions.create_collider(16.0, 4.0, 16.0),
+            Position::from(*position),
+            CollisionLayers::new(
+                [CollisionLayer::BuildIndicator],
+                [CollisionLayer::BuildIndicator; 0],
+            ),
+            LockedAxes::new()
+                .lock_rotation_x()
+                .lock_rotation_z()
+                .lock_rotation_y(),
+            CurrentTile::default(),
+        ))
+        .id()
 }
 
 pub fn exit_build_mode(
     mut exit_build_mode_evr: EventReader<ExitBuildMode>,
-    mut player_build_indicator_query: Query<(&BuildingIndicator, &mut CharacterControl), With<IsBuilding>>,
+    mut player_build_indicator_query: Query<
+        (&BuildingIndicator, &mut CharacterControl),
+        With<IsBuilding>,
+    >,
     mut commands: Commands,
 ) {
     for stop_event in exit_build_mode_evr.read() {
-        if let Ok((bulding_indicator, mut controller)) = player_build_indicator_query.get_mut(stop_event.0) {
+        if let Ok((bulding_indicator, mut controller)) =
+            player_build_indicator_query.get_mut(stop_event.0)
+        {
             controller.triggers.unset(ControllerFlag::BUILD);
             commands.entity(bulding_indicator.0).despawn_recursive();
         }
@@ -100,7 +114,6 @@ pub fn execute_build(
         if let Ok(build_indicator) = player_build_indicator_query.get(execute_event.0) {
             if let Ok((position, current_tile)) = building_indicator.get(build_indicator.0) {
                 if !map_graph.occupied_tiles.contains(&current_tile.tile) {
-
                     let current_index = build_indicator.1;
                     let current_key = model_defs.build_indicators[current_index as usize];
                     build_tower_ew.send(BuildTower {
@@ -117,13 +130,18 @@ pub fn execute_build(
 
 pub fn building_mode(
     builder_query: Query<(&CurrentTile, &Rotation, &BuildingIndicator), With<IsBuilding>>,
-    mut building_indicator_query: Query<(&CurrentTile, &Rotation, &mut Position, &SceneInstance), With<IsBuildIndicator>>,
+    mut building_indicator_query: Query<
+        (&CurrentTile, &Rotation, &mut Position, &SceneInstance),
+        With<IsBuildIndicator>,
+    >,
     tile_definitions: Res<TileDefinitions>,
 ) {
     for (current_tile, rotation, building_indicator) in builder_query.iter() {
         let desired_neighbour = rotation.get_neighbour(current_tile.tile);
-        if let Ok((_, _, mut position, _)) = building_indicator_query.get_mut(building_indicator.0) {
-            let desired_neighbour_pos = desired_neighbour.to_world_coords(&tile_definitions) + Vec3::new(0.0, -tile_definitions.wall_height, 0.0);
+        if let Ok((_, _, mut position, _)) = building_indicator_query.get_mut(building_indicator.0)
+        {
+            let desired_neighbour_pos = desired_neighbour.to_world_coords(&tile_definitions)
+                + Vec3::new(0.0, -tile_definitions.wall_height, 0.0);
             position.0 = desired_neighbour_pos;
         }
     }
@@ -135,10 +153,11 @@ pub fn change_build_indicator(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     model_defs: Res<MapModelDefinitions>,
-    tile_defs: Res<TileDefinitions>
+    tile_defs: Res<TileDefinitions>,
 ) {
     for change_build_event in change_build_indicator_evr.read() {
-        if let Ok((mut building_indicator, position)) = builder_query.get_mut(change_build_event.0) {
+        if let Ok((mut building_indicator, position)) = builder_query.get_mut(change_build_event.0)
+        {
             let current_index = building_indicator.1;
 
             building_indicator.1 = current_index + change_build_event.1;
@@ -163,12 +182,8 @@ pub fn change_build_indicator(
                 &mut commands,
                 &asset_server,
                 &p,
-                model_defs
-                    .definitions
-                    .get(indicator_key)
-                    .unwrap()
-                    .file,
-                &tile_defs
+                model_defs.definitions.get(indicator_key).unwrap().file,
+                &tile_defs,
             );
         }
     }
@@ -194,33 +209,37 @@ impl ToWorldCoordinates for (usize, usize) {
 
 impl ToGridNeighbour for Rotation {
     fn get_neighbour(&self, current_tile: (usize, usize)) -> (usize, usize) {
-        let n = self.0.
-            mul_vec3(Vec3::new(0.0, 0.0, -1.0))
-            .xz()
-            .normalize();
+        let n = self.0.mul_vec3(Vec3::new(0.0, 0.0, -1.0)).xz().normalize();
 
         let mut angle = n.angle_between(Vec2::new(1.0, 0.0)).to_degrees() as i32;
 
-        angle = if angle.is_negative() { 360 + angle } else { angle };
+        angle = if angle.is_negative() {
+            360 + angle
+        } else {
+            angle
+        };
 
         let x: i32 = match angle {
-            0..=59 => { 1 }
-            60..=119 => { 0 }
-            120..=239 => { -1 }
-            240..=299 => { 0 }
-            300..=360 => { 1 }
-            _ => { 1 }
+            0..=59 => 1,
+            60..=119 => 0,
+            120..=239 => -1,
+            240..=299 => 0,
+            300..=360 => 1,
+            _ => 1,
         } + current_tile.0 as i32;
 
         let y: i32 = match angle {
-            46..=134 => { -1 }
-            135..=224 => { 0 }
-            225..=314 => { 1 }
-            315..=360 => { 0 }
-            _ => { 0 }
+            46..=134 => -1,
+            135..=224 => 0,
+            225..=314 => 1,
+            315..=360 => 0,
+            _ => 0,
         } + current_tile.1 as i32;
 
-        ((if x.is_negative() { 0 } else { x as usize }), if y.is_negative() { 0 } else { y as usize })
+        (
+            (if x.is_negative() { 0 } else { x as usize }),
+            if y.is_negative() { 0 } else { y as usize },
+        )
     }
 }
 
@@ -232,7 +251,10 @@ pub fn build_tower_system(
     tile_defs: Res<TileDefinitions>,
 ) {
     for build_tower in build_tower_er.read() {
-        let model_def = model_defs.definitions.get(build_tower.model_definition_key).unwrap();
+        let model_def = model_defs
+            .definitions
+            .get(build_tower.model_definition_key)
+            .unwrap();
         let mut ec = commands.spawn((
             Name::from(model_def.name),
             IsObstacle {}, // let this be, for now!
@@ -258,7 +280,7 @@ pub fn build_tower_system(
                     TowerSensor {},
                     TowerShooter::new(20.0),
                     Sensor,
-                    create_thinker()
+                    create_thinker(),
                 ));
             });
         }

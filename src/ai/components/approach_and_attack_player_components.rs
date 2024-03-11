@@ -25,6 +25,3 @@ pub struct ApproachPlayerAction {}
 
 #[derive(Clone, Component, Debug, ActionBuilder)]
 pub struct AttackPlayerAction {}
-
-
-

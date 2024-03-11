@@ -1,3 +1,7 @@
+use crate::alien::components::general::Alien;
+use crate::general::components::map_components::CoolDown;
+use crate::general::components::{Ball, CollisionLayer};
+use crate::towers::components::{AlienInRangeScore, ShootAlienAction, TowerSensor, TowerShooter};
 use bevy::asset::AssetServer;
 use bevy::core::Name;
 use bevy::math::Vec3;
@@ -10,10 +14,6 @@ use big_brain::actions::{ActionState, Steps};
 use big_brain::pickers::Highest;
 use big_brain::scorers::Score;
 use big_brain::thinker::{ActionSpan, Actor, Thinker, ThinkerBuilder};
-use crate::alien::components::general::Alien;
-use crate::general::components::{Ball, CollisionLayer};
-use crate::general::components::map_components::CoolDown;
-use crate::towers::components::{AlienInRangeScore, ShootAlienAction, TowerSensor, TowerShooter};
 
 pub fn tower_has_alien_in_range_scorer_system(
     mut query: Query<(&Actor, &mut Score), With<AlienInRangeScore>>,
@@ -22,7 +22,11 @@ pub fn tower_has_alien_in_range_scorer_system(
 ) {
     for (actor, mut score) in query.iter_mut() {
         if let Ok(colliding_entities) = colliding_entities_query.get(actor.0) {
-            if colliding_entities.0.iter().any(|alien_entity| alien_query.contains(*alien_entity)) {
+            if colliding_entities
+                .0
+                .iter()
+                .any(|alien_entity| alien_query.contains(*alien_entity))
+            {
                 score.set(1.0);
             } else {
                 score.set(0.0);
@@ -40,7 +44,9 @@ pub fn shoot_alien_system(
     time: Res<Time>,
 ) {
     for (actor, mut action_state, _action_span) in action_query.iter_mut() {
-        if let Ok((tower_position, colliding_entities, mut tower_shooter)) = tower_query.get_mut(actor.0) {
+        if let Ok((tower_position, colliding_entities, mut tower_shooter)) =
+            tower_query.get_mut(actor.0)
+        {
             if tower_shooter.cool_down(time.delta_seconds()) {
                 let closes_alien = colliding_entities.0.iter().min_by(|a, b| {
                     if let (Ok(a_pos), Ok(b_pos)) = (alien_query.get(**a), alien_query.get(**b)) {
@@ -57,13 +63,13 @@ pub fn shoot_alien_system(
                         continue;
                     }
                     Some(alien_entity) => {
-                        if let Ok (alien_position) = alien_query.get(*alien_entity) {
+                        if let Ok(alien_position) = alien_query.get(*alien_entity) {
                             let direction = (alien_position.0 - tower_position.0).normalize();
                             let launch_p = tower_position.0 + direction + Vec3::new(0.0, 0.25, 0.0);
 
-                            let entity = commands.spawn(
-                                BallBundle::new(launch_p, direction, &asset_server)
-                            ).id();
+                            let entity = commands
+                                .spawn(BallBundle::new(launch_p, direction, &asset_server))
+                                .id();
 
                             commands.entity(entity).insert(Ball::new(entity));
                             *action_state = ActionState::Success;
@@ -105,8 +111,9 @@ impl BallBundle {
                     CollisionLayer::Alien,
                     CollisionLayer::Player,
                     CollisionLayer::AlienSpawnPoint,
-                    CollisionLayer::AlienGoal
-                ]),
+                    CollisionLayer::AlienGoal,
+                ],
+            ),
         }
     }
 }

@@ -1,15 +1,15 @@
-use bevy::math::{Vec3};
+use crate::assets::assets_plugin::GameAssets;
+use crate::control::components::{CharacterControl, ControllerFlag};
+use crate::game_state::score_keeper::GameTrackingEvent;
+use crate::general::components::map_components::CoolDown;
+use crate::general::components::{Ball, CollisionLayer};
+use crate::player::components::{AutoAim, Player};
+use bevy::math::Vec3;
 use bevy::prelude::{Commands, Entity, EventWriter, Query, Res, Transform};
 use bevy::scene::SceneBundle;
 use bevy::time::Time;
 use bevy_xpbd_3d::components::{CollisionLayers, LinearVelocity, Position, RigidBody};
 use bevy_xpbd_3d::prelude::Collider;
-use crate::assets::assets_plugin::GameAssets;
-use crate::control::components::{CharacterControl, ControllerFlag};
-use crate::game_state::score_keeper::{GameTrackingEvent};
-use crate::general::components::{Ball, CollisionLayer};
-use crate::general::components::map_components::CoolDown;
-use crate::player::components::{AutoAim, Player};
 
 pub fn throwing(
     time_res: Res<Time>,
@@ -34,15 +34,17 @@ pub fn throwing(
                     RigidBody::Dynamic,
                     Collider::sphere(1.0 / 16.0),
                     LinearVelocity(auto_aim.0 * 12.0),
-                    CollisionLayers::new([CollisionLayer::Ball],
-                                         [
-                                             CollisionLayer::Impassable,
-                                             CollisionLayer::Floor,
-                                             CollisionLayer::Alien,
-                                             CollisionLayer::Player,
-                                             CollisionLayer::AlienSpawnPoint,
-                                             CollisionLayer::AlienGoal
-                                         ]),
+                    CollisionLayers::new(
+                        [CollisionLayer::Ball],
+                        [
+                            CollisionLayer::Impassable,
+                            CollisionLayer::Floor,
+                            CollisionLayer::Alien,
+                            CollisionLayer::Player,
+                            CollisionLayer::AlienSpawnPoint,
+                            CollisionLayer::AlienGoal,
+                        ],
+                    ),
                 ));
             }
         } else {

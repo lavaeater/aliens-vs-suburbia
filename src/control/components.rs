@@ -1,8 +1,8 @@
+use crate::animation::animation_plugin::AnimationKey;
+use crate::general::components::map_components::CoolDown;
 use bevy::math::Vec3;
 use bevy::prelude::*;
 use bevy_inspector_egui::InspectorOptions;
-use crate::animation::animation_plugin::AnimationKey;
-use crate::general::components::map_components::CoolDown;
 
 #[derive(Component, Default, Reflect, Clone)]
 #[reflect(Component)]
@@ -53,14 +53,14 @@ pub trait Opposite {
 impl Opposite for ControllerFlag {
     fn opposite(self) -> Self {
         match self {
-            ControllerFlag::THROW => { ControllerFlag::NOTHING }
-            ControllerFlag::JUMP => { ControllerFlag::NOTHING }
-            ControllerFlag::BUILD => { ControllerFlag::NOTHING }
-            ControllerFlag::LEFT => { ControllerFlag::RIGHT }
-            ControllerFlag::RIGHT => { ControllerFlag::LEFT }
-            ControllerFlag::FORWARD => { ControllerFlag::BACKWARD }
-            ControllerFlag::BACKWARD => { ControllerFlag::FORWARD }
-            _ => { ControllerFlag::NOTHING }
+            ControllerFlag::THROW => ControllerFlag::NOTHING,
+            ControllerFlag::JUMP => ControllerFlag::NOTHING,
+            ControllerFlag::BUILD => ControllerFlag::NOTHING,
+            ControllerFlag::LEFT => ControllerFlag::RIGHT,
+            ControllerFlag::RIGHT => ControllerFlag::LEFT,
+            ControllerFlag::FORWARD => ControllerFlag::BACKWARD,
+            ControllerFlag::BACKWARD => ControllerFlag::FORWARD,
+            _ => ControllerFlag::NOTHING,
         }
     }
 }
@@ -129,7 +129,6 @@ impl CoolDown for CharacterControl {
 #[reflect(Component)]
 pub struct DynamicMovement;
 
-
 #[derive(Component)]
 pub struct KinematicMovement;
 
@@ -166,7 +165,7 @@ impl CharacterState {
 impl Default for CharacterState {
     fn default() -> Self {
         Self {
-            state: vec![AnimationKey::Idle]
+            state: vec![AnimationKey::Idle],
         }
     }
 }

@@ -1,3 +1,11 @@
+use crate::ai::components::approach_and_attack_player_components::{
+    ApproachAndAttackPlayerData, ApproachAndAttackPlayerScore, ApproachPlayerAction,
+    AttackPlayerAction,
+};
+use crate::alien::components::general::{Alien, AlienSightShape};
+use crate::control::components::{CharacterControl, ControllerFlag};
+use crate::general::components::{Attack, CollisionLayer, Health};
+use crate::player::components::Player;
 use bevy::prelude::*;
 use bevy_xpbd_3d::components::{Position, Rotation};
 use bevy_xpbd_3d::math::Vector2;
@@ -5,14 +13,14 @@ use bevy_xpbd_3d::prelude::{SpatialQuery, SpatialQueryFilter};
 use big_brain::actions::ActionState;
 use big_brain::scorers::Score;
 use big_brain::thinker::{ActionSpan, Actor};
-use crate::ai::components::approach_and_attack_player_components::{ApproachAndAttackPlayerData, ApproachAndAttackPlayerScore, ApproachPlayerAction, AttackPlayerAction};
-use crate::general::components::{Attack, CollisionLayer, Health};
-use crate::alien::components::general::{Alien, AlienSightShape};
-use crate::control::components::{CharacterControl, ControllerFlag};
-use crate::player::components::Player;
 
 pub fn can_agent_see_player_system(
-    mut approach_player_query: Query<(&mut ApproachAndAttackPlayerData, &AlienSightShape, &Position, &Rotation)>,
+    mut approach_player_query: Query<(
+        &mut ApproachAndAttackPlayerData,
+        &AlienSightShape,
+        &Position,
+        &Rotation,
+    )>,
     spatial_query: SpatialQuery,
 ) {
     for (mut alien_brain, sight_shape, position, rotation) in approach_player_query.iter_mut() {
@@ -27,11 +35,11 @@ pub fn can_agent_see_player_system(
          */
 
         match spatial_query.cast_shape(
-            &sight_shape.shape, // Shape to cast
-            position.0, // Origin
-            sight_shape.rotation, // Rotation of shape
-            Direction3d::new(direction).unwrap(),// Direction
-            sight_shape.range, // Maximum time of impact (travel distance)
+            &sight_shape.shape,                   // Shape to cast
+            position.0,                           // Origin
+            sight_shape.rotation,                 // Rotation of shape
+            Direction3d::new(direction).unwrap(), // Direction
+            sight_shape.range,                    // Maximum time of impact (travel distance)
             true,
             SpatialQueryFilter::from_mask([CollisionLayer::Player]), // Query for players
         ) {
@@ -65,7 +73,15 @@ pub fn approach_and_attack_player_scorer_system(
 
 pub fn approach_player_action_system(
     mut action_query: Query<(&Actor, &mut ActionState, &ActionSpan), With<ApproachPlayerAction>>,
-    mut alien_query: Query<(&ApproachAndAttackPlayerData, &mut CharacterControl, &Position, &Rotation), With<Alien>>,
+    mut alien_query: Query<
+        (
+            &ApproachAndAttackPlayerData,
+            &mut CharacterControl,
+            &Position,
+            &Rotation,
+        ),
+        With<Alien>,
+    >,
     player_query: Query<&Position, With<Player>>,
 ) {
     for (Actor(actor), mut action_state, span) in action_query.iter_mut() {
@@ -78,9 +94,8 @@ pub fn approach_player_action_system(
                 *action_state = ActionState::Executing;
             }
             ActionState::Executing => {
-                if let Ok(
-                    (approach_player_data, mut controller, alien_position, alien_rotation)
-                ) = alien_query.get_mut(*actor)
+                if let Ok((approach_player_data, mut controller, alien_position, alien_rotation)) =
+                    alien_query.get_mut(*actor)
                 {
                     // Look up the actor's position.
                     match approach_player_data.seen_player {
@@ -88,16 +103,20 @@ pub fn approach_player_action_system(
                             *action_state = ActionState::Failure;
                         }
                         Some(player_entity) => {
-                            let alien_direction_vector3 = alien_rotation.0.mul_vec3(Vec3::new(0.0, 0.0, -1.0));
-                            let alien_direction_vector2 = Vector2::new(alien_direction_vector3.x, alien_direction_vector3.z);
-                            let alien_position_vector2 = Vector2::new(alien_position.0.x, alien_position.0.z);
+                            let alien_direction_vector3 =
+                                alien_rotation.0.mul_vec3(Vec3::new(0.0, 0.0, -1.0));
+                            let alien_direction_vector2 =
+                                Vector2::new(alien_direction_vector3.x, alien_direction_vector3.z);
+                            let alien_position_vector2 =
+                                Vector2::new(alien_position.0.x, alien_position.0.z);
                             let player_position = player_query.get(player_entity).unwrap();
-                            let player_position_vector2 = Vector2::new(
-                                player_position.0.x,
-                                player_position.0.z,
-                            );
-                            let alien_to_player_direction = (player_position_vector2 - alien_position_vector2).normalize();
-                            let angle = alien_direction_vector2.angle_between(alien_to_player_direction).to_degrees();
+                            let player_position_vector2 =
+                                Vector2::new(player_position.0.x, player_position.0.z);
+                            let alien_to_player_direction =
+                                (player_position_vector2 - alien_position_vector2).normalize();
+                            let angle = alien_direction_vector2
+                                .angle_between(alien_to_player_direction)
+                                .to_degrees();
                             controller.rotations.clear();
                             if angle.abs() < 15.0 {
                                 controller.directions.set(ControllerFlag::FORWARD);
@@ -106,7 +125,8 @@ pub fn approach_player_action_system(
                             } else {
                                 controller.rotations.set(ControllerFlag::LEFT);
                             }
-                            let distance = (player_position_vector2 - alien_position_vector2).length();
+                            let distance =
+                                (player_position_vector2 - alien_position_vector2).length();
                             if distance < approach_player_data.attack_distance {
                                 *action_state = ActionState::Success;
                             }
@@ -128,7 +148,15 @@ pub fn approach_player_action_system(
 
 pub fn attack_player_action_system(
     mut action_query: Query<(&Actor, &mut ActionState, &ActionSpan), With<AttackPlayerAction>>,
-    mut alien_query: Query<(&ApproachAndAttackPlayerData, &mut CharacterControl, &Position, &Attack), With<Alien>>,
+    mut alien_query: Query<
+        (
+            &ApproachAndAttackPlayerData,
+            &mut CharacterControl,
+            &Position,
+            &Attack,
+        ),
+        With<Alien>,
+    >,
     mut player_query: Query<(&mut Health, &Position), With<Player>>,
 ) {
     for (Actor(actor), mut action_state, span) in action_query.iter_mut() {
@@ -141,8 +169,8 @@ pub fn attack_player_action_system(
                 *action_state = ActionState::Executing;
             }
             ActionState::Executing => {
-                if let Ok((attack_player_data, mut controller, alien_position, alien_attack))
-                    = alien_query.get_mut(*actor)
+                if let Ok((attack_player_data, mut controller, alien_position, alien_attack)) =
+                    alien_query.get_mut(*actor)
                 {
                     // Look up the actor's position.
                     match attack_player_data.seen_player {
@@ -150,15 +178,16 @@ pub fn attack_player_action_system(
                             *action_state = ActionState::Failure;
                         }
                         Some(player_entity) => {
-                            let alien_position_vector2 = Vector2::new(alien_position.0.x, alien_position.0.z);
-                            let (mut player_health, player_position) = player_query.get_mut(player_entity).unwrap();
-                            let player_position_vector2 = Vector2::new(
-                                player_position.0.x,
-                                player_position.0.z,
-                            );
+                            let alien_position_vector2 =
+                                Vector2::new(alien_position.0.x, alien_position.0.z);
+                            let (mut player_health, player_position) =
+                                player_query.get_mut(player_entity).unwrap();
+                            let player_position_vector2 =
+                                Vector2::new(player_position.0.x, player_position.0.z);
                             controller.rotations.clear();
 
-                            let distance = (player_position_vector2 - alien_position_vector2).length();
+                            let distance =
+                                (player_position_vector2 - alien_position_vector2).length();
                             if distance < attack_player_data.attack_distance * 2.0 {
                                 player_health.health -= alien_attack.damage_range;
                                 *action_state = ActionState::Success;
@@ -180,4 +209,3 @@ pub fn attack_player_action_system(
         }
     }
 }
-

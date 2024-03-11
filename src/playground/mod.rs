@@ -1,43 +1,30 @@
 mod player_prefab;
 
+use crate::assets::assets_plugin::GameAssets;
+use crate::game_state::GameState;
+use crate::player::bundle::PlayerBundle;
+use crate::player::systems::spawn_players::FixSceneTransform;
 use bevy::prelude::*;
 use bevy_atmosphere::plugin::AtmosphereCamera;
 use bevy_xpbd_3d::prelude::Collider;
-use crate::game_state::GameState;
-use space_editor::prelude::{PrefabBundle};
-use space_editor::space_editor_ui::ext::bevy_panorbit_camera;use crate::assets::assets_plugin::GameAssets;
-use crate::player::bundle::PlayerBundle;
-use crate::player::systems::spawn_players::FixSceneTransform;
+use space_editor::prelude::PrefabBundle;
+use space_editor::space_editor_ui::ext::bevy_panorbit_camera;
 
 pub struct PlaygroundPlugin;
 
 impl Plugin for PlaygroundPlugin {
     fn build(&self, app: &mut App) {
-        app
-
-           .add_systems(
-                OnEnter(GameState::Playground),
-                (
-                    load_level,
-                ))
-        ;
+        app.add_systems(OnEnter(GameState::Playground), (load_level,));
     }
 }
 
-fn load_level(
-    mut commands: Commands,
-    game_assets: Res<GameAssets>,
-) {
-
+fn load_level(mut commands: Commands, game_assets: Res<GameAssets>) {
     // Render the mesh with the custom texture using a PbrBundle, add the marker.
-    commands.spawn(
-        PrefabBundle::new("levels/solar_punk_village.scn.ron"))
-    ;
+    commands.spawn(PrefabBundle::new("levels/solar_punk_village.scn.ron"));
 
     // Transform for the camera and lighting, looking at (0,0,0) (the position of the mesh).
     let camera_and_light_transform =
         Transform::from_xyz(1.8, 1.8, 1.8).looking_at(Vec3::ZERO, Vec3::Y);
-
 
     commands
         .spawn(Camera3dBundle {
@@ -47,34 +34,28 @@ fn load_level(
         .insert((
             bevy_panorbit_camera::PanOrbitCamera::default(),
             AtmosphereCamera::default(),
+        ));
+
+    commands
+        .spawn((
+            FixSceneTransform::new(
+                Vec3::new(0.0, -0.37, 0.0),
+                Quat::from_euler(EulerRot::YXZ, 180.0f32.to_radians(), 0.0, 0.0),
+                Vec3::new(0.5, 0.5, 0.5),
+            ),
+            SceneBundle {
+                scene: game_assets.girl_scene.clone(),
+                transform: Transform::from_xyz(4.0, 2.0, 4.0),
+                ..Default::default()
+            },
+            PlayerBundle::new("player", "Player One"),
         ))
-    ;
-
-    
-
-    commands.spawn((
-        FixSceneTransform::new(
-            Vec3::new(0.0, -0.37, 0.0),
-            Quat::from_euler(
-                EulerRot::YXZ,
-                180.0f32.to_radians(), 0.0, 0.0),
-            Vec3::new(0.5, 0.5, 0.5),
-        ),
-        SceneBundle {
-            scene: game_assets.girl_scene.clone(),
-            transform: Transform::from_xyz(4.0, 2.0, 4.0),
-            ..Default::default()
-        },
-        PlayerBundle::new(
-            "player",
-            "Player One",
-        ),
-    )).with_children(|children|
-        { // Spawn the child colliders positioned relative to the rigid body
-            children.spawn(
-                (
-                    Collider::capsule(0.4, 0.2),
-                    Transform::from_xyz(0.0, 0.0, 0.0)));
+        .with_children(|children| {
+            // Spawn the child colliders positioned relative to the rigid body
+            children.spawn((
+                Collider::capsule(0.4, 0.2),
+                Transform::from_xyz(0.0, 0.0, 0.0),
+            ));
         });
 
     // Light up the scene.
@@ -89,20 +70,19 @@ fn load_level(
     });
 
     // Text to describe the controls.
-    commands
-        .spawn(
-            TextBundle::from_section(
-                "Controls:\nSpace: Change UVs\nX/Y/Z: Rotate\nR: Reset orientation",
-                TextStyle {
-                    font_size: 20.0,
-                    ..default()
-                },
-            )
-                .with_style(Style {
-                    position_type: PositionType::Absolute,
-                    top: Val::Px(12.0),
-                    left: Val::Px(12.0),
-                    ..default()
-                }),
-        );
+    commands.spawn(
+        TextBundle::from_section(
+            "Controls:\nSpace: Change UVs\nX/Y/Z: Rotate\nR: Reset orientation",
+            TextStyle {
+                font_size: 20.0,
+                ..default()
+            },
+        )
+        .with_style(Style {
+            position_type: PositionType::Absolute,
+            top: Val::Px(12.0),
+            left: Val::Px(12.0),
+            ..default()
+        }),
+    );
 }

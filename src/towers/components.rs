@@ -1,7 +1,7 @@
+use crate::general::components::map_components::CoolDown;
 use bevy::prelude::{Component, Entity};
 use bevy::utils::HashSet;
 use big_brain::prelude::{ActionBuilder, ScorerBuilder};
-use crate::general::components::map_components::CoolDown;
 
 #[derive(Component)]
 pub struct TowerSensor {}
@@ -35,9 +35,8 @@ impl CoolDown for TowerShooter {
 
 #[derive(Component)]
 pub struct ShootAlienData {
-    pub aliens_in_range: HashSet<Entity>
+    pub aliens_in_range: HashSet<Entity>,
 }
-
 
 // Scorers are the same as in the thirst example.
 #[derive(Clone, Component, Debug, ScorerBuilder)]

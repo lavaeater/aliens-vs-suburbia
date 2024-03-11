@@ -1,14 +1,14 @@
-use bevy::prelude::{Query, With};
-use big_brain::prelude::{ActionSpan, Actor, Score};
-use big_brain::actions::ActionState;
 use crate::ai::components::move_forward_components::{MoveForwardAction, MoveForwardScore};
 use crate::control::components::{CharacterControl, ControllerFlag};
+use bevy::prelude::{Query, With};
+use big_brain::actions::ActionState;
+use big_brain::prelude::{ActionSpan, Actor, Score};
 
 pub fn move_forward_action_system(
     mut action_query: Query<(&Actor, &mut ActionState, &ActionSpan), With<MoveForwardAction>>,
     mut controller_query: Query<&mut CharacterControl>,
 ) {
-    for(actor, mut action_state, span) in action_query.iter_mut() {
+    for (actor, mut action_state, span) in action_query.iter_mut() {
         let _guard = span.span().enter();
         // Different behavior depending on action state.
         match *action_state {
@@ -42,9 +42,7 @@ pub fn move_forward_action_system(
     }
 }
 
-pub fn move_forward_scorer_system(
-    mut query: Query<&mut Score, With<MoveForwardScore>>,
-) {
+pub fn move_forward_scorer_system(mut query: Query<&mut Score, With<MoveForwardScore>>) {
     for mut score in query.iter_mut() {
         score.set(0.9);
     }

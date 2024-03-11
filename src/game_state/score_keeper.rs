@@ -1,9 +1,8 @@
-use bevy::app::{App, Plugin, Update};
-use bevy::prelude::{Component, Entity, Event, in_state, IntoSystemConfigs, Resource};
-use crate::game_state::GameState;
-use bevy::prelude::*;
 use crate::game_state::game_state_plugin::GotoState;
-
+use crate::game_state::GameState;
+use bevy::app::{App, Plugin, Update};
+use bevy::prelude::*;
+use bevy::prelude::{in_state, Component, Entity, Event, IntoSystemConfigs, Resource};
 
 #[derive(Debug, Component)]
 pub struct Shooter(Entity);
@@ -25,7 +24,6 @@ impl Score {
         }
     }
 }
-
 
 #[derive(Debug)]
 pub enum LevelState {
@@ -63,7 +61,12 @@ impl Default for LevelTracker {
 }
 
 impl LevelTracker {
-    pub fn update(level_name: String, aliens_to_spawn: i32, spawn_rate_per_minute: f32, aliens_win_cutoff: i32) -> Self {
+    pub fn update(
+        level_name: String,
+        aliens_to_spawn: i32,
+        spawn_rate_per_minute: f32,
+        aliens_win_cutoff: i32,
+    ) -> Self {
         Self {
             level_name,
             aliens_to_spawn,
@@ -95,15 +98,12 @@ pub struct ScoreKeeperPlugin;
 
 impl Plugin for ScoreKeeperPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_event::<GameTrackingEvent>()
+        app.add_event::<GameTrackingEvent>()
             .insert_resource(LevelTracker::default())
-            .add_systems(Update, (
-                level_state_system,
-            )
-                .run_if(in_state(GameState::InGame)),
-            )
-        ;
+            .add_systems(
+                Update,
+                (level_state_system,).run_if(in_state(GameState::InGame)),
+            );
     }
 }
 
@@ -126,10 +126,14 @@ pub fn level_state_system(
         }
         LevelState::InProgress => {}
         LevelState::Completed => {
-            goto_state_ew.send(GotoState { state: GameState::Menu });
+            goto_state_ew.send(GotoState {
+                state: GameState::Menu,
+            });
         }
         LevelState::Failed => {
-            goto_state_ew.send(GotoState { state: GameState::Menu });
+            goto_state_ew.send(GotoState {
+                state: GameState::Menu,
+            });
         }
     }
 }

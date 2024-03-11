@@ -1,8 +1,8 @@
+use crate::alien::components::general::{Alien, AlienCounter};
+use crate::game_state::score_keeper::GameTrackingEvent;
+use crate::general::components::{Ball, Health, HittableTarget};
 use bevy::prelude::{Commands, DespawnRecursiveExt, EventReader, EventWriter, Has, Query, ResMut};
 use bevy_xpbd_3d::prelude::Collision;
-use crate::alien::components::general::{Alien, AlienCounter};
-use crate::game_state::score_keeper::{GameTrackingEvent};
-use crate::general::components::{Ball, Health, HittableTarget};
 
 pub fn collision_handling_system(
     mut alien_counter: ResMut<AlienCounter>,
@@ -31,9 +31,20 @@ pub fn collision_handling_system(
                 }
             }
 
-            let hittable_entity = if ball_is_first { contacts.entity2 } else { contacts.entity1 };
-            if let Ok((mut target_health, _, is_alien)) = hittable_target_query.get_mut(hittable_entity) {
-                let mut ball = (if ball_is_first { ball_query.get_mut( contacts.entity1) } else { ball_query.get_mut(contacts.entity2) }).unwrap();
+            let hittable_entity = if ball_is_first {
+                contacts.entity2
+            } else {
+                contacts.entity1
+            };
+            if let Ok((mut target_health, _, is_alien)) =
+                hittable_target_query.get_mut(hittable_entity)
+            {
+                let mut ball = (if ball_is_first {
+                    ball_query.get_mut(contacts.entity1)
+                } else {
+                    ball_query.get_mut(contacts.entity2)
+                })
+                .unwrap();
 
                 if ball.can_score {
                     ball.can_score = false;

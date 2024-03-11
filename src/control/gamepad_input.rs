@@ -1,11 +1,14 @@
-use bevy::app::{App, Plugin, Update};
-use bevy::input::{Axis};
-use bevy::input::gamepad::GamepadButtonInput;
-use bevy::prelude::{ButtonInput, Commands, Component, Entity, EventReader, Gamepad, GamepadAxis, GamepadAxisType, GamepadButton, GamepadButtonType, in_state, IntoSystemConfigs, Query, Res, With};
-use bevy::reflect::Reflect;
 use crate::control::components::{CharacterControl, InputKeyboard};
 use crate::game_state::GameState;
 use crate::player::components::Player;
+use bevy::app::{App, Plugin, Update};
+use bevy::input::gamepad::GamepadButtonInput;
+use bevy::input::Axis;
+use bevy::prelude::{
+    in_state, ButtonInput, Commands, Component, Entity, EventReader, Gamepad, GamepadAxis,
+    GamepadAxisType, GamepadButton, GamepadButtonType, IntoSystemConfigs, Query, Res, With,
+};
+use bevy::reflect::Reflect;
 
 /// Simple resource to store the ID of the connected gamepad.
 /// We need to know which gamepad to use for player input.
@@ -45,13 +48,10 @@ impl InputGamepad {
 pub struct GamepadPlugin;
 impl Plugin for GamepadPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_systems(Update, (
-                gamepad_game_input,
-                gamepad_buttons
-            )
-                .run_if(in_state(GameState::InGame)))
-        ;
+        app.add_systems(
+            Update,
+            (gamepad_game_input, gamepad_buttons).run_if(in_state(GameState::InGame)),
+        );
     }
 }
 
@@ -64,7 +64,9 @@ fn gamepad_buttons(
         if event.button.button_type == GamepadButtonType::Start {
             if let Ok(entity) = player_query.get_single_mut() {
                 commands.entity(entity).remove::<InputKeyboard>();
-                commands.entity(entity).insert(InputGamepad::new(event.button.gamepad));
+                commands
+                    .entity(entity)
+                    .insert(InputGamepad::new(event.button.gamepad));
             }
         }
     }
@@ -73,11 +75,14 @@ fn gamepad_buttons(
 fn gamepad_game_input(
     axes: Res<Axis<GamepadAxis>>,
     _buttons: Res<ButtonInput<GamepadButton>>,
-    mut player_query: Query<(Entity, &mut CharacterControl, &InputGamepad)>
+    mut player_query: Query<(Entity, &mut CharacterControl, &InputGamepad)>,
 ) {
     for (_entity, mut controller, input_gamepad) in player_query.iter_mut() {
         // do something with the gamepad
-        if let (Some(x), Some(y)) = (axes.get(input_gamepad.left_x), axes.get(input_gamepad.left_y)) {
+        if let (Some(x), Some(y)) = (
+            axes.get(input_gamepad.left_x),
+            axes.get(input_gamepad.left_y),
+        ) {
             if x.abs() > 0.1 {
                 controller.walk_direction.x = x;
             } else {
@@ -88,7 +93,6 @@ fn gamepad_game_input(
             } else {
                 controller.walk_direction.z = 0.0;
             }
-
         }
     }
 }

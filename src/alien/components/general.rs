@@ -2,7 +2,6 @@ use bevy::math::{EulerRot, Quat};
 use bevy::prelude::{Component, Resource};
 use bevy_xpbd_3d::prelude::Collider;
 
-
 #[derive(Component, Clone, Copy, Debug, PartialEq)]
 pub struct Alien;
 
@@ -26,14 +25,14 @@ impl Default for AlienSightShape {
 #[derive(Resource, Clone, Debug)]
 pub struct AlienCounter {
     pub count: u32,
-    pub max_count: u32
+    pub max_count: u32,
 }
 
 impl AlienCounter {
     pub fn new(max_count: u32) -> Self {
         Self {
             count: 0,
-            max_count
+            max_count,
         }
     }
 }

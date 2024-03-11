@@ -1,9 +1,9 @@
+use crate::general::components::CollisionLayer;
 use bevy::prelude::*;
 use bevy::reflect::Reflect;
 use bevy::utils::HashMap;
 use bevy_xpbd_3d::components::{CollisionLayers, RigidBody};
 use bevy_xpbd_3d::prelude::LayerMask;
-use crate::general::components::CollisionLayer;
 
 #[derive(Component)]
 pub struct Wall {}
@@ -11,7 +11,7 @@ pub struct Wall {}
 #[derive(Component)]
 pub struct AlienGoal {
     pub x: usize,
-    pub y: usize
+    pub y: usize,
 }
 
 pub struct ModelDefinition {
@@ -25,7 +25,7 @@ pub struct ModelDefinition {
     pub mask: LayerMask,
 }
 
-#[derive(Hash, PartialEq, Eq, Clone, Reflect,Component)]
+#[derive(Hash, PartialEq, Eq, Clone, Reflect, Component)]
 pub struct Tower {}
 
 impl ModelDefinition {
@@ -42,30 +42,27 @@ pub struct MapModelDefinitions {
 
 impl AlienGoal {
     pub fn new(x: usize, y: usize) -> Self {
-        Self {
-            x,
-            y
-        }
+        Self { x, y }
     }
 }
 
 #[derive(Component, Clone, Copy, Debug, PartialEq, Reflect, Default)]
 #[reflect(Component)]
 pub struct CurrentTile {
-    pub tile: (usize, usize)
+    pub tile: (usize, usize),
 }
 
 #[derive(Component, Debug, Reflect)]
 pub struct AlienSpawnPoint {
     pub spawn_rate_per_minute: f32,
-    pub spawn_cool_down: f32
+    pub spawn_cool_down: f32,
 }
 
 impl AlienSpawnPoint {
     pub fn new(spawn_rate_per_minute: f32) -> Self {
         Self {
             spawn_rate_per_minute,
-            spawn_cool_down: 0.0
+            spawn_cool_down: 0.0,
         }
     }
 }
@@ -85,7 +82,6 @@ impl CoolDown for AlienSpawnPoint {
         false
     }
 }
-
 
 #[derive(Component)]
 pub struct Floor {}

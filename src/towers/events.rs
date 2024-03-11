@@ -5,5 +5,4 @@ use bevy::prelude::Event;
 pub struct BuildTower {
     pub position: Vec3,
     pub model_definition_key: &'static str,
-    
 }

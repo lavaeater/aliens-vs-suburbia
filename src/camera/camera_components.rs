@@ -11,5 +11,5 @@ pub struct CameraOffset(pub Vec3);
 
 #[derive(Component)]
 pub struct FollowCamera {
-    pub offset: Vector3
+    pub offset: Vector3,
 }

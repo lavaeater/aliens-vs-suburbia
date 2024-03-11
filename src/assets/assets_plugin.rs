@@ -7,10 +7,8 @@ pub struct AssetsPlugin;
 
 impl Plugin for AssetsPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .init_resource::<GameAssets>()
-            .add_systems(Startup, load_assets)
-        ;
+        app.init_resource::<GameAssets>()
+            .add_systems(Startup, load_assets);
     }
 }
 
@@ -22,10 +20,7 @@ pub struct GameAssets {
     pub alien_construct: Handle<Scene>,
 }
 
-fn load_assets(
-    asset_server: Res<AssetServer>,
-    mut game_assets: ResMut<GameAssets>,
-) {
+fn load_assets(asset_server: Res<AssetServer>, mut game_assets: ResMut<GameAssets>) {
     *game_assets = GameAssets {
         girl_scene: asset_server.load("girl/girl.glb#Scene0"),
         ball_scene: asset_server.load("ball_fab.glb#Scene0"),

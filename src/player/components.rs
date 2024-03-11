@@ -5,7 +5,7 @@ use bevy::reflect::Reflect;
 #[derive(Component, Default, Reflect, Clone)]
 #[reflect(Component)]
 pub struct Player {
-    pub key: String
+    pub key: String,
 }
 
 #[derive(Hash, PartialEq, Eq, Clone, Reflect, Component)]

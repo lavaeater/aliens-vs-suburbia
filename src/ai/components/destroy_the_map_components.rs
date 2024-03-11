@@ -1,6 +1,6 @@
+use crate::general::components::map_components::CoolDown;
 use bevy::prelude::Component;
 use big_brain::prelude::{ActionBuilder, ScorerBuilder};
-use crate::general::components::map_components::CoolDown;
 
 pub enum MustDestroyTheMapState {
     NotStarted,
@@ -8,7 +8,7 @@ pub enum MustDestroyTheMapState {
     MovingTowardsThingToDestroy,
     DestroyingThing,
     Finished,
-    Failed
+    Failed,
 }
 
 #[derive(Component)]
@@ -17,7 +17,7 @@ pub struct MustDestroyTheMap {
     pub state: MustDestroyTheMapState,
     pub target_tile: Option<(usize, usize)>,
     pub attack_cooldown: f32,
-    pub attack_rate_per_minute: f32
+    pub attack_rate_per_minute: f32,
 }
 
 impl MustDestroyTheMap {
@@ -27,7 +27,7 @@ impl MustDestroyTheMap {
             state: MustDestroyTheMapState::NotStarted,
             target_tile: None,
             attack_cooldown: 0.0,
-            attack_rate_per_minute: 30.0
+            attack_rate_per_minute: 30.0,
         }
     }
 }
@@ -44,10 +44,8 @@ impl CoolDown for MustDestroyTheMap {
     }
 }
 
-
 #[derive(Clone, Component, Debug, ScorerBuilder)]
 pub struct DestroyTheMapScore;
 
 #[derive(Clone, Component, Debug, ActionBuilder)]
 pub struct DestroyTheMapAction {}
-
