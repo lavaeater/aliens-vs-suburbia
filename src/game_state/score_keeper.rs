@@ -53,7 +53,7 @@ impl Default for LevelTracker {
             aliens_left_to_spawn: 10,
             aliens_killed: 0,
             spawn_rate_per_minute: 10.0,
-            level_state: LevelState::NotStarted,
+            level_state: LevelState::InProgress,
             aliens_reached_goal: 0,
             aliens_win_cut_off: 600,
         }
@@ -126,14 +126,14 @@ pub fn level_state_system(
         }
         LevelState::InProgress => {}
         LevelState::Completed => {
-            goto_state_ew.send(GotoState {
-                state: GameState::Menu,
-            });
+            // goto_state_ew.send(GotoState {
+            //     state: GameState::Menu,
+            // });
         }
         LevelState::Failed => {
-            goto_state_ew.send(GotoState {
-                state: GameState::Menu,
-            });
+            // goto_state_ew.send(GotoState {
+            //     state: GameState::Menu,
+            // });
         }
     }
 }

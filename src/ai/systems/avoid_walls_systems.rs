@@ -6,13 +6,13 @@ use crate::general::components::map_components::CoolDown;
 use crate::general::components::CollisionLayer;
 use bevy::log::info;
 use bevy::math::{EulerRot, Quat, Vec3};
-use bevy::prelude::{Query, Res, With};
+use bevy::prelude::{Direction3d, Query, Res, With};
 use bevy::time::Time;
 use bevy_xpbd_3d::components::{Position, Rotation};
 use bevy_xpbd_3d::prelude::{SpatialQuery, SpatialQueryFilter};
 use big_brain::actions::ActionState;
 use big_brain::prelude::{ActionSpan, Actor, Score};
-use space_editor::space_prefab::ext::Direction3d;
+// use space_editor::space_prefab::ext::Direction3d;
 
 pub fn avoid_walls_scorer_system(
     mut avoid_wall_data_query: Query<&mut AvoidWallsData>,

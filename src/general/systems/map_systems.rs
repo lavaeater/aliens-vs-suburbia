@@ -22,8 +22,8 @@ use bevy_xpbd_3d::math::PI;
 use bevy_xpbd_3d::prelude::{Collider, Position, RigidBody, Rotation};
 use flagset::{flags, FlagSet};
 use pathfinding::grid::Grid;
-use space_editor::prelude::PrefabBundle;
-use space_editor::space_prefab::load::PrefabLoader;
+// use space_editor::prelude::PrefabBundle;
+// use space_editor::space_prefab::load::PrefabLoader;
 
 flags! {
     pub enum FileFlags: u16 {
@@ -334,7 +334,7 @@ pub fn map_loader(
                 let p = tile_defs.get_floor_position(tile.x, tile.y);
                 let floor = commands
                     .spawn((
-                        PrefabBundle::new("floor-laminate-1.scn.ron"),
+                        // PrefabBundle::new("floor-laminate-1.scn.ron"),
                         Floor {},
                         model_def.create_collision_layers(),
                     ))

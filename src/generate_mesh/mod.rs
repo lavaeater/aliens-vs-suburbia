@@ -17,17 +17,17 @@ struct CustomUV;
 
 pub struct MeshPlugin;
 
-impl Plugin for MeshPlugin {
-    fn build(&self, app: &mut App) {
-        app.init_resource::<BallTimer>()
-            .init_resource::<MapBuilder>()
-            .add_systems(OnEnter(GameState::Mesh), setup_mesh)
-            .add_systems(
-                Update,
-                (mesh_input_handler, spawn_balls).run_if(in_state(GameState::Mesh)),
-            );
-    }
-}
+// impl Plugin for MeshPlugin {
+//     fn build(&self, app: &mut App) {
+//         app.init_resource::<BallTimer>()
+//             .init_resource::<MapBuilder>()
+//             .add_systems(OnEnter(GameState::Mesh), setup_mesh)
+//             .add_systems(
+//                 Update,
+//                 (mesh_input_handler, spawn_balls).run_if(in_state(GameState::Mesh)),
+//             );
+//     }
+// }
 
 #[derive(Resource, Default)]
 pub struct BallTimer {

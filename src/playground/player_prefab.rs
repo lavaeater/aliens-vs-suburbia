@@ -2,7 +2,6 @@ use bevy::core::Name;
 use bevy::math::Vec3;
 use bevy::prelude::Bundle;
 use bevy_xpbd_3d::components::{CollisionLayers, LockedAxes};
-use space_editor::prelude::PrefabBundle;
 
 use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
 use crate::control::components::{
@@ -28,7 +27,7 @@ pub struct PlayerPrefab {
     character_state: CharacterState,
     score: Score,
     auto_aim: AutoAim,
-    prefab_bundle: PrefabBundle,
+    // prefab_bundle: PrefabBundle,
 }
 
 impl PlayerPrefab {
@@ -66,7 +65,7 @@ impl PlayerPrefab {
             character_state: CharacterState::default(),
             score: Score::new(),
             auto_aim: AutoAim(Vec3::Z),
-            prefab_bundle: PrefabBundle::new("girl/girl_prefab_2.scn.ron"),
+            // prefab_bundle: PrefabBundle::new("girl/girl_prefab_2.scn.ron"),
         }
     }
 }

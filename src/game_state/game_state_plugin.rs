@@ -47,11 +47,12 @@ impl Plugin for GamePlugin {
                 ClearGameEntitiesPlugin,
                 PlayerPlugin::default(),
                 ScoreKeeperPlugin,
-                // VideoGlitchPlugin,
                 GamepadPlugin,
                 InspectorPlugin,
             ))
-            .add_plugins((MeshPlugin, PlaygroundPlugin))
+            // .add_plugins((
+            //     MeshPlugin,
+            //     PlaygroundPlugin))
             .add_systems(OnEnter(GameState::InGame), (spawn_lights,))
             .add_systems(
                 Update,
