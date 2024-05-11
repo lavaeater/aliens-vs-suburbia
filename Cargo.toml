@@ -10,9 +10,9 @@ editor = ["space_editor/editor"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy = "0.12.1"
-bevy_rand = "0.4.0"
-bevy_xpbd_3d = { version = "0.3.2", default-features = false, features = ["3d", "f32", "debug-plugin", "collider-from-mesh", "async-collider", "simd", "parallel"] }
+bevy = "0.13.1"
+bevy_rand = "0.5.2"
+bevy_xpbd_3d = { version = "0.4.2", default-features = false, features = ["3d", "f32", "debug-plugin", "collider-from-mesh", "async-collider", "simd", "parallel"] }
 big-brain = { git="https://github.com/zkat/big-brain", branch="main" }
 rand_chacha = "0.3.1"
 flagset = "0.4.4"
@@ -20,20 +20,19 @@ serde = "1.0.193"
 serde_json = "1.0.108"
 pathfinding = "4.6.0"
 itertools = "0.12.0"
-belly = { git="https://github.com/jkb0o/belly/", branch="0.12" }
-bevy_mod_outline = "0.6.0"
+bevy_mod_outline = "0.7.0"
 bevy_video_glitch = "0.1.1"
-bevy-inspector-egui = "0.22.0"
-bevy_atmosphere = "0.8.1"
+bevy-inspector-egui = "0.23.4"
+bevy_atmosphere = "0.9.0"
 rand = "0.8.5"
-image = "0.24.8"
-noise = "0.8.2"
+image = "0.25.1"
+noise = "0.9.0"
 nalgebra = "0.32.3"
 bitintr = "0.3.0"
 palette = "0.7.3"
-space_editor = { git="https://github.com/lavaeater/space_editor.git", branch="main"}
-bevy_panorbit_camera = "0.10.0"
-bevy_hanabi = "0.9.0"
+space_editor = { git="https://github.com/rewin123/space_editor", tag="v0.5.0" }
+bevy_panorbit_camera = "0.17.0"
+bevy_hanabi = "0.10.0"
 # Enable max optimizations for dependencies, but not for our code:
 [profile.dev.package."*"]
 opt-level = 3
