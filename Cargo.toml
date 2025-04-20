@@ -1,9 +1,10 @@
+cargo-features = ["codegen-backend"]
+
 [package]
 name = "aliens-vs-suburbia"
 version = "0.1.0"
-edition = "2021"
-
-[features]
+edition = "2024"
+exclude = ["dist", "build", "assets", "credits"]
 
 [dependencies]
 bevy = "0.15.3"
@@ -32,3 +33,10 @@ bevy_hanabi = "0.15.0"
 # Enable max optimizations for dependencies, but not for our code:
 [profile.dev.package."*"]
 opt-level = 3
+codegen-backend = "cranelift"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true
