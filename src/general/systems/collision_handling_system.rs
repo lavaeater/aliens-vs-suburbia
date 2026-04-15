@@ -1,50 +1,50 @@
 use bevy::prelude::{Commands, DespawnRecursiveExt, EventReader, EventWriter, Has, Query, ResMut};
-use bevy_xpbd_3d::prelude::Collision;
+use avian3d::prelude::CollisionStarted;
 use crate::alien::components::general::{Alien, AlienCounter};
 use crate::game_state::score_keeper::{GameTrackingEvent};
 use crate::general::components::{Ball, Health, HittableTarget};
 
 pub fn collision_handling_system(
     mut alien_counter: ResMut<AlienCounter>,
-    mut collision_event_reader: EventReader<Collision>,
+    mut collision_event_reader: EventReader<CollisionStarted>,
     mut ball_query: Query<&mut Ball>,
     mut hittable_target_query: Query<(&mut Health, &HittableTarget, Has<Alien>)>,
     mut commands: Commands,
     mut game_ew: EventWriter<GameTrackingEvent>,
 ) {
-    for Collision(contacts) in collision_event_reader.read() {
-        if ball_query.contains(contacts.entity1) || ball_query.contains(contacts.entity2) {
-            // we have a ball up in this!
+    for CollisionStarted(entity1, entity2) in collision_event_reader.read() {
+        let (entity1, entity2) = (*entity1, *entity2);
+        if ball_query.contains(entity1) || ball_query.contains(entity2) {
             let mut ball_is_first = true;
-            if let Ok(mut ball) = ball_query.get_mut(contacts.entity1) {
+            if let Ok(mut ball) = ball_query.get_mut(entity1) {
                 ball.bounces += 1;
                 if ball.bounces >= ball.max_bounces {
-                    commands.entity(contacts.entity1).despawn_recursive();
+                    commands.entity(entity1).despawn_recursive();
                 }
             }
 
-            if let Ok(mut ball) = ball_query.get_mut(contacts.entity2) {
+            if let Ok(mut ball) = ball_query.get_mut(entity2) {
                 ball_is_first = false;
                 ball.bounces += 1;
                 if ball.bounces >= ball.max_bounces {
-                    commands.entity(contacts.entity2).despawn_recursive();
+                    commands.entity(entity2).despawn_recursive();
                 }
             }
 
-            let hittable_entity = if ball_is_first { contacts.entity2 } else { contacts.entity1 };
+            let hittable_entity = if ball_is_first { entity2 } else { entity1 };
             if let Ok((mut target_health, _, is_alien)) = hittable_target_query.get_mut(hittable_entity) {
-                let mut ball = (if ball_is_first { ball_query.get_mut( contacts.entity1) } else { ball_query.get_mut(contacts.entity2) }).unwrap();
-
-                if ball.can_score {
-                    ball.can_score = false;
-                    game_ew.send(GameTrackingEvent::ShotHit(ball.entity));
-                }
-                if ball.bounces <= 2 {
-                    target_health.health -= 10;
-                    if target_health.health <= 0 && is_alien {
-                        game_ew.send(GameTrackingEvent::AlienKilled(ball.entity));
-                        //NO need to despawn here, it is done in health_monitor_system
-                        alien_counter.count -= 1;
+                let ball_entity = if ball_is_first { entity1 } else { entity2 };
+                if let Ok(mut ball) = ball_query.get_mut(ball_entity) {
+                    if ball.can_score {
+                        ball.can_score = false;
+                        game_ew.send(GameTrackingEvent::ShotHit(ball.entity));
+                    }
+                    if ball.bounces <= 2 {
+                        target_health.health -= 10;
+                        if target_health.health <= 0 && is_alien {
+                            game_ew.send(GameTrackingEvent::AlienKilled(ball.entity));
+                            alien_counter.count -= 1;
+                        }
                     }
                 }
             }

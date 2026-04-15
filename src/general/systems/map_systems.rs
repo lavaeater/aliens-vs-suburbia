@@ -2,12 +2,11 @@ use bevy::asset::AssetServer;
 use bevy::core::Name;
 use bevy::math::{Quat, Vec3};
 use bevy::prelude::{Commands, EventReader, EventWriter, Has, Query, Res, ResMut, Resource};
-use bevy::scene::SceneBundle;
-use bevy_xpbd_3d::components::CollisionLayers;
-use bevy_xpbd_3d::math::PI;
-use bevy_xpbd_3d::prelude::{Collider, Position, RigidBody, Rotation};
+use bevy::scene::SceneRoot;
+use avian3d::prelude::{Collider, CollisionLayers, Position, RigidBody, Rotation};
 use flagset::{flags, FlagSet};
 use pathfinding::grid::Grid;
+use std::f32::consts::PI;
 use crate::alien::components::general::AlienCounter;
 use crate::general::components::CollisionLayer;
 use crate::general::components::map_components::{AlienGoal, AlienSpawnPoint, CurrentTile, Floor, MapModelDefinitions, Wall};
@@ -128,14 +127,6 @@ impl TileDefinitions {
         Collider::cuboid(width * self.tile_unit * 2.0, height * self.tile_unit * 2.0, depth * self.tile_unit * 2.0)
     }
 
-    // pub fn get_position(&self, x: i32, y: i32) -> Vec3 {
-    //     Vec3::new(self.tile_width * x as f32, 0.0, self.tile_width * y as f32)
-    // }
-
-    // pub fn create_floor_collider(&self) -> Collider {
-    //     Collider::cuboid(self.tile_width, self.tile_depth, self.tile_width)
-    // }
-
     pub fn get_floor_position(&self, x: i32, y: i32) -> Vec3 {
         Vec3::new(self.tile_width * x as f32, self.floor_level, self.tile_width * y as f32)
     }
@@ -218,19 +209,6 @@ pub fn map_loader(
         let rows = m.len();
         let cols = m[0].len();
         map_graph.path_finding_grid = Grid::new(cols, rows);
-        // let m = [
-        //     [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-        //     [0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-        //     [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
-        //     [0, 1, 1, 0, 0, 1, 1, 3, 1, 1, 1, 1, 1, 0, 0, 0, 0],
-        //     [0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
-        //     [0, 0, 1, 1, 1, 5, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
-        //     [0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
-        //     [0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
-        //     [1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
-        //     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        //     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        // ];
         let checks = [
             [-1, 0],
             [1, 0],
@@ -241,7 +219,6 @@ pub fn map_loader(
         for (row, rows) in m.iter().enumerate() {
             for (column, t) in rows.iter().enumerate() {
                 let mut flag_val: FlagSet<TileFlags> = TileFlags::Floor.into();
-                //Fix border tiles
                 if *t != 0 {
                     map_graph.path_finding_grid.add_vertex((column, row));
                     if column == 0 {
@@ -257,7 +234,6 @@ pub fn map_loader(
                         flag_val |= TileFlags::WallSouth | TileFlags::AnyWall;
                     }
 
-                    //Check neighbours
                     for check in checks.iter() {
                         let column_check = column as i32 + check[0];
                         let row_check = row as i32 + check[1];
@@ -281,15 +257,12 @@ pub fn map_loader(
                     if *t == 3 {
                         flag_val |= TileFlags::Pickup;
                     }
-
                     if *t == 5 {
                         flag_val |= TileFlags::AlienSpawnPoint;
                     }
-
                     if *t == 9 {
                         flag_val |= TileFlags::AlienGoal;
                     }
-
                     if *t == 17 {
                         flag_val |= TileFlags::PlayerSpawn;
                     }
@@ -298,7 +271,6 @@ pub fn map_loader(
             }
         }
 
-        //This will make the grid ready for some a* path-finding!
         map_graph.path_finding_grid.enable_diagonal_mode();
 
         let map = MapDef {
@@ -313,10 +285,7 @@ pub fn map_loader(
                 commands.spawn((
                     Name::from(format!("Floor {}:{}", tile.x, tile.y)),
                     Floor {},
-                    SceneBundle {
-                        scene: asset_server.load(model_def.file),
-                        ..Default::default()
-                    },
+                    SceneRoot(asset_server.load(model_def.file)),
                     model_def.rigid_body,
                     tile_defs.create_collider(model_def.width, model_def.height, model_def.depth),
                     Position::from(tile_defs.get_floor_position(tile.x, tile.y)),
@@ -326,7 +295,7 @@ pub fn map_loader(
             if tile.features.contains(TileFlags::AnyWall)
             {
                 let model_def = model_defs.definitions.get("wall").unwrap();
-                if tile.features.contains(TileFlags::WallEast) { //Change to WallEast
+                if tile.features.contains(TileFlags::WallEast) {
                     commands.spawn((
                         Name::from(format!("Wall East {}:{}", tile.x, tile.y)),
                         Wall {},
@@ -335,10 +304,7 @@ pub fn map_loader(
                         Rotation::from(tile_defs.get_wall_rotation(TileFlags::WallEast)),
                         model_def.rigid_body,
                         model_def.create_collision_layers(),
-                        SceneBundle {
-                            scene: asset_server.load(model_def.file),
-                            ..Default::default()
-                        },
+                        SceneRoot(asset_server.load(model_def.file)),
                     ));
                 }
                 if tile.features.contains(TileFlags::WallWest) {
@@ -350,10 +316,8 @@ pub fn map_loader(
                         Rotation::from(tile_defs.get_wall_rotation(TileFlags::WallWest)),
                         model_def.rigid_body,
                         model_def.create_collision_layers(),
-                        SceneBundle {
-                            scene: asset_server.load(model_def.file),
-                            ..Default::default()
-                        }, ));
+                        SceneRoot(asset_server.load(model_def.file)),
+                    ));
                 }
                 if tile.features.contains(TileFlags::WallSouth) {
                     commands.spawn((
@@ -364,10 +328,7 @@ pub fn map_loader(
                         Rotation::from(tile_defs.get_wall_rotation(TileFlags::WallSouth)),
                         model_def.rigid_body,
                         model_def.create_collision_layers(),
-                        SceneBundle {
-                            scene: asset_server.load(model_def.file),
-                            ..Default::default()
-                        },
+                        SceneRoot(asset_server.load(model_def.file)),
                     ));
                 }
                 if tile.features.contains(TileFlags::WallNorth) {
@@ -379,24 +340,17 @@ pub fn map_loader(
                         Rotation::from(tile_defs.get_wall_rotation(TileFlags::WallNorth)),
                         model_def.rigid_body,
                         model_def.create_collision_layers(),
-                        SceneBundle {
-                            scene: asset_server.load(model_def.file),
-                            ..Default::default()
-                        },
+                        SceneRoot(asset_server.load(model_def.file)),
                     ));
                 }
             }
 
             if tile.features.contains(TileFlags::AlienSpawnPoint) {
-                // We set the max aliens in the map, OK?
                 alien_counter.max_count = 100;
                 commands.spawn((
                     Name::from(format!("Alien Spawn Point{}:{}", tile.x, tile.y)),
                     AlienSpawnPoint::new(2.0),
-                    SceneBundle {
-                        scene: game_assets.alien_construct.clone(),
-                        ..Default::default()
-                    },
+                    SceneRoot(game_assets.alien_construct.clone()),
                     RigidBody::Static,
                     Collider::cuboid(0.5, 0.5, 0.45),
                     Position::from((tile.x as usize, tile.y as usize).to_world_coords(&tile_defs) + Vec3::new(0.0, -tile_defs.wall_height, 0.0)),
@@ -407,11 +361,8 @@ pub fn map_loader(
                 map_graph.goal = (tile.x as usize, tile.y as usize);
                 commands.spawn((
                     Name::from(format!("Alien Goal {}:{}", tile.x, tile.y)),
-                    AlienGoal::new(tile.x as usize, tile.y as usize), //ooh, we need to handle this in the future...
-                    SceneBundle {
-                        scene: game_assets.alien_construct.clone(),
-                        ..Default::default()
-                    },
+                    AlienGoal::new(tile.x as usize, tile.y as usize),
+                    SceneRoot(game_assets.alien_construct.clone()),
                     RigidBody::Static,
                     Collider::cuboid(0.5, 0.5, 0.45),
                     Position::from((tile.x as usize, tile.y as usize).to_world_coords(&tile_defs) + Vec3::new(0.0, -tile_defs.wall_height, 0.0)),

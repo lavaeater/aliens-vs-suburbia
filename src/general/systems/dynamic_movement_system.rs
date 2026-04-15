@@ -1,6 +1,6 @@
-use bevy::math::{EulerRot, Quat, Vec3Swizzles};
+use bevy::math::{EulerRot, Quat};
 use bevy::prelude::{Query, Transform, With};
-use bevy_xpbd_3d::components::{AngularVelocity, LinearVelocity};
+use avian3d::prelude::{AngularVelocity, LinearVelocity};
 use crate::control::components::{CharacterControl, DynamicMovement, InputKeyboard};
 use crate::control::gamepad_input::InputGamepad;
 
@@ -25,12 +25,5 @@ pub fn dynamic_movement_gamepad(
         let direction = Quat::from_euler(EulerRot::YXZ, 45.0f32.to_radians(), 0.0, 0.0).mul_vec3(controller.walk_direction);
         linear_velocity.x = direction.x * controller.speed;
         linear_velocity.z = direction.z * controller.speed;
-
-        // transform.rotation = Quat::from_euler(
-        //     EulerRot::YXZ,
-        //     controller.walk_direction.xz().angle_between(Vec2::X),
-        //     0.0,
-        //     0.0
-        // );
     }
 }
