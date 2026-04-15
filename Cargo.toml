@@ -42,7 +42,6 @@ big-brain = "0.22.0"
 flagset = "0.4.4"
 pathfinding = "4.6.0"
 itertools = "0.14.0"
-belly = { git="https://github.com/lavaeater/belly/", branch="bevy@0.15.3" }
 bevy_mod_outline = "0.9.1"
 bevy-inspector-egui = "0.30.0"
 bevy_atmosphere = "0.12.2"
@@ -52,7 +51,6 @@ bevy_panorbit_camera = "0.25.0"
 # Enable max optimizations for dependencies, but not for our code:
 [profile.dev.package."*"]
 opt-level = 3
-#codegen-backend = "cranelift"
 
 [profile.release]
 opt-level = "s"
