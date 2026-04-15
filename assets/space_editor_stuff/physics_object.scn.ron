@@ -60,17 +60,17 @@
         )),
         "space_bevy_xpbd_plugin::collider::ColliderPrefab": FromPrefabMesh,
         "space_bevy_xpbd_plugin::registry::RigidBodyPrefab": Static,
-        "bevy_xpbd_3d::components::mass_properties::Mass": (3724.0),
-        "bevy_xpbd_3d::components::Friction": (
+        "avian3d::components::mass_properties::Mass": (3724.0),
+        "avian3d::components::Friction": (
           dynamic_coefficient: 0.3,
           static_coefficient: 0.3,
           combine_rule: Average,
         ),
-        "bevy_xpbd_3d::components::Restitution": (
+        "avian3d::components::Restitution": (
           coefficient: 0.3,
           combine_rule: Average,
         ),
-        "bevy_xpbd_3d::components::mass_properties::Inertia": ((
+        "avian3d::components::mass_properties::Inertia": ((
           x_axis: (
             x: 8064.737,
             y: 0.0,
@@ -87,7 +87,7 @@
             z: 8068.6567,
           ),
         )),
-        "bevy_xpbd_3d::components::mass_properties::CenterOfMass": ((
+        "avian3d::components::mass_properties::CenterOfMass": ((
           x: 0.0,
           y: 0.0,
           z: 0.0,
@@ -153,17 +153,17 @@
         )),
         "space_bevy_xpbd_plugin::collider::ColliderPrefab": FromPrefabMesh,
         "space_bevy_xpbd_plugin::registry::RigidBodyPrefab": Static,
-        "bevy_xpbd_3d::components::mass_properties::Mass": (3724.0),
-        "bevy_xpbd_3d::components::Friction": (
+        "avian3d::components::mass_properties::Mass": (3724.0),
+        "avian3d::components::Friction": (
           dynamic_coefficient: 0.3,
           static_coefficient: 0.3,
           combine_rule: Average,
         ),
-        "bevy_xpbd_3d::components::Restitution": (
+        "avian3d::components::Restitution": (
           coefficient: 0.3,
           combine_rule: Average,
         ),
-        "bevy_xpbd_3d::components::mass_properties::Inertia": ((
+        "avian3d::components::mass_properties::Inertia": ((
           x_axis: (
             x: 8064.737,
             y: 0.0,
@@ -180,7 +180,7 @@
             z: 8068.6567,
           ),
         )),
-        "bevy_xpbd_3d::components::mass_properties::CenterOfMass": ((
+        "avian3d::components::mass_properties::CenterOfMass": ((
           x: 0.0,
           y: 0.0,
           z: 0.0,
@@ -246,17 +246,17 @@
         )),
         "space_bevy_xpbd_plugin::collider::ColliderPrefab": FromPrefabMesh,
         "space_bevy_xpbd_plugin::registry::RigidBodyPrefab": Static,
-        "bevy_xpbd_3d::components::mass_properties::Mass": (3724.0),
-        "bevy_xpbd_3d::components::Friction": (
+        "avian3d::components::mass_properties::Mass": (3724.0),
+        "avian3d::components::Friction": (
           dynamic_coefficient: 0.3,
           static_coefficient: 0.3,
           combine_rule: Average,
         ),
-        "bevy_xpbd_3d::components::Restitution": (
+        "avian3d::components::Restitution": (
           coefficient: 0.3,
           combine_rule: Average,
         ),
-        "bevy_xpbd_3d::components::mass_properties::Inertia": ((
+        "avian3d::components::mass_properties::Inertia": ((
           x_axis: (
             x: 8064.737,
             y: 0.0,
@@ -273,7 +273,7 @@
             z: 8068.6567,
           ),
         )),
-        "bevy_xpbd_3d::components::mass_properties::CenterOfMass": ((
+        "avian3d::components::mass_properties::CenterOfMass": ((
           x: 0.0,
           y: 0.0,
           z: 0.0,
@@ -394,17 +394,17 @@
         )),
         "space_bevy_xpbd_plugin::collider::ColliderPrefab": FromPrefabMesh,
         "space_bevy_xpbd_plugin::registry::RigidBodyPrefab": Static,
-        "bevy_xpbd_3d::components::mass_properties::Mass": (3724.0),
-        "bevy_xpbd_3d::components::Friction": (
+        "avian3d::components::mass_properties::Mass": (3724.0),
+        "avian3d::components::Friction": (
           dynamic_coefficient: 0.3,
           static_coefficient: 0.3,
           combine_rule: Average,
         ),
-        "bevy_xpbd_3d::components::Restitution": (
+        "avian3d::components::Restitution": (
           coefficient: 0.3,
           combine_rule: Average,
         ),
-        "bevy_xpbd_3d::components::mass_properties::Inertia": ((
+        "avian3d::components::mass_properties::Inertia": ((
           x_axis: (
             x: 8064.737,
             y: 0.0,
@@ -421,7 +421,7 @@
             z: 8068.6567,
           ),
         )),
-        "bevy_xpbd_3d::components::mass_properties::CenterOfMass": ((
+        "avian3d::components::mass_properties::CenterOfMass": ((
           x: 0.0,
           y: 0.0,
           z: 0.0,
@@ -469,17 +469,17 @@
           )),
         ),
         "space_bevy_xpbd_plugin::registry::RigidBodyPrefab": Static,
-        "bevy_xpbd_3d::components::mass_properties::Mass": (703.8845),
-        "bevy_xpbd_3d::components::Friction": (
+        "avian3d::components::mass_properties::Mass": (703.8845),
+        "avian3d::components::Friction": (
           dynamic_coefficient: 0.3,
           static_coefficient: 0.3,
           combine_rule: Average,
         ),
-        "bevy_xpbd_3d::components::Restitution": (
+        "avian3d::components::Restitution": (
           coefficient: 0.3,
           combine_rule: Average,
         ),
-        "bevy_xpbd_3d::components::mass_properties::Inertia": ((
+        "avian3d::components::mass_properties::Inertia": ((
           x_axis: (
             x: 817.6957,
             y: -0.0000005616606,
@@ -496,7 +496,7 @@
             z: 817.6957,
           ),
         )),
-        "bevy_xpbd_3d::components::mass_properties::CenterOfMass": ((
+        "avian3d::components::mass_properties::CenterOfMass": ((
           x: -0.25000003,
           y: 1.7495799,
           z: 0.049999993,
@@ -617,17 +617,17 @@
         )),
         "space_bevy_xpbd_plugin::collider::ColliderPrefab": FromPrefabMesh,
         "space_bevy_xpbd_plugin::registry::RigidBodyPrefab": Static,
-        "bevy_xpbd_3d::components::mass_properties::Mass": (3724.0),
-        "bevy_xpbd_3d::components::Friction": (
+        "avian3d::components::mass_properties::Mass": (3724.0),
+        "avian3d::components::Friction": (
           dynamic_coefficient: 0.3,
           static_coefficient: 0.3,
           combine_rule: Average,
         ),
-        "bevy_xpbd_3d::components::Restitution": (
+        "avian3d::components::Restitution": (
           coefficient: 0.3,
           combine_rule: Average,
         ),
-        "bevy_xpbd_3d::components::mass_properties::Inertia": ((
+        "avian3d::components::mass_properties::Inertia": ((
           x_axis: (
             x: 8064.737,
             y: 0.0,
@@ -644,7 +644,7 @@
             z: 8068.6567,
           ),
         )),
-        "bevy_xpbd_3d::components::mass_properties::CenterOfMass": ((
+        "avian3d::components::mass_properties::CenterOfMass": ((
           x: 0.0,
           y: 0.0,
           z: 0.0,
@@ -692,17 +692,17 @@
           )),
         ),
         "space_bevy_xpbd_plugin::registry::RigidBodyPrefab": Static,
-        "bevy_xpbd_3d::components::mass_properties::Mass": (697.96954),
-        "bevy_xpbd_3d::components::Friction": (
+        "avian3d::components::mass_properties::Mass": (697.96954),
+        "avian3d::components::Friction": (
           dynamic_coefficient: 0.3,
           static_coefficient: 0.3,
           combine_rule: Average,
         ),
-        "bevy_xpbd_3d::components::Restitution": (
+        "avian3d::components::Restitution": (
           coefficient: 0.3,
           combine_rule: Average,
         ),
-        "bevy_xpbd_3d::components::mass_properties::Inertia": ((
+        "avian3d::components::mass_properties::Inertia": ((
           x_axis: (
             x: 810.8243,
             y: -0.0000005617361,
@@ -719,7 +719,7 @@
             z: 810.82434,
           ),
         )),
-        "bevy_xpbd_3d::components::mass_properties::CenterOfMass": ((
+        "avian3d::components::mass_properties::CenterOfMass": ((
           x: -0.25000003,
           y: 1.7495763,
           z: 0.049999986,
@@ -785,17 +785,17 @@
         )),
         "space_bevy_xpbd_plugin::collider::ColliderPrefab": FromPrefabMesh,
         "space_bevy_xpbd_plugin::registry::RigidBodyPrefab": Static,
-        "bevy_xpbd_3d::components::mass_properties::Mass": (3699.0),
-        "bevy_xpbd_3d::components::Friction": (
+        "avian3d::components::mass_properties::Mass": (3699.0),
+        "avian3d::components::Friction": (
           dynamic_coefficient: 0.3,
           static_coefficient: 0.3,
           combine_rule: Average,
         ),
-        "bevy_xpbd_3d::components::Restitution": (
+        "avian3d::components::Restitution": (
           coefficient: 0.3,
           combine_rule: Average,
         ),
-        "bevy_xpbd_3d::components::mass_properties::Inertia": ((
+        "avian3d::components::mass_properties::Inertia": ((
           x_axis: (
             x: 8010.5703,
             y: 0.0,
@@ -812,7 +812,7 @@
             z: 8014.49,
           ),
         )),
-        "bevy_xpbd_3d::components::mass_properties::CenterOfMass": ((
+        "avian3d::components::mass_properties::CenterOfMass": ((
           x: 0.0,
           y: 0.0,
           z: 0.0,
@@ -878,17 +878,17 @@
         )),
         "space_bevy_xpbd_plugin::collider::ColliderPrefab": FromPrefabMesh,
         "space_bevy_xpbd_plugin::registry::RigidBodyPrefab": Static,
-        "bevy_xpbd_3d::components::mass_properties::Mass": (3724.0),
-        "bevy_xpbd_3d::components::Friction": (
+        "avian3d::components::mass_properties::Mass": (3724.0),
+        "avian3d::components::Friction": (
           dynamic_coefficient: 0.3,
           static_coefficient: 0.3,
           combine_rule: Average,
         ),
-        "bevy_xpbd_3d::components::Restitution": (
+        "avian3d::components::Restitution": (
           coefficient: 0.3,
           combine_rule: Average,
         ),
-        "bevy_xpbd_3d::components::mass_properties::Inertia": ((
+        "avian3d::components::mass_properties::Inertia": ((
           x_axis: (
             x: 8064.737,
             y: 0.0,
@@ -905,7 +905,7 @@
             z: 8068.6567,
           ),
         )),
-        "bevy_xpbd_3d::components::mass_properties::CenterOfMass": ((
+        "avian3d::components::mass_properties::CenterOfMass": ((
           x: 0.0,
           y: 0.0,
           z: 0.0,
@@ -971,17 +971,17 @@
         )),
         "space_bevy_xpbd_plugin::collider::ColliderPrefab": FromPrefabMesh,
         "space_bevy_xpbd_plugin::registry::RigidBodyPrefab": Static,
-        "bevy_xpbd_3d::components::mass_properties::Mass": (3724.0),
-        "bevy_xpbd_3d::components::Friction": (
+        "avian3d::components::mass_properties::Mass": (3724.0),
+        "avian3d::components::Friction": (
           dynamic_coefficient: 0.3,
           static_coefficient: 0.3,
           combine_rule: Average,
         ),
-        "bevy_xpbd_3d::components::Restitution": (
+        "avian3d::components::Restitution": (
           coefficient: 0.3,
           combine_rule: Average,
         ),
-        "bevy_xpbd_3d::components::mass_properties::Inertia": ((
+        "avian3d::components::mass_properties::Inertia": ((
           x_axis: (
             x: 8064.737,
             y: 0.0,
@@ -998,7 +998,7 @@
             z: 8068.6567,
           ),
         )),
-        "bevy_xpbd_3d::components::mass_properties::CenterOfMass": ((
+        "avian3d::components::mass_properties::CenterOfMass": ((
           x: 0.0,
           y: 0.0,
           z: 0.0,
@@ -1119,17 +1119,17 @@
         )),
         "space_bevy_xpbd_plugin::collider::ColliderPrefab": FromPrefabMesh,
         "space_bevy_xpbd_plugin::registry::RigidBodyPrefab": Static,
-        "bevy_xpbd_3d::components::mass_properties::Mass": (3724.0),
-        "bevy_xpbd_3d::components::Friction": (
+        "avian3d::components::mass_properties::Mass": (3724.0),
+        "avian3d::components::Friction": (
           dynamic_coefficient: 0.3,
           static_coefficient: 0.3,
           combine_rule: Average,
         ),
-        "bevy_xpbd_3d::components::Restitution": (
+        "avian3d::components::Restitution": (
           coefficient: 0.3,
           combine_rule: Average,
         ),
-        "bevy_xpbd_3d::components::mass_properties::Inertia": ((
+        "avian3d::components::mass_properties::Inertia": ((
           x_axis: (
             x: 8064.737,
             y: 0.0,
@@ -1146,7 +1146,7 @@
             z: 8068.6567,
           ),
         )),
-        "bevy_xpbd_3d::components::mass_properties::CenterOfMass": ((
+        "avian3d::components::mass_properties::CenterOfMass": ((
           x: 0.0,
           y: 0.0,
           z: 0.0,
@@ -1213,17 +1213,17 @@
         ]),
         "space_bevy_xpbd_plugin::collider::ColliderPrefab": FromPrefabMesh,
         "space_bevy_xpbd_plugin::registry::RigidBodyPrefab": Dynamic,
-        "bevy_xpbd_3d::components::mass_properties::Mass": (147.00008),
-        "bevy_xpbd_3d::components::Friction": (
+        "avian3d::components::mass_properties::Mass": (147.00008),
+        "avian3d::components::Friction": (
           dynamic_coefficient: 0.3,
           static_coefficient: 0.3,
           combine_rule: Average,
         ),
-        "bevy_xpbd_3d::components::Restitution": (
+        "avian3d::components::Restitution": (
           coefficient: 0.3,
           combine_rule: Average,
         ),
-        "bevy_xpbd_3d::components::mass_properties::Inertia": ((
+        "avian3d::components::mass_properties::Inertia": ((
           x_axis: (
             x: 24.5,
             y: 0.0,
@@ -1240,7 +1240,7 @@
             z: 24.5,
           ),
         )),
-        "bevy_xpbd_3d::components::mass_properties::CenterOfMass": ((
+        "avian3d::components::mass_properties::CenterOfMass": ((
           x: 0.0,
           y: 0.0,
           z: 0.0,

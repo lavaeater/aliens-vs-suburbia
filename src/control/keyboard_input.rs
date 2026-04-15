@@ -1,19 +1,19 @@
 use bevy::input::ButtonState;
 use bevy::input::keyboard::KeyboardInput;
 use bevy::math::Vec3;
-use bevy::prelude::{Entity, EventReader, EventWriter, KeyCode, Query, With};
+use bevy::prelude::{Entity, MessageReader, MessageWriter, KeyCode, Query, With};
 use crate::animation::animation_plugin::{AnimationEvent, AnimationEventType, AnimationKey};
 use crate::control::components::{CharacterControl, ControllerFlag, InputKeyboard};
 use crate::player::events::building_events::{ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode};
 
 pub fn keyboard_input(
-    mut key_evr: EventReader<KeyboardInput>,
+    mut key_evr: MessageReader<KeyboardInput>,
     mut query: Query<(Entity, &mut CharacterControl), With<InputKeyboard>>,
-    mut start_build_ew: EventWriter<EnterBuildMode>,
-    mut execute_build: EventWriter<ExecuteBuild>,
-    mut exit_build: EventWriter<ExitBuildMode>,
-    mut change_build_indicator: EventWriter<ChangeBuildIndicator>,
-    mut animation_ew: EventWriter<AnimationEvent>,
+    mut start_build_ew: MessageWriter<EnterBuildMode>,
+    mut execute_build: MessageWriter<ExecuteBuild>,
+    mut exit_build: MessageWriter<ExitBuildMode>,
+    mut change_build_indicator: MessageWriter<ChangeBuildIndicator>,
+    mut animation_ew: MessageWriter<AnimationEvent>,
 ) {
     if let Ok((entity, mut controller)) = query.get_single_mut() {
         for ev in key_evr.read() {

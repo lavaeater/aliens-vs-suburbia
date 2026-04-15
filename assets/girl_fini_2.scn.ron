@@ -50,17 +50,17 @@
           ),
         ),
         "space_bevy_xpbd_plugin::registry::RigidBodyPrefab": Static,
-        "bevy_xpbd_3d::components::mass_properties::Mass": (59.336323),
-        "bevy_xpbd_3d::components::Friction": (
+        "avian3d::components::mass_properties::Mass": (59.336323),
+        "avian3d::components::Friction": (
           dynamic_coefficient: 0.3,
           static_coefficient: 0.3,
           combine_rule: Average,
         ),
-        "bevy_xpbd_3d::components::Restitution": (
+        "avian3d::components::Restitution": (
           coefficient: 0.3,
           combine_rule: Average,
         ),
-        "bevy_xpbd_3d::components::mass_properties::Inertia": ((
+        "avian3d::components::mass_properties::Inertia": ((
           x_axis: (
             x: 45.762154,
             y: 0.0,
@@ -77,12 +77,12 @@
             z: 45.762154,
           ),
         )),
-        "bevy_xpbd_3d::components::mass_properties::CenterOfMass": ((
+        "avian3d::components::mass_properties::CenterOfMass": ((
           x: 0.0,
           y: 0.009925522,
           z: 0.0,
         )),
-        "bevy_xpbd_3d::components::locked_axes::LockedAxes": (0),
+        "avian3d::components::locked_axes::LockedAxes": (0),
         "aliens_vs_suburbia::player::components::Player": (
           key: "Player One",
         ),
@@ -110,7 +110,7 @@
           fire_cool_down: 0.0,
         ),
         "aliens_vs_suburbia::control::components::DynamicMovement": (),
-        "bevy_xpbd_3d::components::layers::CollisionLayers": (
+        "avian3d::components::layers::CollisionLayers": (
           groups: 4294967295,
           masks: 4294967295,
         ),
@@ -140,7 +140,7 @@
           y: 0.0,
           z: 1.0,
         )),
-        "bevy_xpbd_3d::components::Position": ((
+        "avian3d::components::Position": ((
           x: 0.0,
           y: 0.0,
           z: 0.0,

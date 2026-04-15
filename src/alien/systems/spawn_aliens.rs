@@ -1,9 +1,9 @@
 use bevy::math::{EulerRot, Quat, Vec3};
-use bevy::prelude::{ Commands, EventReader, EventWriter, Name, Query, Res, ResMut, Time, Transform};
+use bevy::prelude::{ Commands, MessageReader, MessageWriter, Name, Query, Res, ResMut, Time, Transform};
 use bevy::scene::SceneBundle;
-use bevy_xpbd_3d::components::{AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
-use bevy_xpbd_3d::math::PI;
-use bevy_xpbd_3d::prelude::Position;
+use avian3d::components::{AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
+use avian3d::math::PI;
+use avian3d::prelude::Position;
 use big_brain::actions::Steps;
 use big_brain::pickers::Highest;
 use big_brain::thinker::Thinker;
@@ -24,7 +24,7 @@ use crate::ui::spawn_ui::AddHealthBar;
 
 pub fn alien_spawner_system(
     time_res: Res<Time>,
-    mut spawn_alien_event_writer: EventWriter<SpawnAlien>,
+    mut spawn_alien_event_writer: MessageWriter<SpawnAlien>,
     mut alien_spawn_point_query: Query<(&Position, &mut AlienSpawnPoint)>,
 ) {
     for (position, mut alien_spawn_point) in alien_spawn_point_query.iter_mut() {
@@ -39,11 +39,11 @@ pub fn alien_spawner_system(
 
 pub fn spawn_aliens(
     mut alien_counter: ResMut<AlienCounter>,
-    mut spawn_alien_event_reader: EventReader<SpawnAlien>,
+    mut spawn_alien_event_reader: MessageReader<SpawnAlien>,
     mut commands: Commands,
-    mut add_health_bar_ew: EventWriter<AddHealthBar>,
+    mut add_health_bar_ew: MessageWriter<AddHealthBar>,
     game_assets: Res<GameAssets>,
-    mut game_tracking_event_ew: EventWriter<GameTrackingEvent>
+    mut game_tracking_event_ew: MessageWriter<GameTrackingEvent>
 ) {
     if alien_counter.count >= alien_counter.max_count {
         return;

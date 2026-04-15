@@ -1,6 +1,6 @@
 use bevy::math::{EulerRot, Quat};
 use bevy::prelude::{Query, Transform, With};
-use bevy_xpbd_3d::components::{AngularVelocity, LinearVelocity};
+use avian3d::components::{AngularVelocity, LinearVelocity};
 use crate::control::components::{CharacterControl, DynamicMovement, InputKeyboard};
 use crate::control::gamepad_input::InputGamepad;
 

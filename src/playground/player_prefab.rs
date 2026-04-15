@@ -2,7 +2,7 @@ use bevy::core::Name;
 use bevy::math::{Vec3};
 use bevy::prelude::{Bundle, Color, default};
 use bevy_mod_outline::{OutlineBundle, OutlineVolume};
-use bevy_xpbd_3d::components::{CollisionLayers, LockedAxes};
+use avian3d::components::{CollisionLayers, LockedAxes};
 use space_editor::prelude::PrefabBundle;
 use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
 use crate::control::components::{CharacterControl, CharacterState, DynamicMovement, InputKeyboard};

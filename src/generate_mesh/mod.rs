@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy::render::mesh::Indices;
 use bevy::render::mesh::VertexAttributeValues;
 use bevy::render::render_resource::PrimitiveTopology;
-use bevy_xpbd_3d::components::{Collider, RigidBody};
+use avian3d::components::{Collider, RigidBody};
 use image::{ImageBuffer, Luma};
 use noise::{Fbm, Perlin};
 use crate::game_state::GameState;

@@ -3,8 +3,8 @@ use bevy::math::{Quat, Vec3};
 use bevy::prelude::{Camera3dBundle, Commands, PerspectiveProjection, Projection, Query, Transform, With};
 use bevy::utils::default;
 use bevy_atmosphere::plugin::AtmosphereCamera;
-use bevy_xpbd_3d::math::PI;
-use bevy_xpbd_3d::components::Position;
+use avian3d::math::PI;
+use avian3d::components::Position;
 use crate::camera::camera_components::{CameraOffset, GameCamera};
 use crate::player::components::Player;
 

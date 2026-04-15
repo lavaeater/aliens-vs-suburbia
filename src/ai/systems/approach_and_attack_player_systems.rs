@@ -1,7 +1,7 @@
 use bevy::prelude::*;
-use bevy_xpbd_3d::components::{Position, Rotation};
-use bevy_xpbd_3d::math::Vector2;
-use bevy_xpbd_3d::prelude::{SpatialQuery, SpatialQueryFilter};
+use avian3d::components::{Position, Rotation};
+use avian3d::math::Vector2;
+use avian3d::prelude::{SpatialQuery, SpatialQueryFilter};
 use big_brain::actions::ActionState;
 use big_brain::scorers::Score;
 use big_brain::thinker::{ActionSpan, Actor};

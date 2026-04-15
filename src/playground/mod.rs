@@ -4,7 +4,7 @@ mod player_prefab;
 use bevy::prelude::*;
 use bevy_atmosphere::plugin::AtmosphereCamera;
 use bevy_mod_outline::{OutlineBundle, OutlineVolume};
-use bevy_xpbd_3d::components::{Collider};
+use avian3d::components::{Collider};
 use crate::game_state::GameState;
 use space_editor::prelude::{PrefabBundle};
 use space_editor::space_editor_ui::ext::bevy_panorbit_camera;use crate::assets::assets_plugin::GameAssets;

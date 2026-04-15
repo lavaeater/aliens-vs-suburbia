@@ -1,7 +1,7 @@
 use bevy::app::{App, Plugin};
 use bevy::prelude::{Color, default};
 use bevy_mod_outline::{OutlineBundle, OutlineVolume};
-use bevy_xpbd_3d::components::{CollisionLayers, LockedAxes, Position};
+use avian3d::components::{CollisionLayers, LockedAxes, Position};
 use space_editor::prelude::{EditorRegistryExt, EditorUiExt};
 use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
 use crate::camera::camera_components::CameraOffset;

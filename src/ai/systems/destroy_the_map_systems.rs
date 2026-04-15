@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_xpbd_3d::components::{Position, Rotation};
+use avian3d::components::{Position, Rotation};
 use big_brain::actions::ActionState;
 use big_brain::scorers::Score;
 use big_brain::thinker::{ActionSpan, Actor};
@@ -18,7 +18,7 @@ use crate::control::components::{CharacterControl, ControllerFlag};
 use crate::general::components::Health;
 
 pub fn agent_cant_find_path(
-    mut alien_cant_find_path_event_reader: EventReader<AgentCannotFindPath>,
+    mut alien_cant_find_path_event_reader: MessageReader<AgentCannotFindPath>,
     mut commands: Commands,
 ) {
     for AgentCannotFindPath(alien) in alien_cant_find_path_event_reader.read() {

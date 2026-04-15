@@ -1,7 +1,7 @@
 use bevy::app::{App, Plugin, PreUpdate, Update};
 use bevy::log::info;
 use bevy::prelude::{Changed, Commands, Entity, in_state, IntoSystemConfigs, OnEnter, Or, Query, Transform};
-use bevy_xpbd_3d::components::{AngularDamping, CenterOfMass, Friction, GravityScale, Inertia, LinearDamping, LockedAxes, Mass, Position, Restitution, RigidBody, Rotation, Sensor};
+use avian3d::components::{AngularDamping, CenterOfMass, Friction, GravityScale, Inertia, LinearDamping, LockedAxes, Mass, Position, Restitution, RigidBody, Rotation, Sensor};
 use space_editor::prelude::{ColliderPart, ColliderPrefabCompound, ColliderPrimitive, EditorRegistryExt, EditorState, PrefabSet, register_xpbd_spatial_types, RegisterSettingsBlockExt, RigidBodyPrefab};
 use space_editor::space_bevy_xpbd_plugin::collider;
 
@@ -70,13 +70,13 @@ impl Plugin for CustomXpbdPlugin {
                 .register_settings_block("Bevy XPBD 3D", |ui, _, world| {
                     ui.checkbox(
                         &mut world
-                            .resource_mut::<bevy_xpbd_3d::prelude::PhysicsDebugConfig>()
+                            .resource_mut::<avian3d::prelude::PhysicsDebugConfig>()
                             .enabled,
                         "Show bevy xpbd debug render",
                     );
                     ui.checkbox(
                         &mut world
-                            .resource_mut::<bevy_xpbd_3d::prelude::PhysicsDebugConfig>()
+                            .resource_mut::<avian3d::prelude::PhysicsDebugConfig>()
                             .hide_meshes,
                         "Hide debug meshes",
                     );

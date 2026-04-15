@@ -114,7 +114,7 @@ impl AnimationKey {
 
 pub fn leave_animation_state_handler(
     anim_store: Res<AnimationStore<String>>,
-    mut update_er: EventReader<AnimationEvent>,
+    mut update_er: MessageReader<AnimationEvent>,
     mut anim_key_query: Query<(&mut CurrentAnimationKey, &mut CharacterState)>,
     mut player_query: Query<&mut AnimationPlayer>,
     child_query: Query<&Children>,
@@ -140,7 +140,7 @@ pub fn leave_animation_state_handler(
 
 pub fn goto_animation_state_handler(
     anim_store: Res<AnimationStore<String>>,
-    mut update_er: EventReader<AnimationEvent>,
+    mut update_er: MessageReader<AnimationEvent>,
     mut anim_key_query: Query<(&mut CurrentAnimationKey, &mut CharacterState)>,
     mut player_query: Query<&mut AnimationPlayer>,
     child_query: Query<&Children>,

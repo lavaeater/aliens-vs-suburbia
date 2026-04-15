@@ -1,7 +1,7 @@
 use bevy::core::Name;
 use bevy::math::Vec3;
 use bevy::prelude::{Bundle};
-use bevy_xpbd_3d::components::{AngularDamping, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
+use avian3d::components::{AngularDamping, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
 use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
 use crate::control::components::{CharacterControl, DynamicMovement, InputKeyboard};
 use crate::control::components::CharacterState;

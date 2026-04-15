@@ -1,8 +1,8 @@
 use bevy::math::{Vec3};
-use bevy::prelude::{Commands, Entity, EventWriter, Query, Res, Transform};
+use bevy::prelude::{Commands, Entity, MessageWriter, Query, Res, Transform};
 use bevy::scene::SceneBundle;
 use bevy::time::Time;
-use bevy_xpbd_3d::components::{Collider, CollisionLayers, LinearVelocity, Position, RigidBody};
+use avian3d::components::{Collider, CollisionLayers, LinearVelocity, Position, RigidBody};
 use crate::assets::assets_plugin::GameAssets;
 use crate::control::components::{CharacterControl, ControllerFlag};
 use crate::game_state::score_keeper::{GameTrackingEvent};
@@ -15,7 +15,7 @@ pub fn throwing(
     mut query: Query<(Entity, &Player, &Position, &AutoAim, &mut CharacterControl)>,
     mut commands: Commands,
     game_assets: Res<GameAssets>,
-    mut game_ew: EventWriter<GameTrackingEvent>,
+    mut game_ew: MessageWriter<GameTrackingEvent>,
 ) {
     for (entity, _player, position, auto_aim, mut controller) in query.iter_mut() {
         if controller.triggers.has(ControllerFlag::THROW) {

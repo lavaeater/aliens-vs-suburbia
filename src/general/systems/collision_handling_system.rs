@@ -1,16 +1,16 @@
-use bevy::prelude::{Commands, DespawnRecursiveExt, EventReader, EventWriter, Has, Query, ResMut};
-use bevy_xpbd_3d::prelude::Collision;
+use bevy::prelude::{Commands, DespawnRecursiveExt, MessageReader, MessageWriter, Has, Query, ResMut};
+use avian3d::prelude::Collision;
 use crate::alien::components::general::{Alien, AlienCounter};
 use crate::game_state::score_keeper::{GameTrackingEvent};
 use crate::general::components::{Ball, Health, HittableTarget};
 
 pub fn collision_handling_system(
     mut alien_counter: ResMut<AlienCounter>,
-    mut collision_event_reader: EventReader<Collision>,
+    mut collision_event_reader: MessageReader<Collision>,
     mut ball_query: Query<&mut Ball>,
     mut hittable_target_query: Query<(&mut Health, &HittableTarget, Has<Alien>)>,
     mut commands: Commands,
-    mut game_ew: EventWriter<GameTrackingEvent>,
+    mut game_ew: MessageWriter<GameTrackingEvent>,
 ) {
     for Collision(contacts) in collision_event_reader.read() {
         if ball_query.contains(contacts.entity1) || ball_query.contains(contacts.entity2) {

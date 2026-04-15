@@ -2,7 +2,7 @@ pub (crate) mod map_components;
 
 use bevy::prelude::*;
 use bevy_inspector_egui::{prelude::*};
-use bevy_xpbd_3d::prelude::PhysicsLayer;
+use avian3d::prelude::PhysicsLayer;
 
 #[derive(Component)]
 pub struct Ball {

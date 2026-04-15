@@ -1,6 +1,6 @@
 use belly::build::{Elements, eml};
 use bevy::app::{App, Plugin, Update};
-use bevy::prelude::{Component, Entity, Event, EventReader, in_state, IntoSystemConfigs, Resource};
+use bevy::prelude::{Component, Entity, Event, MessageReader, in_state, IntoSystemConfigs, Resource};
 use crate::game_state::GameState;
 use bevy::prelude::*;
 use belly::prelude::*;
@@ -111,7 +111,7 @@ impl Plugin for ScoreKeeperPlugin {
 }
 
 pub fn game_tracking_event_system(
-    mut game_tracking_events: EventReader<GameTrackingEvent>,
+    mut game_tracking_events: MessageReader<GameTrackingEvent>,
     mut level_tracker: ResMut<LevelTracker>,
     mut score_query: Query<&mut Score>,
     mut elements: Elements,
@@ -158,7 +158,7 @@ pub fn game_tracking_event_system(
 
 pub fn level_state_system(
     mut level_tracker: ResMut<LevelTracker>,
-    mut goto_state_ew: EventWriter<GotoState>,
+    mut goto_state_ew: MessageWriter<GotoState>,
 ) {
     if level_tracker.aliens_killed >= level_tracker.aliens_to_spawn {
         level_tracker.level_state = LevelState::Completed;

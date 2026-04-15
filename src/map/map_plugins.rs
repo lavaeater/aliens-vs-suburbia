@@ -1,6 +1,6 @@
 use bevy::app::{App, Plugin, Startup, Update};
 use bevy::utils::HashMap;
-use bevy_xpbd_3d::components::RigidBody;
+use avian3d::components::RigidBody;
 use pathfinding::grid::Grid;
 use std::collections::HashSet;
 use bevy::prelude::{in_state, IntoSystemConfigs, OnEnter};

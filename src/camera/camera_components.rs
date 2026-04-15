@@ -1,7 +1,7 @@
 use bevy::math::Vec3;
 use bevy::prelude::Component;
 use bevy::reflect::Reflect;
-use bevy_xpbd_3d::math::Vector3;
+use avian3d::math::Vector3;
 
 #[derive(Component)]
 pub struct GameCamera {}

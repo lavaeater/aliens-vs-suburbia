@@ -1,6 +1,6 @@
 use bevy::app::{App, Plugin, PostUpdate, Startup};
 use bevy::prelude::{in_state, IntoSystemConfigs, OnEnter};
-use bevy_xpbd_3d::PhysicsSet;
+use avian3d::PhysicsSet;
 use bevy::transform::TransformSystem;
 use crate::camera::camera_systems::{camera_follow, spawn_camera};
 use crate::game_state::GameState;

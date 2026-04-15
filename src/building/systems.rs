@@ -3,10 +3,10 @@ use bevy::core::Name;
 use bevy::hierarchy::{BuildChildren, DespawnRecursiveExt};
 use bevy::log::info;
 use bevy::math::{Vec2, Vec3, Vec3Swizzles};
-use bevy::prelude::{Commands, Entity, EventReader, EventWriter, Query, Res, With, Without};
+use bevy::prelude::{Commands, Entity, MessageReader, MessageWriter, Query, Res, With, Without};
 use bevy::scene::{SceneBundle, SceneInstance};
-use bevy_xpbd_3d::components::{Collider, CollisionLayers, LockedAxes, RigidBody, Rotation, Sensor};
-use bevy_xpbd_3d::prelude::Position;
+use avian3d::components::{Collider, CollisionLayers, LockedAxes, RigidBody, Rotation, Sensor};
+use avian3d::prelude::Position;
 use crate::control::components::{CharacterControl, ControllerFlag};
 use crate::general::components::{CollisionLayer, Health};
 use crate::general::components::map_components::{CurrentTile, MapModelDefinitions};
@@ -21,7 +21,7 @@ use crate::ui::spawn_ui::AddHealthBar;
 
 
 pub fn enter_build_mode(
-    mut enter_build_mode_evr: EventReader<EnterBuildMode>,
+    mut enter_build_mode_evr: MessageReader<EnterBuildMode>,
     mut builder_query: Query<(&CurrentTile, &Rotation), Without<IsBuilding>>,
     asset_server: Res<AssetServer>,
     tile_definitions: Res<TileDefinitions>,
@@ -73,7 +73,7 @@ pub fn spawn_building_indicator(
 }
 
 pub fn exit_build_mode(
-    mut exit_build_mode_evr: EventReader<ExitBuildMode>,
+    mut exit_build_mode_evr: MessageReader<ExitBuildMode>,
     mut player_build_indicator_query: Query<(&BuildingIndicator, &mut CharacterControl), With<IsBuilding>>,
     mut commands: Commands,
 ) {
@@ -88,13 +88,13 @@ pub fn exit_build_mode(
 }
 
 pub fn execute_build(
-    mut execute_evr: EventReader<ExecuteBuild>,
-    mut remove_tile_ew: EventWriter<RemoveTile>,
+    mut execute_evr: MessageReader<ExecuteBuild>,
+    mut remove_tile_ew: MessageWriter<RemoveTile>,
     player_build_indicator_query: Query<&BuildingIndicator>,
     building_indicator: Query<(&Position, &CurrentTile), With<IsBuildIndicator>>,
     map_graph: Res<MapGraph>,
     model_defs: Res<MapModelDefinitions>,
-    mut build_tower_ew: EventWriter<BuildTower>,
+    mut build_tower_ew: MessageWriter<BuildTower>,
 ) {
     for execute_event in execute_evr.read() {
         if let Ok(build_indicator) = player_build_indicator_query.get(execute_event.0) {
@@ -130,7 +130,7 @@ pub fn building_mode(
 }
 
 pub fn change_build_indicator(
-    mut change_build_indicator_evr: EventReader<ChangeBuildIndicator>,
+    mut change_build_indicator_evr: MessageReader<ChangeBuildIndicator>,
     mut builder_query: Query<(&mut BuildingIndicator, &Position), With<IsBuilding>>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -225,9 +225,9 @@ impl ToGridNeighbour for Rotation {
 }
 
 pub fn build_tower_system(
-    mut build_tower_er: EventReader<BuildTower>,
+    mut build_tower_er: MessageReader<BuildTower>,
     mut commands: Commands,
-    mut add_health_bar_ew: EventWriter<AddHealthBar>,
+    mut add_health_bar_ew: MessageWriter<AddHealthBar>,
     asset_server: Res<AssetServer>,
     model_defs: Res<MapModelDefinitions>,
     tile_defs: Res<TileDefinitions>,

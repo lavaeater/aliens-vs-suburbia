@@ -61,17 +61,17 @@
         ]),
         "space_bevy_xpbd_plugin::collider::ColliderPrefab": FromPrefabMesh,
         "space_bevy_xpbd_plugin::registry::RigidBodyPrefab": Dynamic,
-        "bevy_xpbd_3d::components::mass_properties::Mass": (148.00037),
-        "bevy_xpbd_3d::components::Friction": (
+        "avian3d::components::mass_properties::Mass": (148.00037),
+        "avian3d::components::Friction": (
           dynamic_coefficient: 0.3,
           static_coefficient: 0.3,
           combine_rule: Average,
         ),
-        "bevy_xpbd_3d::components::Restitution": (
+        "avian3d::components::Restitution": (
           coefficient: 0.3,
           combine_rule: Average,
         ),
-        "bevy_xpbd_3d::components::mass_properties::Inertia": ((
+        "avian3d::components::mass_properties::Inertia": ((
           x_axis: (
             x: 24.666742,
             y: 0.0,
@@ -88,7 +88,7 @@
             z: 24.666742,
           ),
         )),
-        "bevy_xpbd_3d::components::mass_properties::CenterOfMass": ((
+        "avian3d::components::mass_properties::CenterOfMass": ((
           x: 0.0,
           y: 0.0,
           z: 0.0,
@@ -209,17 +209,17 @@
         )),
         "space_bevy_xpbd_plugin::collider::ColliderPrefab": FromPrefabMesh,
         "space_bevy_xpbd_plugin::registry::RigidBodyPrefab": Static,
-        "bevy_xpbd_3d::components::mass_properties::Mass": (3749.0),
-        "bevy_xpbd_3d::components::Friction": (
+        "avian3d::components::mass_properties::Mass": (3749.0),
+        "avian3d::components::Friction": (
           dynamic_coefficient: 0.3,
           static_coefficient: 0.3,
           combine_rule: Average,
         ),
-        "bevy_xpbd_3d::components::Restitution": (
+        "avian3d::components::Restitution": (
           coefficient: 0.3,
           combine_rule: Average,
         ),
-        "bevy_xpbd_3d::components::mass_properties::Inertia": ((
+        "avian3d::components::mass_properties::Inertia": ((
           x_axis: (
             x: 8118.9033,
             y: 0.0,
@@ -236,7 +236,7 @@
             z: 8122.823,
           ),
         )),
-        "bevy_xpbd_3d::components::mass_properties::CenterOfMass": ((
+        "avian3d::components::mass_properties::CenterOfMass": ((
           x: 0.0,
           y: 0.0,
           z: 0.0,

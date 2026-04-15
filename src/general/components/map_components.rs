@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy::reflect::Reflect;
 use bevy::utils::HashMap;
-use bevy_xpbd_3d::components::{CollisionLayers, RigidBody};
+use avian3d::components::{CollisionLayers, RigidBody};
 use crate::general::components::CollisionLayer;
 
 #[derive(Component)]

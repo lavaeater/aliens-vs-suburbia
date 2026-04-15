@@ -1,11 +1,11 @@
 use bevy::asset::AssetServer;
 use bevy::core::Name;
 use bevy::math::{Quat, Vec3};
-use bevy::prelude::{Commands, EventReader, EventWriter, Has, Query, Res, ResMut, Resource, Transform};
+use bevy::prelude::{Commands, MessageReader, MessageWriter, Has, Query, Res, ResMut, Resource, Transform};
 use bevy::scene::SceneBundle;
-use bevy_xpbd_3d::components::CollisionLayers;
-use bevy_xpbd_3d::math::PI;
-use bevy_xpbd_3d::prelude::{Collider, Position, RigidBody, Rotation};
+use avian3d::components::CollisionLayers;
+use avian3d::math::PI;
+use avian3d::prelude::{Collider, Position, RigidBody, Rotation};
 use flagset::{flags, FlagSet};
 use pathfinding::grid::Grid;
 use crate::alien::components::general::AlienCounter;
@@ -80,7 +80,7 @@ pub struct MapDef {
 } //No data needed now
 
 pub fn load_map_one(
-    mut send_event: EventWriter<LoadMap>
+    mut send_event: MessageWriter<LoadMap>
 ) {
     send_event.send(LoadMap {});
 }
@@ -177,8 +177,8 @@ impl TileDefinitions {
 
 #[allow(clippy::too_many_arguments)]
 pub fn map_loader(
-    mut load_map_event_reader: EventReader<LoadMap>,
-    mut spawn_player_event_writer: EventWriter<SpawnPlayer>,
+    mut load_map_event_reader: MessageReader<LoadMap>,
+    mut spawn_player_event_writer: MessageWriter<SpawnPlayer>,
     mut commands: Commands,
     mut alien_counter: ResMut<AlienCounter>,
     mut map_graph: ResMut<MapGraph>,
@@ -442,7 +442,7 @@ pub fn update_current_tile_system(
 }
 
 pub fn remove_tile_from_map(
-    mut remove_tile_evr: EventReader<RemoveTile>,
+    mut remove_tile_evr: MessageReader<RemoveTile>,
     mut map_graph: ResMut<MapGraph>,
 ) {
     for remove_tile_event in remove_tile_evr.read() {
@@ -451,7 +451,7 @@ pub fn remove_tile_from_map(
 }
 
 pub fn add_tile_to_map(
-    mut add_tile_evr: EventReader<AddTile>,
+    mut add_tile_evr: MessageReader<AddTile>,
     mut map_graph: ResMut<MapGraph>,
 ) {
     for add_tile_event in add_tile_evr.read() {

@@ -1,7 +1,7 @@
 use bevy::prelude::{Query, With};
-use bevy_xpbd_3d::components::{AngularVelocity, LinearVelocity};
-use bevy_xpbd_3d::math::Vector3;
-use bevy_xpbd_3d::prelude::Rotation;
+use avian3d::components::{AngularVelocity, LinearVelocity};
+use avian3d::math::Vector3;
+use avian3d::prelude::Rotation;
 use crate::control::components::{CharacterControl, ControllerFlag, KinematicMovement};
 
 pub fn kinematic_movement(

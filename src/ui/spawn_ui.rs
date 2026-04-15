@@ -32,7 +32,7 @@ pub fn spawn_menu(
 
 pub fn goto_state_system(
     mut state: ResMut<NextState<GameState>>,
-    mut goto_state_er: EventReader<GotoState>,
+    mut goto_state_er: MessageReader<GotoState>,
 ) {
     for goto_state in &mut goto_state_er.read() {
         state.set(goto_state.state.clone());
@@ -148,7 +148,7 @@ pub struct AddHealthBar {
 
 pub fn add_health_bar(
     mut elements: Elements,
-    mut add_health_bar_er: EventReader<AddHealthBar>,
+    mut add_health_bar_er: MessageReader<AddHealthBar>,
 ) {
     for add_health_bar in &mut add_health_bar_er.read() {
         let erp = add_health_bar.entity;

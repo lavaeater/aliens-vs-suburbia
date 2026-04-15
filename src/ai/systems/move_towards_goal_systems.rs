@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy::utils::petgraph::matrix_graph::Zero;
-use bevy_xpbd_3d::components::{Position, Rotation};
-use bevy_xpbd_3d::prelude::LinearVelocity;
+use avian3d::components::{Position, Rotation};
+use avian3d::prelude::LinearVelocity;
 use big_brain::actions::ActionState;
 use big_brain::scorers::Score;
 use big_brain::thinker::{ActionSpan, Actor};
@@ -32,8 +32,8 @@ pub fn move_towards_goal_action_system(
     map_graph: Res<MapGraph>,
     mut action_query: Query<(&Actor, &mut ActionState, &ActionSpan), With<MoveTowardsGoalAction>>,
     mut alien_query: Query<(&mut MoveTowardsGoalData, &mut CharacterControl, &Position, &Rotation, &CurrentTile, &LinearVelocity), With<Alien>>,
-    mut alien_reached_goal_event_writer: EventWriter<AgentReachedGoal>,
-    mut cant_find_path_ew: EventWriter<AgentCannotFindPath>,
+    mut alien_reached_goal_event_writer: MessageWriter<AgentReachedGoal>,
+    mut cant_find_path_ew: MessageWriter<AgentCannotFindPath>,
     tile_definitions: Res<TileDefinitions>,
 ) {
     for (actor, mut action_state, span) in action_query.iter_mut() {
@@ -138,9 +138,9 @@ pub fn move_towards_goal_action_system(
 
 pub fn agent_reached_goal_handler(
     mut alien_counter: ResMut<AlienCounter>,
-    mut reached_goal_event_reader: EventReader<AgentReachedGoal>,
+    mut reached_goal_event_reader: MessageReader<AgentReachedGoal>,
     mut commands: Commands,
-    mut game_tracking_event_ew: EventWriter<GameTrackingEvent>,
+    mut game_tracking_event_ew: MessageWriter<GameTrackingEvent>,
 ) {
     for AgentReachedGoal(alien) in reached_goal_event_reader.read() {
         alien_counter.count -= 1;
