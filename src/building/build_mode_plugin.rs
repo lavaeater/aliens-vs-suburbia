@@ -1,5 +1,5 @@
 use bevy::app::{App, Plugin, Update};
-use bevy::prelude::{in_state, IntoSystemConfigs};
+use bevy::prelude::{in_state, IntoScheduleConfigs};
 use crate::building::systems::{build_tower_system, building_mode, change_build_indicator, enter_build_mode, execute_build, exit_build_mode};
 use crate::game_state::GameState;
 use crate::general::systems::map_systems::{add_tile_to_map, remove_tile_from_map};
@@ -11,13 +11,13 @@ pub struct BuildModeEventsPlugin;
 impl Plugin for BuildModeEventsPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_event::<EnterBuildMode>()
-            .add_event::<ExitBuildMode>()
-            .add_event::<ExecuteBuild>()
-            .add_event::<ChangeBuildIndicator>()
-            .add_event::<RemoveTile>()
-            .add_event::<AddTile>()
-            .add_event::<BuildTower>();
+            .add_message::<EnterBuildMode>()
+            .add_message::<ExitBuildMode>()
+            .add_message::<ExecuteBuild>()
+            .add_message::<ChangeBuildIndicator>()
+            .add_message::<RemoveTile>()
+            .add_message::<AddTile>()
+            .add_message::<BuildTower>();
     }
 }
 

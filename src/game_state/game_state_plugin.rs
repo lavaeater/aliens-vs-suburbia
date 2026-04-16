@@ -1,5 +1,6 @@
 use bevy::app::{App, Plugin, Update};
-use bevy::prelude::{in_state, IntoSystemConfigs, OnEnter, Time};
+use bevy::prelude::{in_state, IntoScheduleConfigs, OnEnter, Time};
+use bevy::state::app::AppExtStates;
 use bevy::time::Fixed;
 use crate::ai::ai_plugin::StatefulAiPlugin;
 use crate::alien::alien_plugin::StatefulAlienPlugin;
@@ -20,7 +21,6 @@ use crate::inspection::inspector::InspectorPlugin;
 use crate::map::map_plugins::StatefulMapPlugin;
 use crate::player::player_plugin::PlayerPlugin;
 use crate::towers::systems::shoot_alien_system;
-use crate::ui::spawn_ui::{AddHealthBar, GotoState};
 use crate::ui::ui_plugin::UiPlugin;
 
 pub struct GamePlugin;
@@ -29,9 +29,7 @@ impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app
             .insert_resource(Time::<Fixed>::from_seconds(0.05))
-            .add_state::<GameState>()
-            .add_event::<GotoState>()
-            .add_event::<AddHealthBar>()
+            .init_state::<GameState>()
             .add_plugins((
                 AssetsPlugin,
                 StatefulMapPlugin,

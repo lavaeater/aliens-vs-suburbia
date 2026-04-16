@@ -1,8 +1,6 @@
 use bevy::math::Quat;
-use bevy::pbr::{CascadeShadowConfigBuilder, DirectionalLight};
-use bevy::prelude::{Commands, EulerRot, Transform};
-use bevy::utils::default;
-use bevy::core::Name;
+use bevy::light::{CascadeShadowConfigBuilder, DirectionalLight};
+use bevy::prelude::{Commands, EulerRot, Name, Transform, default};
 
 pub fn spawn_lights(
     mut commands: Commands,

@@ -1,5 +1,5 @@
 use bevy::math::{EulerRot, Quat, Vec3};
-use bevy::prelude::{Commands, EventReader, EventWriter, Name, Query, Res, ResMut, Time, Transform};
+use bevy::prelude::{Commands, MessageReader, MessageWriter, Name, Query, Res, ResMut, Time, Transform};
 use bevy::scene::SceneRoot;
 use avian3d::prelude::{AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, Position, RigidBody};
 use std::f32::consts::PI;
@@ -19,12 +19,12 @@ use crate::ui::spawn_ui::AddHealthBar;
 
 pub fn alien_spawner_system(
     time_res: Res<Time>,
-    mut spawn_alien_event_writer: EventWriter<SpawnAlien>,
+    mut spawn_alien_mw: MessageWriter<SpawnAlien>,
     mut alien_spawn_point_query: Query<(&Position, &mut AlienSpawnPoint)>,
 ) {
     for (position, mut alien_spawn_point) in alien_spawn_point_query.iter_mut() {
         if alien_spawn_point.cool_down(time_res.delta_secs()) {
-            spawn_alien_event_writer.send(SpawnAlien {
+            spawn_alien_mw.write(SpawnAlien {
                 position: position.0,
             });
         }
@@ -34,16 +34,16 @@ pub fn alien_spawner_system(
 
 pub fn spawn_aliens(
     mut alien_counter: ResMut<AlienCounter>,
-    mut spawn_alien_event_reader: EventReader<SpawnAlien>,
+    mut spawn_alien_mr: MessageReader<SpawnAlien>,
     mut commands: Commands,
-    mut add_health_bar_ew: EventWriter<AddHealthBar>,
+    mut add_health_bar_mw: MessageWriter<AddHealthBar>,
     game_assets: Res<GameAssets>,
-    mut game_tracking_event_ew: EventWriter<GameTrackingEvent>,
+    mut game_tracking_mw: MessageWriter<GameTrackingEvent>,
 ) {
     if alien_counter.count >= alien_counter.max_count {
         return;
     }
-    for spawn_alien in spawn_alien_event_reader.read() {
+    for spawn_alien in spawn_alien_mr.read() {
         alien_counter.count += 1;
 
         let alien_transform = Transform::from_xyz(spawn_alien.position.x, spawn_alien.position.y, spawn_alien.position.z)
@@ -51,51 +51,55 @@ pub fn spawn_aliens(
             .with_rotation(Quat::from_rotation_y(PI * 2.0));
 
         let id = commands.spawn((
-            Name::from("Spider"),
-            HittableTarget {},
-            DynamicMovement {},
-            FixSceneTransform::new(
-                Vec3::new(0.0, -0.35, 0.0),
-                Quat::from_euler(EulerRot::YXZ, 180.0f32.to_radians(), 0.0, 0.0),
-                Vec3::new(0.5, 0.5, 0.5),
+            (
+                Name::from("Spider"),
+                HittableTarget {},
+                DynamicMovement {},
+                FixSceneTransform::new(
+                    Vec3::new(0.0, -0.35, 0.0),
+                    Quat::from_euler(EulerRot::YXZ, 180.0f32.to_radians(), 0.0, 0.0),
+                    Vec3::new(0.5, 0.5, 0.5),
+                ),
+                CharacterControl::new(1.0, 3.0, 1.0),
+                SceneRoot(game_assets.alien_scene.clone()),
+                alien_transform,
+                Friction::new(0.0),
+                AngularDamping(1.0),
+                LinearDamping(0.9),
+                RigidBody::Dynamic,
+                Collider::capsule(1.0, 1.0),
+                LockedAxes::new().lock_rotation_x().lock_rotation_z(),
+                CollisionLayers::new(
+                    [CollisionLayer::Alien],
+                    [
+                        CollisionLayer::Ball,
+                        CollisionLayer::Impassable,
+                        CollisionLayer::Floor,
+                        CollisionLayer::Alien,
+                        CollisionLayer::Player,
+                        CollisionLayer::AlienGoal,
+                        CollisionLayer::Sensor,
+                        CollisionLayer::PlayerAimSensor,
+                    ]),
             ),
-            CharacterControl::new(1.0, 3.0, 1.0),
-            SceneRoot(game_assets.alien_scene.clone()),
-            alien_transform,
-            Friction::new(0.0),
-            AngularDamping(1.0),
-            LinearDamping(0.9),
-            RigidBody::Dynamic,
-            Collider::capsule(1.0, 1.0),
-            LockedAxes::new().lock_rotation_x().lock_rotation_z(),
-            CollisionLayers::new(
-                [CollisionLayer::Alien],
-                [
-                    CollisionLayer::Ball,
-                    CollisionLayer::Impassable,
-                    CollisionLayer::Floor,
-                    CollisionLayer::Alien,
-                    CollisionLayer::Player,
-                    CollisionLayer::AlienGoal,
-                    CollisionLayer::Sensor,
-                    CollisionLayer::PlayerAimSensor,
-                ]),
-            CurrentTile::default(),
-            CurrentAnimationKey::new("aliens".into(), AnimationKey::Walking),
-            Alien {},
-            AvoidWallsData::new(0.125, 0.125, 0.125, 5.0),
-            ApproachAndAttackPlayerData::default(),
-            MoveTowardsGoalData { path: None },
-            AlienSightShape::default(),
-            Attack::default(),
-            Health::default(),
+            (
+                CurrentTile::default(),
+                CurrentAnimationKey::new("aliens".into(), AnimationKey::Walking),
+                Alien {},
+                AvoidWallsData::new(0.125, 0.125, 0.125, 5.0),
+                ApproachAndAttackPlayerData::default(),
+                MoveTowardsGoalData { path: None },
+                AlienSightShape::default(),
+                Attack::default(),
+                Health::default(),
+            ),
         )).id();
 
-        add_health_bar_ew.send(AddHealthBar {
+        add_health_bar_mw.write(AddHealthBar {
             entity: id,
             name: "ALIEN",
         });
 
-        game_tracking_event_ew.send(GameTrackingEvent::AlienSpawned);
+        game_tracking_mw.write(GameTrackingEvent::AlienSpawned);
     }
 }

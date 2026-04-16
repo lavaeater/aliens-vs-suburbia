@@ -3,7 +3,7 @@ use crate::camera::components::GameCamera;
 use crate::game_state::GameState;
 use crate::general::components::Health;
 
-#[derive(Event)]
+#[derive(Message, Clone)]
 pub struct GotoState {
     pub state: GameState,
 }
@@ -47,7 +47,7 @@ pub struct StateMarker;
 
 pub fn goto_state_system(
     mut state: ResMut<NextState<GameState>>,
-    mut goto_state_er: EventReader<GotoState>,
+    mut goto_state_mr: MessageReader<GotoState>,
     interaction_query: Query<&Interaction, (Changed<Interaction>, With<Button>)>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
@@ -58,7 +58,7 @@ pub fn goto_state_system(
         }
     }
     // Also handle programmatic state changes
-    for goto_state in goto_state_er.read() {
+    for goto_state in goto_state_mr.read() {
         state.set(goto_state.state.clone());
     }
 }
@@ -68,7 +68,7 @@ pub fn cleanup_menu(
     entities: Query<Entity, With<StateMarker>>,
 ) {
     for entity in entities.iter() {
-        commands.entity(entity).despawn_recursive();
+        commands.entity(entity).despawn();
     }
 }
 
@@ -76,7 +76,7 @@ pub fn spawn_ui(mut _commands: Commands) {
     // In-game HUD placeholder — health bars are spawned dynamically via AddHealthBar
 }
 
-#[derive(Event)]
+#[derive(Message, Clone)]
 pub struct AddHealthBar {
     pub entity: Entity,
     pub name: &'static str,
@@ -84,9 +84,9 @@ pub struct AddHealthBar {
 
 pub fn add_health_bar(
     mut commands: Commands,
-    mut add_health_bar_er: EventReader<AddHealthBar>,
+    mut add_health_bar_mr: MessageReader<AddHealthBar>,
 ) {
-    for add_health_bar in add_health_bar_er.read() {
+    for add_health_bar in add_health_bar_mr.read() {
         let target = add_health_bar.entity;
         commands.spawn((
             Fellow { target },
@@ -130,13 +130,13 @@ pub fn fellow_system(
     mut commands: Commands,
     camera_q: Query<(&Camera, &GlobalTransform), With<GameCamera>>,
 ) {
-    let Ok((camera, camera_global_transform)) = camera_q.get_single() else {
+    let Ok((camera, camera_global_transform)) = camera_q.single() else {
         return;
     };
 
     for (entity, fellow, mut node) in fellows.iter_mut() {
         let Ok(tr) = transforms.get(fellow.target) else {
-            commands.entity(entity).despawn_recursive();
+            commands.entity(entity).despawn();
             continue;
         };
         if let Ok(pos) = camera.world_to_viewport(camera_global_transform, tr.translation()) {

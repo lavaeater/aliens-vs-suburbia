@@ -1,25 +1,25 @@
-use bevy::prelude::{Entity, Event};
+use bevy::prelude::{Entity, Message};
 
-#[derive(Event)]
+#[derive(Message, Clone)]
 pub struct EnterBuildMode(pub Entity);
 
-#[derive(Event)]
+#[derive(Message, Clone)]
 pub struct ExecuteBuild(pub Entity);
 
-#[derive(Event)]
+#[derive(Message, Clone)]
 pub struct RemoveTile(pub (usize, usize));
 
-#[derive(Event)]
+#[derive(Message, Clone)]
 pub struct AddTile(pub (usize, usize));
 
-#[derive(Event)]
+#[derive(Message, Clone)]
 pub struct ExitBuildMode(pub Entity);
 
-#[derive(Event)]
+#[derive(Message, Clone)]
 pub struct ChangeBuildIndicator(pub Entity, pub i32); //negative for back, positive for forward
 
-#[derive(Event)]
+#[derive(Message, Clone)]
 pub struct CurrentTileUpdated(pub Entity, pub (usize, usize));
 
-#[derive(Event)]
+#[derive(Message, Clone)]
 pub struct BuildingIndicatorPositionUpdated(pub Entity, pub (usize, usize));

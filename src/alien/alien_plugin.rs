@@ -1,5 +1,5 @@
 use bevy::app::{App, Plugin, Update};
-use bevy::prelude::{in_state, IntoSystemConfigs};
+use bevy::prelude::{in_state, IntoScheduleConfigs};
 use crate::alien::systems::spawn_aliens::{alien_spawner_system, spawn_aliens};
 use crate::game_state::GameState;
 

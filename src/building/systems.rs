@@ -1,9 +1,7 @@
 use bevy::asset::AssetServer;
-use bevy::core::Name;
-use bevy::hierarchy::{BuildChildren, DespawnRecursiveExt};
 use bevy::log::info;
 use bevy::math::{Vec2, Vec3, Vec3Swizzles};
-use bevy::prelude::{Commands, Entity, EventReader, EventWriter, Query, Res, With, Without};
+use bevy::prelude::{Commands, Entity, MessageReader, MessageWriter, Name, Query, Res, With, Without};
 use bevy::scene::{SceneRoot, SceneInstance};
 use avian3d::prelude::{Collider, CollisionLayers, LockedAxes, Position, RigidBody, Rotation, Sensor};
 use crate::control::components::{ControlCommand, CharacterControl};
@@ -19,7 +17,7 @@ use crate::ui::spawn_ui::AddHealthBar;
 
 
 pub fn enter_build_mode(
-    mut enter_build_mode_evr: EventReader<EnterBuildMode>,
+    mut enter_build_mode_evr: MessageReader<EnterBuildMode>,
     mut builder_query: Query<(&CurrentTile, &Rotation), Without<IsBuilding>>,
     asset_server: Res<AssetServer>,
     tile_definitions: Res<TileDefinitions>,
@@ -68,14 +66,14 @@ pub fn spawn_building_indicator(
 }
 
 pub fn exit_build_mode(
-    mut exit_build_mode_evr: EventReader<ExitBuildMode>,
+    mut exit_build_mode_evr: MessageReader<ExitBuildMode>,
     mut player_build_indicator_query: Query<(&BuildingIndicator, &mut CharacterControl), With<IsBuilding>>,
     mut commands: Commands,
 ) {
     for stop_event in exit_build_mode_evr.read() {
         if let Ok((bulding_indicator, mut controller)) = player_build_indicator_query.get_mut(stop_event.0) {
             controller.triggers.remove(&ControlCommand::Build);
-            commands.entity(bulding_indicator.0).despawn_recursive();
+            commands.entity(bulding_indicator.0).despawn();
         }
         commands.entity(stop_event.0).remove::<IsBuilding>();
         commands.entity(stop_event.0).remove::<BuildingIndicator>();
@@ -83,13 +81,13 @@ pub fn exit_build_mode(
 }
 
 pub fn execute_build(
-    mut execute_evr: EventReader<ExecuteBuild>,
-    mut remove_tile_ew: EventWriter<RemoveTile>,
+    mut execute_evr: MessageReader<ExecuteBuild>,
+    mut remove_tile_mw: MessageWriter<RemoveTile>,
     player_build_indicator_query: Query<&BuildingIndicator>,
     building_indicator: Query<(&Position, &CurrentTile), With<IsBuildIndicator>>,
     map_graph: Res<MapGraph>,
     model_defs: Res<MapModelDefinitions>,
-    mut build_tower_ew: EventWriter<BuildTower>,
+    mut build_tower_mw: MessageWriter<BuildTower>,
 ) {
     for execute_event in execute_evr.read() {
         if let Ok(build_indicator) = player_build_indicator_query.get(execute_event.0) {
@@ -98,12 +96,12 @@ pub fn execute_build(
 
                     let current_index = build_indicator.1;
                     let current_key = model_defs.build_indicators[current_index as usize];
-                    build_tower_ew.send(BuildTower {
+                    build_tower_mw.write(BuildTower {
                         position: position.0,
                         model_definition_key: current_key,
                     });
 
-                    remove_tile_ew.send(RemoveTile(current_tile.tile));
+                    remove_tile_mw.write(RemoveTile(current_tile.tile));
                 }
             }
         }
@@ -125,7 +123,7 @@ pub fn building_mode(
 }
 
 pub fn change_build_indicator(
-    mut change_build_indicator_evr: EventReader<ChangeBuildIndicator>,
+    mut change_build_indicator_evr: MessageReader<ChangeBuildIndicator>,
     mut builder_query: Query<(&mut BuildingIndicator, &Position), With<IsBuilding>>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -149,7 +147,7 @@ pub fn change_build_indicator(
             info!("Changing indicator to {}", indicator_key);
 
             let p = position.0;
-            commands.entity(building_indicator.0).despawn_recursive();
+            commands.entity(building_indicator.0).despawn();
             building_indicator.0 = spawn_building_indicator(
                 &mut commands,
                 &asset_server,
@@ -216,14 +214,14 @@ impl ToGridNeighbour for Rotation {
 }
 
 pub fn build_tower_system(
-    mut build_tower_er: EventReader<BuildTower>,
+    mut build_tower_mr: MessageReader<BuildTower>,
     mut commands: Commands,
-    mut add_health_bar_ew: EventWriter<AddHealthBar>,
+    mut add_health_bar_mw: MessageWriter<AddHealthBar>,
     asset_server: Res<AssetServer>,
     model_defs: Res<MapModelDefinitions>,
     tile_defs: Res<TileDefinitions>,
 ) {
-    for build_tower in build_tower_er.read() {
+    for build_tower in build_tower_mr.read() {
         let model_def = model_defs.definitions.get(build_tower.model_definition_key).unwrap();
         let mut ec = commands.spawn((
             Name::from(model_def.name),
@@ -252,7 +250,7 @@ pub fn build_tower_system(
         }
 
         let id = ec.id();
-        add_health_bar_ew.send(AddHealthBar {
+        add_health_bar_mw.write(AddHealthBar {
             entity: id,
             name: "OBSTACLE",
         });

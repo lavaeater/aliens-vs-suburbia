@@ -1,6 +1,6 @@
 use bevy::app::{App, Plugin, Update};
-use bevy::prelude::{in_state, IntoSystemConfigs, With, World};
-use bevy::utils::HashSet;
+use bevy::prelude::{in_state, IntoScheduleConfigs, With, World};
+use std::collections::HashSet;
 use bevy::window::PrimaryWindow;
 use bevy_inspector_egui::bevy_egui::{EguiContext, EguiPlugin};
 use bevy_inspector_egui::DefaultInspectorConfigPlugin;
@@ -14,7 +14,7 @@ pub struct InspectorPlugin;
 impl Plugin for InspectorPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_plugins(EguiPlugin { enable_multipass_for_primary_context: false })
+            .add_plugins(EguiPlugin { enable_multipass_for_primary_context: false, ..Default::default() })
             .add_plugins(DefaultInspectorConfigPlugin)
             .register_type::<CharacterControl>()
             .register_type::<HashSet<ControlCommand>>()
@@ -27,7 +27,7 @@ impl Plugin for InspectorPlugin {
 fn inspector_ui(world: &mut World) {
     let Ok(egui_context) = world
         .query_filtered::<&mut EguiContext, With<PrimaryWindow>>()
-        .get_single(world)
+        .single(world)
     else {
         return;
     };

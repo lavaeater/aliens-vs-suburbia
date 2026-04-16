@@ -1,10 +1,11 @@
 use bevy::app::{App, Plugin, Update};
+use bevy::ecs::component::Mutable;
 use bevy::prelude::{Added, AnimationGraph, AnimationGraphHandle, AnimationNodeIndex, AnimationPlayer,
-                    Assets, Children, Commands, Component, Entity, Event, EventReader,
-                    in_state, IntoSystemConfigs, OnEnter, Parent, Query, Reflect, Res, ResMut, Resource};
+                    Assets, Children, Commands, Component, Entity, Message, MessageReader,
+                    in_state, IntoScheduleConfigs, OnEnter, Parent, Query, Reflect, Res, ResMut, Resource};
 use bevy::animation::AnimationClip;
 use bevy::asset::{AssetServer, Handle};
-use bevy::utils::HashMap;
+use std::collections::HashMap;
 use crate::control::components::CharacterState;
 use crate::game_state::GameState;
 
@@ -14,7 +15,7 @@ pub enum AnimationEventType {
     LeaveAnimState,
 }
 
-#[derive(Event)]
+#[derive(Message, Clone)]
 pub struct AnimationEvent(pub AnimationEventType, pub Entity, pub AnimationKey);
 
 #[derive(Component, Debug, Reflect)]
@@ -34,7 +35,7 @@ pub struct AnimationPlugin;
 impl Plugin for AnimationPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_event::<AnimationEvent>()
+            .add_message::<AnimationEvent>()
             .add_systems(
                 OnEnter(GameState::InGame),
                 load_animations,
@@ -68,7 +69,7 @@ pub enum AnimationKey {
 
 pub fn leave_animation_state_handler(
     anim_store: Res<AnimationStore>,
-    mut update_er: EventReader<AnimationEvent>,
+    mut update_er: MessageReader<AnimationEvent>,
     mut anim_key_query: Query<(&mut CurrentAnimationKey, &mut CharacterState)>,
     mut player_query: Query<&mut AnimationPlayer>,
     child_query: Query<&Children>,
@@ -94,7 +95,7 @@ pub fn leave_animation_state_handler(
 
 pub fn goto_animation_state_handler(
     anim_store: Res<AnimationStore>,
-    mut update_er: EventReader<AnimationEvent>,
+    mut update_er: MessageReader<AnimationEvent>,
     mut anim_key_query: Query<(&mut CurrentAnimationKey, &mut CharacterState)>,
     mut player_query: Query<&mut AnimationPlayer>,
     child_query: Query<&Children>,
@@ -195,7 +196,7 @@ pub fn get_parent_recursive(entity: Entity, parent_query: &Query<&Parent>) -> Op
     }
 }
 
-pub fn get_child_with_component_recursive<T: Component>(entity: Entity, child_query: &Query<&Children>, component_query: &Query<&mut T>) -> Option<Entity> {
+pub fn get_child_with_component_recursive<T: Component<Mutability = Mutable>>(entity: Entity, child_query: &Query<&Children>, component_query: &Query<&mut T>) -> Option<Entity> {
     if component_query.contains(entity) {
         Some(entity)
     } else {

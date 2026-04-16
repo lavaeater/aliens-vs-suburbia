@@ -1,6 +1,6 @@
 use bevy::app::{App, Plugin, Update};
 use bevy::input::gamepad::{Gamepad, GamepadButton};
-use bevy::prelude::{ButtonInput, Commands, Component, Entity, EventReader, in_state, IntoSystemConfigs, Query, Reflect, Res, With};
+use bevy::prelude::{ButtonInput, Commands, Component, Entity, MessageReader, in_state, IntoScheduleConfigs, Query, Reflect, Res, With};
 use bevy::input::gamepad::GamepadConnectionEvent;
 use crate::control::components::{CharacterControl, InputKeyboard};
 use crate::game_state::GameState;
@@ -30,13 +30,13 @@ impl Plugin for GamepadPlugin {
 }
 
 fn gamepad_connection(
-    mut connection_evr: EventReader<GamepadConnectionEvent>,
+    mut connection_evr: MessageReader<GamepadConnectionEvent>,
     mut player_query: Query<Entity, With<Player>>,
     mut commands: Commands,
 ) {
     for event in connection_evr.read() {
         if event.connected() {
-            if let Ok(entity) = player_query.get_single_mut() {
+            if let Ok(entity) = player_query.single_mut() {
                 commands.entity(entity).remove::<InputKeyboard>();
                 commands.entity(entity).insert(InputGamepad::new(event.gamepad));
             }

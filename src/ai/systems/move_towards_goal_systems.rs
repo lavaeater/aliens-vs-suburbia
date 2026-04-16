@@ -13,8 +13,8 @@ use crate::general::systems::map_systems::TileDefinitions;
 pub fn move_towards_goal_system(
     map_graph: Res<MapGraph>,
     mut alien_query: Query<(Entity, &mut MoveTowardsGoalData, &mut CharacterControl, &Position, &Rotation, &CurrentTile, &LinearVelocity), With<Alien>>,
-    mut alien_reached_goal_event_writer: EventWriter<AgentReachedGoal>,
-    mut cant_find_path_ew: EventWriter<AgentCannotFindPath>,
+    mut alien_reached_goal_mw: MessageWriter<AgentReachedGoal>,
+    mut cant_find_path_mw: MessageWriter<AgentCannotFindPath>,
     tile_definitions: Res<TileDefinitions>,
     goal_query: Query<(), With<AlienGoal>>,
 ) {
@@ -45,7 +45,7 @@ pub fn move_towards_goal_system(
                 );
                 match astar_result {
                     None => {
-                        cant_find_path_ew.send(AgentCannotFindPath(entity));
+                        cant_find_path_mw.write(AgentCannotFindPath(entity));
                     }
                     Some(path) => {
                         move_towards_goal_data.path = Some(path.0[1..].to_vec());
@@ -55,7 +55,7 @@ pub fn move_towards_goal_system(
             Some(path) => {
                 if path.is_empty() {
                     move_towards_goal_data.path = None;
-                    alien_reached_goal_event_writer.send(AgentReachedGoal(entity));
+                    alien_reached_goal_mw.write(AgentReachedGoal(entity));
                 } else {
                     let next_tile = path[0];
                     if map_graph.path_finding_grid.has_vertex(next_tile) {
@@ -100,13 +100,13 @@ pub fn move_towards_goal_system(
 
 pub fn agent_reached_goal_handler(
     mut alien_counter: ResMut<AlienCounter>,
-    mut reached_goal_event_reader: EventReader<AgentReachedGoal>,
+    mut reached_goal_mr: MessageReader<AgentReachedGoal>,
     mut commands: Commands,
-    mut game_tracking_event_ew: EventWriter<GameTrackingEvent>,
+    mut game_tracking_mw: MessageWriter<GameTrackingEvent>,
 ) {
-    for AgentReachedGoal(alien) in reached_goal_event_reader.read() {
+    for AgentReachedGoal(alien) in reached_goal_mr.read() {
         alien_counter.count -= 1;
-        commands.entity(*alien).despawn_recursive();
-        game_tracking_event_ew.send(GameTrackingEvent::AlienReachedGoal);
+        commands.entity(*alien).despawn();
+        game_tracking_mw.write(GameTrackingEvent::AlienReachedGoal);
     }
 }

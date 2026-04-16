@@ -9,8 +9,8 @@ pub struct UiPlugin;
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_event::<GotoState>()
-            .add_event::<AddHealthBar>()
+            .add_message::<GotoState>()
+            .add_message::<AddHealthBar>()
             .add_systems(
                 OnEnter(GameState::InGame),
                 spawn_ui,

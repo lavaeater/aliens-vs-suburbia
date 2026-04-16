@@ -1,9 +1,9 @@
 use bevy::app::{App, Plugin, Startup, Update};
-use bevy::utils::HashMap;
-use bevy_xpbd_3d::components::RigidBody;
+use std::collections::HashMap;
+use avian3d::prelude::RigidBody;
 use pathfinding::grid::Grid;
 use std::collections::HashSet;
-use bevy::prelude::{in_state, IntoSystemConfigs, OnEnter};
+use bevy::prelude::{in_state, IntoScheduleConfigs, OnEnter};
 use crate::alien::components::general::AlienCounter;
 use crate::game_state::GameState;
 use crate::general::components::CollisionLayer;
@@ -17,9 +17,9 @@ pub struct NonStateMapStuff;
 impl Plugin for NonStateMapStuff {
     fn build(&self, app: &mut App) {
         app
-            .add_event::<LoadMap>()
-            .add_event::<SpawnPlayer>()
-            .add_event::<SpawnAlien>()
+            .add_message::<LoadMap>()
+            .add_message::<SpawnPlayer>()
+            .add_message::<SpawnAlien>()
             .insert_resource(
                 MapModelDefinitions {
                     definitions: HashMap::from(

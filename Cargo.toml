@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 bevy = { version = "0.18", features = ["wayland"] }
-avian3d = { version = "0.6", default-features = false, features = ["3d", "f32", "debug-plugin", "collider-from-mesh", "simd", "parallel"] }
+avian3d = { version = "0.6", default-features = false, features = ["3d", "parry-f32", "debug-plugin", "collider-from-mesh", "simd", "parallel"] }
 rand_chacha = "0.3.1"
 flagset = "0.4.4"
 serde = "1.0"

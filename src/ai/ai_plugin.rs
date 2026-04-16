@@ -1,5 +1,5 @@
 use bevy::app::{App, FixedUpdate, Plugin, Update};
-use bevy::prelude::{in_state, IntoSystemConfigs};
+use bevy::prelude::{in_state, IntoScheduleConfigs};
 use crate::ai::components::move_towards_goal_components::{AgentReachedGoal, AgentCannotFindPath};
 use crate::ai::systems::approach_and_attack_player_systems::{approach_player_system, attack_player_system, can_agent_see_player_system};
 use crate::ai::systems::avoid_walls_systems::{avoid_walls_action_system, avoid_walls_data_system};
@@ -12,8 +12,8 @@ pub struct AiPlugin;
 impl Plugin for AiPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_event::<AgentReachedGoal>()
-            .add_event::<AgentCannotFindPath>()
+            .add_message::<AgentReachedGoal>()
+            .add_message::<AgentCannotFindPath>()
             .add_systems(
                 Update,
                 (
@@ -46,8 +46,8 @@ pub struct StatefulAiPlugin;
 impl Plugin for StatefulAiPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_event::<AgentReachedGoal>()
-            .add_event::<AgentCannotFindPath>()
+            .add_message::<AgentReachedGoal>()
+            .add_message::<AgentCannotFindPath>()
             .add_systems(
                 Update,
                 (

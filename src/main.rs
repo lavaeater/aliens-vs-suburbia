@@ -1,7 +1,6 @@
 use bevy::app::{App, PluginGroup};
 use bevy::{DefaultPlugins, log};
 use bevy::log::LogPlugin;
-use bevy::prelude::Msaa;
 use avian3d::prelude::PhysicsPlugins;
 use crate::ai::components::approach_and_attack_player_components::ApproachAndAttackPlayerData;
 use crate::ai::components::avoid_wall_components::AvoidWallsData;
@@ -36,7 +35,6 @@ fn main() {
         .register_type::<Health>()
         .register_type::<AvoidWallsData>()
         .register_type::<ApproachAndAttackPlayerData>()
-        .insert_resource(Msaa::Sample4)
         .add_plugins(
             DefaultPlugins.set(
                 LogPlugin {

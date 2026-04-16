@@ -1,7 +1,6 @@
 use bevy::asset::AssetServer;
-use bevy::core::Name;
 use bevy::math::{Quat, Vec3};
-use bevy::prelude::{Commands, EventReader, EventWriter, Has, Query, Res, ResMut, Resource};
+use bevy::prelude::{Commands, Has, MessageReader, MessageWriter, Name, Query, Res, ResMut, Resource};
 use bevy::scene::SceneRoot;
 use avian3d::prelude::{Collider, CollisionLayers, Position, RigidBody, Rotation};
 use flagset::{flags, FlagSet};
@@ -77,9 +76,9 @@ pub struct MapDef {
 } //No data needed now
 
 pub fn load_map_one(
-    mut send_event: EventWriter<LoadMap>
+    mut send_event: MessageWriter<LoadMap>
 ) {
-    send_event.send(LoadMap {});
+    send_event.write(LoadMap {});
 }
 
 
@@ -166,8 +165,8 @@ impl TileDefinitions {
 
 #[allow(clippy::too_many_arguments)]
 pub fn map_loader(
-    mut load_map_event_reader: EventReader<LoadMap>,
-    mut spawn_player_event_writer: EventWriter<SpawnPlayer>,
+    mut load_map_event_reader: MessageReader<LoadMap>,
+    mut spawn_player_event_writer: MessageWriter<SpawnPlayer>,
     mut commands: Commands,
     mut alien_counter: ResMut<AlienCounter>,
     mut map_graph: ResMut<MapGraph>,
@@ -371,7 +370,7 @@ pub fn map_loader(
             }
 
             if tile.features.contains(TileFlags::PlayerSpawn) {
-                spawn_player_event_writer.send(SpawnPlayer {
+                spawn_player_event_writer.write(SpawnPlayer {
                     position: (tile.x as usize, tile.y as usize).to_world_coords(&tile_defs) + Vec3::new(0.0, -tile_defs.wall_height, 0.0),
                 });
             }
@@ -394,7 +393,7 @@ pub fn update_current_tile_system(
 }
 
 pub fn remove_tile_from_map(
-    mut remove_tile_evr: EventReader<RemoveTile>,
+    mut remove_tile_evr: MessageReader<RemoveTile>,
     mut map_graph: ResMut<MapGraph>,
 ) {
     for remove_tile_event in remove_tile_evr.read() {
@@ -403,7 +402,7 @@ pub fn remove_tile_from_map(
 }
 
 pub fn add_tile_to_map(
-    mut add_tile_evr: EventReader<AddTile>,
+    mut add_tile_evr: MessageReader<AddTile>,
     mut map_graph: ResMut<MapGraph>,
 ) {
     for add_tile_event in add_tile_evr.read() {

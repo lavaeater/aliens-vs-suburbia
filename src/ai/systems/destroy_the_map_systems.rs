@@ -14,10 +14,10 @@ use crate::control::components::{ControlDirection, CharacterControl, ControlRota
 use crate::general::components::Health;
 
 pub fn agent_cant_find_path(
-    mut alien_cant_find_path_event_reader: EventReader<AgentCannotFindPath>,
+    mut alien_cant_find_path_mr: MessageReader<AgentCannotFindPath>,
     mut commands: Commands,
 ) {
-    for AgentCannotFindPath(alien) in alien_cant_find_path_event_reader.read() {
+    for AgentCannotFindPath(alien) in alien_cant_find_path_mr.read() {
         if let Some(mut alien_commands) = commands.get_entity(*alien) {
             alien_commands.insert(MustDestroyTheMap::new());
         }

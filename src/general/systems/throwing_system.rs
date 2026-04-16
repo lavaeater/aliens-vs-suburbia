@@ -1,5 +1,5 @@
 use bevy::math::Vec3;
-use bevy::prelude::{Commands, Entity, EventWriter, Query, Res, Transform};
+use bevy::prelude::{Commands, Entity, MessageWriter, Query, Res, Transform};
 use bevy::scene::SceneRoot;
 use bevy::time::Time;
 use avian3d::prelude::{Collider, CollisionLayers, LinearVelocity, Position, RigidBody};
@@ -15,13 +15,13 @@ pub fn throwing(
     mut query: Query<(Entity, &Player, &Position, &AutoAim, &mut CharacterControl)>,
     mut commands: Commands,
     game_assets: Res<GameAssets>,
-    mut game_ew: EventWriter<GameTrackingEvent>,
+    mut game_mw: MessageWriter<GameTrackingEvent>,
 ) {
     for (entity, _player, position, auto_aim, mut controller) in query.iter_mut() {
         if controller.triggers.contains(&ControlCommand::Throw) {
             if controller.cool_down(time_res.delta_secs()) {
                 let launch_p = position.0 + auto_aim.0 * 0.5 + Vec3::new(0.0, 0.25, 0.0);
-                game_ew.send(GameTrackingEvent::ShotFired(entity));
+                game_mw.write(GameTrackingEvent::ShotFired(entity));
                 controller.has_thrown = true;
                 commands.spawn((
                     Ball::new(entity),

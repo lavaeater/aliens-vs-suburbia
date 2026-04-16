@@ -1,12 +1,11 @@
-use bevy::hierarchy::{BuildChildren, Children};
 use bevy::math::{EulerRot, Quat, Vec3};
-use bevy::prelude::{Commands, Component, Entity, EventReader, EventWriter, Query, Res, Transform, Visibility, With};
+use bevy::prelude::{Children, Commands, Component, Entity, MessageReader, MessageWriter, Query,
+                    Res, Transform, Visibility, With};
 use bevy::scene::SceneRoot;
-use bevy::utils::default;
-use bevy_mod_outline::{OutlineVolume};
+use bevy_mod_outline::OutlineVolume;
 use avian3d::prelude::Collider;
 use crate::assets::assets_plugin::GameAssets;
-use crate::game_state::score_keeper::{GameTrackingEvent};
+use crate::game_state::score_keeper::GameTrackingEvent;
 use crate::general::components::CollisionLayer;
 use crate::general::events::map_events::SpawnPlayer;
 use crate::player::bundle::PlayerBundle;
@@ -30,11 +29,11 @@ impl FixSceneTransform {
 }
 
 pub fn spawn_players(
-    mut spawn_player_event_reader: EventReader<SpawnPlayer>,
+    mut spawn_player_event_reader: MessageReader<SpawnPlayer>,
     mut commands: Commands,
     game_assets: Res<GameAssets>,
-    mut add_health_bar_ew: EventWriter<AddHealthBar>,
-    mut player_addedd_ew: EventWriter<GameTrackingEvent>,
+    mut add_health_bar_mw: MessageWriter<AddHealthBar>,
+    mut player_added_mw: MessageWriter<GameTrackingEvent>,
 ) {
     for spawn_player in spawn_player_event_reader.read() {
         let player = commands.spawn((
@@ -50,7 +49,7 @@ pub fn spawn_players(
             PlayerBundle::new(
                 "player",
                 "Player One",
-                [CollisionLayer::Player].into(),
+                [CollisionLayer::Player],
                 [
                     CollisionLayer::Ball,
                     CollisionLayer::Impassable,
@@ -59,7 +58,7 @@ pub fn spawn_players(
                     CollisionLayer::Player,
                     CollisionLayer::AlienSpawnPoint,
                     CollisionLayer::AlienGoal
-                ].into(),
+                ],
             ),
             OutlineVolume {
                 visible: true,
@@ -72,12 +71,11 @@ pub fn spawn_players(
                 Transform::from_xyz(0.0, 0.0, 0.0),
             ));
         }).id();
-        add_health_bar_ew.send(AddHealthBar {
+        add_health_bar_mw.write(AddHealthBar {
             entity: player,
             name: "PLAYER",
         });
-        player_addedd_ew.send(
-            GameTrackingEvent::PlayerAdded(player));
+        player_added_mw.write(GameTrackingEvent::PlayerAdded(player));
     }
 }
 

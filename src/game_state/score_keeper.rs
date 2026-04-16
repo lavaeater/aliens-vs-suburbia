@@ -1,9 +1,7 @@
-use belly::build::{Elements, eml};
 use bevy::app::{App, Plugin, Update};
-use bevy::prelude::{Component, Entity, Event, EventReader, in_state, IntoSystemConfigs, Resource};
+use bevy::prelude::{Component, Entity, Message, MessageReader, MessageWriter, ResMut, Resource,
+                    in_state, IntoScheduleConfigs, Query};
 use crate::game_state::GameState;
-use bevy::prelude::*;
-use belly::prelude::*;
 use crate::ui::spawn_ui::GotoState;
 
 
@@ -78,7 +76,7 @@ impl LevelTracker {
     }
 }
 
-#[derive(Debug, Event)]
+#[derive(Debug, Message, Clone)]
 pub enum GameTrackingEvent {
     PlayerAdded(Entity),
     PlayerRemoved(Entity),
@@ -89,15 +87,12 @@ pub enum GameTrackingEvent {
     AlienReachedGoal,
 }
 
-#[derive(Debug, Event)]
-pub struct ShotHit;
-
 pub struct ScoreKeeperPlugin;
 
 impl Plugin for ScoreKeeperPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_event::<GameTrackingEvent>()
+            .add_message::<GameTrackingEvent>()
             .insert_resource(LevelTracker::default())
             .add_systems(Update, (
                 game_tracking_event_system,
@@ -110,24 +105,13 @@ impl Plugin for ScoreKeeperPlugin {
 }
 
 pub fn game_tracking_event_system(
-    mut game_tracking_events: EventReader<GameTrackingEvent>,
+    mut game_tracking_events: MessageReader<GameTrackingEvent>,
     mut level_tracker: ResMut<LevelTracker>,
     mut score_query: Query<&mut Score>,
-    mut elements: Elements,
 ) {
     for event in game_tracking_events.read() {
         match event {
-            GameTrackingEvent::PlayerAdded(player) => {
-                let p = *player;
-                elements.select("#ui-footer")
-                    .add_child(eml! {
-                        <span c:cell>
-                            <label bind:value=from!(p, Score:kills | fmt.c("Kills: {c}") )/>
-                            <label bind:value=from!(p, Score:shots_fired | fmt.c("Shots: {c}") )/>
-                            <label bind:value=from!(p, Score:shots_hit | fmt.c("Hits: {c}") )/>
-                        </span>
-                    });
-            }
+            GameTrackingEvent::PlayerAdded(_player) => {}
             GameTrackingEvent::PlayerRemoved(_) => {}
             GameTrackingEvent::AlienKilled(player) => {
                 if let Ok(mut score) = score_query.get_mut(*player) {
@@ -157,7 +141,7 @@ pub fn game_tracking_event_system(
 
 pub fn level_state_system(
     mut level_tracker: ResMut<LevelTracker>,
-    mut goto_state_ew: EventWriter<GotoState>,
+    mut goto_state_mw: MessageWriter<GotoState>,
 ) {
     if level_tracker.aliens_killed >= level_tracker.aliens_to_spawn {
         level_tracker.level_state = LevelState::Completed;
@@ -174,10 +158,10 @@ pub fn level_state_system(
         }
         LevelState::InProgress => {}
         LevelState::Completed => {
-            goto_state_ew.send(GotoState { state: GameState::Menu });
+            goto_state_mw.write(GotoState { state: GameState::Menu });
         }
         LevelState::Failed => {
-            goto_state_ew.send(GotoState { state: GameState::Menu });
+            goto_state_mw.write(GotoState { state: GameState::Menu });
         }
     }
 }

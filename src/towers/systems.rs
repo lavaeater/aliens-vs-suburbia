@@ -1,4 +1,4 @@
-use bevy::core::Name;
+use bevy::prelude::Name;
 use bevy::math::Vec3;
 use bevy::prelude::{Commands, Query, Res, Transform, With};
 use bevy::scene::SceneRoot;

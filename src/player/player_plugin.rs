@@ -1,5 +1,5 @@
 use bevy::app::{App, Plugin, Update};
-use bevy::prelude::{Commands, Component, Entity, in_state, IntoSystemConfigs, Query, Res, SceneSpawner, Without};
+use bevy::prelude::{Commands, Component, Entity, in_state, IntoScheduleConfigs, Query, Res, SceneSpawner, Without};
 use bevy::scene::SceneInstance;
 use bevy_mod_outline::{AutoGenerateOutlineNormalsPlugin, InheritOutline, OutlinePlugin};
 use crate::game_state::GameState;
@@ -19,7 +19,7 @@ impl Plugin for PlayerPlugin {
         app
             .add_plugins((
                 OutlinePlugin,
-                AutoGenerateOutlineNormalsPlugin,
+                AutoGenerateOutlineNormalsPlugin::default(),
             ))
             .add_systems(
                 Update,

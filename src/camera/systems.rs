@@ -1,8 +1,6 @@
-use bevy::core::Name;
 use bevy::math::{Mat3, Quat, Rect, Vec2, Vec3};
-use bevy::prelude::{Camera3d, Commands, OrthographicProjection, Query, Transform, With};
-use bevy::render::camera::{Projection, ScalingMode};
-use bevy::utils::default;
+use bevy::prelude::{Camera3d, Commands, Name, OrthographicProjection, Query, Transform, With, default};
+use bevy::camera::{Projection, ScalingMode};
 use std::f32::consts::PI;
 use avian3d::prelude::Position;
 use crate::camera::components::{CameraOffset, GameCamera};

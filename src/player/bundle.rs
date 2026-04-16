@@ -1,7 +1,6 @@
-use bevy::core::Name;
 use bevy::math::Vec3;
-use bevy::prelude::Bundle;
-use avian3d::prelude::{AngularDamping, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
+use bevy::prelude::{Bundle, Name};
+use avian3d::prelude::{AngularDamping, CollisionLayers, Friction, LayerMask, LinearDamping, LockedAxes, RigidBody};
 use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
 use crate::control::components::{CharacterControl, DynamicMovement, InputKeyboard};
 use crate::control::components::CharacterState;
@@ -35,8 +34,8 @@ impl PlayerBundle {
     pub fn new(
         name: &str,
         player_key: &str,
-        groups: Vec<CollisionLayer>,
-        masks: Vec<CollisionLayer>
+        groups: impl Into<LayerMask>,
+        masks: impl Into<LayerMask>,
     ) -> Self {
         Self {
             name: Name::new(name.to_string()),

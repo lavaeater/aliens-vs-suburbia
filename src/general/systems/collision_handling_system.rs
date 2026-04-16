@@ -1,25 +1,26 @@
-use bevy::prelude::{Commands, DespawnRecursiveExt, EventReader, EventWriter, Has, Query, ResMut};
-use avian3d::prelude::CollisionStarted;
+use bevy::prelude::{Commands, Has, MessageReader, MessageWriter, Query, ResMut};
+use avian3d::prelude::CollisionStart;
 use crate::alien::components::general::{Alien, AlienCounter};
 use crate::game_state::score_keeper::{GameTrackingEvent};
 use crate::general::components::{Ball, Health, HittableTarget};
 
 pub fn collision_handling_system(
     mut alien_counter: ResMut<AlienCounter>,
-    mut collision_event_reader: EventReader<CollisionStarted>,
+    mut collision_event_reader: MessageReader<CollisionStart>,
     mut ball_query: Query<&mut Ball>,
     mut hittable_target_query: Query<(&mut Health, &HittableTarget, Has<Alien>)>,
     mut commands: Commands,
-    mut game_ew: EventWriter<GameTrackingEvent>,
+    mut game_mw: MessageWriter<GameTrackingEvent>,
 ) {
-    for CollisionStarted(entity1, entity2) in collision_event_reader.read() {
-        let (entity1, entity2) = (*entity1, *entity2);
+    for collision in collision_event_reader.read() {
+        let entity1 = collision.collider1;
+        let entity2 = collision.collider2;
         if ball_query.contains(entity1) || ball_query.contains(entity2) {
             let mut ball_is_first = true;
             if let Ok(mut ball) = ball_query.get_mut(entity1) {
                 ball.bounces += 1;
                 if ball.bounces >= ball.max_bounces {
-                    commands.entity(entity1).despawn_recursive();
+                    commands.entity(entity1).despawn();
                 }
             }
 
@@ -27,7 +28,7 @@ pub fn collision_handling_system(
                 ball_is_first = false;
                 ball.bounces += 1;
                 if ball.bounces >= ball.max_bounces {
-                    commands.entity(entity2).despawn_recursive();
+                    commands.entity(entity2).despawn();
                 }
             }
 
@@ -37,12 +38,12 @@ pub fn collision_handling_system(
                 if let Ok(mut ball) = ball_query.get_mut(ball_entity) {
                     if ball.can_score {
                         ball.can_score = false;
-                        game_ew.send(GameTrackingEvent::ShotHit(ball.entity));
+                        game_mw.write(GameTrackingEvent::ShotHit(ball.entity));
                     }
                     if ball.bounces <= 2 {
                         target_health.health -= 10;
                         if target_health.health <= 0 && is_alien {
-                            game_ew.send(GameTrackingEvent::AlienKilled(ball.entity));
+                            game_mw.write(GameTrackingEvent::AlienKilled(ball.entity));
                             alien_counter.count -= 1;
                         }
                     }
