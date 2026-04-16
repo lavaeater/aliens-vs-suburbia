@@ -59,7 +59,7 @@ pub fn spawn_building_indicator(
         RigidBody::Kinematic,
         tile_definitions.create_collider(16.0, 4.0, 16.0),
         Position::from(*position),
-        CollisionLayers::new([CollisionLayer::BuildIndicator], []),
+        CollisionLayers::new([CollisionLayer::BuildIndicator], [CollisionLayer::Floor; 0]),
         LockedAxes::new().lock_rotation_x().lock_rotation_z().lock_rotation_y(),
         CurrentTile::default(),
     )).id()

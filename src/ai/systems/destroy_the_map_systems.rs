@@ -18,7 +18,7 @@ pub fn agent_cant_find_path(
     mut commands: Commands,
 ) {
     for AgentCannotFindPath(alien) in alien_cant_find_path_mr.read() {
-        if let Some(mut alien_commands) = commands.get_entity(*alien) {
+        if let Ok(mut alien_commands) = commands.get_entity(*alien) {
             alien_commands.insert(MustDestroyTheMap::new());
         }
     }

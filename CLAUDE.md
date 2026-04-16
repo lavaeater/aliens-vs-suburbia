@@ -52,20 +52,29 @@ Two states: `Menu` and `InGame`. Most gameplay systems use `.run_if(in_state(InG
 
 ### Physics & Collision
 
-Uses **bevy_xpbd_3d** with collision layers defined in `src/general/`: `Impassable`, `Floor`, `Ball`, `Alien`, `Player`.
+Uses **avian3d 0.6** (successor to `bevy_xpbd_3d`) with collision layers defined in `src/general/components/mod.rs`: `Impassable`, `Floor`, `Ball`, `Alien`, `Player`, `BuildIndicator`, `Sensor`, `PlayerAimSensor`, `AlienSpawnPoint`, `AlienGoal`.
 
 ### AI Pattern
 
-Big Brain actions/scorers are split into `components/`, `systems/`, and action structs per behavior. Each behavior (e.g., `ApproachAndAttackPlayer`, `AvoidWalls`) has its own submodule under `src/ai/`.
+AI behaviors are implemented directly without an external library. Each behavior (e.g., `ApproachAndAttackPlayer`, `AvoidWalls`, `MoveTowardsGoal`, `DestroyTheMap`) has its own submodule under `src/ai/` split into `components/` and `systems/`.
+
+### Bevy 0.18 Patterns
+
+Key API changes active in this codebase:
+- **Messages not Events**: Custom event types derive `Message` (not `Event`) and use `MessageReader`/`MessageWriter`. `add_message::<T>()` registers them. Bevy built-in events (e.g. `KeyboardInput`, `GamepadConnectionEvent`) are also `Message`.
+- **`IntoScheduleConfigs`** must be explicitly imported when using `.run_if()`, `.after()`, `.before()` — it is in `bevy::prelude` but requires a specific import.
+- **`ChildOf`** replaces `Parent` for parent traversal. `.parent()` returns the parent entity.
+- **`despawn()`** recursively despawns children by default (no more `despawn_recursive()`).
+- **`Query::single()`** replaces `get_single()` (returns `Result`).
+- **`PhysicsSystems::Writeback`** replaces `PhysicsSet::Sync` for ordering camera after physics.
 
 ### Key Dependencies
 
-- `bevy 0.12.1` — game engine (current branch `bevy@0.16` is an in-progress upgrade)
-- `bevy_xpbd_3d 0.3.2` — 3D physics
-- `big-brain 0.12.0` — utility AI
+- `bevy 0.18` — game engine
+- `avian3d 0.6` — 3D physics (requires `parry-f32` feature)
 - `pathfinding 4.6.0` — A* grid navigation
-- `bevy_mod_outline` — entity outlines
-- `bevy-inspector-egui` — runtime debug inspector (toggle via commented-out `WorldInspectorPlugin` in `main.rs`)
+- `bevy_mod_outline 0.12` — entity outlines
+- `bevy-inspector-egui 0.36` — runtime debug inspector (active via `InspectorPlugin`)
 
 ### Assets
 

@@ -12,7 +12,7 @@ use crate::assets::assets_plugin::GameAssets;
 use crate::control::components::{CharacterControl, DynamicMovement};
 use crate::game_state::score_keeper::GameTrackingEvent;
 use crate::general::components::{Attack, CollisionLayer, Health, HittableTarget};
-use crate::general::components::map_components::{AlienSpawnPoint, CurrentTile};
+use crate::general::components::map_components::{AlienSpawnPoint, CoolDown, CurrentTile};
 use crate::general::events::map_events::SpawnAlien;
 use crate::player::systems::spawn_players::FixSceneTransform;
 use crate::ui::spawn_ui::AddHealthBar;

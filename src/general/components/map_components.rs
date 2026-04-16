@@ -1,8 +1,7 @@
 use bevy::prelude::{Component, Resource};
 use bevy::reflect::Reflect;
-use bevy::utils::HashMap;
-use avian3d::prelude::{CollisionLayers, RigidBody};
-use crate::general::components::CollisionLayer;
+use std::collections::HashMap;
+use avian3d::prelude::{CollisionLayers, LayerMask, RigidBody};
 
 #[derive(Component)]
 pub struct Wall {}
@@ -20,8 +19,8 @@ pub struct ModelDefinition {
     pub height: f32,
     pub depth: f32,
     pub rigid_body: RigidBody,
-    pub group: Vec<CollisionLayer>,
-    pub mask: Vec<CollisionLayer>,
+    pub group: LayerMask,
+    pub mask: LayerMask,
 }
 
 #[derive(Hash, PartialEq, Eq, Clone, Reflect,Component)]
@@ -29,7 +28,7 @@ pub struct Tower {}
 
 impl ModelDefinition {
     pub fn create_collision_layers(&self) -> CollisionLayers {
-        CollisionLayers::new(self.group.clone(), self.mask.clone())
+        CollisionLayers::new(self.group, self.mask)
     }
 }
 

@@ -1,8 +1,8 @@
 use bevy::app::{App, Plugin, Update};
 use bevy::ecs::component::Mutable;
 use bevy::prelude::{Added, AnimationGraph, AnimationGraphHandle, AnimationNodeIndex, AnimationPlayer,
-                    Assets, Children, Commands, Component, Entity, Message, MessageReader,
-                    in_state, IntoScheduleConfigs, OnEnter, Parent, Query, Reflect, Res, ResMut, Resource};
+                    Assets, Children, ChildOf, Commands, Component, Entity, Message, MessageReader,
+                    in_state, IntoScheduleConfigs, OnEnter, Query, Reflect, Res, ResMut, Resource};
 use bevy::animation::AnimationClip;
 use bevy::asset::{AssetServer, Handle};
 use std::collections::HashMap;
@@ -168,7 +168,7 @@ pub fn start_some_animations(
     anim_store: Res<AnimationStore>,
     mut players: Query<(Entity, &mut AnimationPlayer), Added<AnimationPlayer>>,
     anim_key_query: Query<&CurrentAnimationKey>,
-    parent_query: Query<&Parent>,
+    parent_query: Query<&ChildOf>,
     mut commands: Commands,
 ) {
     for (entity, mut anim_player) in players.iter_mut() {
@@ -185,10 +185,10 @@ pub fn start_some_animations(
     }
 }
 
-pub fn get_parent_recursive(entity: Entity, parent_query: &Query<&Parent>) -> Option<Entity> {
+pub fn get_parent_recursive(entity: Entity, parent_query: &Query<&ChildOf>) -> Option<Entity> {
     match parent_query.get(entity) {
-        Ok(parent) => {
-            get_parent_recursive(parent.get(), parent_query)
+        Ok(child_of) => {
+            get_parent_recursive(child_of.parent(), parent_query)
         }
         Err(_) => {
             Some(entity)
