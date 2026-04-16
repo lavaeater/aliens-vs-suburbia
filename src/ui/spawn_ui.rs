@@ -46,10 +46,9 @@ pub fn spawn_menu(
 pub struct StateMarker;
 
 pub fn goto_state_system(
-    mut state: ResMut<NextState<GameState>>,
+    mut next_state: ResMut<NextState<GameState>>,
     mut goto_state_mr: MessageReader<GotoState>,
     interaction_query: Query<&Interaction, (Changed<Interaction>, With<Button>)>,
-    mut next_state: ResMut<NextState<GameState>>,
 ) {
     // Handle button presses
     for interaction in interaction_query.iter() {
@@ -59,7 +58,7 @@ pub fn goto_state_system(
     }
     // Also handle programmatic state changes
     for goto_state in goto_state_mr.read() {
-        state.set(goto_state.state.clone());
+        next_state.set(goto_state.state.clone());
     }
 }
 
