@@ -19,7 +19,7 @@ pub fn keyboard_input(
         for ev in key_evr.read() {
             match ev.state {
                 ButtonState::Pressed => match ev.key_code {
-                    Some(KeyCode::B) => {
+                    KeyCode::KeyB => {
                         if controller.triggers.contains(&ControlCommand::Build) {
                             animation_ew.send(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Building));
                             exit_build.send(ExitBuildMode(entity));
@@ -29,29 +29,29 @@ pub fn keyboard_input(
                             start_build_ew.send(EnterBuildMode(entity));
                         }
                     }
-                    Some(KeyCode::Escape) => {
+                    KeyCode::Escape => {
                         if controller.triggers.contains(&ControlCommand::Build) {
                             animation_ew.send(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Building));
                             exit_build.send(ExitBuildMode(entity));
                         }
                     }
-                    Some(KeyCode::A) => {
+                    KeyCode::KeyA => {
                         animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walking));
                         controller.rotations.insert(ControlRotation::Left);
                     }
-                    Some(KeyCode::D) => {
+                    KeyCode::KeyD => {
                         animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walking));
                         controller.rotations.insert(ControlRotation::Right);
                     }
-                    Some(KeyCode::W) => {
+                    KeyCode::KeyW => {
                         animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walking));
                         controller.directions.insert(ControlDirection::Forward);
                     }
-                    Some(KeyCode::S) => {
+                    KeyCode::KeyS => {
                         animation_ew.send(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walking));
                         controller.directions.insert(ControlDirection::Backward);
                     }
-                    Some(KeyCode::Space) => {
+                    KeyCode::Space => {
                         if controller.triggers.contains(&ControlCommand::Build) {
                             execute_build.send(ExecuteBuild(entity));
                         } else if controller.triggers.contains(&ControlCommand::Throw) {
@@ -65,22 +65,22 @@ pub fn keyboard_input(
                     _ => {}
                 },
                 ButtonState::Released => match ev.key_code {
-                    Some(KeyCode::A) => {
+                    KeyCode::KeyA => {
                         controller.rotations.remove(&ControlRotation::Left);
                     }
-                    Some(KeyCode::D) => {
+                    KeyCode::KeyD => {
                         controller.rotations.remove(&ControlRotation::Right);
                     }
-                    Some(KeyCode::W) => {
+                    KeyCode::KeyW => {
                         controller.directions.remove(&ControlDirection::Forward);
                     }
-                    Some(KeyCode::S) => {
+                    KeyCode::KeyS => {
                         controller.directions.remove(&ControlDirection::Backward);
                     }
-                    Some(KeyCode::Left) => {
+                    KeyCode::ArrowLeft => {
                         change_build_indicator.send(ChangeBuildIndicator(entity, -1));
                     }
-                    Some(KeyCode::Right) => {
+                    KeyCode::ArrowRight => {
                         change_build_indicator.send(ChangeBuildIndicator(entity, 1));
                     }
                     _ => {}

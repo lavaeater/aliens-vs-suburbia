@@ -1,6 +1,5 @@
 use bevy::prelude::{Component, Entity};
 use bevy::reflect::Reflect;
-use big_brain::prelude::{ActionBuilder, ScorerBuilder};
 
 #[derive(Clone, Component, Debug, Reflect)]
 pub struct ApproachAndAttackPlayerData {
@@ -16,15 +15,3 @@ impl Default for ApproachAndAttackPlayerData {
         }
     }
 }
-
-#[derive(Clone, Component, Debug, ScorerBuilder)]
-pub struct ApproachAndAttackPlayerScore;
-
-#[derive(Clone, Component, Debug, ActionBuilder)]
-pub struct ApproachPlayerAction {}
-
-#[derive(Clone, Component, Debug, ActionBuilder)]
-pub struct AttackPlayerAction {}
-
-
-

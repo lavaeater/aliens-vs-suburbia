@@ -1,7 +1,7 @@
 use bevy::app::{App, Plugin, Update};
 use bevy::prelude::{Commands, Component, Entity, in_state, IntoSystemConfigs, Query, Res, SceneSpawner, Without};
 use bevy::scene::SceneInstance;
-use bevy_mod_outline::{AutoGenerateOutlineNormalsPlugin, InheritOutlineBundle, OutlinePlugin};
+use bevy_mod_outline::{AutoGenerateOutlineNormalsPlugin, InheritOutline, OutlinePlugin};
 use crate::game_state::GameState;
 use crate::player::systems::auto_aim::{auto_aim, debug_gizmos};
 use crate::player::systems::spawn_players::{fix_scene_transform, spawn_players};
@@ -14,7 +14,7 @@ pub struct PlayerPlugin {
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         if self.with_debug {
-            app.add_systems(Update, (debug_gizmos).run_if(in_state(GameState::InGame)));
+            app.add_systems(Update, debug_gizmos.run_if(in_state(GameState::InGame)));
         }
         app
             .add_plugins((
@@ -44,9 +44,7 @@ fn setup_scene_once_loaded(
     for (scene_entity, scene) in scene_query.iter() {
         if scene_manager.instance_is_ready(**scene) {
             for entity in scene_manager.iter_instance_entities(**scene) {
-                commands
-                    .entity(entity)
-                    .insert(InheritOutlineBundle::default());
+                commands.entity(entity).insert(InheritOutline);
             }
             commands.entity(scene_entity).insert(OutlineDone);
         }

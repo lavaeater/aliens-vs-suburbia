@@ -1,13 +1,13 @@
 use bevy::hierarchy::{BuildChildren, Children};
 use bevy::math::{EulerRot, Quat, Vec3};
-use bevy::prelude::{Color, Commands, Component, Entity, EventReader, EventWriter, Query, Res, Transform, Visibility, With};
-use bevy::scene::SceneBundle;
+use bevy::prelude::{Commands, Component, Entity, EventReader, EventWriter, Query, Res, Transform, Visibility, With};
+use bevy::scene::SceneRoot;
 use bevy::utils::default;
-use bevy_mod_outline::{OutlineBundle, OutlineVolume};
-use bevy_xpbd_3d::components::{Collider};
+use bevy_mod_outline::{OutlineVolume};
+use avian3d::prelude::Collider;
 use crate::assets::assets_plugin::GameAssets;
 use crate::game_state::score_keeper::{GameTrackingEvent};
-use crate::general::components::{CollisionLayer};
+use crate::general::components::CollisionLayer;
 use crate::general::events::map_events::SpawnPlayer;
 use crate::player::bundle::PlayerBundle;
 use crate::ui::spawn_ui::AddHealthBar;
@@ -45,11 +45,8 @@ pub fn spawn_players(
                     180.0f32.to_radians(), 0.0, 0.0),
                 Vec3::new(0.5, 0.5, 0.5),
             ),
-            SceneBundle {
-                scene: game_assets.girl_scene.clone(),
-                transform: Transform::from_xyz(spawn_player.position.x, spawn_player.position.y, spawn_player.position.z),
-                ..Default::default()
-            },
+            SceneRoot(game_assets.girl_scene.clone()),
+            Transform::from_xyz(spawn_player.position.x, spawn_player.position.y, spawn_player.position.z),
             PlayerBundle::new(
                 "player",
                 "Player One",
@@ -64,21 +61,17 @@ pub fn spawn_players(
                     CollisionLayer::AlienGoal
                 ].into(),
             ),
-            OutlineBundle {
-                outline: OutlineVolume {
-                    visible: true,
-                    width: 1.0,
-                    colour: Color::BLACK,
-                },
-                ..default()
-            }
-        )).with_children(|children|
-            { // Spawn the child colliders positioned relative to the rigid body
-                children.spawn(
-                    (
-                        Collider::capsule(0.4, 0.2),
-                        Transform::from_xyz(0.0, 0.0, 0.0)));
-            }).id();
+            OutlineVolume {
+                visible: true,
+                width: 1.0,
+                colour: bevy::prelude::Color::BLACK,
+            },
+        )).with_children(|children| {
+            children.spawn((
+                Collider::capsule(0.4, 0.2),
+                Transform::from_xyz(0.0, 0.0, 0.0),
+            ));
+        }).id();
         add_health_bar_ew.send(AddHealthBar {
             entity: player,
             name: "PLAYER",

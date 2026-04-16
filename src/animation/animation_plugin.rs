@@ -1,9 +1,10 @@
 use bevy::app::{App, Plugin, Update};
-use bevy::prelude::{Added, Children, Commands, Component, Entity, Event, EventReader, in_state, IntoSystemConfigs, OnEnter, Query, Reflect, Res, Resource};
-use bevy::animation::{AnimationClip, AnimationPlayer};
-use bevy::hierarchy::Parent;
-use bevy::utils::HashMap;
+use bevy::prelude::{Added, AnimationGraph, AnimationGraphHandle, AnimationNodeIndex, AnimationPlayer,
+                    Assets, Children, Commands, Component, Entity, Event, EventReader,
+                    in_state, IntoSystemConfigs, OnEnter, Parent, Query, Reflect, Res, ResMut, Resource};
+use bevy::animation::AnimationClip;
 use bevy::asset::{AssetServer, Handle};
+use bevy::utils::HashMap;
 use crate::control::components::CharacterState;
 use crate::game_state::GameState;
 
@@ -51,8 +52,9 @@ impl Plugin for AnimationPlugin {
 }
 
 #[derive(Resource)]
-pub struct AnimationStore<S: Into<String>> {
-    pub anims: HashMap<S, HashMap<AnimationKey, Handle<AnimationClip>>>,
+pub struct AnimationStore {
+    pub anims: HashMap<String, HashMap<AnimationKey, AnimationNodeIndex>>,
+    pub graphs: HashMap<String, Handle<AnimationGraph>>,
 }
 
 #[derive(Eq, Hash, PartialEq, Copy, Clone, Debug, Reflect)]
@@ -65,7 +67,7 @@ pub enum AnimationKey {
 }
 
 pub fn leave_animation_state_handler(
-    anim_store: Res<AnimationStore<String>>,
+    anim_store: Res<AnimationStore>,
     mut update_er: EventReader<AnimationEvent>,
     mut anim_key_query: Query<(&mut CurrentAnimationKey, &mut CharacterState)>,
     mut player_query: Query<&mut AnimationPlayer>,
@@ -79,8 +81,8 @@ pub fn leave_animation_state_handler(
                     if let Some(player_entity) = get_child_with_component_recursive(*entity, &child_query, &player_query) {
                         if let Ok(mut player) = player_query.get_mut(player_entity) {
                             current_key.key = new_key;
-                            if let Some(anim) = anim_store.anims.get(&current_key.group).unwrap().get(&current_key.key) {
-                                player.play(anim.clone_weak()).repeat();
+                            if let Some(idx) = anim_store.anims.get(&current_key.group).and_then(|m| m.get(&current_key.key)) {
+                                player.play(*idx).repeat();
                             }
                         }
                     }
@@ -91,7 +93,7 @@ pub fn leave_animation_state_handler(
 }
 
 pub fn goto_animation_state_handler(
-    anim_store: Res<AnimationStore<String>>,
+    anim_store: Res<AnimationStore>,
     mut update_er: EventReader<AnimationEvent>,
     mut anim_key_query: Query<(&mut CurrentAnimationKey, &mut CharacterState)>,
     mut player_query: Query<&mut AnimationPlayer>,
@@ -104,8 +106,8 @@ pub fn goto_animation_state_handler(
                     if let Some(player_entity) = get_child_with_component_recursive(*entity, &child_query, &player_query) {
                         if let Ok(mut player) = player_query.get_mut(player_entity) {
                             current_key.key = *anim_key;
-                            if let Some(anim) = anim_store.anims.get(&current_key.group).unwrap().get(&current_key.key) {
-                                player.play(anim.clone_weak()).repeat();
+                            if let Some(idx) = anim_store.anims.get(&current_key.group).and_then(|m| m.get(&current_key.key)) {
+                                player.play(*idx).repeat();
                             }
                         }
                     }
@@ -118,48 +120,64 @@ pub fn goto_animation_state_handler(
 pub fn load_animations(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
+    mut animation_graphs: ResMut<Assets<AnimationGraph>>,
 ) {
-    let mut store = AnimationStore::<String> {
-        anims: HashMap::new()
-    };
-    store.anims.insert("aliens".into(),
-                       HashMap::new());
-    let alien_anims = store
-        .anims
-        .get_mut("aliens")
-        .unwrap();
-    alien_anims.insert(AnimationKey::Walking, asset_server.load("quaternius/alien.glb#Animation13"));
-    alien_anims.insert(AnimationKey::Idle, asset_server.load("quaternius/alien.glb#Animation2"));
+    // --- Aliens ---
+    let mut alien_graph = AnimationGraph::new();
+    let mut alien_anims: HashMap<AnimationKey, AnimationNodeIndex> = HashMap::new();
 
+    let alien_walking_clip: Handle<AnimationClip> = asset_server.load("quaternius/alien.glb#Animation13");
+    let alien_idle_clip: Handle<AnimationClip> = asset_server.load("quaternius/alien.glb#Animation2");
 
-    store
-        .anims
-        .insert("players".into(),
-                HashMap::new());
-    let player_anims = store
-        .anims
-        .get_mut("players")
-        .unwrap();
-    player_anims.insert(AnimationKey::Idle, asset_server.load("girl/girl.glb#Animation0"));
-    player_anims.insert(AnimationKey::Walking, asset_server.load("girl/girl.glb#Animation1"));
-    player_anims.insert(AnimationKey::Throwing, asset_server.load("girl/girl.glb#Animation2"));
-    player_anims.insert(AnimationKey::Crawling, asset_server.load("girl/girl.glb#Animation3"));
-    player_anims.insert(AnimationKey::Building, asset_server.load("girl/girl.glb#Animation4"));
+    alien_anims.insert(AnimationKey::Walking, alien_graph.add_clip(alien_walking_clip, 1.0, alien_graph.root));
+    alien_anims.insert(AnimationKey::Idle, alien_graph.add_clip(alien_idle_clip, 1.0, alien_graph.root));
 
-    commands.insert_resource(store);
+    let alien_graph_handle = animation_graphs.add(alien_graph);
+
+    // --- Players ---
+    let mut player_graph = AnimationGraph::new();
+    let mut player_anims: HashMap<AnimationKey, AnimationNodeIndex> = HashMap::new();
+
+    let player_idle_clip: Handle<AnimationClip> = asset_server.load("girl/girl.glb#Animation0");
+    let player_walking_clip: Handle<AnimationClip> = asset_server.load("girl/girl.glb#Animation1");
+    let player_throwing_clip: Handle<AnimationClip> = asset_server.load("girl/girl.glb#Animation2");
+    let player_crawling_clip: Handle<AnimationClip> = asset_server.load("girl/girl.glb#Animation3");
+    let player_building_clip: Handle<AnimationClip> = asset_server.load("girl/girl.glb#Animation4");
+
+    player_anims.insert(AnimationKey::Idle, player_graph.add_clip(player_idle_clip, 1.0, player_graph.root));
+    player_anims.insert(AnimationKey::Walking, player_graph.add_clip(player_walking_clip, 1.0, player_graph.root));
+    player_anims.insert(AnimationKey::Throwing, player_graph.add_clip(player_throwing_clip, 1.0, player_graph.root));
+    player_anims.insert(AnimationKey::Crawling, player_graph.add_clip(player_crawling_clip, 1.0, player_graph.root));
+    player_anims.insert(AnimationKey::Building, player_graph.add_clip(player_building_clip, 1.0, player_graph.root));
+
+    let player_graph_handle = animation_graphs.add(player_graph);
+
+    let mut anims = HashMap::new();
+    anims.insert("aliens".to_string(), alien_anims);
+    anims.insert("players".to_string(), player_anims);
+
+    let mut graphs = HashMap::new();
+    graphs.insert("aliens".to_string(), alien_graph_handle);
+    graphs.insert("players".to_string(), player_graph_handle);
+
+    commands.insert_resource(AnimationStore { anims, graphs });
 }
 
 pub fn start_some_animations(
-    anim_store: Res<AnimationStore<String>>,
+    anim_store: Res<AnimationStore>,
     mut players: Query<(Entity, &mut AnimationPlayer), Added<AnimationPlayer>>,
     anim_key_query: Query<&CurrentAnimationKey>,
     parent_query: Query<&Parent>,
+    mut commands: Commands,
 ) {
     for (entity, mut anim_player) in players.iter_mut() {
         if let Some(super_ent) = get_parent_recursive(entity, &parent_query) {
             if let Ok(anim_key) = anim_key_query.get(super_ent) {
-                if let Some(anim) = anim_store.anims.get(&anim_key.group).unwrap().get(&anim_key.key) {
-                    anim_player.play(anim.clone_weak()).repeat();
+                if let Some(graph_handle) = anim_store.graphs.get(&anim_key.group) {
+                    commands.entity(entity).insert(AnimationGraphHandle(graph_handle.clone()));
+                    if let Some(idx) = anim_store.anims.get(&anim_key.group).and_then(|m| m.get(&anim_key.key)) {
+                        anim_player.play(*idx).repeat();
+                    }
                 }
             }
         }
@@ -196,5 +214,3 @@ pub fn get_child_with_component_recursive<T: Component>(entity: Entity, child_qu
         }
     }
 }
-
-

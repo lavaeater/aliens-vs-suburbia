@@ -1,7 +1,7 @@
 use bevy::core::Name;
 use bevy::math::Vec3;
-use bevy::prelude::{Bundle};
-use bevy_xpbd_3d::components::{AngularDamping, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
+use bevy::prelude::Bundle;
+use avian3d::prelude::{AngularDamping, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody};
 use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
 use crate::control::components::{CharacterControl, DynamicMovement, InputKeyboard};
 use crate::control::components::CharacterState;
@@ -46,9 +46,9 @@ impl PlayerBundle {
             input: InputKeyboard,
             character_controller: CharacterControl::new(3.0, 3.0, 60.0),
             dynamic_movement: DynamicMovement,
-            friction: Friction::from(0.0),
-            angular_damping: AngularDamping::from(0.0),
-            linear_damping: LinearDamping::from(0.0),
+            friction: Friction::new(0.0),
+            angular_damping: AngularDamping(0.0),
+            linear_damping: LinearDamping(0.0),
             rigid_body: RigidBody::Dynamic,
             locked_axes: LockedAxes::new().lock_rotation_x().lock_rotation_z(),
             collision_layers: CollisionLayers::new(groups, masks),

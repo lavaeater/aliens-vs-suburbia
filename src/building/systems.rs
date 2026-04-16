@@ -4,9 +4,8 @@ use bevy::hierarchy::{BuildChildren, DespawnRecursiveExt};
 use bevy::log::info;
 use bevy::math::{Vec2, Vec3, Vec3Swizzles};
 use bevy::prelude::{Commands, Entity, EventReader, EventWriter, Query, Res, With, Without};
-use bevy::scene::{SceneBundle, SceneInstance};
-use bevy_xpbd_3d::components::{Collider, CollisionLayers, LockedAxes, RigidBody, Rotation, Sensor};
-use bevy_xpbd_3d::prelude::Position;
+use bevy::scene::{SceneRoot, SceneInstance};
+use avian3d::prelude::{Collider, CollisionLayers, LockedAxes, Position, RigidBody, Rotation, Sensor};
 use crate::control::components::{ControlCommand, CharacterControl};
 use crate::general::components::{CollisionLayer, Health};
 use crate::general::components::map_components::{CurrentTile, MapModelDefinitions};
@@ -16,7 +15,6 @@ use crate::player::components::{BuildingIndicator, IsBuildIndicator, IsBuilding,
 use crate::player::events::building_events::{ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode, RemoveTile};
 use crate::towers::components::{TowerSensor, TowerShooter};
 use crate::towers::events::BuildTower;
-use crate::towers::systems;
 use crate::ui::spawn_ui::AddHealthBar;
 
 
@@ -59,10 +57,7 @@ pub fn spawn_building_indicator(
     commands.spawn((
         Name::from("BuildingIndicator"),
         IsBuildIndicator {},
-        SceneBundle {
-            scene: asset_server.load(file),
-            ..Default::default()
-        },
+        SceneRoot(asset_server.load(file)),
         RigidBody::Kinematic,
         tile_definitions.create_collider(16.0, 4.0, 16.0),
         Position::from(*position),
@@ -135,7 +130,7 @@ pub fn change_build_indicator(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     model_defs: Res<MapModelDefinitions>,
-    tile_defs: Res<TileDefinitions>
+    tile_defs: Res<TileDefinitions>,
 ) {
     for change_build_event in change_build_indicator_evr.read() {
         if let Ok((mut building_indicator, position)) = builder_query.get_mut(change_build_event.0) {
@@ -153,11 +148,7 @@ pub fn change_build_indicator(
             let indicator_key = model_defs.build_indicators[building_indicator.1 as usize];
             info!("Changing indicator to {}", indicator_key);
 
-            /*
-            We need to destroy the entity and re-create it. Buuummer!
-             */
-
-            let p = position.0.clone();
+            let p = position.0;
             commands.entity(building_indicator.0).despawn_recursive();
             building_indicator.0 = spawn_building_indicator(
                 &mut commands,
@@ -179,11 +170,11 @@ pub trait ToGridNeighbour {
 }
 
 pub trait ToWorldCoordinates {
-    fn to_world_coords(&self, tile_definitions: &Res<TileDefinitions>) -> Vec3;
+    fn to_world_coords(&self, tile_definitions: &TileDefinitions) -> Vec3;
 }
 
 impl ToWorldCoordinates for (usize, usize) {
-    fn to_world_coords(&self, tile_definitions: &Res<TileDefinitions>) -> Vec3 {
+    fn to_world_coords(&self, tile_definitions: &TileDefinitions) -> Vec3 {
         Vec3::new(
             tile_definitions.tile_width * self.0 as f32,
             0.0,
@@ -194,30 +185,30 @@ impl ToWorldCoordinates for (usize, usize) {
 
 impl ToGridNeighbour for Rotation {
     fn get_neighbour(&self, current_tile: (usize, usize)) -> (usize, usize) {
-        let n = self.0.
-            mul_vec3(Vec3::new(0.0, 0.0, -1.0))
+        let n = self.0
+            .mul_vec3(Vec3::new(0.0, 0.0, -1.0))
             .xz()
             .normalize();
 
-        let mut angle = n.angle_between(Vec2::new(1.0, 0.0)).to_degrees() as i32;
+        let mut angle = n.angle_to(Vec2::new(1.0, 0.0)).to_degrees() as i32;
 
         angle = if angle.is_negative() { 360 + angle } else { angle };
 
         let x: i32 = match angle {
-            0..=59 => { 1 }
-            60..=119 => { 0 }
-            120..=239 => { -1 }
-            240..=299 => { 0 }
-            300..=360 => { 1 }
-            _ => { 1 }
+            0..=59 => 1,
+            60..=119 => 0,
+            120..=239 => -1,
+            240..=299 => 0,
+            300..=360 => 1,
+            _ => 1,
         } + current_tile.0 as i32;
 
         let y: i32 = match angle {
-            46..=134 => { -1 }
-            135..=224 => { 0 }
-            225..=314 => { 1 }
-            315..=360 => { 0 }
-            _ => { 0 }
+            46..=134 => -1,
+            135..=224 => 0,
+            225..=314 => 1,
+            315..=360 => 0,
+            _ => 0,
         } + current_tile.1 as i32;
 
         ((if x.is_negative() { 0 } else { x as usize }), if y.is_negative() { 0 } else { y as usize })
@@ -236,11 +227,8 @@ pub fn build_tower_system(
         let model_def = model_defs.definitions.get(build_tower.model_definition_key).unwrap();
         let mut ec = commands.spawn((
             Name::from(model_def.name),
-            IsObstacle {}, // let this be, for now!
-            SceneBundle {
-                scene: asset_server.load(model_def.file),
-                ..Default::default()
-            },
+            IsObstacle {},
+            SceneRoot(asset_server.load(model_def.file)),
             model_def.rigid_body,
             tile_defs.create_collider(model_def.width, model_def.height, model_def.depth),
             Position::from(build_tower.position),
@@ -259,7 +247,6 @@ pub fn build_tower_system(
                     TowerSensor {},
                     TowerShooter::new(20.0),
                     Sensor,
-                    systems::create_thinker()
                 ));
             });
         }

@@ -1,8 +1,8 @@
-use belly::build::BellyPlugin;
 use bevy::app::{App, Plugin, Update};
-use bevy::prelude::{Camera2dBundle, OnEnter, OnExit};
+use bevy::prelude::{Camera2d, OnEnter, OnExit};
 use crate::game_state::GameState;
-use crate::ui::spawn_ui::{cleanup_menu, goto_state_system, GotoState, spawn_menu, spawn_ui};
+use crate::ui::spawn_ui::{cleanup_menu, goto_state_system, GotoState, spawn_menu, spawn_ui,
+                          add_health_bar, fellow_system, AddHealthBar};
 
 pub struct UiPlugin;
 
@@ -10,7 +10,7 @@ impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_event::<GotoState>()
-            .add_plugins(BellyPlugin)
+            .add_event::<AddHealthBar>()
             .add_systems(
                 OnEnter(GameState::InGame),
                 spawn_ui,
@@ -28,16 +28,17 @@ impl Plugin for UiPlugin {
             )
             .add_systems(
                 Update,
-                goto_state_system,
-            )
-        ;
+                (
+                    goto_state_system,
+                    add_health_bar,
+                    fellow_system,
+                ),
+            );
     }
 }
 
 pub fn spawn_ui_camera(
     mut commands: bevy::prelude::Commands,
 ) {
-    commands.spawn(
-        Camera2dBundle::default()
-    );
+    commands.spawn(Camera2d::default());
 }
