@@ -371,7 +371,7 @@ pub fn map_loader(
 
             if tile.features.contains(TileFlags::PlayerSpawn) {
                 spawn_player_event_writer.write(SpawnPlayer {
-                    position: (tile.x as usize, tile.y as usize).to_world_coords(&tile_defs) + Vec3::new(0.0, -tile_defs.wall_height, 0.0),
+                    position: (tile.x as usize, tile.y as usize).to_world_coords(&tile_defs) + Vec3::new(0.0, -tile_defs.wall_height, 2.0),
                 });
             }
         }
