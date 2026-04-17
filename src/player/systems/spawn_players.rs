@@ -44,7 +44,7 @@ pub fn spawn_players(
             ),
             SceneRoot(game_assets.player_scene.clone()),
             Transform::from_xyz(spawn_player.position.x, spawn_player.position.y, spawn_player.position.z),
-            Collider::cuboid(0.5, 1.0, 1.0),
+            Collider::cuboid(0.5, 0.5, 0.45),
             PlayerBundle::new(
                 "player",
                 "Player One",
