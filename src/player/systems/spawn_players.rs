@@ -44,7 +44,7 @@ pub fn spawn_players(
                     180.0f32.to_radians(), 0.0, 0.0),
                 Vec3::new(0.5, 0.5, 0.5),
             ),
-            SceneRoot(game_assets.girl_scene.clone()),
+            SceneRoot(game_assets.player_scene.clone()),
             Transform::from_xyz(spawn_player.position.x, spawn_player.position.y, spawn_player.position.z),
             PlayerBundle::new(
                 "player",
