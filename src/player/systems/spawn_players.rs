@@ -38,14 +38,13 @@ pub fn spawn_players(
     for spawn_player in spawn_player_event_reader.read() {
         let player = commands.spawn((
             FixSceneTransform::new(
-                Vec3::new(0.0, -0.37, 0.0),
-                Quat::from_euler(
-                    EulerRot::YXZ,
-                    180.0f32.to_radians(), 0.0, 0.0),
-                Vec3::new(0.5, 0.5, 0.5),
+                Vec3::new(0.0, 0.0, 0.0),
+                Quat::default(),
+                Vec3::new(1.0, 1.0, 1.0),
             ),
             SceneRoot(game_assets.player_scene.clone()),
             Transform::from_xyz(spawn_player.position.x, spawn_player.position.y, spawn_player.position.z),
+            Collider::cuboid(0.5, 1.0, 1.0),
             PlayerBundle::new(
                 "player",
                 "Player One",
@@ -65,12 +64,7 @@ pub fn spawn_players(
                 width: 1.0,
                 colour: bevy::prelude::Color::BLACK,
             },
-        )).with_children(|children| {
-            children.spawn((
-                Collider::capsule(0.4, 0.2),
-                Transform::from_xyz(0.0, 0.0, 0.0),
-            ));
-        }).id();
+        )).id();
         add_health_bar_mw.write(AddHealthBar {
             entity: player,
             name: "PLAYER",

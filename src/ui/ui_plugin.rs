@@ -40,5 +40,5 @@ impl Plugin for UiPlugin {
 pub fn spawn_ui_camera(
     mut commands: bevy::prelude::Commands,
 ) {
-    commands.spawn(Camera2d::default());
+    commands.spawn((Camera2d::default(), bevy::prelude::Camera { order: 1, ..Default::default() }));
 }

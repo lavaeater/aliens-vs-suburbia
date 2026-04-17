@@ -1,3 +1,4 @@
+use avian3d::debug_render::PhysicsDebugPlugin;
 use bevy::app::{App, PluginGroup};
 use bevy::{DefaultPlugins, log};
 use bevy::log::LogPlugin;
@@ -43,6 +44,7 @@ fn main() {
                     ..Default::default()
                 }))
         .add_plugins(PhysicsPlugins::default())
+        .add_plugins(PhysicsDebugPlugin)
         .add_plugins(GamePlugin)
         .run();
 }
