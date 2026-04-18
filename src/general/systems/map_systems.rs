@@ -5,7 +5,7 @@ use bevy::scene::SceneRoot;
 use avian3d::prelude::{Collider, CollisionLayers, Position, RigidBody, Rotation};
 use flagset::{flags, FlagSet};
 use pathfinding::grid::Grid;
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::f32::consts::PI;
 use crate::alien::components::general::AlienCounter;
 use crate::general::components::CollisionLayer;
@@ -133,6 +133,10 @@ impl TileDefinitions {
 
     pub fn create_wall_collider(&self) -> Collider {
         Collider::cuboid(self.tile_width, self.wall_height, self.tile_depth)
+    }
+
+    pub fn create_wall_collider_merged(&self, tile_count: f32) -> Collider {
+        Collider::cuboid(self.tile_width * tile_count, self.wall_height, self.tile_depth)
     }
 
     pub fn get_wall_position(&self, x: i32, y: i32, wall_direction: TileFlags) -> Vec3 {
@@ -335,6 +339,85 @@ pub fn map_loader(
             }
         }
 
+        // Spawn merged wall colliders: N/S walls merge along columns, E/W merge along rows.
+        {
+            let wall_model_def = model_defs.definitions.get("wall").unwrap();
+
+            fn merge_runs(sorted_vals: &[i32]) -> Vec<(i32, i32)> {
+                let mut runs = Vec::new();
+                let mut start = 0;
+                while start < sorted_vals.len() {
+                    let mut end = start;
+                    while end + 1 < sorted_vals.len() && sorted_vals[end + 1] == sorted_vals[end] + 1 {
+                        end += 1;
+                    }
+                    runs.push((sorted_vals[start], sorted_vals[end]));
+                    start = end + 1;
+                }
+                runs
+            }
+
+            // North/South: group by row, merge consecutive columns.
+            for dir in [TileFlags::WallNorth, TileFlags::WallSouth] {
+                let mut by_row: BTreeMap<i32, Vec<i32>> = BTreeMap::new();
+                for tile in map.tiles.iter() {
+                    if tile.features.contains(dir) {
+                        by_row.entry(tile.y).or_default().push(tile.x);
+                    }
+                }
+                for (row, mut cols) in by_row {
+                    cols.sort();
+                    for (c1, c2) in merge_runs(&cols) {
+                        let count = (c2 - c1 + 1) as f32;
+                        let center_x = tile_defs.tile_width * (c1 + c2) as f32 / 2.0;
+                        let z = if dir == TileFlags::WallNorth {
+                            tile_defs.tile_width * row as f32 - tile_defs.tile_width / 2.0
+                        } else {
+                            tile_defs.tile_width * row as f32 + tile_defs.tile_width / 2.0
+                        };
+                        commands.spawn((
+                            Wall {},
+                            wall_model_def.rigid_body,
+                            tile_defs.create_wall_collider_merged(count),
+                            Position::from(Vec3::new(center_x, -tile_defs.wall_height, z)),
+                            Rotation::from(tile_defs.get_wall_rotation(dir)),
+                            wall_model_def.create_collision_layers(),
+                        ));
+                    }
+                }
+            }
+
+            // East/West: group by col, merge consecutive rows.
+            for dir in [TileFlags::WallEast, TileFlags::WallWest] {
+                let mut by_col: BTreeMap<i32, Vec<i32>> = BTreeMap::new();
+                for tile in map.tiles.iter() {
+                    if tile.features.contains(dir) {
+                        by_col.entry(tile.x).or_default().push(tile.y);
+                    }
+                }
+                for (col, mut tile_rows) in by_col {
+                    tile_rows.sort();
+                    for (r1, r2) in merge_runs(&tile_rows) {
+                        let count = (r2 - r1 + 1) as f32;
+                        let x = if dir == TileFlags::WallEast {
+                            tile_defs.tile_width * col as f32 + tile_defs.tile_width / 2.0 - tile_defs.tile_size / tile_defs.tile_basis
+                        } else {
+                            tile_defs.tile_width * col as f32 - tile_defs.tile_width / 2.0
+                        };
+                        let center_z = tile_defs.tile_width * (r1 + r2) as f32 / 2.0;
+                        commands.spawn((
+                            Wall {},
+                            wall_model_def.rigid_body,
+                            tile_defs.create_wall_collider_merged(count),
+                            Position::from(Vec3::new(x, -tile_defs.wall_height, center_z)),
+                            Rotation::from(tile_defs.get_wall_rotation(dir)),
+                            wall_model_def.create_collision_layers(),
+                        ));
+                    }
+                }
+            }
+        }
+
         for tile in map.tiles.iter() {
             if tile.features.contains(TileFlags::Floor) {
                 let model_def = model_defs.definitions.get("floor").unwrap();
@@ -345,56 +428,23 @@ pub fn map_loader(
                     Transform::from_translation(pos),
                 ));
             }
-            if tile.features.contains(TileFlags::AnyWall)
-            {
+            if tile.features.contains(TileFlags::AnyWall) {
                 let model_def = model_defs.definitions.get("wall").unwrap();
-                if tile.features.contains(TileFlags::WallEast) {
-                    commands.spawn((
-                        Name::from(format!("Wall East {}:{}", tile.x, tile.y)),
-                        Wall {},
-                        tile_defs.create_wall_collider(),
-                        Position::from(tile_defs.get_wall_position(tile.x, tile.y, TileFlags::WallEast)),
-                        Rotation::from(tile_defs.get_wall_rotation(TileFlags::WallEast)),
-                        model_def.rigid_body,
-                        model_def.create_collision_layers(),
-                        SceneRoot(asset_server.load(model_def.file)),
-                    ));
-                }
-                if tile.features.contains(TileFlags::WallWest) {
-                    commands.spawn((
-                        Name::from(format!("Wall West {}:{}", tile.x, tile.y)),
-                        Wall {},
-                        tile_defs.create_wall_collider(),
-                        Position::from(tile_defs.get_wall_position(tile.x, tile.y, TileFlags::WallWest)),
-                        Rotation::from(tile_defs.get_wall_rotation(TileFlags::WallWest)),
-                        model_def.rigid_body,
-                        model_def.create_collision_layers(),
-                        SceneRoot(asset_server.load(model_def.file)),
-                    ));
-                }
-                if tile.features.contains(TileFlags::WallSouth) {
-                    commands.spawn((
-                        Name::from(format!("Wall South {}:{}", tile.x, tile.y)),
-                        Wall {},
-                        tile_defs.create_wall_collider(),
-                        Position::from(tile_defs.get_wall_position(tile.x, tile.y, TileFlags::WallSouth)),
-                        Rotation::from(tile_defs.get_wall_rotation(TileFlags::WallSouth)),
-                        model_def.rigid_body,
-                        model_def.create_collision_layers(),
-                        SceneRoot(asset_server.load(model_def.file)),
-                    ));
-                }
-                if tile.features.contains(TileFlags::WallNorth) {
-                    commands.spawn((
-                        Name::from(format!("Wall North {}:{}", tile.x, tile.y)),
-                        Wall {},
-                        tile_defs.create_wall_collider(),
-                        Position::from(tile_defs.get_wall_position(tile.x, tile.y, TileFlags::WallNorth)),
-                        Rotation::from(tile_defs.get_wall_rotation(TileFlags::WallNorth)),
-                        model_def.rigid_body,
-                        model_def.create_collision_layers(),
-                        SceneRoot(asset_server.load(model_def.file)),
-                    ));
+                for (flag, label) in [
+                    (TileFlags::WallEast, "East"),
+                    (TileFlags::WallWest, "West"),
+                    (TileFlags::WallSouth, "South"),
+                    (TileFlags::WallNorth, "North"),
+                ] {
+                    if tile.features.contains(flag) {
+                        let pos = tile_defs.get_wall_position(tile.x, tile.y, flag);
+                        let rot = tile_defs.get_wall_rotation(flag);
+                        commands.spawn((
+                            Name::from(format!("Wall {} {}:{}", label, tile.x, tile.y)),
+                            SceneRoot(asset_server.load(model_def.file)),
+                            Transform::from_translation(pos).with_rotation(rot),
+                        ));
+                    }
                 }
             }
 
