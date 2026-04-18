@@ -1,10 +1,11 @@
 use bevy::asset::AssetServer;
 use bevy::math::{Quat, Vec3};
-use bevy::prelude::{Commands, Has, MessageReader, MessageWriter, Name, Query, Res, ResMut, Resource};
+use bevy::prelude::{Commands, Has, MessageReader, MessageWriter, Name, Query, Res, ResMut, Resource, Transform};
 use bevy::scene::SceneRoot;
 use avian3d::prelude::{Collider, CollisionLayers, Position, RigidBody, Rotation};
 use flagset::{flags, FlagSet};
 use pathfinding::grid::Grid;
+use std::collections::HashSet;
 use std::f32::consts::PI;
 use crate::alien::components::general::AlienCounter;
 use crate::general::components::CollisionLayer;
@@ -278,17 +279,70 @@ pub fn map_loader(
             tiles,
         };
 
+        // Spawn merged floor colliders using greedy maximal rectangles.
+        {
+            let floor_model_def = model_defs.definitions.get("floor").unwrap();
+            let floor_set: HashSet<(i32, i32)> = map.tiles.iter()
+                .filter(|t| t.features.contains(TileFlags::Floor))
+                .map(|t| (t.x, t.y))
+                .collect();
+            let mut covered = vec![vec![false; cols]; rows];
+            for row in 0..rows {
+                for col in 0..cols {
+                    if covered[row][col] || !floor_set.contains(&(col as i32, row as i32)) {
+                        continue;
+                    }
+                    let mut max_col = col;
+                    while max_col + 1 < cols
+                        && floor_set.contains(&((max_col + 1) as i32, row as i32))
+                        && !covered[row][max_col + 1]
+                    {
+                        max_col += 1;
+                    }
+                    let mut max_row = row;
+                    'extend_down: loop {
+                        if max_row + 1 >= rows { break; }
+                        for c in col..=max_col {
+                            if !floor_set.contains(&(c as i32, (max_row + 1) as i32))
+                                || covered[max_row + 1][c]
+                            {
+                                break 'extend_down;
+                            }
+                        }
+                        max_row += 1;
+                    }
+                    for r in row..=max_row {
+                        for c in col..=max_col {
+                            covered[r][c] = true;
+                        }
+                    }
+                    let w = (max_col - col + 1) as f32;
+                    let h = (max_row - row + 1) as f32;
+                    let center = Vec3::new(
+                        tile_defs.tile_width * (col + max_col) as f32 / 2.0,
+                        tile_defs.floor_level,
+                        tile_defs.tile_width * (row + max_row) as f32 / 2.0,
+                    );
+                    commands.spawn((
+                        Name::from(format!("Floor Collider {}:{} {}x{}", col, row, w as i32, h as i32)),
+                        Floor {},
+                        floor_model_def.rigid_body,
+                        tile_defs.create_collider(floor_model_def.width * w, floor_model_def.height, floor_model_def.depth * h),
+                        Position::from(center),
+                        floor_model_def.create_collision_layers(),
+                    ));
+                }
+            }
+        }
+
         for tile in map.tiles.iter() {
             if tile.features.contains(TileFlags::Floor) {
                 let model_def = model_defs.definitions.get("floor").unwrap();
+                let pos = tile_defs.get_floor_position(tile.x, tile.y);
                 commands.spawn((
                     Name::from(format!("Floor {}:{}", tile.x, tile.y)),
-                    Floor {},
                     SceneRoot(asset_server.load(model_def.file)),
-                    model_def.rigid_body,
-                    tile_defs.create_collider(model_def.width, model_def.height, model_def.depth),
-                    Position::from(tile_defs.get_floor_position(tile.x, tile.y)),
-                    model_def.create_collision_layers(),
+                    Transform::from_translation(pos),
                 ));
             }
             if tile.features.contains(TileFlags::AnyWall)
