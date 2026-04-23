@@ -120,6 +120,8 @@ dependencies = [
  "jackdaw",
  "lava_ui_builder",
  "pathfinding",
+ "ron 0.8.1",
+ "serde",
 ]
 
 [[package]]
@@ -550,6 +552,12 @@ dependencies = [
 
 [[package]]
 name = "base64"
+version = "0.21.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567"
+
+[[package]]
+name = "base64"
 version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
@@ -660,7 +668,7 @@ dependencies = [
  "downcast-rs 2.0.2",
  "either",
  "petgraph",
- "ron",
+ "ron 0.12.1",
  "serde",
  "smallvec",
  "thiserror 2.0.18",
@@ -758,7 +766,7 @@ dependencies = [
  "futures-util",
  "js-sys",
  "notify-debouncer-full",
- "ron",
+ "ron 0.12.1",
  "serde",
  "stackfuture",
  "thiserror 2.0.18",
@@ -1176,7 +1184,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5f37fb52655d0439656ca0a1db027d46926e463c81d893d4b1639668e5d7f1c1"
 dependencies = [
  "async-lock",
- "base64",
+ "base64 0.22.1",
  "bevy_animation",
  "bevy_app",
  "bevy_asset",
@@ -1772,7 +1780,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "159a74df828813210ac43df3a3055cfe1a42264753af3fe9bebbcce5916fa225"
 dependencies = [
  "anyhow",
- "base64",
+ "base64 0.22.1",
  "bevy_app",
  "bevy_asset",
  "bevy_camera",
@@ -1817,7 +1825,7 @@ dependencies = [
  "bevy_transform",
  "bevy_utils",
  "derive_more",
- "ron",
+ "ron 0.12.1",
  "serde",
  "thiserror 2.0.18",
  "uuid",
@@ -4377,7 +4385,7 @@ dependencies = [
  "anyhow",
  "arboard",
  "avian3d 0.5.0",
- "base64",
+ "base64 0.22.1",
  "bevy",
  "bevy_enhanced_input",
  "bevy_infinite_grid",
@@ -6472,6 +6480,18 @@ dependencies = [
 
 [[package]]
 name = "ron"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b91f7eff05f748767f183df4320a63d6936e9c6107d97c9e6bdd9784f4289c94"
+dependencies = [
+ "base64 0.21.7",
+ "bitflags 2.11.1",
+ "serde",
+ "serde_derive",
+]
+
+[[package]]
+name = "ron"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4147b952f3f819eca0e99527022f7d6a8d05f111aeb0a62960c74eb283bec8fc"
@@ -7528,7 +7548,7 @@ version = "2.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02d1a66277ed75f640d608235660df48c8e3c19f3b4edb6a263315626cc3c01d"
 dependencies = [
- "base64",
+ "base64 0.22.1",
  "flate2",
  "log",
  "once_cell",

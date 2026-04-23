@@ -3,7 +3,7 @@ use bevy::prelude::{Camera2d, OnEnter, OnExit};
 use lava_ui_builder::LavaUiPlugin;
 use crate::game_state::GameState;
 use crate::ui::spawn_ui::{cleanup_menu, goto_state_system, GotoState, spawn_menu, spawn_ui,
-                          add_health_bar, sync_health_bars, AddHealthBar};
+                          add_health_bar, sync_health_bars, update_hud, AddHealthBar};
 
 pub struct UiPlugin;
 
@@ -33,6 +33,7 @@ impl Plugin for UiPlugin {
                     goto_state_system,
                     add_health_bar,
                     sync_health_bars,
+                    update_hud,
                 ),
             );
     }

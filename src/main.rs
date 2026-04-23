@@ -26,6 +26,7 @@ mod animation;
 mod constants;
 mod assets;
 mod inspection;
+pub(crate) mod settings;
 
 
 fn main() {
@@ -44,7 +45,7 @@ fn main() {
                     ..Default::default()
                 }))
         .add_plugins(PhysicsPlugins::default())
-        .add_plugins(PhysicsDebugPlugin)
+        // .add_plugins(PhysicsDebugPlugin)
         .add_plugins(GamePlugin)
         .run();
 }

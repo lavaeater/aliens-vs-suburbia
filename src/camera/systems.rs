@@ -1,5 +1,5 @@
 use bevy::math::{Quat, Rect, Vec2, Vec3};
-use bevy::prelude::{AlphaMode, Assets, Camera3d, Children, Color, Commands, Entity, MeshMaterial3d, Name, OrthographicProjection, Query, Res, ResMut, StandardMaterial, Transform, With, Without, default};
+use bevy::prelude::{AlphaMode, Assets, Camera3d, Children, Color, Commands, Entity, MeshMaterial3d, Name, OrthographicProjection, PerspectiveProjection, Query, Res, ResMut, StandardMaterial, Transform, With, Without, default};
 use bevy::camera::{Projection, ScalingMode};
 use bevy::scene::{SceneInstance, SceneSpawner};
 use std::f32::consts::PI;
@@ -7,6 +7,7 @@ use avian3d::prelude::Position;
 use crate::camera::components::{CameraOffset, GameCamera};
 use crate::general::systems::map_systems::{WallMaterials, WallOccluder};
 use crate::player::components::Player;
+use crate::settings::resources::{GameSettings, ProjectionMode};
 
 pub fn spawn_camera(mut commands: Commands) {
     commands.spawn((
@@ -119,5 +120,37 @@ pub fn camera_follow(
             camera_transform.translation = camera_transform.translation.lerp(player_position.0 + offset.0, 0.9);
             camera_transform.look_at(player_position.0, Vec3::Y);
         }
+    }
+}
+
+pub fn apply_camera_settings(
+    settings: Res<GameSettings>,
+    mut camera_query: Query<(&mut Projection, &mut Transform, &mut CameraOffset), With<GameCamera>>,
+) {
+
+    let pitch_rad = settings.pitch_degrees.to_radians();
+    let offset_dist = settings.zoom * 0.75;
+    let offset_y = -pitch_rad.sin() * offset_dist;
+    let offset_xz = pitch_rad.cos() * offset_dist;
+
+    for (mut proj, mut _transform, mut offset) in &mut camera_query {
+        offset.0 = Vec3::new(offset_xz * 0.707, offset_y, offset_xz * 0.707);
+
+        *proj = match settings.projection {
+            ProjectionMode::Orthographic => Projection::Orthographic(OrthographicProjection {
+                near: -1000.0,
+                far: 1000.0,
+                viewport_origin: Vec2::new(0.5, 0.5),
+                scaling_mode: ScalingMode::FixedVertical { viewport_height: 2.0 },
+                area: Rect::new(-1.0, -1.0, 1.0, 1.0),
+                scale: settings.zoom,
+            }),
+            ProjectionMode::Perspective => Projection::Perspective(PerspectiveProjection {
+                fov: (settings.zoom).clamp(10.0, 120.0).to_radians(),
+                near: 0.1,
+                far: 1000.0,
+                ..default()
+            }),
+        };
     }
 }
