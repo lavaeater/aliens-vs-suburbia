@@ -1,7 +1,7 @@
 use bevy::prelude::*;
-use crate::camera::components::GameCamera;
 use crate::game_state::GameState;
 use crate::general::components::Health;
+use lava_ui_builder::{progress_bar, ProgressBar, WorldFollower};
 
 #[derive(Message, Clone)]
 pub struct GotoState {
@@ -85,69 +85,23 @@ pub fn add_health_bar(
     mut commands: Commands,
     mut add_health_bar_mr: MessageReader<AddHealthBar>,
 ) {
-    for add_health_bar in add_health_bar_mr.read() {
-        let target = add_health_bar.entity;
-        commands.spawn((
-            Fellow { target },
-            Node {
-                position_type: PositionType::Absolute,
-                width: Val::Px(60.0),
-                height: Val::Px(8.0),
-                ..default()
-            },
-            BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.5)),
-        )).with_children(|parent| {
-            parent.spawn((
-                HealthBarFill { target },
-                Node {
-                    position_type: PositionType::Relative,
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    ..default()
-                },
-                BackgroundColor(Color::srgb(0.0, 1.0, 0.0)),
-            ));
-        });
+    for msg in add_health_bar_mr.read() {
+        let target = msg.entity;
+        let bar = commands.spawn((
+            WorldFollower { target, offset: Vec2::new(-30.0, -40.0) },
+            progress_bar(1.0, 60.0, 8.0, Color::srgb(0.0, 1.0, 0.0), Color::srgba(0.0, 0.0, 0.0, 0.5)),
+        )).id();
+        commands.entity(bar).entry::<Node>().and_modify(|mut n| n.position_type = PositionType::Absolute);
     }
 }
 
-#[derive(Component)]
-pub struct Fellow {
-    pub target: Entity,
-}
-
-#[derive(Component)]
-pub struct HealthBarFill {
-    pub target: Entity,
-}
-
-pub fn fellow_system(
-    mut fellows: Query<(Entity, &Fellow, &mut Node)>,
-    mut health_fills: Query<(&HealthBarFill, &mut Node), Without<Fellow>>,
-    transforms: Query<&GlobalTransform>,
+pub fn sync_health_bars(
+    mut bars: Query<(&WorldFollower, &mut ProgressBar)>,
     health_query: Query<&Health>,
-    mut commands: Commands,
-    camera_q: Query<(&Camera, &GlobalTransform), With<GameCamera>>,
 ) {
-    let Ok((camera, camera_global_transform)) = camera_q.single() else {
-        return;
-    };
-
-    for (entity, fellow, mut node) in fellows.iter_mut() {
-        let Ok(tr) = transforms.get(fellow.target) else {
-            commands.entity(entity).despawn();
-            continue;
-        };
-        if let Ok(pos) = camera.world_to_viewport(camera_global_transform, tr.translation()) {
-            node.left = Val::Px((pos.x - 30.0).round());
-            node.top = Val::Px((pos.y - 40.0).round());
-        }
-    }
-
-    for (fill, mut node) in health_fills.iter_mut() {
-        if let Ok(health) = health_query.get(fill.target) {
-            let pct = (health.health as f32 / health.max_health as f32 * 100.0).clamp(0.0, 100.0);
-            node.width = Val::Percent(pct);
+    for (follower, mut bar) in bars.iter_mut() {
+        if let Ok(health) = health_query.get(follower.target) {
+            bar.value = (health.health as f32 / health.max_health as f32).clamp(0.0, 1.0);
         }
     }
 }

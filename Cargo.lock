@@ -117,6 +117,7 @@ dependencies = [
  "bevy_mod_outline",
  "flagset",
  "itertools 0.12.1",
+ "lava_ui_builder",
  "pathfinding",
 ]
 
@@ -1168,6 +1169,7 @@ dependencies = [
  "bevy_transform",
  "bevy_ui",
  "bevy_ui_render",
+ "bevy_ui_widgets",
  "bevy_utils",
  "bevy_window",
  "bevy_winit",
@@ -3681,6 +3683,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ff7f53bdf698e7aa7ec916411bbdc8078135da11b66db5182675b2227f6c0d07"
 dependencies = [
  "bitflags 2.11.1",
+]
+
+[[package]]
+name = "lava_ui_builder"
+version = "0.1.0"
+dependencies = [
+ "bevy",
 ]
 
 [[package]]

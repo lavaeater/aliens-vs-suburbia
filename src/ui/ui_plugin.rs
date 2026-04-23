@@ -1,14 +1,15 @@
 use bevy::app::{App, Plugin, Update};
 use bevy::prelude::{Camera2d, OnEnter, OnExit};
+use lava_ui_builder::LavaUiPlugin;
 use crate::game_state::GameState;
 use crate::ui::spawn_ui::{cleanup_menu, goto_state_system, GotoState, spawn_menu, spawn_ui,
-                          add_health_bar, fellow_system, AddHealthBar};
+                          add_health_bar, sync_health_bars, AddHealthBar};
 
 pub struct UiPlugin;
 
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
-        app
+        app.add_plugins(LavaUiPlugin)
             .add_message::<GotoState>()
             .add_message::<AddHealthBar>()
             .add_systems(
@@ -31,7 +32,7 @@ impl Plugin for UiPlugin {
                 (
                     goto_state_system,
                     add_health_bar,
-                    fellow_system,
+                    sync_health_bars,
                 ),
             );
     }
