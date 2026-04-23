@@ -90,7 +90,7 @@ pub fn init_build_indicator_tint(
 ) {
     for (entity, scene_instance, mut tint) in &mut indicators {
         if tint.initialized { continue; }
-        if !scene_spawner.instance_is_ready(scene_instance.0) { continue; }
+        if !scene_spawner.instance_is_ready(**scene_instance) { continue; }
 
         let mut descendants = Vec::new();
         collect_descendants(entity, &children_q, &mut descendants);
