@@ -1,9 +1,10 @@
 use bevy::math::{Mat3, Quat, Rect, Vec2, Vec3};
-use bevy::prelude::{Camera3d, Commands, Name, OrthographicProjection, Query, Transform, With, default};
+use bevy::prelude::{Camera3d, Commands, Name, OrthographicProjection, Query, Transform, Visibility, With, Without, default};
 use bevy::camera::{Projection, ScalingMode};
 use std::f32::consts::PI;
 use avian3d::prelude::Position;
 use crate::camera::components::{CameraOffset, GameCamera};
+use crate::general::systems::map_systems::WallOccluder;
 use crate::player::components::Player;
 
 pub fn spawn_camera(mut commands: Commands) {
@@ -25,6 +26,39 @@ pub fn spawn_camera(mut commands: Commands) {
         },
         GameCamera {},
     ));
+}
+
+/// Hide wall entities that are between the camera and the player in the XZ plane.
+/// Uses a point-to-line-segment distance test with a fixed threshold.
+pub fn wall_occlusion_system(
+    camera_q: Query<&Transform, With<GameCamera>>,
+    player_q: Query<&Position, With<Player>>,
+    mut walls: Query<(&Transform, &mut Visibility), (With<WallOccluder>, Without<GameCamera>)>,
+) {
+    let Ok(cam_transform) = camera_q.single() else { return; };
+    let Ok(player_pos) = player_q.single() else { return; };
+
+    let cam = Vec2::new(cam_transform.translation.x, cam_transform.translation.z);
+    let player = Vec2::new(player_pos.x, player_pos.z);
+    let seg = player - cam;
+    let seg_len_sq = seg.length_squared();
+
+    for (wall_transform, mut visibility) in &mut walls {
+        let w = Vec2::new(wall_transform.translation.x, wall_transform.translation.z);
+        // Project w onto the camera→player segment
+        let t = if seg_len_sq > 0.0 {
+            ((w - cam).dot(seg) / seg_len_sq).clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
+        let closest = cam + seg * t;
+        let dist = (w - closest).length();
+        *visibility = if dist < 0.55 && t > 0.05 && t < 0.95 {
+            Visibility::Hidden
+        } else {
+            Visibility::Visible
+        };
+    }
 }
 
 pub fn camera_follow(

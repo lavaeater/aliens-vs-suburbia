@@ -15,6 +15,7 @@ use crate::game_state::GameState;
 use crate::game_state::score_keeper::ScoreKeeperPlugin;
 use crate::general::systems::collision_handling_system::collision_handling_system;
 use crate::general::systems::health_monitor_system::health_monitor_system;
+use crate::general::systems::death_effect_system::{spawn_death_effects, tick_death_effects};
 use crate::general::systems::lights_systems::spawn_lights;
 use crate::general::systems::throwing_system::throwing;
 use crate::inspection::inspector::InspectorPlugin;
@@ -56,7 +57,9 @@ impl Plugin for GamePlugin {
                     throwing,
                     collision_handling_system,
                     shoot_alien_system,
+                    spawn_death_effects.before(health_monitor_system),
                     health_monitor_system,
+                    tick_death_effects,
                 ).run_if(in_state(GameState::InGame)),
             );
     }

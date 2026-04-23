@@ -1,7 +1,11 @@
 use bevy::asset::AssetServer;
 use bevy::math::{Quat, Vec3};
-use bevy::prelude::{Commands, Has, MessageReader, MessageWriter, Name, Query, Res, ResMut, Resource, Transform};
+use bevy::prelude::{Commands, Component, Has, MessageReader, MessageWriter, Name, Query, Res, ResMut, Resource, Transform};
 use bevy::scene::SceneRoot;
+
+/// Marks a visual wall entity for occlusion testing by the camera system.
+#[derive(Component)]
+pub struct WallOccluder;
 use avian3d::prelude::{Collider, CollisionLayers, Position, RigidBody, Rotation};
 use flagset::{flags, FlagSet};
 use pathfinding::grid::Grid;
@@ -441,6 +445,7 @@ pub fn map_loader(
                         let rot = tile_defs.get_wall_rotation(flag);
                         commands.spawn((
                             Name::from(format!("Wall {} {}:{}", label, tile.x, tile.y)),
+                            WallOccluder,
                             SceneRoot(asset_server.load(model_def.file)),
                             Transform::from_translation(pos).with_rotation(rot),
                         ));

@@ -1,7 +1,7 @@
 use bevy::asset::AssetServer;
 use bevy::log::info;
 use bevy::math::{Vec2, Vec3, Vec3Swizzles};
-use bevy::prelude::{Commands, Entity, MessageReader, MessageWriter, Name, Query, Res, With, Without};
+use bevy::prelude::{AlphaMode, Assets, Children, Color, Commands, Component, Entity, Mesh, Mesh3d, MeshMaterial3d, MessageReader, MessageWriter, Name, Plane3d, Query, Res, ResMut, StandardMaterial, Transform, With, Without};
 use bevy::scene::{SceneRoot, SceneInstance};
 use avian3d::prelude::{Collider, CollisionLayers, LockedAxes, Position, RigidBody, Rotation, Sensor};
 use crate::control::components::{ControlCommand, CharacterControl};
@@ -16,12 +16,20 @@ use crate::towers::events::BuildTower;
 use crate::ui::spawn_ui::AddHealthBar;
 
 
+/// Stores the material handle for the green/red validity overlay under the build indicator.
+#[derive(Component)]
+pub struct BuildOverlay {
+    pub handle: bevy::asset::Handle<StandardMaterial>,
+}
+
 pub fn enter_build_mode(
     mut enter_build_mode_evr: MessageReader<EnterBuildMode>,
     mut builder_query: Query<(&CurrentTile, &Rotation), Without<IsBuilding>>,
     asset_server: Res<AssetServer>,
     tile_definitions: Res<TileDefinitions>,
     mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     for start_event in enter_build_mode_evr.read() {
         if let Ok((current_tile, rotation)) = builder_query.get_mut(start_event.0) {
@@ -35,7 +43,9 @@ pub fn enter_build_mode(
                 &asset_server,
                 &desired_neighbour_pos,
                 "map/obstacle.glb#Scene0",
-                &tile_definitions
+                &tile_definitions,
+                &mut meshes,
+                &mut materials,
             );
             commands.entity(start_event.0).insert(BuildingIndicator(
                 building_indicator,
@@ -51,7 +61,25 @@ pub fn spawn_building_indicator(
     position: &Vec3,
     file: &'static str,
     tile_definitions: &TileDefinitions,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<StandardMaterial>>,
 ) -> Entity {
+    let overlay_mat = materials.add(StandardMaterial {
+        base_color: Color::srgba(0.0, 1.0, 0.0, 0.45),
+        alpha_mode: AlphaMode::Blend,
+        unlit: true,
+        ..Default::default()
+    });
+    let overlay_handle = overlay_mat.clone();
+    let overlay = commands.spawn((
+        Name::from("BuildOverlay"),
+        BuildOverlay { handle: overlay_handle },
+        Mesh3d(meshes.add(bevy::prelude::Rectangle::new(0.45, 0.45))),
+        MeshMaterial3d(overlay_mat),
+        Transform::from_xyz(0.0, 0.08, 0.0)
+            .with_rotation(bevy::prelude::Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2)),
+    )).id();
+
     commands.spawn((
         Name::from("BuildingIndicator"),
         IsBuildIndicator {},
@@ -62,7 +90,30 @@ pub fn spawn_building_indicator(
         CollisionLayers::new([CollisionLayer::BuildIndicator], [CollisionLayer::Floor; 0]),
         LockedAxes::new().lock_rotation_x().lock_rotation_z().lock_rotation_y(),
         CurrentTile::default(),
-    )).id()
+    )).add_child(overlay).id()
+}
+
+pub fn update_build_overlay(
+    indicator_q: Query<(&CurrentTile, &Children), With<IsBuildIndicator>>,
+    overlay_q: Query<&BuildOverlay>,
+    map_graph: Res<MapGraph>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    for (tile, children) in &indicator_q {
+        let occupied = map_graph.occupied_tiles.contains(&tile.tile);
+        let color = if occupied {
+            Color::srgba(1.0, 0.0, 0.0, 0.45)
+        } else {
+            Color::srgba(0.0, 1.0, 0.0, 0.45)
+        };
+        for child in children.iter() {
+            if let Ok(overlay) = overlay_q.get(*child) {
+                if let Some(mat) = materials.get_mut(&overlay.handle) {
+                    mat.base_color = color;
+                }
+            }
+        }
+    }
 }
 
 pub fn exit_build_mode(
@@ -129,6 +180,8 @@ pub fn change_build_indicator(
     asset_server: Res<AssetServer>,
     model_defs: Res<MapModelDefinitions>,
     tile_defs: Res<TileDefinitions>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     for change_build_event in change_build_indicator_evr.read() {
         if let Ok((mut building_indicator, position)) = builder_query.get_mut(change_build_event.0) {
@@ -157,7 +210,9 @@ pub fn change_build_indicator(
                     .get(indicator_key)
                     .unwrap()
                     .file,
-                &tile_defs
+                &tile_defs,
+                &mut meshes,
+                &mut materials,
             );
         }
     }
