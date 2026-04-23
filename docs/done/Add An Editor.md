@@ -1,1 +1,0 @@
-Add the excellent Space editor to the project so that we more easily can create levels and worlds.
