@@ -15,7 +15,7 @@ impl Plugin for SettingsPlugin {
 ///   F2          — save settings to disk
 ///   Z / X       — decrease / increase zoom
 ///   C / V       — decrease / increase camera pitch
-///   B / N       — rotate camera left / right (yaw)
+///   N / M       — rotate camera left / right (yaw)
 ///   P           — toggle Orthographic ↔ Perspective
 fn settings_keyboard_system(
     keys: Res<ButtonInput<KeyCode>>,
@@ -51,11 +51,11 @@ fn settings_keyboard_system(
         changed = true;
     }
 
-    if keys.just_pressed(KeyCode::KeyB) {
+    if keys.just_pressed(KeyCode::KeyN) {
         settings.yaw_degrees = (settings.yaw_degrees - 15.0).rem_euclid(360.0);
         changed = true;
     }
-    if keys.just_pressed(KeyCode::KeyN) {
+    if keys.just_pressed(KeyCode::KeyM) {
         settings.yaw_degrees = (settings.yaw_degrees + 15.0).rem_euclid(360.0);
         changed = true;
     }

@@ -196,7 +196,7 @@ pub fn update_hud(
             ProjectionMode::Perspective => "Persp",
         };
         **t = format!(
-            "{proj_name} zoom:{:.0} pitch:{:.0}° yaw:{:.0}°  [P]/[Z,X]/[C,V]/[B,N]",
+            "{proj_name} zoom:{:.0} pitch:{:.0}° yaw:{:.0}°  [P]/[Z,X]/[C,V]/[N,M]",
             settings.zoom, settings.pitch_degrees, settings.yaw_degrees
         );
     }

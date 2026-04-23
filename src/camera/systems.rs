@@ -3,6 +3,7 @@ use bevy::prelude::{AlphaMode, Assets, Camera3d, Children, Color, Commands, Enti
 use bevy::camera::{Projection, ScalingMode};
 use bevy::scene::{SceneInstance, SceneSpawner};
 use std::f32::consts::PI;
+use avian3d::interpolation::TransformInterpolation;
 use avian3d::prelude::Position;
 use crate::camera::components::{CameraOffset, GameCamera};
 use crate::general::systems::map_systems::{WallMaterials, WallOccluder};
@@ -26,6 +27,7 @@ pub fn spawn_camera(mut commands: Commands) {
             rotation: Quat::from_rotation_x(-PI / 4.),
             ..default()
         },
+        // TransformInterpolation,
         GameCamera {},
     ));
 }

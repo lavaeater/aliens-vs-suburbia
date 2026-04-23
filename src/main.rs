@@ -1,4 +1,5 @@
 use avian3d::debug_render::PhysicsDebugPlugin;
+use avian3d::interpolation::PhysicsInterpolationPlugin;
 use bevy::app::{App, PluginGroup};
 use bevy::{DefaultPlugins, log};
 use bevy::log::LogPlugin;

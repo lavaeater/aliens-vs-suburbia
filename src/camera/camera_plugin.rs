@@ -18,7 +18,6 @@ impl Plugin for StatefulCameraPlugin {
             .add_systems(
                 PostUpdate,
                 camera_follow
-                    .after(PhysicsSystems::Writeback)
                     .before(TransformSystems::Propagate)
                     .run_if(in_state(GameState::InGame)),
             )
