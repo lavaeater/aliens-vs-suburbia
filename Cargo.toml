@@ -12,6 +12,7 @@ itertools = "0.12"
 bevy_mod_outline = "0.12"
 bevy-inspector-egui = "0.36"
 lava_ui_builder = { path = "lava_ui_builder" }
+jackdaw = { path = "jackdaw" }
 
 # Enable max optimizations for dependencies, but not for our code:h
 [profile.dev.package."*"]
