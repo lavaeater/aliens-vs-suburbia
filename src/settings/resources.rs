@@ -19,6 +19,9 @@ pub struct GameSettings {
     /// Camera pitch in degrees (negative = looking down)
     #[serde(default = "default_pitch")]
     pub pitch_degrees: f32,
+    /// Camera yaw in degrees — rotates the orbit angle around the player
+    #[serde(default = "default_yaw")]
+    pub yaw_degrees: f32,
     #[serde(default = "default_speed")]
     pub player_speed_multiplier: f32,
 }
@@ -26,6 +29,7 @@ pub struct GameSettings {
 fn default_projection() -> ProjectionMode { ProjectionMode::Orthographic }
 fn default_zoom() -> f32 { 8.0 }
 fn default_pitch() -> f32 { -45.0 }
+fn default_yaw() -> f32 { 45.0 }
 fn default_speed() -> f32 { 1.0 }
 
 impl Default for GameSettings {
@@ -34,6 +38,7 @@ impl Default for GameSettings {
             projection: default_projection(),
             zoom: default_zoom(),
             pitch_degrees: default_pitch(),
+            yaw_degrees: default_yaw(),
             player_speed_multiplier: default_speed(),
         }
     }

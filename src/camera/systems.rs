@@ -129,12 +129,13 @@ pub fn apply_camera_settings(
 ) {
 
     let pitch_rad = settings.pitch_degrees.to_radians();
+    let yaw_rad = settings.yaw_degrees.to_radians();
     let offset_dist = settings.zoom * 0.75;
     let offset_y = -pitch_rad.sin() * offset_dist;
     let offset_xz = pitch_rad.cos() * offset_dist;
 
     for (mut proj, mut _transform, mut offset) in &mut camera_query {
-        offset.0 = Vec3::new(offset_xz * 0.707, offset_y, offset_xz * 0.707);
+        offset.0 = Vec3::new(yaw_rad.sin() * offset_xz, offset_y, yaw_rad.cos() * offset_xz);
 
         *proj = match settings.projection {
             ProjectionMode::Orthographic => Projection::Orthographic(OrthographicProjection {
