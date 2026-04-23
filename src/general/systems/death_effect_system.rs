@@ -43,7 +43,8 @@ pub fn tick_death_effects(
         let t = effect.timer.fraction();
         transform.scale = Vec3::splat(1.0 + t * 4.0);
         if let Some(mat) = materials.get_mut(&mat_handle.0) {
-            mat.base_color.set_alpha(1.0 - t);
+            let c = mat.base_color.to_srgba();
+            mat.base_color = bevy::prelude::Color::srgba(c.red, c.green, c.blue, 1.0 - t);
         }
         if effect.timer.fraction() >= 1.0 {
             commands.entity(entity).despawn();

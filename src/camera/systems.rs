@@ -1,10 +1,11 @@
-use bevy::math::{Mat3, Quat, Rect, Vec2, Vec3};
-use bevy::prelude::{Camera3d, Commands, Name, OrthographicProjection, Query, Transform, Visibility, With, Without, default};
+use bevy::math::{Quat, Rect, Vec2, Vec3};
+use bevy::prelude::{AlphaMode, Assets, Camera3d, Children, Color, Commands, Entity, MeshMaterial3d, Name, OrthographicProjection, Query, Res, ResMut, StandardMaterial, Transform, With, Without, default};
 use bevy::camera::{Projection, ScalingMode};
+use bevy::scene::{SceneInstance, SceneSpawner};
 use std::f32::consts::PI;
 use avian3d::prelude::Position;
 use crate::camera::components::{CameraOffset, GameCamera};
-use crate::general::systems::map_systems::WallOccluder;
+use crate::general::systems::map_systems::{WallMaterials, WallOccluder};
 use crate::player::components::Player;
 
 pub fn spawn_camera(mut commands: Commands) {
@@ -28,12 +29,53 @@ pub fn spawn_camera(mut commands: Commands) {
     ));
 }
 
-/// Hide wall entities that are between the camera and the player in the XZ plane.
-/// Uses a point-to-line-segment distance test with a fixed threshold.
+fn collect_descendants(entity: Entity, children_q: &Query<&Children>, out: &mut Vec<Entity>) {
+    if let Ok(children) = children_q.get(entity) {
+        for child in children.iter() {
+            out.push(*child);
+            collect_descendants(*child, children_q, out);
+        }
+    }
+}
+
+/// After each wall's scene is ready, clone its mesh materials with AlphaMode::Blend
+/// so we can fade alpha at runtime without affecting shared materials.
+pub fn init_wall_materials(
+    mut walls: Query<(Entity, &SceneInstance, &mut WallMaterials), With<WallOccluder>>,
+    scene_spawner: Res<SceneSpawner>,
+    children_q: Query<&Children>,
+    mut mat_q: Query<&mut MeshMaterial3d<StandardMaterial>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    for (entity, scene_instance, mut wall_mats) in &mut walls {
+        if wall_mats.initialized { continue; }
+        if !scene_spawner.instance_is_ready(**scene_instance) { continue; }
+
+        let mut descendants = Vec::new();
+        collect_descendants(entity, &children_q, &mut descendants);
+
+        for desc in descendants {
+            if let Ok(mut mat_handle) = mat_q.get_mut(desc) {
+                if let Some(cloned) = materials.get(&mat_handle.0).cloned() {
+                    let mut new_mat = cloned;
+                    new_mat.alpha_mode = AlphaMode::Blend;
+                    let handle = materials.add(new_mat);
+                    wall_mats.handles.push(handle.clone());
+                    mat_handle.0 = handle;
+                }
+            }
+        }
+        wall_mats.initialized = true;
+    }
+}
+
+/// Fade walls that lie between the camera and the player to semi-transparent.
+/// Walls not on the camera→player line are restored to full opacity.
 pub fn wall_occlusion_system(
     camera_q: Query<&Transform, With<GameCamera>>,
     player_q: Query<&Position, With<Player>>,
-    mut walls: Query<(&Transform, &mut Visibility), (With<WallOccluder>, Without<GameCamera>)>,
+    walls: Query<(&Transform, &WallMaterials), (With<WallOccluder>, Without<GameCamera>)>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let Ok(cam_transform) = camera_q.single() else { return; };
     let Ok(player_pos) = player_q.single() else { return; };
@@ -43,9 +85,10 @@ pub fn wall_occlusion_system(
     let seg = player - cam;
     let seg_len_sq = seg.length_squared();
 
-    for (wall_transform, mut visibility) in &mut walls {
+    for (wall_transform, wall_mats) in &walls {
+        if !wall_mats.initialized { continue; }
+
         let w = Vec2::new(wall_transform.translation.x, wall_transform.translation.z);
-        // Project w onto the camera→player segment
         let t = if seg_len_sq > 0.0 {
             ((w - cam).dot(seg) / seg_len_sq).clamp(0.0, 1.0)
         } else {
@@ -53,11 +96,17 @@ pub fn wall_occlusion_system(
         };
         let closest = cam + seg * t;
         let dist = (w - closest).length();
-        *visibility = if dist < 0.55 && t > 0.05 && t < 0.95 {
-            Visibility::Hidden
+        let alpha = if dist < 0.55 && t > 0.05 && t < 0.95 {
+            0.15_f32
         } else {
-            Visibility::Visible
+            1.0_f32
         };
+        for handle in &wall_mats.handles {
+            if let Some(mat) = materials.get_mut(handle) {
+                let c = mat.base_color.to_srgba();
+                mat.base_color = Color::srgba(c.red, c.green, c.blue, alpha);
+            }
+        }
     }
 }
 
