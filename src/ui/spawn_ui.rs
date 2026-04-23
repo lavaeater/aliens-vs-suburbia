@@ -53,23 +53,25 @@ pub struct StateMarker;
 
 pub fn spawn_menu(commands: Commands, theme: Res<LavaTheme>) {
     let mut ui = UIBuilder::new(commands, Some(theme.clone()));
-    ui.insert(StateMarker);
+    // ui_root fills the screen and centers its children
+    ui.insert_bundle(lava_ui_builder::ui_root("Menu"))
+        .insert(StateMarker);
 
-    ui.add_centered(|center| {
-        center.add_panel(|panel| {
-            panel.gap_px(24.0).align_items_center();
+    ui.add_panel(|panel| {
+        panel.gap_px(24.0).align_items_center();
 
-            let text_theme = panel.theme().text.clone();
-            panel.insert_bundle(lava_ui_builder::header("Aliens vs Suburbia", &text_theme));
-
-            panel.add_button_observe(
-                "Start Game",
-                |btn| { btn.size_px(220.0, 52.0); },
-                |_: On<Activate>, mut next_state: ResMut<NextState<GameState>>| {
-                    next_state.set(GameState::InGame);
-                },
-            );
+        let text_theme = panel.theme().text.clone();
+        panel.with_child(|h| {
+            h.insert_bundle(lava_ui_builder::header("Aliens vs Suburbia", &text_theme));
         });
+
+        panel.add_button_observe(
+            "Start Game",
+            |btn| { btn.size_px(220.0, 52.0); },
+            |_: On<Activate>, mut next_state: ResMut<NextState<GameState>>| {
+                next_state.set(GameState::InGame);
+            },
+        );
     });
 
     ui.build();
