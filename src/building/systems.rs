@@ -1,8 +1,8 @@
 use bevy::asset::AssetServer;
 use bevy::log::info;
 use bevy::math::{Vec2, Vec3, Vec3Swizzles};
-use bevy::prelude::{AlphaMode, Assets, Children, Color, Commands, Component, Entity, Mesh, Mesh3d, MeshMaterial3d, MessageReader, MessageWriter, Name, Plane3d, Query, Res, ResMut, StandardMaterial, Transform, With, Without};
-use bevy::scene::{SceneRoot, SceneInstance};
+use bevy::prelude::{AlphaMode, Assets, Children, Color, Commands, Component, Entity, MeshMaterial3d, MessageReader, MessageWriter, Name, Query, Res, ResMut, StandardMaterial, With, Without};
+use bevy::scene::{SceneRoot, SceneInstance, SceneSpawner};
 use avian3d::prelude::{Collider, CollisionLayers, LockedAxes, Position, RigidBody, Rotation, Sensor};
 use crate::control::components::{ControlCommand, CharacterControl};
 use crate::general::components::{CollisionLayer, Health};
@@ -15,11 +15,11 @@ use crate::towers::components::{TowerSensor, TowerShooter};
 use crate::towers::events::BuildTower;
 use crate::ui::spawn_ui::AddHealthBar;
 
-
-/// Stores the material handle for the green/red validity overlay under the build indicator.
-#[derive(Component)]
-pub struct BuildOverlay {
-    pub handle: bevy::asset::Handle<StandardMaterial>,
+/// Tracks materials cloned from the indicator model's scene children so they can be tinted.
+#[derive(Component, Default)]
+pub struct BuildIndicatorTint {
+    handles: Vec<bevy::asset::Handle<StandardMaterial>>,
+    initialized: bool,
 }
 
 pub fn enter_build_mode(
@@ -28,8 +28,6 @@ pub fn enter_build_mode(
     asset_server: Res<AssetServer>,
     tile_definitions: Res<TileDefinitions>,
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     for start_event in enter_build_mode_evr.read() {
         if let Ok((current_tile, rotation)) = builder_query.get_mut(start_event.0) {
@@ -44,12 +42,8 @@ pub fn enter_build_mode(
                 &desired_neighbour_pos,
                 "map/obstacle.glb#Scene0",
                 &tile_definitions,
-                &mut meshes,
-                &mut materials,
             );
-            commands.entity(start_event.0).insert(BuildingIndicator(
-                building_indicator,
-                0));
+            commands.entity(start_event.0).insert(BuildingIndicator(building_indicator, 0));
             commands.entity(start_event.0).insert(IsBuilding {});
         }
     }
@@ -61,28 +55,11 @@ pub fn spawn_building_indicator(
     position: &Vec3,
     file: &'static str,
     tile_definitions: &TileDefinitions,
-    meshes: &mut ResMut<Assets<Mesh>>,
-    materials: &mut ResMut<Assets<StandardMaterial>>,
 ) -> Entity {
-    let overlay_mat = materials.add(StandardMaterial {
-        base_color: Color::srgba(0.0, 1.0, 0.0, 0.45),
-        alpha_mode: AlphaMode::Blend,
-        unlit: true,
-        ..Default::default()
-    });
-    let overlay_handle = overlay_mat.clone();
-    let overlay = commands.spawn((
-        Name::from("BuildOverlay"),
-        BuildOverlay { handle: overlay_handle },
-        Mesh3d(meshes.add(bevy::prelude::Rectangle::new(0.45, 0.45))),
-        MeshMaterial3d(overlay_mat),
-        Transform::from_xyz(0.0, 0.08, 0.0)
-            .with_rotation(bevy::prelude::Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2)),
-    )).id();
-
     commands.spawn((
         Name::from("BuildingIndicator"),
         IsBuildIndicator {},
+        BuildIndicatorTint::default(),
         SceneRoot(asset_server.load(file)),
         RigidBody::Kinematic,
         tile_definitions.create_collider(16.0, 4.0, 16.0),
@@ -90,27 +67,66 @@ pub fn spawn_building_indicator(
         CollisionLayers::new([CollisionLayer::BuildIndicator], [CollisionLayer::Floor; 0]),
         LockedAxes::new().lock_rotation_x().lock_rotation_z().lock_rotation_y(),
         CurrentTile::default(),
-    )).add_child(overlay).id()
+    )).id()
 }
 
-pub fn update_build_overlay(
-    indicator_q: Query<(&CurrentTile, &Children), With<IsBuildIndicator>>,
-    overlay_q: Query<&BuildOverlay>,
+fn collect_descendants(entity: Entity, children_q: &Query<&Children>, out: &mut Vec<Entity>) {
+    if let Ok(children) = children_q.get(entity) {
+        for child in children.iter() {
+            out.push(*child);
+            collect_descendants(*child, children_q, out);
+        }
+    }
+}
+
+/// On first frame after the scene is ready, clone each mesh's material with alpha blending
+/// and a green tint. Stores the handles so `update_build_indicator_tint` can change the color.
+pub fn init_build_indicator_tint(
+    mut indicators: Query<(Entity, &SceneInstance, &mut BuildIndicatorTint), With<IsBuildIndicator>>,
+    scene_spawner: Res<SceneSpawner>,
+    children_q: Query<&Children>,
+    mut mat_q: Query<&mut MeshMaterial3d<StandardMaterial>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    for (entity, scene_instance, mut tint) in &mut indicators {
+        if tint.initialized { continue; }
+        if !scene_spawner.instance_is_ready(scene_instance.0) { continue; }
+
+        let mut descendants = Vec::new();
+        collect_descendants(entity, &children_q, &mut descendants);
+
+        for desc in descendants {
+            if let Ok(mut mat_handle) = mat_q.get_mut(desc) {
+                if let Some(new_mat) = materials.get(&mat_handle.0).cloned() {
+                    let mut tinted = new_mat;
+                    tinted.alpha_mode = AlphaMode::Blend;
+                    tinted.base_color = Color::srgba(0.2, 1.0, 0.2, 0.55);
+                    let handle = materials.add(tinted);
+                    tint.handles.push(handle.clone());
+                    mat_handle.0 = handle;
+                }
+            }
+        }
+        tint.initialized = true;
+    }
+}
+
+/// Each frame, update tint color to green (free) or red (occupied).
+pub fn update_build_indicator_tint(
+    indicators: Query<(&CurrentTile, &BuildIndicatorTint), With<IsBuildIndicator>>,
     map_graph: Res<MapGraph>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    for (tile, children) in &indicator_q {
-        let occupied = map_graph.occupied_tiles.contains(&tile.tile);
-        let color = if occupied {
-            Color::srgba(1.0, 0.0, 0.0, 0.45)
+    for (tile, tint) in &indicators {
+        if !tint.initialized { continue; }
+        let color = if map_graph.occupied_tiles.contains(&tile.tile) {
+            Color::srgba(1.0, 0.2, 0.2, 0.55)
         } else {
-            Color::srgba(0.0, 1.0, 0.0, 0.45)
+            Color::srgba(0.2, 1.0, 0.2, 0.55)
         };
-        for child in children.iter() {
-            if let Ok(overlay) = overlay_q.get(*child) {
-                if let Some(mat) = materials.get_mut(&overlay.handle) {
-                    mat.base_color = color;
-                }
+        for handle in &tint.handles {
+            if let Some(mat) = materials.get_mut(handle) {
+                mat.base_color = color;
             }
         }
     }
@@ -180,8 +196,6 @@ pub fn change_build_indicator(
     asset_server: Res<AssetServer>,
     model_defs: Res<MapModelDefinitions>,
     tile_defs: Res<TileDefinitions>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     for change_build_event in change_build_indicator_evr.read() {
         if let Ok((mut building_indicator, position)) = builder_query.get_mut(change_build_event.0) {
@@ -211,8 +225,6 @@ pub fn change_build_indicator(
                     .unwrap()
                     .file,
                 &tile_defs,
-                &mut meshes,
-                &mut materials,
             );
         }
     }
