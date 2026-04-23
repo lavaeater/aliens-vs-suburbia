@@ -1,13 +1,13 @@
-use bevy::prelude::*;
-use bevy::ui_widgets::Activate;
-use lava_ui_builder::{
-    progress_bar, ButtonTheme, LavaTheme, ProgressBar, TextTheme, UIBuilder, WorldFollower,
-};
 use crate::alien::components::general::AlienCounter;
 use crate::game_state::GameState;
 use crate::general::components::Health;
 use crate::player::components::IsBuilding;
 use crate::settings::resources::{GameSettings, ProjectionMode};
+use bevy::prelude::*;
+use bevy::ui_widgets::Activate;
+use lava_ui_builder::{
+    ButtonTheme, LavaTheme, ProgressBar, TextTheme, UIBuilder, WorldFollower, progress_bar,
+};
 
 // ── Theme ────────────────────────────────────────────────────────────────────
 
@@ -48,31 +48,32 @@ pub struct GotoState {
 // ── Menu ─────────────────────────────────────────────────────────────────────
 
 /// Marker for all entities spawned by menu/hud so cleanup_state can remove them.
-#[derive(Component)]
+#[derive(Component, Default)]
 pub struct StateMarker;
 
 pub fn spawn_menu(commands: Commands, theme: Res<LavaTheme>) {
     let mut ui = UIBuilder::new(commands, Some(theme.clone()));
-    // ui_root fills the screen and centers its children
-    ui.insert_bundle(lava_ui_builder::ui_root("Menu"))
-        .insert(StateMarker);
 
-    ui.add_panel(|panel| {
-        panel.gap_px(24.0).align_items_center();
+    ui.component::<StateMarker>()
+        .size_percent(100.0, 100.0)
+        .display_flex()
+        .flex_column()
+        .align_items_center()
+        .justify_center()
+        .gap_px(24.0);
 
-        let text_theme = panel.theme().text.clone();
-        panel.with_child(|h| {
-            h.insert_bundle(lava_ui_builder::header("Aliens vs Suburbia", &text_theme));
-        });
-
-        panel.add_button_observe(
-            "Start Game",
-            |btn| { btn.size_px(220.0, 52.0); },
-            |_: On<Activate>, mut next_state: ResMut<NextState<GameState>>| {
-                next_state.set(GameState::InGame);
-            },
-        );
+    let text_theme = ui.theme().text.clone();
+    ui.with_child(|h| {
+        h.insert_bundle(lava_ui_builder::header("Aliens vs Suburbia", &text_theme));
     });
+
+    ui.add_button_observe(
+        "Start Game",
+        |btn| { btn.size_px(220.0, 52.0); },
+        |_: On<Activate>, mut next_state: ResMut<NextState<GameState>>| {
+            next_state.set(GameState::InGame);
+        },
+    );
 
     ui.build();
 }
@@ -107,14 +108,13 @@ pub fn spawn_ui(commands: Commands, theme: Res<LavaTheme>) {
     let text_theme = theme.text.clone();
 
     let mut ui = UIBuilder::new(commands, Some(theme.clone()));
-    ui.insert(StateMarker)
-        .modify_node(|mut n| {
-            n.position_type = PositionType::Absolute;
-            n.top = Val::Px(8.0);
-            n.left = Val::Px(8.0);
-            n.flex_direction = FlexDirection::Column;
-            n.row_gap = Val::Px(4.0);
-        });
+    ui.insert(StateMarker).modify_node(|mut n| {
+        n.position_type = PositionType::Absolute;
+        n.top = Val::Px(8.0);
+        n.left = Val::Px(8.0);
+        n.flex_direction = FlexDirection::Column;
+        n.row_gap = Val::Px(4.0);
+    });
 
     ui.with_child(|c| {
         c.insert_bundle(lava_ui_builder::label("Aliens: 0", &text_theme))
@@ -122,18 +122,26 @@ pub fn spawn_ui(commands: Commands, theme: Res<LavaTheme>) {
     });
 
     ui.with_child(|c| {
-        c.insert_bundle(lava_ui_builder::label("", &TextTheme {
-            label_color: Color::srgb(1.0, 0.8, 0.2),
-            ..text_theme.clone()
-        })).insert(HudBuildMode);
+        c.insert_bundle(lava_ui_builder::label(
+            "",
+            &TextTheme {
+                label_color: Color::srgb(1.0, 0.8, 0.2),
+                ..text_theme.clone()
+            },
+        ))
+        .insert(HudBuildMode);
     });
 
     ui.with_child(|c| {
-        c.insert_bundle(lava_ui_builder::label("", &TextTheme {
-            label_size: 14.0,
-            label_color: Color::srgb(0.6, 0.6, 0.6),
-            ..text_theme.clone()
-        })).insert(HudProjection);
+        c.insert_bundle(lava_ui_builder::label(
+            "",
+            &TextTheme {
+                label_size: 14.0,
+                label_color: Color::srgb(0.6, 0.6, 0.6),
+                ..text_theme.clone()
+            },
+        ))
+        .insert(HudProjection);
     });
 
     ui.build();
@@ -143,9 +151,30 @@ pub fn update_hud(
     alien_counter: Option<Res<AlienCounter>>,
     building_query: Query<(), With<IsBuilding>>,
     settings: Res<GameSettings>,
-    mut alien_text: Query<&mut Text, (With<HudAlienCount>, Without<HudBuildMode>, Without<HudProjection>)>,
-    mut build_text: Query<&mut Text, (With<HudBuildMode>, Without<HudAlienCount>, Without<HudProjection>)>,
-    mut proj_text: Query<&mut Text, (With<HudProjection>, Without<HudAlienCount>, Without<HudBuildMode>)>,
+    mut alien_text: Query<
+        &mut Text,
+        (
+            With<HudAlienCount>,
+            Without<HudBuildMode>,
+            Without<HudProjection>,
+        ),
+    >,
+    mut build_text: Query<
+        &mut Text,
+        (
+            With<HudBuildMode>,
+            Without<HudAlienCount>,
+            Without<HudProjection>,
+        ),
+    >,
+    mut proj_text: Query<
+        &mut Text,
+        (
+            With<HudProjection>,
+            Without<HudAlienCount>,
+            Without<HudBuildMode>,
+        ),
+    >,
 ) {
     if let Some(counter) = alien_counter {
         if let Ok(mut t) = alien_text.single_mut() {
@@ -181,17 +210,28 @@ pub struct AddHealthBar {
     pub name: &'static str,
 }
 
-pub fn add_health_bar(
-    mut commands: Commands,
-    mut add_health_bar_mr: MessageReader<AddHealthBar>,
-) {
+pub fn add_health_bar(mut commands: Commands, mut add_health_bar_mr: MessageReader<AddHealthBar>) {
     for msg in add_health_bar_mr.read() {
         let target = msg.entity;
-        let bar = commands.spawn((
-            WorldFollower { target, offset: Vec2::new(-30.0, -40.0) },
-            progress_bar(1.0, 60.0, 8.0, Color::srgb(0.2, 0.85, 0.3), Color::srgba(0.0, 0.0, 0.0, 0.5)),
-        )).id();
-        commands.entity(bar).entry::<Node>().and_modify(|mut n| n.position_type = PositionType::Absolute);
+        let bar = commands
+            .spawn((
+                WorldFollower {
+                    target,
+                    offset: Vec2::new(-30.0, -40.0),
+                },
+                progress_bar(
+                    1.0,
+                    60.0,
+                    8.0,
+                    Color::srgb(0.2, 0.85, 0.3),
+                    Color::srgba(0.0, 0.0, 0.0, 0.5),
+                ),
+            ))
+            .id();
+        commands
+            .entity(bar)
+            .entry::<Node>()
+            .and_modify(|mut n| n.position_type = PositionType::Absolute);
     }
 }
 

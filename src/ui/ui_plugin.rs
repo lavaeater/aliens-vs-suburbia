@@ -1,5 +1,6 @@
 use bevy::app::{App, Plugin, Update};
-use bevy::prelude::{Camera2d, Commands, OnEnter, OnExit};
+use bevy::feathers::{dark_theme::create_dark_theme, theme::UiTheme, FeathersPlugins};
+use bevy::prelude::{Camera2d, Commands, IsDefaultUiCamera, OnEnter, OnExit};
 use lava_ui_builder::LavaUiPlugin;
 use crate::game_state::GameState;
 use crate::ui::spawn_ui::{
@@ -11,7 +12,8 @@ pub struct UiPlugin;
 
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(LavaUiPlugin)
+        app.add_plugins((LavaUiPlugin, FeathersPlugins))
+            .insert_resource(UiTheme(create_dark_theme()))
             .insert_resource(game_theme())
             .add_message::<GotoState>()
             .add_message::<AddHealthBar>()
@@ -26,6 +28,7 @@ impl Plugin for UiPlugin {
 pub fn spawn_ui_camera(mut commands: Commands) {
     commands.spawn((
         Camera2d::default(),
+        IsDefaultUiCamera,
         bevy::prelude::Camera { order: 1, ..Default::default() },
     ));
 }
