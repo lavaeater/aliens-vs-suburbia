@@ -1,11 +1,12 @@
 use bevy::app::{App, Plugin, Update};
 use bevy::feathers::{dark_theme::create_dark_theme, theme::UiTheme, FeathersPlugins};
-use bevy::prelude::{Camera2d, Commands, IsDefaultUiCamera, OnEnter, OnExit};
+use bevy::prelude::{in_state, Camera2d, Commands, IntoScheduleConfigs, IsDefaultUiCamera, OnEnter, OnExit};
 use lava_ui_builder::LavaUiPlugin;
 use crate::game_state::GameState;
 use crate::ui::spawn_ui::{
     add_health_bar, cleanup_state, game_theme, goto_state_system, GotoState,
-    spawn_menu, spawn_ui, sync_health_bars, update_hud, AddHealthBar,
+    spawn_menu, spawn_ui, sync_health_bars, toggle_settings_panel, update_hud,
+    update_settings_panel, AddHealthBar,
 };
 
 pub struct UiPlugin;
@@ -21,7 +22,17 @@ impl Plugin for UiPlugin {
             .add_systems(OnEnter(GameState::Menu), (spawn_ui_camera, spawn_menu))
             .add_systems(OnExit(GameState::Menu), cleanup_state)
             .add_systems(OnExit(GameState::InGame), cleanup_state)
-            .add_systems(Update, (goto_state_system, add_health_bar, sync_health_bars, update_hud));
+            .add_systems(
+                Update,
+                (
+                    goto_state_system,
+                    add_health_bar,
+                    sync_health_bars,
+                    update_hud,
+                    toggle_settings_panel,
+                    update_settings_panel,
+                ).run_if(in_state(GameState::InGame)),
+            );
     }
 }
 

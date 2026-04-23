@@ -104,47 +104,192 @@ pub struct HudBuildMode;
 #[derive(Component)]
 pub struct HudProjection;
 
-pub fn spawn_ui(commands: Commands, theme: Res<LavaTheme>) {
+pub fn spawn_ui(mut commands: Commands, theme: Res<LavaTheme>) {
     let text_theme = theme.text.clone();
 
+    {
+        let mut ui = UIBuilder::new(commands.reborrow(), Some(theme.clone()));
+        ui.insert(StateMarker).modify_node(|mut n| {
+            n.position_type = PositionType::Absolute;
+            n.top = Val::Px(8.0);
+            n.left = Val::Px(8.0);
+            n.flex_direction = FlexDirection::Column;
+            n.row_gap = Val::Px(4.0);
+        });
+
+        ui.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label("Aliens: 0", &text_theme))
+                .insert(HudAlienCount);
+        });
+
+        ui.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label(
+                "",
+                &TextTheme {
+                    label_color: Color::srgb(1.0, 0.8, 0.2),
+                    ..text_theme.clone()
+                },
+            ))
+            .insert(HudBuildMode);
+        });
+
+        ui.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label(
+                "",
+                &TextTheme {
+                    label_size: 14.0,
+                    label_color: Color::srgb(0.6, 0.6, 0.6),
+                    ..text_theme.clone()
+                },
+            ))
+            .insert(HudProjection);
+        });
+
+        ui.build();
+    }
+
+    spawn_settings_panel(commands, theme);
+}
+
+fn spawn_settings_panel(commands: Commands, theme: Res<LavaTheme>) {
     let mut ui = UIBuilder::new(commands, Some(theme.clone()));
-    ui.insert(StateMarker).modify_node(|mut n| {
-        n.position_type = PositionType::Absolute;
-        n.top = Val::Px(8.0);
-        n.left = Val::Px(8.0);
-        n.flex_direction = FlexDirection::Column;
-        n.row_gap = Val::Px(4.0);
+
+    ui.component::<SettingsPanel>()
+        .display_none() // hidden until F1
+        .modify_node(|mut n| {
+            n.position_type = PositionType::Absolute;
+            n.top = Val::Px(8.0);
+            n.right = Val::Px(8.0);
+            n.flex_direction = FlexDirection::Column;
+            n.row_gap = Val::Px(6.0);
+            n.padding = UiRect::all(Val::Px(12.0));
+        })
+        .bg_color(Color::srgba(0.05, 0.12, 0.07, 0.92))
+        .insert(StateMarker);
+
+    let text_theme = ui.theme().text.clone();
+
+    // Title
+    ui.with_child(|c| {
+        c.insert_bundle(lava_ui_builder::header("Settings  [F1]", &text_theme));
     });
 
-    ui.with_child(|c| {
-        c.insert_bundle(lava_ui_builder::label("Aliens: 0", &text_theme))
-            .insert(HudAlienCount);
+    // Projection
+    setting_row(&mut ui, "Projection", &text_theme, |row| {
+        row.add_button_observe("Ortho", |b| { b.size_px(70.0, 32.0); },
+            |_: On<Activate>, mut s: ResMut<GameSettings>| {
+                s.projection = ProjectionMode::Orthographic; s.save();
+            });
+        row.add_button_observe("Persp", |b| { b.size_px(70.0, 32.0); },
+            |_: On<Activate>, mut s: ResMut<GameSettings>| {
+                s.projection = ProjectionMode::Perspective; s.save();
+            });
     });
 
-    ui.with_child(|c| {
-        c.insert_bundle(lava_ui_builder::label(
-            "",
-            &TextTheme {
-                label_color: Color::srgb(1.0, 0.8, 0.2),
-                ..text_theme.clone()
-            },
-        ))
-        .insert(HudBuildMode);
+    // Zoom
+    setting_row(&mut ui, "Zoom", &text_theme, |row| {
+        row.add_button_observe("-", |b| { b.size_px(32.0, 32.0); },
+            |_: On<Activate>, mut s: ResMut<GameSettings>| {
+                s.zoom = (s.zoom - 1.0).max(1.0); s.save();
+            });
+        row.with_child(|v| { v.insert_bundle(lava_ui_builder::label("", &TextTheme::default())).insert(SettingValueZoom); });
+        row.add_button_observe("+", |b| { b.size_px(32.0, 32.0); },
+            |_: On<Activate>, mut s: ResMut<GameSettings>| {
+                s.zoom = (s.zoom + 1.0).min(60.0); s.save();
+            });
     });
 
-    ui.with_child(|c| {
-        c.insert_bundle(lava_ui_builder::label(
-            "",
-            &TextTheme {
-                label_size: 14.0,
-                label_color: Color::srgb(0.6, 0.6, 0.6),
-                ..text_theme.clone()
-            },
-        ))
-        .insert(HudProjection);
+    // Pitch
+    setting_row(&mut ui, "Pitch", &text_theme, |row| {
+        row.add_button_observe("-", |b| { b.size_px(32.0, 32.0); },
+            |_: On<Activate>, mut s: ResMut<GameSettings>| {
+                s.pitch_degrees = (s.pitch_degrees - 5.0).max(-89.0); s.save();
+            });
+        row.with_child(|v| { v.insert_bundle(lava_ui_builder::label("", &TextTheme::default())).insert(SettingValuePitch); });
+        row.add_button_observe("+", |b| { b.size_px(32.0, 32.0); },
+            |_: On<Activate>, mut s: ResMut<GameSettings>| {
+                s.pitch_degrees = (s.pitch_degrees + 5.0).min(-5.0); s.save();
+            });
+    });
+
+    // Yaw
+    setting_row(&mut ui, "Yaw", &text_theme, |row| {
+        row.add_button_observe("-", |b| { b.size_px(32.0, 32.0); },
+            |_: On<Activate>, mut s: ResMut<GameSettings>| {
+                s.yaw_degrees = (s.yaw_degrees - 15.0).rem_euclid(360.0); s.save();
+            });
+        row.with_child(|v| { v.insert_bundle(lava_ui_builder::label("", &TextTheme::default())).insert(SettingValueYaw); });
+        row.add_button_observe("+", |b| { b.size_px(32.0, 32.0); },
+            |_: On<Activate>, mut s: ResMut<GameSettings>| {
+                s.yaw_degrees = (s.yaw_degrees + 15.0).rem_euclid(360.0); s.save();
+            });
+    });
+
+    // Speed multiplier
+    setting_row(&mut ui, "Speed", &text_theme, |row| {
+        row.add_button_observe("-", |b| { b.size_px(32.0, 32.0); },
+            |_: On<Activate>, mut s: ResMut<GameSettings>| {
+                s.player_speed_multiplier = (s.player_speed_multiplier - 0.25).max(0.25); s.save();
+            });
+        row.with_child(|v| { v.insert_bundle(lava_ui_builder::label("", &TextTheme::default())).insert(SettingValueSpeed); });
+        row.add_button_observe("+", |b| { b.size_px(32.0, 32.0); },
+            |_: On<Activate>, mut s: ResMut<GameSettings>| {
+                s.player_speed_multiplier = (s.player_speed_multiplier + 0.25).min(5.0); s.save();
+            });
     });
 
     ui.build();
+}
+
+fn setting_row<F: FnOnce(&mut UIBuilder)>(
+    ui: &mut UIBuilder,
+    label: &str,
+    text_theme: &TextTheme,
+    f: F,
+) {
+    let label_theme = TextTheme { label_size: 16.0, ..text_theme.clone() };
+    ui.add_row(|row| {
+        row.gap_px(6.0).align_items_center().width_px(260.0);
+        row.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label(label, &label_theme));
+            c.modify_node(|mut n| n.width = Val::Px(70.0));
+        });
+        f(row);
+    });
+}
+
+#[derive(Component, Default)]
+pub struct SettingsPanel;
+
+#[derive(Component)] pub struct SettingValueZoom;
+#[derive(Component)] pub struct SettingValuePitch;
+#[derive(Component)] pub struct SettingValueYaw;
+#[derive(Component)] pub struct SettingValueSpeed;
+
+pub fn toggle_settings_panel(
+    keys: Res<ButtonInput<KeyCode>>,
+    mut panel: Query<&mut Node, With<SettingsPanel>>,
+) {
+    if !keys.just_pressed(KeyCode::F1) { return; }
+    if let Ok(mut node) = panel.single_mut() {
+        node.display = match node.display {
+            Display::None => Display::Flex,
+            _ => Display::None,
+        };
+    }
+}
+
+pub fn update_settings_panel(
+    settings: Res<GameSettings>,
+    mut zoom: Query<&mut Text, (With<SettingValueZoom>, Without<SettingValuePitch>, Without<SettingValueYaw>, Without<SettingValueSpeed>)>,
+    mut pitch: Query<&mut Text, (With<SettingValuePitch>, Without<SettingValueZoom>, Without<SettingValueYaw>, Without<SettingValueSpeed>)>,
+    mut yaw: Query<&mut Text, (With<SettingValueYaw>, Without<SettingValueZoom>, Without<SettingValuePitch>, Without<SettingValueSpeed>)>,
+    mut speed: Query<&mut Text, (With<SettingValueSpeed>, Without<SettingValueZoom>, Without<SettingValuePitch>, Without<SettingValueYaw>)>,
+) {
+    if let Ok(mut t) = zoom.single_mut() { **t = format!("{:.0}", settings.zoom); }
+    if let Ok(mut t) = pitch.single_mut() { **t = format!("{:.0}°", settings.pitch_degrees); }
+    if let Ok(mut t) = yaw.single_mut() { **t = format!("{:.0}°", settings.yaw_degrees); }
+    if let Ok(mut t) = speed.single_mut() { **t = format!("{:.2}×", settings.player_speed_multiplier); }
 }
 
 pub fn update_hud(
