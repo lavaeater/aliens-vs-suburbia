@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 bevy = { version = "0.18", features = ["wayland"] }
-avian3d = { version = "0.6", default-features = false, features = ["3d", "parry-f32", "debug-plugin", "collider-from-mesh", "simd", "parallel"] }
+avian3d = { version = "0.6", default-features = false, features = ["3d", "parry-f32", "debug-plugin", "collider-from-mesh", "simd", "parallel", "serialize", "bevy_scene", "bevy_picking", "xpbd_joints"] }
 flagset = "0.4.4"
 pathfinding = "4.6"
 itertools = "0.12"
