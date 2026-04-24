@@ -2,7 +2,3 @@
 	path = lava_ui_builder
 	url = git@github.com:lavaeater/lava_ui_builder.git
 	branch = main
-[submodule "jackdaw"]
-	path = jackdaw
-	url = git@github.com:lavaeater/jackdaw.git
-	branch = main
