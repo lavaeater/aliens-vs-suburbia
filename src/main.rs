@@ -28,6 +28,7 @@ mod constants;
 mod assets;
 mod inspection;
 pub(crate) mod settings;
+pub(crate) mod model_settings;
 
 
 fn main() {

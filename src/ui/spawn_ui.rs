@@ -3,6 +3,7 @@ use crate::game_state::GameState;
 use crate::general::components::Health;
 use crate::player::components::IsBuilding;
 use crate::settings::resources::{GameSettings, ProjectionMode};
+use crate::model_settings::resources::ModelSettings;
 use bevy::prelude::*;
 use bevy::ui_widgets::Activate;
 use lava_ui_builder::{
@@ -238,6 +239,49 @@ fn spawn_settings_panel(commands: Commands, theme: Res<LavaTheme>) {
             });
     });
 
+    // ── Model settings ────────────────────────────────────────────────────────
+    let sep_theme = TextTheme { label_size: 13.0, label_color: Color::srgb(0.4, 0.7, 0.5), ..text_theme.clone() };
+    ui.with_child(|c| { c.insert_bundle(lava_ui_builder::label("— Model —", &sep_theme)); });
+
+    // Scale
+    setting_row(&mut ui, "Scale", &text_theme, |row| {
+        row.add_button_observe("-", |b| { b.size_px(32.0, 32.0); },
+            |_: On<Activate>, mut s: ResMut<ModelSettings>| {
+                s.scale = (s.scale - 0.1).max(0.1); s.save();
+            });
+        row.with_child(|v| { v.insert_bundle(lava_ui_builder::label("", &TextTheme::default())).insert(ModelSettingValueScale); });
+        row.add_button_observe("+", |b| { b.size_px(32.0, 32.0); },
+            |_: On<Activate>, mut s: ResMut<ModelSettings>| {
+                s.scale = (s.scale + 0.1).min(10.0); s.save();
+            });
+    });
+
+    // Offset Y
+    setting_row(&mut ui, "Offset Y", &text_theme, |row| {
+        row.add_button_observe("-", |b| { b.size_px(32.0, 32.0); },
+            |_: On<Activate>, mut s: ResMut<ModelSettings>| {
+                s.translation_y -= 0.05; s.save();
+            });
+        row.with_child(|v| { v.insert_bundle(lava_ui_builder::label("", &TextTheme::default())).insert(ModelSettingValueOffsetY); });
+        row.add_button_observe("+", |b| { b.size_px(32.0, 32.0); },
+            |_: On<Activate>, mut s: ResMut<ModelSettings>| {
+                s.translation_y += 0.05; s.save();
+            });
+    });
+
+    // Rotation Y
+    setting_row(&mut ui, "Rot Y", &text_theme, |row| {
+        row.add_button_observe("-", |b| { b.size_px(32.0, 32.0); },
+            |_: On<Activate>, mut s: ResMut<ModelSettings>| {
+                s.rotation_y_degrees = (s.rotation_y_degrees - 15.0).rem_euclid(360.0); s.save();
+            });
+        row.with_child(|v| { v.insert_bundle(lava_ui_builder::label("", &TextTheme::default())).insert(ModelSettingValueRotY); });
+        row.add_button_observe("+", |b| { b.size_px(32.0, 32.0); },
+            |_: On<Activate>, mut s: ResMut<ModelSettings>| {
+                s.rotation_y_degrees = (s.rotation_y_degrees + 15.0).rem_euclid(360.0); s.save();
+            });
+    });
+
     ui.build();
 }
 
@@ -265,6 +309,9 @@ pub struct SettingsPanel;
 #[derive(Component)] pub struct SettingValuePitch;
 #[derive(Component)] pub struct SettingValueYaw;
 #[derive(Component)] pub struct SettingValueSpeed;
+#[derive(Component)] pub struct ModelSettingValueScale;
+#[derive(Component)] pub struct ModelSettingValueOffsetY;
+#[derive(Component)] pub struct ModelSettingValueRotY;
 
 pub fn toggle_settings_panel(
     keys: Res<ButtonInput<KeyCode>>,
@@ -281,15 +328,22 @@ pub fn toggle_settings_panel(
 
 pub fn update_settings_panel(
     settings: Res<GameSettings>,
-    mut zoom: Query<&mut Text, (With<SettingValueZoom>, Without<SettingValuePitch>, Without<SettingValueYaw>, Without<SettingValueSpeed>)>,
-    mut pitch: Query<&mut Text, (With<SettingValuePitch>, Without<SettingValueZoom>, Without<SettingValueYaw>, Without<SettingValueSpeed>)>,
-    mut yaw: Query<&mut Text, (With<SettingValueYaw>, Without<SettingValueZoom>, Without<SettingValuePitch>, Without<SettingValueSpeed>)>,
-    mut speed: Query<&mut Text, (With<SettingValueSpeed>, Without<SettingValueZoom>, Without<SettingValuePitch>, Without<SettingValueYaw>)>,
+    model_settings: Res<ModelSettings>,
+    mut zoom: Query<&mut Text, (With<SettingValueZoom>, Without<SettingValuePitch>, Without<SettingValueYaw>, Without<SettingValueSpeed>, Without<ModelSettingValueScale>, Without<ModelSettingValueOffsetY>, Without<ModelSettingValueRotY>)>,
+    mut pitch: Query<&mut Text, (With<SettingValuePitch>, Without<SettingValueZoom>, Without<SettingValueYaw>, Without<SettingValueSpeed>, Without<ModelSettingValueScale>, Without<ModelSettingValueOffsetY>, Without<ModelSettingValueRotY>)>,
+    mut yaw: Query<&mut Text, (With<SettingValueYaw>, Without<SettingValueZoom>, Without<SettingValuePitch>, Without<SettingValueSpeed>, Without<ModelSettingValueScale>, Without<ModelSettingValueOffsetY>, Without<ModelSettingValueRotY>)>,
+    mut speed: Query<&mut Text, (With<SettingValueSpeed>, Without<SettingValueZoom>, Without<SettingValuePitch>, Without<SettingValueYaw>, Without<ModelSettingValueScale>, Without<ModelSettingValueOffsetY>, Without<ModelSettingValueRotY>)>,
+    mut model_scale: Query<&mut Text, (With<ModelSettingValueScale>, Without<SettingValueZoom>, Without<SettingValuePitch>, Without<SettingValueYaw>, Without<SettingValueSpeed>, Without<ModelSettingValueOffsetY>, Without<ModelSettingValueRotY>)>,
+    mut model_offset_y: Query<&mut Text, (With<ModelSettingValueOffsetY>, Without<SettingValueZoom>, Without<SettingValuePitch>, Without<SettingValueYaw>, Without<SettingValueSpeed>, Without<ModelSettingValueScale>, Without<ModelSettingValueRotY>)>,
+    mut model_rot_y: Query<&mut Text, (With<ModelSettingValueRotY>, Without<SettingValueZoom>, Without<SettingValuePitch>, Without<SettingValueYaw>, Without<SettingValueSpeed>, Without<ModelSettingValueScale>, Without<ModelSettingValueOffsetY>)>,
 ) {
     if let Ok(mut t) = zoom.single_mut() { **t = format!("{:.0}", settings.zoom); }
     if let Ok(mut t) = pitch.single_mut() { **t = format!("{:.0}°", settings.pitch_degrees); }
     if let Ok(mut t) = yaw.single_mut() { **t = format!("{:.0}°", settings.yaw_degrees); }
     if let Ok(mut t) = speed.single_mut() { **t = format!("{:.2}×", settings.player_speed_multiplier); }
+    if let Ok(mut t) = model_scale.single_mut() { **t = format!("{:.2}", model_settings.scale); }
+    if let Ok(mut t) = model_offset_y.single_mut() { **t = format!("{:.2}", model_settings.translation_y); }
+    if let Ok(mut t) = model_rot_y.single_mut() { **t = format!("{:.0}°", model_settings.rotation_y_degrees); }
 }
 
 pub fn update_hud(

@@ -22,6 +22,7 @@ use crate::inspection::inspector::InspectorPlugin;
 use crate::map::map_plugins::StatefulMapPlugin;
 use crate::player::player_plugin::PlayerPlugin;
 use crate::settings::plugin::SettingsPlugin;
+use crate::model_settings::plugin::ModelSettingsPlugin;
 use crate::towers::systems::shoot_alien_system;
 use crate::ui::ui_plugin::UiPlugin;
 
@@ -47,7 +48,10 @@ impl Plugin for GamePlugin {
                 ScoreKeeperPlugin,
                 GamepadPlugin,
                 InspectorPlugin,
+            ))
+            .add_plugins((
                 SettingsPlugin,
+                ModelSettingsPlugin,
             ))
             .add_systems(
                 OnEnter(GameState::InGame),

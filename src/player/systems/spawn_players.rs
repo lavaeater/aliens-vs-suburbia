@@ -9,6 +9,7 @@ use crate::assets::assets_plugin::GameAssets;
 use crate::game_state::score_keeper::GameTrackingEvent;
 use crate::general::components::CollisionLayer;
 use crate::general::events::map_events::SpawnPlayer;
+use crate::model_settings::resources::ModelSettings;
 use crate::player::bundle::PlayerBundle;
 use crate::ui::spawn_ui::AddHealthBar;
 
@@ -33,15 +34,17 @@ pub fn spawn_players(
     mut spawn_player_event_reader: MessageReader<SpawnPlayer>,
     mut commands: Commands,
     game_assets: Res<GameAssets>,
+    model_settings: Res<ModelSettings>,
     mut add_health_bar_mw: MessageWriter<AddHealthBar>,
     mut player_added_mw: MessageWriter<GameTrackingEvent>,
 ) {
     for spawn_player in spawn_player_event_reader.read() {
+        let s = &*model_settings;
         let player = commands.spawn((
             FixSceneTransform::new(
-                Vec3::new(0.0, 0.0, 0.0),
-                Quat::default(),
-                Vec3::new(1.0, 1.0, 1.0),
+                Vec3::new(s.translation_x, s.translation_y, s.translation_z),
+                Quat::from_rotation_y(s.rotation_y_degrees.to_radians()),
+                Vec3::splat(s.scale),
             ),
             SceneRoot(game_assets.player_scene.clone()),
             Transform::from_xyz(spawn_player.position.x, spawn_player.position.y, spawn_player.position.z),

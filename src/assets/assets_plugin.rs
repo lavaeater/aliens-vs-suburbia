@@ -27,7 +27,7 @@ fn load_assets(
     mut game_assets: ResMut<GameAssets>,
 ) {
     *game_assets = GameAssets {
-        player_scene: asset_server.load("player.glb#Scene0"),
+        player_scene: asset_server.load("models/Adventurer.glb#Scene0"),
         ball_scene: asset_server.load("ball_fab.glb#Scene0"),
         alien_scene: asset_server.load("quaternius/alien.glb#Scene0"),
         alien_construct: asset_server.load("player.glb#Scene0"),
