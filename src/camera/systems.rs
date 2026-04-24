@@ -18,8 +18,8 @@ use crate::general::systems::map_systems::{WallMaterials, WallOccluder};
 use crate::player::components::Player;
 use crate::settings::resources::{GameSettings, ProjectionMode};
 
-const PIXEL_WIDTH: u32 = 480;
-const PIXEL_HEIGHT: u32 = 270;
+const PIXEL_WIDTH: u32 = 320;
+const PIXEL_HEIGHT: u32 = 240;
 const CANVAS_LAYER: usize = 1;
 
 pub fn spawn_camera(
