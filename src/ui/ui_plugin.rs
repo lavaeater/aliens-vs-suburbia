@@ -1,45 +1,45 @@
 use bevy::app::{App, Plugin, Update};
-use bevy::prelude::{Camera2d, OnEnter, OnExit};
+use bevy::feathers::{dark_theme::create_dark_theme, theme::UiTheme, FeathersPlugins};
+use bevy::prelude::{in_state, Camera2d, Commands, IntoScheduleConfigs, IsDefaultUiCamera, OnEnter, OnExit};
 use lava_ui_builder::LavaUiPlugin;
 use crate::game_state::GameState;
-use crate::ui::spawn_ui::{cleanup_menu, goto_state_system, GotoState, spawn_menu, spawn_ui,
-                          add_health_bar, sync_health_bars, AddHealthBar};
+use crate::ui::spawn_ui::{
+    add_health_bar, cleanup_state, game_theme, goto_state_system, GotoState,
+    spawn_menu, spawn_ui, sync_health_bars, toggle_settings_panel, update_hud,
+    update_settings_panel, AddHealthBar,
+};
 
 pub struct UiPlugin;
 
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(LavaUiPlugin)
+        app.add_plugins((LavaUiPlugin, FeathersPlugins))
+            .insert_resource(UiTheme(create_dark_theme()))
+            .insert_resource(game_theme())
             .add_message::<GotoState>()
             .add_message::<AddHealthBar>()
-            .add_systems(
-                OnEnter(GameState::InGame),
-                spawn_ui,
-            )
-            .add_systems(
-                OnEnter(GameState::Menu),
-                (
-                    spawn_ui_camera,
-                    spawn_menu,
-                ),
-            )
-            .add_systems(
-                OnExit(GameState::Menu),
-                cleanup_menu,
-            )
+            .add_systems(OnEnter(GameState::InGame), spawn_ui)
+            .add_systems(OnEnter(GameState::Menu), (spawn_ui_camera, spawn_menu))
+            .add_systems(OnExit(GameState::Menu), cleanup_state)
+            .add_systems(OnExit(GameState::InGame), cleanup_state)
             .add_systems(
                 Update,
                 (
                     goto_state_system,
                     add_health_bar,
                     sync_health_bars,
-                ),
+                    update_hud,
+                    toggle_settings_panel,
+                    update_settings_panel,
+                ).run_if(in_state(GameState::InGame)),
             );
     }
 }
 
-pub fn spawn_ui_camera(
-    mut commands: bevy::prelude::Commands,
-) {
-    commands.spawn((Camera2d::default(), bevy::prelude::Camera { order: 1, ..Default::default() }));
+pub fn spawn_ui_camera(mut commands: Commands) {
+    commands.spawn((
+        Camera2d::default(),
+        IsDefaultUiCamera,
+        bevy::prelude::Camera { order: 1, ..Default::default() },
+    ));
 }

@@ -1,8 +1,8 @@
 use bevy::asset::AssetServer;
 use bevy::log::info;
 use bevy::math::{Vec2, Vec3, Vec3Swizzles};
-use bevy::prelude::{Commands, Entity, MessageReader, MessageWriter, Name, Query, Res, With, Without};
-use bevy::scene::{SceneRoot, SceneInstance};
+use bevy::prelude::{AlphaMode, Assets, Children, Color, Commands, Component, Entity, MeshMaterial3d, MessageReader, MessageWriter, Name, Query, Res, ResMut, StandardMaterial, With, Without};
+use bevy::scene::{SceneRoot, SceneInstance, SceneSpawner};
 use avian3d::prelude::{Collider, CollisionLayers, LockedAxes, Position, RigidBody, Rotation, Sensor};
 use crate::control::components::{ControlCommand, CharacterControl};
 use crate::general::components::{CollisionLayer, Health};
@@ -15,6 +15,12 @@ use crate::towers::components::{TowerSensor, TowerShooter};
 use crate::towers::events::BuildTower;
 use crate::ui::spawn_ui::AddHealthBar;
 
+/// Tracks materials cloned from the indicator model's scene children so they can be tinted.
+#[derive(Component, Default)]
+pub struct BuildIndicatorTint {
+    handles: Vec<bevy::asset::Handle<StandardMaterial>>,
+    initialized: bool,
+}
 
 pub fn enter_build_mode(
     mut enter_build_mode_evr: MessageReader<EnterBuildMode>,
@@ -35,11 +41,9 @@ pub fn enter_build_mode(
                 &asset_server,
                 &desired_neighbour_pos,
                 "map/obstacle.glb#Scene0",
-                &tile_definitions
+                &tile_definitions,
             );
-            commands.entity(start_event.0).insert(BuildingIndicator(
-                building_indicator,
-                0));
+            commands.entity(start_event.0).insert(BuildingIndicator(building_indicator, 0));
             commands.entity(start_event.0).insert(IsBuilding {});
         }
     }
@@ -55,6 +59,7 @@ pub fn spawn_building_indicator(
     commands.spawn((
         Name::from("BuildingIndicator"),
         IsBuildIndicator {},
+        BuildIndicatorTint::default(),
         SceneRoot(asset_server.load(file)),
         RigidBody::Kinematic,
         tile_definitions.create_collider(16.0, 4.0, 16.0),
@@ -63,6 +68,68 @@ pub fn spawn_building_indicator(
         LockedAxes::new().lock_rotation_x().lock_rotation_z().lock_rotation_y(),
         CurrentTile::default(),
     )).id()
+}
+
+fn collect_descendants(entity: Entity, children_q: &Query<&Children>, out: &mut Vec<Entity>) {
+    if let Ok(children) = children_q.get(entity) {
+        for child in children.iter() {
+            out.push(*child);
+            collect_descendants(*child, children_q, out);
+        }
+    }
+}
+
+/// On first frame after the scene is ready, clone each mesh's material with alpha blending
+/// and a green tint. Stores the handles so `update_build_indicator_tint` can change the color.
+pub fn init_build_indicator_tint(
+    mut indicators: Query<(Entity, &SceneInstance, &mut BuildIndicatorTint), With<IsBuildIndicator>>,
+    scene_spawner: Res<SceneSpawner>,
+    children_q: Query<&Children>,
+    mut mat_q: Query<&mut MeshMaterial3d<StandardMaterial>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    for (entity, scene_instance, mut tint) in &mut indicators {
+        if tint.initialized { continue; }
+        if !scene_spawner.instance_is_ready(**scene_instance) { continue; }
+
+        let mut descendants = Vec::new();
+        collect_descendants(entity, &children_q, &mut descendants);
+
+        for desc in descendants {
+            if let Ok(mut mat_handle) = mat_q.get_mut(desc) {
+                if let Some(new_mat) = materials.get(&mat_handle.0).cloned() {
+                    let mut tinted = new_mat;
+                    tinted.alpha_mode = AlphaMode::Blend;
+                    tinted.base_color = Color::srgba(0.2, 1.0, 0.2, 0.55);
+                    let handle = materials.add(tinted);
+                    tint.handles.push(handle.clone());
+                    mat_handle.0 = handle;
+                }
+            }
+        }
+        tint.initialized = true;
+    }
+}
+
+/// Each frame, update tint color to green (free) or red (occupied).
+pub fn update_build_indicator_tint(
+    indicators: Query<(&CurrentTile, &BuildIndicatorTint), With<IsBuildIndicator>>,
+    map_graph: Res<MapGraph>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    for (tile, tint) in &indicators {
+        if !tint.initialized { continue; }
+        let color = if map_graph.occupied_tiles.contains(&tile.tile) {
+            Color::srgba(1.0, 0.2, 0.2, 0.55)
+        } else {
+            Color::srgba(0.2, 1.0, 0.2, 0.55)
+        };
+        for handle in &tint.handles {
+            if let Some(mat) = materials.get_mut(handle) {
+                mat.base_color = color;
+            }
+        }
+    }
 }
 
 pub fn exit_build_mode(
@@ -157,7 +224,7 @@ pub fn change_build_indicator(
                     .get(indicator_key)
                     .unwrap()
                     .file,
-                &tile_defs
+                &tile_defs,
             );
         }
     }

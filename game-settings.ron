@@ -1,0 +1,7 @@
+(
+    projection: Orthographic,
+    zoom: 2.0,
+    pitch_degrees: -15.0,
+    yaw_degrees: 0.0,
+    player_speed_multiplier: 1.0,
+)
