@@ -8,12 +8,13 @@ bevy = { version = "0.18", features = ["wayland", "3d", "ui", "experimental_bevy
 avian3d = { version = "0.6", default-features = false, features = ["3d", "parry-f32", "debug-plugin", "collider-from-mesh", "simd", "parallel", "serialize", "bevy_scene", "bevy_picking", "xpbd_joints"] }
 flagset = "0.4.4"
 pathfinding = "4.6"
-itertools = "0.12"
+itertools = "0.14.0"
 bevy_mod_outline = "0.12"
 bevy-inspector-egui = "0.36"
 lava_ui_builder = { path = "lava_ui_builder" }
 serde = { version = "1", features = ["derive"] }
-ron = "0.8"
+ron = "0.12.1"
+bevy_wind_waker_shader = "0.6.0"
 
 # Enable max optimizations for dependencies, but not for our code:h
 [profile.dev.package."*"]

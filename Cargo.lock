@@ -115,11 +115,12 @@ dependencies = [
  "bevy",
  "bevy-inspector-egui",
  "bevy_mod_outline",
+ "bevy_wind_waker_shader",
  "flagset",
- "itertools 0.12.1",
+ "itertools 0.14.0",
  "lava_ui_builder",
  "pathfinding",
- "ron 0.8.1",
+ "ron",
  "serde",
 ]
 
@@ -435,12 +436,6 @@ dependencies = [
 
 [[package]]
 name = "base64"
-version = "0.21.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567"
-
-[[package]]
-name = "base64"
 version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
@@ -551,7 +546,7 @@ dependencies = [
  "downcast-rs 2.0.2",
  "either",
  "petgraph",
- "ron 0.12.1",
+ "ron",
  "serde",
  "smallvec",
  "thiserror 2.0.18",
@@ -648,7 +643,7 @@ dependencies = [
  "futures-lite",
  "futures-util",
  "js-sys",
- "ron 0.12.1",
+ "ron",
  "serde",
  "stackfuture",
  "thiserror 2.0.18",
@@ -1022,7 +1017,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5f37fb52655d0439656ca0a1db027d46926e463c81d893d4b1639668e5d7f1c1"
 dependencies = [
  "async-lock",
- "base64 0.22.1",
+ "base64",
  "bevy_animation",
  "bevy_app",
  "bevy_asset",
@@ -1539,7 +1534,7 @@ dependencies = [
  "bevy_transform",
  "bevy_utils",
  "derive_more",
- "ron 0.12.1",
+ "ron",
  "serde",
  "thiserror 2.0.18",
  "uuid",
@@ -1829,6 +1824,15 @@ dependencies = [
  "bevy_platform",
  "disqualified",
  "thread_local",
+]
+
+[[package]]
+name = "bevy_wind_waker_shader"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "86ca0266e119de37fc08992d307a5aef9424f883e13504a2bb92f31b6379dc5f"
+dependencies = [
+ "bevy",
 ]
 
 [[package]]
@@ -3540,15 +3544,6 @@ dependencies = [
 
 [[package]]
 name = "itertools"
-version = "0.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
-dependencies = [
- "either",
-]
-
-[[package]]
-name = "itertools"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
@@ -5090,18 +5085,6 @@ checksum = "e7ceb6607dd738c99bc8cb28eff249b7cd5c8ec88b9db96c0608c1480d140fb1"
 dependencies = [
  "cpal",
  "lewton",
-]
-
-[[package]]
-name = "ron"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b91f7eff05f748767f183df4320a63d6936e9c6107d97c9e6bdd9784f4289c94"
-dependencies = [
- "base64 0.21.7",
- "bitflags 2.11.1",
- "serde",
- "serde_derive",
 ]
 
 [[package]]

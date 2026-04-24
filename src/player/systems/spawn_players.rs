@@ -4,6 +4,7 @@ use bevy::prelude::{Children, Commands, Component, Entity, MessageReader, Messag
 use bevy::scene::SceneRoot;
 use bevy_mod_outline::OutlineVolume;
 use avian3d::prelude::Collider;
+use bevy_wind_waker_shader::{TimeOfDay, Weather, WindWakerShaderBuilder};
 use crate::assets::assets_plugin::GameAssets;
 use crate::game_state::score_keeper::GameTrackingEvent;
 use crate::general::components::CollisionLayer;
@@ -59,11 +60,15 @@ pub fn spawn_players(
                     CollisionLayer::AlienGoal
                 ],
             ),
-            OutlineVolume {
-                visible: true,
-                width: 1.0,
-                colour: bevy::prelude::Color::BLACK,
-            },
+            WindWakerShaderBuilder::default()
+              .time_of_day(TimeOfDay::Day)
+              .weather(Weather::Sunny)
+              .build(),
+            // OutlineVolume {
+            //     visible: true,
+            //     width: 1.0,
+            //     colour: bevy::prelude::Color::BLACK,
+            // },
         )).id();
         add_health_bar_mw.write(AddHealthBar {
             entity: player,
