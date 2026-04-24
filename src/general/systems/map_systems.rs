@@ -24,6 +24,7 @@ use crate::general::components::map_components::{AlienGoal, AlienSpawnPoint, Cur
 use crate::general::events::map_events::{LoadMap, SpawnPlayer};
 use crate::general::resources::map_resources::MapGraph;
 use bevy::math::EulerRot;
+use bevy_wind_waker_shader::WindWakerShaderBuilder;
 use crate::assets::assets_plugin::GameAssets;
 use crate::building::systems::ToWorldCoordinates;
 use crate::player::components::IsBuildIndicator;
@@ -345,6 +346,7 @@ pub fn map_loader(
                         tile_defs.create_collider(floor_model_def.width * w, floor_model_def.height, floor_model_def.depth * h),
                         Position::from(center),
                         floor_model_def.create_collision_layers(),
+                        WindWakerShaderBuilder::default().build(),
                     ));
                 }
             }
@@ -393,6 +395,7 @@ pub fn map_loader(
                             Position::from(Vec3::new(center_x, -tile_defs.wall_height, z)),
                             Rotation::from(tile_defs.get_wall_rotation(dir)),
                             wall_model_def.create_collision_layers(),
+                            WindWakerShaderBuilder::default().build(),
                         ));
                     }
                 }
@@ -423,6 +426,7 @@ pub fn map_loader(
                             Position::from(Vec3::new(x, -tile_defs.wall_height, center_z)),
                             Rotation::from(tile_defs.get_wall_rotation(dir)),
                             wall_model_def.create_collision_layers(),
+                            WindWakerShaderBuilder::default().build(),
                         ));
                     }
                 }
@@ -468,6 +472,7 @@ pub fn map_loader(
                     AlienSpawnPoint::new(2.0),
                     SceneRoot(game_assets.alien_construct.clone()),
                     RigidBody::Static,
+                    WindWakerShaderBuilder::default().build(),
                     Collider::cuboid(0.5, 0.5, 0.45),
                     Position::from((tile.x as usize, tile.y as usize).to_world_coords(&tile_defs) + Vec3::new(0.0, -tile_defs.wall_height, 0.0)),
                     CollisionLayers::new([CollisionLayer::AlienSpawnPoint], [CollisionLayer::Player]),
@@ -480,6 +485,7 @@ pub fn map_loader(
                     AlienGoal::new(tile.x as usize, tile.y as usize),
                     SceneRoot(game_assets.alien_construct.clone()),
                     RigidBody::Static,
+                    WindWakerShaderBuilder::default().build(),
                     Collider::cuboid(0.5, 0.5, 0.45),
                     Position::from((tile.x as usize, tile.y as usize).to_world_coords(&tile_defs) + Vec3::new(0.0, -tile_defs.wall_height, 0.0)),
                     CollisionLayers::new([CollisionLayer::AlienGoal], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),

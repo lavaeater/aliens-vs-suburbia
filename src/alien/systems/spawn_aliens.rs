@@ -3,6 +3,7 @@ use bevy::prelude::{Commands, MessageReader, MessageWriter, Name, Query, Res, Re
 use bevy::scene::SceneRoot;
 use avian3d::prelude::{AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, Position, RigidBody};
 use std::f32::consts::PI;
+use bevy_wind_waker_shader::WindWakerShaderBuilder;
 use crate::ai::components::approach_and_attack_player_components::ApproachAndAttackPlayerData;
 use crate::ai::components::avoid_wall_components::AvoidWallsData;
 use crate::ai::components::move_towards_goal_components::MoveTowardsGoalData;
@@ -49,7 +50,7 @@ pub fn spawn_aliens(
         let alien_transform = Transform::from_xyz(spawn_alien.position.x, spawn_alien.position.y, spawn_alien.position.z)
             .with_scale(Vec3::new(0.25, 0.25, 0.25))
             .with_rotation(Quat::from_rotation_y(PI * 2.0));
-
+      
         let id = commands.spawn((
             (
                 Name::from("Spider"),
@@ -92,9 +93,10 @@ pub fn spawn_aliens(
                 AlienSightShape::default(),
                 Attack::default(),
                 Health::default(),
-            ),
+                WindWakerShaderBuilder::default().build(),
+            )
         )).id();
-
+      
         add_health_bar_mw.write(AddHealthBar {
             entity: id,
             name: "ALIEN",

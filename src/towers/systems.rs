@@ -4,6 +4,7 @@ use bevy::prelude::{Commands, Query, Res, Transform, With};
 use bevy::scene::SceneRoot;
 use bevy::time::Time;
 use avian3d::prelude::{Collider, CollidingEntities, CollisionLayers, LinearVelocity, Position, RigidBody};
+use bevy_wind_waker_shader::WindWakerShaderBuilder;
 use crate::alien::components::general::Alien;
 use crate::general::components::{Ball, CollisionLayer};
 use crate::general::components::map_components::CoolDown;
@@ -43,6 +44,7 @@ pub fn shoot_alien_system(
                     Transform::from_xyz(launch_p.x, launch_p.y, launch_p.z),
                     RigidBody::Dynamic,
                     Collider::sphere(1.0 / 16.0),
+                    WindWakerShaderBuilder::default().build(),
                     LinearVelocity(direction * 12.0),
                     CollisionLayers::new(
                         [CollisionLayer::Ball],
