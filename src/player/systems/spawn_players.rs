@@ -61,8 +61,6 @@ pub fn spawn_players(
                 ],
             ),
             WindWakerShaderBuilder::default()
-              .time_of_day(TimeOfDay::Day)
-              .weather(Weather::Sunny)
               .build(),
             // OutlineVolume {
             //     visible: true,
