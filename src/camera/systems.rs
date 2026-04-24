@@ -1,20 +1,68 @@
 use bevy::math::{Quat, Rect, Vec2, Vec3};
-use bevy::prelude::{AlphaMode, Assets, Camera3d, Children, Color, Commands, Entity, MeshMaterial3d, Name, OrthographicProjection, PerspectiveProjection, Query, Res, ResMut, StandardMaterial, Transform, With, Without, default};
-use bevy::camera::{Projection, ScalingMode};
+use bevy::prelude::{
+    AlphaMode, Assets, Camera, Camera2d, Camera3d, Children, Color, Commands, Entity, Image,
+    MeshMaterial3d, Name, OrthographicProjection, PerspectiveProjection, Query, Res,
+    ResMut, Sprite, StandardMaterial, Transform, Window, With, Without, default,
+};
+use bevy::camera::{ImageRenderTarget, Projection, RenderTarget, ScalingMode};
+use bevy::image::ImageSampler;
+use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages};
+use bevy::camera::visibility::RenderLayers;
 use bevy::scene::{SceneInstance, SceneSpawner};
+use bevy::window::PrimaryWindow;
 use std::f32::consts::PI;
 use avian3d::interpolation::TransformInterpolation;
 use avian3d::prelude::Position;
-use crate::camera::components::{CameraOffset, GameCamera};
+use crate::camera::components::{CameraOffset, GameCamera, PixelCanvas};
 use crate::general::systems::map_systems::{WallMaterials, WallOccluder};
 use crate::player::components::Player;
 use crate::settings::resources::{GameSettings, ProjectionMode};
 
-pub fn spawn_camera(mut commands: Commands) {
+const PIXEL_WIDTH: u32 = 480;
+const PIXEL_HEIGHT: u32 = 270;
+const CANVAS_LAYER: usize = 1;
+
+pub fn spawn_camera(
+    mut commands: Commands,
+    mut images: ResMut<Assets<Image>>,
+    window_q: Query<&Window, With<PrimaryWindow>>,
+) {
+    let size = Extent3d {
+        width: PIXEL_WIDTH,
+        height: PIXEL_HEIGHT,
+        depth_or_array_layers: 1,
+    };
+
+    let mut render_texture = Image {
+        texture_descriptor: bevy::render::render_resource::TextureDescriptor {
+            label: None,
+            size,
+            dimension: TextureDimension::D2,
+            format: TextureFormat::Bgra8UnormSrgb,
+            mip_level_count: 1,
+            sample_count: 1,
+            usage: TextureUsages::TEXTURE_BINDING
+                | TextureUsages::COPY_DST
+                | TextureUsages::RENDER_ATTACHMENT,
+            view_formats: &[],
+        },
+        sampler: ImageSampler::nearest(),
+        ..default()
+    };
+    render_texture.resize(size);
+
+    let render_texture_handle = images.add(render_texture);
+
+    // 3D game camera — renders to the low-res texture
     commands.spawn((
         Name::from("Camera"),
         CameraOffset(Vec3::new(2.0, 1.5, 2.0)),
         Camera3d::default(),
+        Camera { order: -1, ..default() },
+        RenderTarget::Image(ImageRenderTarget {
+            handle: render_texture_handle.clone(),
+            scale_factor: 1.0,
+        }),
         Projection::Orthographic(OrthographicProjection {
             near: -1000.0,
             far: 1000.0,
@@ -30,6 +78,40 @@ pub fn spawn_camera(mut commands: Commands) {
         TransformInterpolation,
         GameCamera {},
     ));
+
+    let window_size = window_q.single()
+        .map(|w| Vec2::new(w.width(), w.height()))
+        .unwrap_or(Vec2::new(1280.0, 720.0));
+
+    // 2D canvas camera — upscales the pixel texture to screen
+    commands.spawn((
+        Name::from("PixelCanvasCamera"),
+        Camera2d,
+        Camera { order: 0, ..default() },
+        RenderLayers::layer(CANVAS_LAYER),
+    ));
+
+    // Fullscreen sprite showing the low-res render texture
+    commands.spawn((
+        Name::from("PixelCanvas"),
+        Sprite {
+            image: render_texture_handle,
+            custom_size: Some(window_size),
+            ..default()
+        },
+        Transform::default(),
+        PixelCanvas,
+        RenderLayers::layer(CANVAS_LAYER),
+    ));
+}
+
+pub fn resize_pixel_canvas(
+    window_q: Query<&Window, With<PrimaryWindow>>,
+    mut canvas_q: Query<&mut Sprite, With<PixelCanvas>>,
+) {
+    let Ok(window) = window_q.single() else { return; };
+    let Ok(mut sprite) = canvas_q.single_mut() else { return; };
+    sprite.custom_size = Some(Vec2::new(window.width(), window.height()));
 }
 
 fn collect_descendants(entity: Entity, children_q: &Query<&Children>, out: &mut Vec<Entity>) {

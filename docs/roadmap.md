@@ -119,6 +119,11 @@ The vision describes a scene-setting intro (kids coming home, aliens invade). Th
 
 ---
 
+
+## Pixelated Render
+
+Check out this example on github to get an idea on how to render the game pixelated. The UI should not be rendered pixelated, just the game output
+
 ## Suggested sequence
 
 ```
