@@ -3,7 +3,7 @@ use crate::game_state::GameState;
 use crate::general::components::Health;
 use crate::player::components::IsBuilding;
 use crate::settings::resources::{GameSettings, ProjectionMode};
-use crate::model_settings::resources::ModelSettings;
+use crate::model_settings::resources::{ANIM_KEYS, DebugAnimSelection, ModelSettings};
 use bevy::prelude::*;
 use bevy::ui_widgets::Activate;
 use lava_ui_builder::{
@@ -282,6 +282,24 @@ fn spawn_settings_panel(commands: Commands, theme: Res<LavaTheme>) {
             });
     });
 
+    // ── Animation selector ────────────────────────────────────────────────────
+    let sep2_theme = TextTheme { label_size: 13.0, label_color: Color::srgb(0.4, 0.7, 0.5), ..text_theme.clone() };
+    ui.with_child(|c| { c.insert_bundle(lava_ui_builder::label("— Animation —", &sep2_theme)); });
+
+    setting_row(&mut ui, "Anim", &text_theme, |row| {
+        row.add_button_observe("<", |b| { b.size_px(32.0, 32.0); },
+            |_: On<Activate>, mut sel: ResMut<DebugAnimSelection>| {
+                sel.index = (sel.index + ANIM_KEYS.len() - 1) % ANIM_KEYS.len();
+                sel.dirty = true;
+            });
+        row.with_child(|v| { v.insert_bundle(lava_ui_builder::label("", &TextTheme::default())).insert(AnimSelectorLabel); });
+        row.add_button_observe(">", |b| { b.size_px(32.0, 32.0); },
+            |_: On<Activate>, mut sel: ResMut<DebugAnimSelection>| {
+                sel.index = (sel.index + 1) % ANIM_KEYS.len();
+                sel.dirty = true;
+            });
+    });
+
     ui.build();
 }
 
@@ -312,6 +330,7 @@ pub struct SettingsPanel;
 #[derive(Component)] pub struct ModelSettingValueScale;
 #[derive(Component)] pub struct ModelSettingValueOffsetY;
 #[derive(Component)] pub struct ModelSettingValueRotY;
+#[derive(Component)] pub struct AnimSelectorLabel;
 
 pub fn toggle_settings_panel(
     keys: Res<ButtonInput<KeyCode>>,
@@ -344,6 +363,16 @@ pub fn update_settings_panel(
     if let Ok(mut t) = model_scale.single_mut() { **t = format!("{:.2}", model_settings.scale); }
     if let Ok(mut t) = model_offset_y.single_mut() { **t = format!("{:.2}", model_settings.translation_y); }
     if let Ok(mut t) = model_rot_y.single_mut() { **t = format!("{:.0}°", model_settings.rotation_y_degrees); }
+}
+
+pub fn update_anim_selector_label(
+    anim_sel: Res<DebugAnimSelection>,
+    mut label: Query<&mut Text, With<AnimSelectorLabel>>,
+) {
+    if !anim_sel.is_changed() { return; }
+    if let Ok(mut t) = label.single_mut() {
+        **t = format!("{:?}", ANIM_KEYS[anim_sel.index % ANIM_KEYS.len()]);
+    }
 }
 
 pub fn update_hud(

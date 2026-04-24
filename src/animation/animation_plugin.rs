@@ -139,11 +139,11 @@ pub fn load_animations(
     let mut player_graph = AnimationGraph::new();
     let mut player_anims: HashMap<AnimationKey, AnimationNodeIndex> = HashMap::new();
 
-    let player_idle_clip: Handle<AnimationClip> = asset_server.load("girl/girl.glb#Animation0");
-    let player_walking_clip: Handle<AnimationClip> = asset_server.load("girl/girl.glb#Animation1");
-    let player_throwing_clip: Handle<AnimationClip> = asset_server.load("girl/girl.glb#Animation2");
-    let player_crawling_clip: Handle<AnimationClip> = asset_server.load("girl/girl.glb#Animation3");
-    let player_building_clip: Handle<AnimationClip> = asset_server.load("girl/girl.glb#Animation4");
+    let player_idle_clip: Handle<AnimationClip> = asset_server.load("models/Adventurer.glb#Animation0");
+    let player_walking_clip: Handle<AnimationClip> = asset_server.load("models/Adventurer.glb#Animation1");
+    let player_throwing_clip: Handle<AnimationClip> = asset_server.load("models/Adventurer.glb#Animation2");
+    let player_crawling_clip: Handle<AnimationClip> = asset_server.load("models/Adventurer.glb#Animation3");
+    let player_building_clip: Handle<AnimationClip> = asset_server.load("models/Adventurer.glb#Animation4");
 
     player_anims.insert(AnimationKey::Idle, player_graph.add_clip(player_idle_clip, 1.0, player_graph.root));
     player_anims.insert(AnimationKey::Walking, player_graph.add_clip(player_walking_clip, 1.0, player_graph.root));

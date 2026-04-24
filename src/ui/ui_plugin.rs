@@ -5,8 +5,8 @@ use lava_ui_builder::LavaUiPlugin;
 use crate::game_state::GameState;
 use crate::ui::spawn_ui::{
     add_health_bar, cleanup_state, game_theme, goto_state_system, GotoState,
-    spawn_menu, spawn_ui, sync_health_bars, toggle_settings_panel, update_hud,
-    update_settings_panel, AddHealthBar,
+    spawn_menu, spawn_ui, sync_health_bars, toggle_settings_panel, update_anim_selector_label,
+    update_hud, update_settings_panel, AddHealthBar,
 };
 
 pub struct UiPlugin;
@@ -31,6 +31,7 @@ impl Plugin for UiPlugin {
                     update_hud,
                     toggle_settings_panel,
                     update_settings_panel,
+                    update_anim_selector_label,
                 ).run_if(in_state(GameState::InGame)),
             );
     }

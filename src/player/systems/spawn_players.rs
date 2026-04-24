@@ -1,6 +1,6 @@
 use bevy::math::{Quat, Vec3};
-use bevy::prelude::{Children, Commands, Component, Entity, MessageReader, MessageWriter, Query,
-                    Res, Transform, Visibility, With};
+use bevy::prelude::{Children, Commands, Component, DetectChanges, Entity, MessageReader, MessageWriter, Query,
+                    Res, ResMut, Transform, Visibility, With};
 use bevy::scene::SceneRoot;
 use bevy_mod_outline::OutlineVolume;
 use avian3d::prelude::Collider;
@@ -79,6 +79,10 @@ pub fn spawn_players(
     }
 }
 
+/// Marker placed on the direct scene-root child of the player so we can retarget it later.
+#[derive(Component)]
+pub struct PlayerModelRoot;
+
 pub fn fix_scene_transform(
     mut commands: Commands,
     mut scene_instance_query: Query<(Entity, &FixSceneTransform, &Children)>,
@@ -90,8 +94,22 @@ pub fn fix_scene_transform(
                 transform.translation = fix_scene_transform.translation;
                 transform.rotation = fix_scene_transform.rotation;
                 transform.scale = fix_scene_transform.scale;
+                commands.entity(*child).insert(PlayerModelRoot);
                 commands.entity(parent).remove::<FixSceneTransform>();
             }
         }
+    }
+}
+
+pub fn apply_model_settings_live(
+    model_settings: Res<ModelSettings>,
+    mut root_query: Query<&mut Transform, With<PlayerModelRoot>>,
+) {
+    if !model_settings.is_changed() { return; }
+    let s = &*model_settings;
+    for mut transform in root_query.iter_mut() {
+        transform.translation = Vec3::new(s.translation_x, s.translation_y, s.translation_z);
+        transform.rotation = Quat::from_rotation_y(s.rotation_y_degrees.to_radians());
+        transform.scale = Vec3::splat(s.scale);
     }
 }

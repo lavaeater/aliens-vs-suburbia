@@ -1,5 +1,20 @@
 use bevy::prelude::Resource;
 use serde::{Deserialize, Serialize};
+use crate::animation::animation_plugin::AnimationKey;
+
+pub const ANIM_KEYS: &[AnimationKey] = &[
+    AnimationKey::Idle,
+    AnimationKey::Walking,
+    AnimationKey::Throwing,
+    AnimationKey::Crawling,
+    AnimationKey::Building,
+];
+
+#[derive(Resource, Default)]
+pub struct DebugAnimSelection {
+    pub index: usize,
+    pub dirty: bool,
+}
 
 pub const MODEL_SETTINGS_PATH: &str = "assets/models/Adventurer-settings.ron";
 
