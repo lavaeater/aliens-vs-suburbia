@@ -22,7 +22,29 @@ const PIXEL_WIDTH: u32 = 480;
 const PIXEL_HEIGHT: u32 = 360;
 const CANVAS_LAYER: usize = 1;
 
-pub fn spawn_camera(
+pub fn spawn_camera(mut commands: Commands) {
+  commands.spawn((
+    Name::from("Camera"),
+    CameraOffset(Vec3::new(2.0, 1.5, 2.0)),
+    Camera3d::default(),
+    Projection::Orthographic(OrthographicProjection {
+      near: -1000.0,
+      far: 1000.0,
+      viewport_origin: Vec2::new(0.5, 0.5),
+      scaling_mode: ScalingMode::FixedVertical { viewport_height: 2.0 },
+      area: Rect::new(-1.0, -1.0, 1.0, 1.0),
+      scale: 2.0,
+    }),
+    Transform {
+      rotation: Quat::from_rotation_x(-PI / 4.),
+      ..default()
+    },
+    TransformInterpolation,
+    GameCamera {},
+  ));
+}
+
+pub fn spawn_pixelated_camera(
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
     window_q: Query<&Window, With<PrimaryWindow>>,

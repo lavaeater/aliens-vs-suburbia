@@ -17,7 +17,9 @@ pub struct PlayerPlugin {
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         if self.with_debug {
-            app.add_systems(Update, debug_gizmos.run_if(in_state(GameState::InGame)));
+            app
+              .add_systems(Update, 
+                           debug_gizmos.run_if(in_state(GameState::InGame)));
         }
         app.add_plugins((
             OutlinePlugin,
