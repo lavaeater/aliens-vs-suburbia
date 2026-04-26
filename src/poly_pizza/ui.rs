@@ -28,6 +28,9 @@ pub struct AttributionLabel;
 pub struct ResultsContainer;
 
 #[derive(Component)]
+pub struct ViewerPanel;
+
+#[derive(Component)]
 pub struct ResultCard {
     pub index: usize,
 }
@@ -253,45 +256,39 @@ pub fn spawn_polypizza_screen(
         );
     });
 
-    // ── Right area: results (top) + transparent viewer gap (bottom) ──────────
-    ui.with_child(|right| {
-        right.with_flex_grow(1.0)
+    // ── Results column ────────────────────────────────────────────────────────
+    ui.with_child(|list| {
+        list.width_px(320.0)
             .height_percent(100.0)
             .display_flex()
-            .flex_column();
+            .flex_column()
+            .overflow_scroll_y()
+            .padding_all_px(8.0)
+            .gap_px(4.0)
+            .bg_color(Color::srgba(0.03, 0.05, 0.08, 0.88))
+            .insert(ResultsContainer);
+    });
 
-        // Results list — opaque, scrollable, upper portion
-        right.with_child(|list| {
-            list.height_percent(55.0)
-                .width_percent(100.0)
-                .display_flex()
-                .flex_column()
-                .overflow_scroll_y()
-                .padding_all_px(8.0)
-                .gap_px(4.0)
-                .bg_color(Color::srgba(0.03, 0.05, 0.08, 0.88))
-                .insert(ResultsContainer);
-        });
+    // ── Viewer column — transparent, Camera3d viewport locked to this rect ────
+    ui.with_child(|viewer| {
+        viewer.with_flex_grow(1.0)
+            .height_percent(100.0)
+            .display_flex()
+            .flex_column()
+            .padding_all_px(6.0)
+            .insert(ViewerPanel);
 
-        // Viewer area — fully transparent so the Camera3d shows through.
-        // A small label strip at the top of this region gives context.
-        right.with_child(|viewer_strip| {
-            viewer_strip.with_flex_grow(1.0)
-                .width_percent(100.0)
-                .display_flex()
-                .flex_column()
-                .padding_all_px(6.0);
-
-            viewer_strip.with_child(|hint| {
-                hint.insert_bundle(lava_ui_builder::label(
-                    "[drag to rotate · T = toon shader]",
-                    &lava_ui_builder::TextTheme {
-                        label_size: 11.0,
-                        label_color: Color::srgba(0.7, 0.8, 0.7, 0.6),
-                        ..Default::default()
-                    },
-                ));
-            });
+        // Hint label at bottom-left of the viewer area
+        viewer.with_child(|spacer| { spacer.with_flex_grow(1.0); });
+        viewer.with_child(|hint| {
+            hint.insert_bundle(lava_ui_builder::label(
+                "[drag to rotate · T = toon shader]",
+                &lava_ui_builder::TextTheme {
+                    label_size: 11.0,
+                    label_color: Color::srgba(0.7, 0.8, 0.7, 0.5),
+                    ..Default::default()
+                },
+            ));
         });
     });
 
@@ -560,6 +557,30 @@ pub fn update_status_label(
     for mut text in labels.iter_mut() {
         **text = state.status.clone();
     }
+}
+
+pub fn sync_viewer_viewport(
+    panels: Query<(&bevy::ui::ComputedNode, &bevy::ui::UiGlobalTransform), With<ViewerPanel>>,
+    mut cameras: Query<&mut Camera, With<crate::poly_pizza::viewer::ViewerCamera>>,
+    windows: Query<&Window>,
+) {
+    let Ok((node, transform)) = panels.single() else { return };
+    let Ok(mut camera) = cameras.single_mut() else { return };
+    let Ok(window) = windows.single() else { return };
+
+    let scale = window.scale_factor() as f32;
+    // ComputedNode.size is in physical pixels already.
+    let phys_size = node.size;
+    // UiGlobalTransform holds an Affine2; translation is in logical pixels.
+    let logical_pos = transform.affine().translation;
+    let phys_x = (logical_pos.x * scale) as u32;
+    let phys_y = (logical_pos.y * scale) as u32;
+
+    camera.viewport = Some(bevy::camera::Viewport {
+        physical_position: bevy::math::UVec2::new(phys_x, phys_y),
+        physical_size: bevy::math::UVec2::new(phys_size.x as u32, phys_size.y as u32),
+        depth: 0.0..1.0,
+    });
 }
 
 pub fn update_attribution_label(
