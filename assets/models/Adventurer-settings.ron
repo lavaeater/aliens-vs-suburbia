@@ -1,7 +1,7 @@
 (
     scale: 1.0,
     translation_x: 0.0,
-    translation_y: 0.0,
+    translation_y: -0.2,
     translation_z: 0.0,
-    rotation_y_degrees: 0.0,
+    rotation_y_degrees: 180.0,
 )
