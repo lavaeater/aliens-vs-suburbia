@@ -76,6 +76,14 @@ pub fn spawn_menu(commands: Commands, theme: Res<LavaTheme>) {
         },
     );
 
+    ui.add_button_observe(
+        "Browse Models",
+        |btn| { btn.size_px(220.0, 52.0); },
+        |_: On<Activate>, mut next_state: ResMut<NextState<GameState>>| {
+            next_state.set(GameState::PolyPizza);
+        },
+    );
+
     ui.build();
 }
 

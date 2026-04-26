@@ -1,2 +1,4 @@
 /target
 /.idea
+.env
+assets/poly_pizza_cache/

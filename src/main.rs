@@ -29,6 +29,7 @@ mod assets;
 mod inspection;
 pub(crate) mod settings;
 pub(crate) mod model_settings;
+pub(crate) mod poly_pizza;
 
 
 fn main() {
