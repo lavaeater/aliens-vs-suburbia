@@ -172,8 +172,8 @@ pub fn load_animations(
     let mut alien_graph = AnimationGraph::new();
     let mut alien_anims: HashMap<AnimationKey, AnimationNodeIndex> = HashMap::new();
 
-    let alien_walking_clip: Handle<AnimationClip> = asset_server.load("quaternius/alien.glb#Animation13");
-    let alien_idle_clip: Handle<AnimationClip> = asset_server.load("quaternius/alien.glb#Animation2");
+    let alien_walking_clip: Handle<AnimationClip> = asset_server.load("quaternius/alien.glb#Animation13"); // AlienArmature|Alien_Walk
+    let alien_idle_clip: Handle<AnimationClip> = asset_server.load("quaternius/alien.glb#Animation2");    // AlienArmature|Alien_Idle
 
     alien_anims.insert(AnimationKey::Walking, alien_graph.add_clip(alien_walking_clip, 1.0, alien_graph.root));
     alien_anims.insert(AnimationKey::Idle, alien_graph.add_clip(alien_idle_clip, 1.0, alien_graph.root));
@@ -184,11 +184,11 @@ pub fn load_animations(
     let mut player_graph = AnimationGraph::new();
     let mut player_anims: HashMap<AnimationKey, AnimationNodeIndex> = HashMap::new();
 
-    let player_idle_clip: Handle<AnimationClip> = asset_server.load("models/Adventurer.glb#Animation0");
-    let player_walking_clip: Handle<AnimationClip> = asset_server.load("models/Adventurer.glb#Animation1");
-    let player_throwing_clip: Handle<AnimationClip> = asset_server.load("models/Adventurer.glb#Animation2");
-    let player_crawling_clip: Handle<AnimationClip> = asset_server.load("models/Adventurer.glb#Animation3");
-    let player_building_clip: Handle<AnimationClip> = asset_server.load("models/Adventurer.glb#Animation4");
+    let player_idle_clip: Handle<AnimationClip> = asset_server.load("models/Adventurer.glb#Animation4");  // CharacterArmature|Idle
+    let player_walking_clip: Handle<AnimationClip> = asset_server.load("models/Adventurer.glb#Animation22"); // CharacterArmature|Walk
+    let player_throwing_clip: Handle<AnimationClip> = asset_server.load("models/Adventurer.glb#Animation1");  // CharacterArmature|Gun_Shoot
+    let player_crawling_clip: Handle<AnimationClip> = asset_server.load("models/Adventurer.glb#Animation15"); // CharacterArmature|Roll
+    let player_building_clip: Handle<AnimationClip> = asset_server.load("models/Adventurer.glb#Animation10"); // CharacterArmature|Interact
 
     player_anims.insert(AnimationKey::Idle, player_graph.add_clip(player_idle_clip, 1.0, player_graph.root));
     player_anims.insert(AnimationKey::Walking, player_graph.add_clip(player_walking_clip, 1.0, player_graph.root));
