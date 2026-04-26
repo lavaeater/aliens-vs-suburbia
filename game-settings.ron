@@ -1,7 +1,7 @@
 (
-    projection: Orthographic,
+    projection: Perspective,
     zoom: 5.0,
     pitch_degrees: -30.0,
-    yaw_degrees: 45.0,
+    yaw_degrees: 30.0,
     player_speed_multiplier: 1.0,
 )

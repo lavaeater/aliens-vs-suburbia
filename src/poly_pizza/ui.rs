@@ -86,7 +86,7 @@ pub fn spawn_polypizza_screen(
         // Search button
         left.add_button_observe(
             "Search",
-            |b| { b.size_px(240.0, 36.0); },
+            |b| { b.size_px(240.0, 36.0).font_size(14.0); },
             |_: On<Activate>, mut state: ResMut<PolyPizzaState>| {
                 state.search_requested = true;
             },
@@ -101,41 +101,47 @@ pub fn spawn_polypizza_screen(
             }));
         });
 
-        let cat_theme = LavaTheme {
-            button: lava_ui_builder::ButtonTheme {
-                font_size: 11.0,
-                height: Val::Px(24.0),
-                width: Val::Px(110.0),
-                ..theme.button.clone()
-            },
-            ..theme.clone()
-        };
-        let make_cat_row = |left: &mut UIBuilder, label1: &'static str, cat1: Option<u32>, label2: &'static str, cat2: Option<u32>| {
-            left.add_row(|row| {
-                row.gap_px(4.0);
-                let t = cat_theme.clone();
-                row.add_button_observe(label1, |b| { b.size_px(110.0, 24.0); },
-                    move |_: On<Activate>, mut s: ResMut<PolyPizzaState>| {
-                        s.category_filter = cat1;
-                    },
-                );
-                let t2 = cat_theme.clone();
-                row.add_button_observe(label2, |b| { b.size_px(110.0, 24.0); },
-                    move |_: On<Activate>, mut s: ResMut<PolyPizzaState>| {
-                        s.category_filter = cat2;
-                    },
-                );
-            });
-        };
-        make_cat_row(left, "All", None, "Animals", Some(7));
-        make_cat_row(left, "People", Some(9), "Vehicles", Some(3));
-        make_cat_row(left, "Nature", Some(6), "Objects", Some(5));
-        make_cat_row(left, "Weapons", Some(2), "Buildings", Some(8));
+        left.add_row(|row| {
+            row.gap_px(4.0);
+            row.add_button_observe("All", |b| { b.size_px(110.0, 24.0).font_size(11.0); },
+                |_: On<Activate>, mut s: ResMut<PolyPizzaState>| { s.category_filter = None; },
+            );
+            row.add_button_observe("Animals", |b| { b.size_px(110.0, 24.0).font_size(11.0); },
+                |_: On<Activate>, mut s: ResMut<PolyPizzaState>| { s.category_filter = Some(7); },
+            );
+        });
+        left.add_row(|row| {
+            row.gap_px(4.0);
+            row.add_button_observe("People", |b| { b.size_px(110.0, 24.0).font_size(11.0); },
+                |_: On<Activate>, mut s: ResMut<PolyPizzaState>| { s.category_filter = Some(9); },
+            );
+            row.add_button_observe("Vehicles", |b| { b.size_px(110.0, 24.0).font_size(11.0); },
+                |_: On<Activate>, mut s: ResMut<PolyPizzaState>| { s.category_filter = Some(3); },
+            );
+        });
+        left.add_row(|row| {
+            row.gap_px(4.0);
+            row.add_button_observe("Nature", |b| { b.size_px(110.0, 24.0).font_size(11.0); },
+                |_: On<Activate>, mut s: ResMut<PolyPizzaState>| { s.category_filter = Some(6); },
+            );
+            row.add_button_observe("Objects", |b| { b.size_px(110.0, 24.0).font_size(11.0); },
+                |_: On<Activate>, mut s: ResMut<PolyPizzaState>| { s.category_filter = Some(5); },
+            );
+        });
+        left.add_row(|row| {
+            row.gap_px(4.0);
+            row.add_button_observe("Weapons", |b| { b.size_px(110.0, 24.0).font_size(11.0); },
+                |_: On<Activate>, mut s: ResMut<PolyPizzaState>| { s.category_filter = Some(2); },
+            );
+            row.add_button_observe("Buildings", |b| { b.size_px(110.0, 24.0).font_size(11.0); },
+                |_: On<Activate>, mut s: ResMut<PolyPizzaState>| { s.category_filter = Some(8); },
+            );
+        });
 
         // Animated filter
         left.add_button_observe(
             "Animated only: OFF",
-            |b| { b.size_px(240.0, 28.0); },
+            |b| { b.size_px(240.0, 28.0).font_size(12.0); },
             |_: On<Activate>, mut s: ResMut<PolyPizzaState>| {
                 s.animated_only = !s.animated_only;
             },
@@ -144,12 +150,12 @@ pub fn spawn_polypizza_screen(
         // Pagination
         left.add_row(|row| {
             row.gap_px(8.0).align_items_center();
-            row.add_button_observe("< Prev", |b| { b.size_px(80.0, 28.0); },
+            row.add_button_observe("< Prev", |b| { b.size_px(100.0, 28.0).font_size(12.0); },
                 |_: On<Activate>, mut s: ResMut<PolyPizzaState>| {
                     if s.page > 0 { s.page -= 1; s.search_requested = true; }
                 },
             );
-            row.add_button_observe("Next >", |b| { b.size_px(80.0, 28.0); },
+            row.add_button_observe("Next >", |b| { b.size_px(100.0, 28.0).font_size(12.0); },
                 |_: On<Activate>, mut s: ResMut<PolyPizzaState>| {
                     s.page += 1; s.search_requested = true;
                 },
@@ -194,7 +200,7 @@ pub fn spawn_polypizza_screen(
         });
         left.add_button_observe(
             "← Back to Menu",
-            |b| { b.size_px(240.0, 40.0); },
+            |b| { b.size_px(240.0, 40.0).font_size(14.0); },
             |_: On<Activate>, mut next: ResMut<NextState<GameState>>| {
                 next.set(GameState::Menu);
             },
@@ -366,13 +372,14 @@ pub fn rebuild_results_ui(
                 ResultCard { index },
             )).id();
 
-            // Text child
-            parent.spawn((
-                Text::new(label),
-                TextFont::default().with_font_size(12.0),
-                TextColor(Color::srgb(0.85, 0.90, 0.95)),
-                ChildOf(card_entity),
-            ));
+            // Text child — spawn directly under card_entity, not under the container
+            parent.commands().entity(card_entity).with_children(|card| {
+                card.spawn((
+                    Text::new(label),
+                    TextFont::default().with_font_size(12.0),
+                    TextColor(Color::srgb(0.85, 0.90, 0.95)),
+                ));
+            });
 
             parent.commands().entity(card_entity).observe(result_card_clicked);
         }
