@@ -67,6 +67,51 @@ pub enum AnimationKey {
     Crawling,
 }
 
+/*
+[0] AlienArmature|Alien_Clapping
+  [1] AlienArmature|Alien_Death
+  [2] AlienArmature|Alien_Idle
+  [3] AlienArmature|Alien_IdleHold
+  [4] AlienArmature|Alien_Jump
+  [5] AlienArmature|Alien_Punch
+  [6] AlienArmature|Alien_Run
+  [7] AlienArmature|Alien_RunHold
+  [8] AlienArmature|Alien_RunningJump
+  [9] AlienArmature|Alien_Sitting
+  [10] AlienArmature|Alien_Standing
+  [11] AlienArmature|Alien_Swimming
+  [12] AlienArmature|Alien_SwordSlash
+  [13] AlienArmature|Alien_Walk
+ */
+
+/* Adventurer
+ [0] CharacterArmature|Death
+  [1] CharacterArmature|Gun_Shoot
+  [2] CharacterArmature|HitRecieve
+  [3] CharacterArmature|HitRecieve_2
+  [4] CharacterArmature|Idle
+  [5] CharacterArmature|Idle_Gun
+  [6] CharacterArmature|Idle_Gun_Pointing
+  [7] CharacterArmature|Idle_Gun_Shoot
+  [8] CharacterArmature|Idle_Neutral
+  [9] CharacterArmature|Idle_Sword
+  [10] CharacterArmature|Interact
+  [11] CharacterArmature|Kick_Left
+  [12] CharacterArmature|Kick_Right
+  [13] CharacterArmature|Punch_Left
+  [14] CharacterArmature|Punch_Right
+  [15] CharacterArmature|Roll
+  [16] CharacterArmature|Run
+  [17] CharacterArmature|Run_Back
+  [18] CharacterArmature|Run_Left
+  [19] CharacterArmature|Run_Right
+  [20] CharacterArmature|Run_Shoot
+  [21] CharacterArmature|Sword_Slash
+  [22] CharacterArmature|Walk
+  [23] CharacterArmature|Wave
+ */
+
+
 pub fn leave_animation_state_handler(
     anim_store: Res<AnimationStore>,
     mut update_er: MessageReader<AnimationEvent>,
