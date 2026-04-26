@@ -253,17 +253,46 @@ pub fn spawn_polypizza_screen(
         );
     });
 
-    // ── Right area: results list ──────────────────────────────────────────────
+    // ── Right area: results (top) + transparent viewer gap (bottom) ──────────
     ui.with_child(|right| {
         right.with_flex_grow(1.0)
             .height_percent(100.0)
             .display_flex()
-            .flex_column()
-            .overflow_scroll_y()
-            .padding_all_px(8.0)
-            .gap_px(4.0)
-            .bg_color(Color::srgba(0.03, 0.05, 0.08, 0.80))
-            .insert(ResultsContainer);
+            .flex_column();
+
+        // Results list — opaque, scrollable, upper portion
+        right.with_child(|list| {
+            list.height_percent(55.0)
+                .width_percent(100.0)
+                .display_flex()
+                .flex_column()
+                .overflow_scroll_y()
+                .padding_all_px(8.0)
+                .gap_px(4.0)
+                .bg_color(Color::srgba(0.03, 0.05, 0.08, 0.88))
+                .insert(ResultsContainer);
+        });
+
+        // Viewer area — fully transparent so the Camera3d shows through.
+        // A small label strip at the top of this region gives context.
+        right.with_child(|viewer_strip| {
+            viewer_strip.with_flex_grow(1.0)
+                .width_percent(100.0)
+                .display_flex()
+                .flex_column()
+                .padding_all_px(6.0);
+
+            viewer_strip.with_child(|hint| {
+                hint.insert_bundle(lava_ui_builder::label(
+                    "[drag to rotate · T = toon shader]",
+                    &lava_ui_builder::TextTheme {
+                        label_size: 11.0,
+                        label_color: Color::srgba(0.7, 0.8, 0.7, 0.6),
+                        ..Default::default()
+                    },
+                ));
+            });
+        });
     });
 
     ui.build();
