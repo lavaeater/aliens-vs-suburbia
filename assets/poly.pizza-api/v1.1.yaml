@@ -1,0 +1,1339 @@
+openapi: 3.0.0
+info:
+  version: '1.1'
+  title: Poly Pizza API
+  description: 'Welcome to the Poly Pizza API docs! 
+  
+  To get started you''ll need to head to the [settings page](https://poly.pizza/settings/api) and create an app. Copy the API key down somewhere safe and treat it like a password (i.e. don''t include it in public git repos). Requests are authenticated by including your key in an x-auth-token header. 
+  
+
+  There''s an official unity package with examples [here](https://github.com/Chikanz/pizzabox). If you''re using the API in a public app (especially a web app) consider using the API on a server instead of the client as your API key could easily be sniffed and stolen. You can also cache responses much more efficiently. Something like cloudflare workers, heroku or AWS lambda will do. All have huge free tiers. Example coming soon I promise!!! 
+
+
+  The v1 API has been depricated since it was a bit stinky and out of spec in some places. v1.1 is almost exactly the same but has extra validation and extra props on the list endpoint. 
+
+
+  Feel free to shoot me an email if you run into any bugs, have any suggestions or make something cool with the API :)'
+  contact:
+    email: hi@duck.pizza
+servers:
+  - url: 'https://api.poly.pizza/v1.1'
+paths:
+  '/list/{id}':
+    get:
+      tags:
+        - Endpoints
+      summary: Get a List
+      description: Get all models in a list
+      operationId: GetList
+      parameters:
+        - name: id
+          in: path
+          description: ''
+          required: true
+          style: simple
+          schema:
+            type: string
+            example: ILAPXeUYiS
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json; charset=utf-8:
+              schema:
+                $ref: '#/components/schemas/List'
+              examples:
+                default:
+                  value:
+                    Models:
+                      - ID: y4wdQpg767
+                        Title: Shiba Inu
+                        Attribution: '"Shiba Inu" by Quaternius, https://poly.pizza/m/y4wdQpg767. Licence at https://creativecommons.org/publicdomain/zero/1.0/'
+                        Thumbnail: 'https://static.poly.pizza/ba6d0ee3-bcc0-4ef0-9d3c-a3e245b41c77.webp'
+                        Download: 'https://static.poly.pizza/ba6d0ee3-bcc0-4ef0-9d3c-a3e245b41c77.glb'
+                        Tri Count: 1812
+                        Creator:
+                          Username: Quaternius
+                          DPURL: 'https://static.poly.pizza/dp%2Ff63b655a-051c-4c4b-8dcc-3b346a39ece0.jpg'
+                        Category: Animals
+                        Tags:
+                          - Animal
+                          - dog
+                        Licence: CC0 1.0
+                        Animated: true
+                        Orbit:
+                          phi: '1.15921'
+                          radius: 100%
+                          theta: '0.79624'
+                      - ID: tQdzbZ1Cmw
+                        Title: Stag
+                        Attribution: '"Stag" by Quaternius, https://poly.pizza/m/tQdzbZ1Cmw. Licence at https://creativecommons.org/publicdomain/zero/1.0/'
+                        Thumbnail: 'https://static.poly.pizza/a9c69fbc-bf7c-4585-9a49-a82e0be1ac6b.webp'
+                        Download: 'https://static.poly.pizza/a9c69fbc-bf7c-4585-9a49-a82e0be1ac6b.glb'
+                        Tri Count: 1933
+                        Creator:
+                          Username: Quaternius
+                          DPURL: 'https://static.poly.pizza/dp%2Ff63b655a-051c-4c4b-8dcc-3b346a39ece0.jpg'
+                        Category: Animals
+                        Tags:
+                          - Elk
+                          - Deer
+                          - Antelope
+                        Licence: CC0 1.0
+                        Animated: true
+                        Orbit:
+                          phi: '1.15921'
+                          radius: 100%
+                          theta: '0.79624'
+                      - ID: wcWiuEqwzq
+                        Title: Husky
+                        Attribution: '"Husky" by Quaternius, https://poly.pizza/m/wcWiuEqwzq. Licence at https://creativecommons.org/publicdomain/zero/1.0/'
+                        Thumbnail: 'https://static.poly.pizza/611d25c7-430f-4bb5-ab2c-d8f5f3cb9712.webp'
+                        Download: 'https://static.poly.pizza/611d25c7-430f-4bb5-ab2c-d8f5f3cb9712.glb'
+                        Tri Count: 1822
+                        Creator:
+                          Username: Quaternius
+                          DPURL: 'https://static.poly.pizza/dp%2Ff63b655a-051c-4c4b-8dcc-3b346a39ece0.jpg'
+                        Category: Animals
+                        Tags:
+                          - Wolf
+                          - Animal
+                          - Coyote
+                          - Dog
+                        Licence: CC0 1.0
+                        Animated: true
+                        Orbit:
+                          phi: '1.15921'
+                          radius: 100%
+                          theta: '0.79624'
+                      - ID: P1gU3Qkr9r
+                        Title: Wolf
+                        Attribution: '"Wolf" by Quaternius, https://poly.pizza/m/P1gU3Qkr9r. Licence at https://creativecommons.org/publicdomain/zero/1.0/'
+                        Thumbnail: 'https://static.poly.pizza/f1d12388-e39b-4157-b32a-646a1d089fc4.webp'
+                        Download: 'https://static.poly.pizza/f1d12388-e39b-4157-b32a-646a1d089fc4.glb'
+                        Tri Count: 1928
+                        Creator:
+                          Username: Quaternius
+                          DPURL: 'https://static.poly.pizza/dp%2Ff63b655a-051c-4c4b-8dcc-3b346a39ece0.jpg'
+                        Category: Animals
+                        Tags:
+                          - Wolf
+                          - Animal
+                          - Coyote
+                          - Dog
+                        Licence: CC0 1.0
+                        Animated: true
+                        Orbit:
+                          phi: '1.15921'
+                          radius: 100%
+                          theta: '0.79624'
+                      - ID: bEdE4rmZy9
+                        Title: White Horse
+                        Attribution: '"White Horse" by Quaternius, https://poly.pizza/m/bEdE4rmZy9. Licence at https://creativecommons.org/publicdomain/zero/1.0/'
+                        Thumbnail: 'https://static.poly.pizza/3edc2bd9-3378-4b43-a50d-d5e1f858562b.webp'
+                        Download: 'https://static.poly.pizza/3edc2bd9-3378-4b43-a50d-d5e1f858562b.glb'
+                        Tri Count: 1934
+                        Creator:
+                          Username: Quaternius
+                          DPURL: 'https://static.poly.pizza/dp%2Ff63b655a-051c-4c4b-8dcc-3b346a39ece0.jpg'
+                        Category: Animals
+                        Tags:
+                          - Horse
+                          - Animal
+                        Licence: CC0 1.0
+                        Animated: true
+                        Orbit:
+                          phi: '1.15921'
+                          radius: 100%
+                          theta: '0.79624'
+                      - ID: qvTrSG9pZF
+                        Title: Horse
+                        Attribution: '"Horse" by Quaternius, https://poly.pizza/m/qvTrSG9pZF. Licence at https://creativecommons.org/publicdomain/zero/1.0/'
+                        Thumbnail: 'https://static.poly.pizza/d37dbc87-ca61-4b2c-a2da-d2f0c4240bef.webp'
+                        Download: 'https://static.poly.pizza/d37dbc87-ca61-4b2c-a2da-d2f0c4240bef.glb'
+                        Tri Count: 1874
+                        Creator:
+                          Username: Quaternius
+                          DPURL: 'https://static.poly.pizza/dp%2Ff63b655a-051c-4c4b-8dcc-3b346a39ece0.jpg'
+                        Category: Animals
+                        Tags:
+                          - Horse
+                          - Animal
+                        Licence: CC0 1.0
+                        Animated: true
+                        Orbit:
+                          phi: '1.15921'
+                          radius: 100%
+                          theta: '0.79624'
+                    Name: Upload
+                    Owner: {}
+      deprecated: false
+      servers:
+        - url: 'https://api.poly.pizza/v1.1'
+  '/model/{id}':
+    get:
+      tags:
+        - Endpoints
+      summary: Get a single model by its ID
+      description: 'Gets one model. Please note that any use of a creative commons model requires attribution by law. You can included the provided attribution text below, ideally with the links as that''s required by the licence, otherwise the model title and creator will do. Orbit is the viewing rotation set by the creator and is expressed in radians.'
+      operationId: GetModel
+      parameters:
+        - name: id
+          in: path
+          description: Model ID
+          required: true
+          style: simple
+          schema:
+            type: string
+            example: 52s3JpUSjmX
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json; charset=utf-8:
+              schema:
+                $ref: '#/components/schemas/Model'
+              examples:
+                default:
+                  value:
+                    ID: 52s3JpUSjmX
+                    Title: Fish
+                    Description: '#gill #marine #ocean'
+                    Attribution: 'Fish by jeremy, https://poly.pizza/m/52s3JpUSjmX. Licence at https://creativecommons.org/licenses/by/3.0'
+                    Thumbnail: 'https://static.poly.pizza/2e6df40d-305c-4ebe-b61a-dcb2df03fb03.webp'
+                    Download: 'https://static.poly.pizza/2e6df40d-305c-4ebe-b61a-dcb2df03fb03.glb'
+                    Tri Count: 274
+                    Creator:
+                      Username: jeremy
+                      DPURL: 'https://static.poly.pizza/dp%2Fa5e02278-d16e-4cbc-a709-114f417fe8ef.jpg'
+                    Uploaded: '2017-10-22T04:19:30.123Z'
+                    Category: Animals
+                    Licence: CC-BY 3.0
+                    Animated: false
+      deprecated: false
+      servers:
+        - url: 'https://api.poly.pizza/v1.1'
+  /search:
+    get:
+      tags:
+        - Endpoints
+      summary: Search all models with just filters
+      description: Note that this endpoint needs at least one filter
+      operationId: SearchFilters
+      parameters:
+        - name: Limit
+          in: query
+          description: '(Optional) How many results to return. Default is 32, Max is 32'
+          schema:
+            type: integer
+        - name: Page
+          in: query
+          description: '(Optional) What page of results to get. indexed at 0, multiple requests will need to be made to get more than 32 models.'
+          schema:
+            type: integer
+        - name: Category
+          in: query
+          description: '(Optional) Filter serch by model catagory. Catagory is passed as an index using the following list. Food & Drink = 0, Clutter = 1, Weapons = 2, Transport = 3, Furniture & Decor = 4, Objects = 5, Nature = 6, Animals = 7, Buildings = architecture = 8, People & Characters = 9, Scenes & Levels = 10, Other = 11'
+          schema:
+            type: integer
+        - name: License
+          in: query
+          description: '(Optional) Filter search by model Licence. Pass 0 to only get CC-BY models, and 1 to get CC0 models'
+          schema:
+            type: integer
+        - name: Animated
+          in: query
+          description: (Optional) Set as 1 to only get animated models
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json; charset=utf-8:
+              schema:
+                $ref: '#/components/schemas/Search'
+              examples:
+                default:
+                  value:
+                    total: 77
+                    results:
+                      - ID: BwwnUrWGmV
+                        Title: Police Car
+                        Attribution: 'Police Car by Quaternius, https://poly.pizza/m/BwwnUrWGmV. Licence at https://creativecommons.org/publicdomain/zero/1.0/'
+                        Thumbnail: 'https://static.poly.pizza/179e43ce-b9e0-40cf-8b99-641693d3207e.webp'
+                        Download: 'https://static.poly.pizza/179e43ce-b9e0-40cf-8b99-641693d3207e.glb'
+                        Tri Count: 2370
+                        Creator:
+                          Username: Quaternius
+                          DPURL: 'https://static.poly.pizza/dp%2Ff63b655a-051c-4c4b-8dcc-3b346a39ece0.jpg'
+                        Category: Transport
+                        Tags:
+                          - Car
+                          - Vehicle
+                          - Transportation
+                          - Police Car
+                        Licence: CC0 1.0
+                        Animated: false
+                      - ID: 4qjS9tFhsJg
+                        Title: Mitsubishi L200
+                        Description: |-
+                          L200 / Triton 3rd Generation
+                          Pickup - Double cabin - offroad
+                        Attribution: 'Mitsubishi L200 by Muhammad Reyhan, https://poly.pizza/m/4qjS9tFhsJg. Licence at https://creativecommons.org/licenses/by/3.0'
+                        Thumbnail: 'https://static.poly.pizza/ecae441a-cba8-4dd6-9795-207a72d7e88e.webp'
+                        Download: 'https://static.poly.pizza/ecae441a-cba8-4dd6-9795-207a72d7e88e.glb'
+                        Tri Count: 2899
+                        Creator:
+                          Username: Muhammad Reyhan
+                          DPURL: ''
+                        Category: Transport
+                        Tags:
+                          - car
+                          - truck
+                          - ute
+                        Licence: CC-BY 3.0
+                        Animated: false
+                      - ID: 3oBDp9Z3OFH
+                        Title: Police car
+                        Description: '#vehicle'
+                        Attribution: 'Police car by jeremy, https://poly.pizza/m/3oBDp9Z3OFH. Licence at https://creativecommons.org/licenses/by/3.0'
+                        Thumbnail: 'https://static.poly.pizza/f326a847-b941-462b-bb4f-20c99c19b45e.webp'
+                        Download: 'https://static.poly.pizza/f326a847-b941-462b-bb4f-20c99c19b45e.glb'
+                        Tri Count: 2340
+                        Creator:
+                          Username: jeremy
+                          DPURL: 'https://static.poly.pizza/dp%2Fa5e02278-d16e-4cbc-a709-114f417fe8ef.jpg'
+                        Category: Transport
+                        Tags:
+                          - vehicle
+                          - car
+                        Licence: CC-BY 3.0
+                        Animated: false
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      issues:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            code:
+                              type: string
+                            expected:
+                              type: string
+                            received:
+                              type: string
+                            path:
+                              type: array
+                              items:
+                                type: string
+                            message:
+                              type: string
+                            minimum:
+                              type: integer
+                            type:
+                              type: string
+                            inclusive:
+                              type: boolean
+                            exact:
+                              type: boolean
+                            maximum:
+                              type: integer
+                      name:
+                        type: string
+                x-examples:
+                  Example 1:
+                    error:
+                      issues:
+                        - code: invalid_type
+                          expected: number
+                          received: nan
+                          path:
+                            - Limit
+                          message: 'Expected number, received nan'
+                        - code: too_small
+                          minimum: 0
+                          type: number
+                          inclusive: true
+                          exact: false
+                          message: Number must be greater than or equal to 0
+                          path:
+                            - Page
+                        - code: too_big
+                          maximum: 11
+                          type: number
+                          inclusive: true
+                          exact: false
+                          message: Number must be less than or equal to 11
+                          path:
+                            - Category
+                      name: ZodError
+              examples:
+                Example 1:
+                  value:
+                    error: 'No query parameters, must have License, Animated, or Category'
+                Example 2:
+                  value:
+                    error:
+                      issues:
+                        - code: too_small
+                          minimum: 0
+                          type: number
+                          inclusive: true
+                          exact: false
+                          message: Number must be greater than or equal to 0
+                          path:
+                            - Page
+                        - code: too_big
+                          maximum: 11
+                          type: number
+                          inclusive: true
+                          exact: false
+                          message: Number must be less than or equal to 11
+                          path:
+                            - Category
+                      name: ZodError
+      deprecated: false
+      servers:
+        - url: 'https://api.poly.pizza/v1.1'
+  '/search/{keyword}':
+    get:
+      tags:
+        - Endpoints
+      summary: Search models with a keyword and filters
+      operationId: Search
+      parameters:
+        - name: Limit
+          in: query
+          description: '(Optional) How many results to return. Default is 32, Max is 32'
+          schema:
+            type: integer
+        - name: Page
+          in: query
+          description: '(Optional) What page of results to get. indexed at 0, multiple requests will need to be made to get more than 32 models.'
+          schema:
+            type: integer
+        - name: Category
+          in: query
+          description: '(Optional) Filter serch by model catagory. Catagory is passed as an index using the following list. Food & Drink = 0, Clutter = 1, Weapons = 2, Transport = 3, Furniture & Decor = 4, Objects = 5, Nature = 6, Animals = 7, Buildings = architecture = 8, People & Characters = 9, Scenes & Levels = 10, Other = 11'
+          schema:
+            type: integer
+        - name: License
+          in: query
+          description: '(Optional) Filter search by model Licence. Pass 0 to only get CC-BY models, and 1 to get CC0 models'
+          schema:
+            type: integer
+        - name: Animated
+          in: query
+          description: (Optional) Set as 1 to only get animated models
+          schema:
+            type: integer
+        - name: keyword
+          in: path
+          description: URL encoded search term e.g. Cat or Shiba%20Inu.
+          required: true
+          style: simple
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json; charset=utf-8:
+              schema:
+                $ref: '#/components/schemas/Search'
+              examples:
+                default:
+                  value:
+                    total: 77
+                    results:
+                      - ID: BwwnUrWGmV
+                        Title: Police Car
+                        Attribution: 'Police Car by Quaternius, https://poly.pizza/m/BwwnUrWGmV. Licence at https://creativecommons.org/publicdomain/zero/1.0/'
+                        Thumbnail: 'https://static.poly.pizza/179e43ce-b9e0-40cf-8b99-641693d3207e.webp'
+                        Download: 'https://static.poly.pizza/179e43ce-b9e0-40cf-8b99-641693d3207e.glb'
+                        Tri Count: 2370
+                        Creator:
+                          Username: Quaternius
+                          DPURL: 'https://static.poly.pizza/dp%2Ff63b655a-051c-4c4b-8dcc-3b346a39ece0.jpg'
+                        Category: Transport
+                        Tags:
+                          - Car
+                          - Vehicle
+                          - Transportation
+                          - Police Car
+                        Licence: CC0 1.0
+                        Animated: false
+                      - ID: 4qjS9tFhsJg
+                        Title: Mitsubishi L200
+                        Description: |-
+                          L200 / Triton 3rd Generation
+                          Pickup - Double cabin - offroad
+                        Attribution: 'Mitsubishi L200 by Muhammad Reyhan, https://poly.pizza/m/4qjS9tFhsJg. Licence at https://creativecommons.org/licenses/by/3.0'
+                        Thumbnail: 'https://static.poly.pizza/ecae441a-cba8-4dd6-9795-207a72d7e88e.webp'
+                        Download: 'https://static.poly.pizza/ecae441a-cba8-4dd6-9795-207a72d7e88e.glb'
+                        Tri Count: 2899
+                        Creator:
+                          Username: Muhammad Reyhan
+                          DPURL: ''
+                        Category: Transport
+                        Tags:
+                          - car
+                          - truck
+                          - ute
+                        Licence: CC-BY 3.0
+                        Animated: false
+                      - ID: 3oBDp9Z3OFH
+                        Title: Police car
+                        Description: '#vehicle'
+                        Attribution: 'Police car by jeremy, https://poly.pizza/m/3oBDp9Z3OFH. Licence at https://creativecommons.org/licenses/by/3.0'
+                        Thumbnail: 'https://static.poly.pizza/f326a847-b941-462b-bb4f-20c99c19b45e.webp'
+                        Download: 'https://static.poly.pizza/f326a847-b941-462b-bb4f-20c99c19b45e.glb'
+                        Tri Count: 2340
+                        Creator:
+                          Username: jeremy
+                          DPURL: 'https://static.poly.pizza/dp%2Fa5e02278-d16e-4cbc-a709-114f417fe8ef.jpg'
+                        Category: Transport
+                        Tags:
+                          - vehicle
+                          - car
+                        Licence: CC-BY 3.0
+                        Animated: false
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      issues:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            code:
+                              type: string
+                            expected:
+                              type: string
+                            received:
+                              type: string
+                            path:
+                              type: array
+                              items:
+                                type: string
+                            message:
+                              type: string
+                            minimum:
+                              type: integer
+                            type:
+                              type: string
+                            inclusive:
+                              type: boolean
+                            exact:
+                              type: boolean
+                            maximum:
+                              type: integer
+                      name:
+                        type: string
+                x-examples:
+                  Example 1:
+                    error:
+                      issues:
+                        - code: invalid_type
+                          expected: number
+                          received: nan
+                          path:
+                            - Limit
+                          message: 'Expected number, received nan'
+                        - code: too_small
+                          minimum: 0
+                          type: number
+                          inclusive: true
+                          exact: false
+                          message: Number must be greater than or equal to 0
+                          path:
+                            - Page
+                        - code: too_big
+                          maximum: 11
+                          type: number
+                          inclusive: true
+                          exact: false
+                          message: Number must be less than or equal to 11
+                          path:
+                            - Category
+                      name: ZodError
+              examples:
+                Example 1:
+                  value:
+                    error:
+                      issues:
+                        - code: invalid_type
+                          expected: number
+                          received: nan
+                          path:
+                            - Limit
+                          message: 'Expected number, received nan'
+                        - code: too_small
+                          minimum: 0
+                          type: number
+                          inclusive: true
+                          exact: false
+                          message: Number must be greater than or equal to 0
+                          path:
+                            - Page
+                        - code: too_big
+                          maximum: 11
+                          type: number
+                          inclusive: true
+                          exact: false
+                          message: Number must be less than or equal to 11
+                          path:
+                            - Category
+                      name: ZodError
+      deprecated: false
+      servers:
+        - url: 'https://api.poly.pizza/v1.1'
+  '/user/{username}':
+    get:
+      tags:
+        - Endpoints
+      summary: Get all models belonging to a user
+      operationId: GetUser'smodels
+      parameters:
+        - name: Limit
+          in: query
+          description: '(Optional) How many results to return. Default is 32, Max is 32'
+          schema:
+            type: integer
+        - name: Page
+          in: query
+          description: '(Optional) What page of results to get. indexed at 0, multiple requests will need to be made to get more than 32 models.'
+          schema:
+            type: integer
+        - name: username
+          in: path
+          description: ''
+          required: true
+          style: simple
+          schema:
+            type: string
+            example: dook
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json; charset=utf-8:
+              schema:
+                $ref: '#/components/schemas/User'
+              examples:
+                default:
+                  value:
+                    username: dook
+                    DPURL: 'https://static.poly.pizza/dp%2F394ccf8f-e9d5-488c-8557-b4f56269c36b.jpg'
+                    About: hey i made this site
+                    Socials:
+                      Twitter: duckpizza_
+                      Youtube: c/dookdook
+                      Website: 'https://poly.pizza'
+                    models:
+                      - ID: H3BYbNwq8a
+                        Title: Metal Door
+                        Description: |-
+                          What if door.... but metal???
+                          Shattered version also included because if you're not destroying your door what the fuck is the point in making a vibeo game
+                        Attribution: '"Metal Door" by dook, https://poly.pizza/m/H3BYbNwq8a. Licence at https://creativecommons.org/licenses/by/3.0'
+                        Thumbnail: 'https://static.poly.pizza/44e4f447-5ba2-4ab9-ab5d-33d3b3c1f5de.webp'
+                        Download: 'https://static.poly.pizza/44e4f447-5ba2-4ab9-ab5d-33d3b3c1f5de.glb'
+                        Tri Count: 333
+                        Creator:
+                          Username: dook
+                          DPURL: 'https://static.poly.pizza/dp%2F394ccf8f-e9d5-488c-8557-b4f56269c36b.jpg'
+                        Category: Objects
+                        Tags:
+                          - door
+                        Licence: CC-BY 3.0
+                        Animated: false
+                        Orbit:
+                          phi: '1.35331'
+                          radius: '5.53'
+                          theta: '-2.05828'
+                      - ID: SubFCu60Ga
+                        Title: Conveyor Thing
+                        Description: |-
+                          no idea why the conveyor belt texture died lol
+                          someone should fix this fucking website
+                        Attribution: '"Conveyor Thing" by dook, https://poly.pizza/m/SubFCu60Ga. Licence at https://creativecommons.org/licenses/by/3.0'
+                        Thumbnail: 'https://static.poly.pizza/bcf6014e-064d-48dc-a219-682e5b1cdabc.webp'
+                        Download: 'https://static.poly.pizza/bcf6014e-064d-48dc-a219-682e5b1cdabc.glb'
+                        Tri Count: 1520
+                        Creator:
+                          Username: dook
+                          DPURL: 'https://static.poly.pizza/dp%2F394ccf8f-e9d5-488c-8557-b4f56269c36b.jpg'
+                        Category: Furniture & Decor
+                        Tags:
+                          - conveyor
+                          - airport
+                        Licence: CC-BY 3.0
+                        Animated: false
+                        Orbit:
+                          phi: '1.26960'
+                          radius: '10.15'
+                          theta: '-2.49653'
+                      - ID: LtrzDvRya9
+                        Title: Fire Extinguisher
+                        Description: Always handy to have nearby when you're playing my mixtape
+                        Attribution: '"Fire Extinguisher" by dook, https://poly.pizza/m/LtrzDvRya9. Licence at https://creativecommons.org/licenses/by/3.0'
+                        Thumbnail: 'https://static.poly.pizza/30244587-f6af-4700-9a4e-d8f9338f5a20.webp'
+                        Download: 'https://static.poly.pizza/30244587-f6af-4700-9a4e-d8f9338f5a20.glb'
+                        Tri Count: 692
+                        Creator:
+                          Username: dook
+                          DPURL: 'https://static.poly.pizza/dp%2F394ccf8f-e9d5-488c-8557-b4f56269c36b.jpg'
+                        Category: Objects
+                        Tags:
+                          - Extinguisher
+                        Licence: CC-BY 3.0
+                        Animated: false
+                        Orbit:
+                          phi: '1.23514'
+                          radius: '8.89'
+                          theta: '1.18671'
+                      - ID: zV3WXbyjMf
+                        Title: Katana
+                        Description: |-
+                          Legends say that a mysterious waterfowl with a firearm used to wield this weapon...
+
+                          Literally just a much more optimised version of Nick Ladd's blocks katana at https://poly.pizza/m/7Ly4_Ou8HXK
+                        Attribution: '"Katana" by dook, https://poly.pizza/m/zV3WXbyjMf. Licence at https://creativecommons.org/licenses/by/3.0'
+                        Thumbnail: 'https://static.poly.pizza/55abcdd7-a800-400e-bca5-95532d763ad3.webp'
+                        Download: 'https://static.poly.pizza/55abcdd7-a800-400e-bca5-95532d763ad3.glb'
+                        Tri Count: 332
+                        Creator:
+                          Username: dook
+                          DPURL: 'https://static.poly.pizza/dp%2F394ccf8f-e9d5-488c-8557-b4f56269c36b.jpg'
+                        Category: Weapons
+                        Tags:
+                          - sword
+                          - katana
+                        Licence: CC-BY 3.0
+                        Animated: false
+                        Orbit:
+                          phi: '1.44195'
+                          radius: '10.61'
+                          theta: '1.29012'
+                      - ID: 5acg61YOSv
+                        Title: Ralsei deltarune
+                        Description: goot lookin mf
+                        Attribution: '"Ralsei deltarune" by dook, https://poly.pizza/m/5acg61YOSv. Licence at https://creativecommons.org/licenses/by/3.0'
+                        Thumbnail: 'https://static.poly.pizza/68f09735-98eb-4977-b861-b725795bb4b1.webp'
+                        Download: 'https://static.poly.pizza/68f09735-98eb-4977-b861-b725795bb4b1.glb'
+                        Tri Count: 2706
+                        Creator:
+                          Username: dook
+                          DPURL: 'https://static.poly.pizza/dp%2F394ccf8f-e9d5-488c-8557-b4f56269c36b.jpg'
+                        Category: Food & Drink
+                        Tags:
+                          - deltarune
+                          - goat
+                          - ralsei
+                        Licence: CC-BY 3.0
+                        Animated: false
+                        Orbit:
+                          phi: '1.33296'
+                          radius: '1.6567711410845052'
+                          theta: '2.12142'
+                    lists:
+                      - NSNpJGBQW3
+                      - vRm2Zylmn6
+                      - tIoOa9DHZc
+      deprecated: false
+      servers:
+        - url: 'https://api.poly.pizza/v1.1'
+tags:
+  - name: Endpoints
+    description: ''
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      name: x-auth-token
+      in: header
+  schemas:
+    List:
+      type: object
+      properties:
+        Models:
+          type: array
+          items:
+            type: object
+            properties:
+              ID:
+                type: string
+              Title:
+                type: string
+              Description:
+                type: string
+              Attribution:
+                type: string
+              Thumbnail:
+                type: string
+              Download:
+                type: string
+              Tri Count:
+                type: integer
+              Creator:
+                type: object
+                properties:
+                  Username:
+                    type: string
+              Category:
+                type: string
+              Tags:
+                type: array
+                items:
+                  type: string
+              Licence:
+                type: string
+              Animated:
+                type: boolean
+              Orbit:
+                type: object
+                properties:
+                  phi:
+                    type: string
+                  radius:
+                    type: string
+                  theta:
+                    type: string
+        Visibility:
+          type: string
+        Images:
+          type: array
+          items:
+            type: string
+        Tags:
+          type: array
+          items:
+            type: string
+        LastUpdated:
+          type: string
+        Created:
+          type: string
+        Views:
+          type: integer
+        Downloads:
+          type: integer
+        Name:
+          type: string
+        Owner:
+          type: object
+          properties:
+            username:
+              type: string
+            DPURL:
+              type: string
+        Category:
+          type: integer
+        Description:
+          type: string
+        FeaturedAsset:
+          type: string
+        ThumbnailImage:
+          type: string
+      x-examples:
+        Example 1:
+          Models:
+            - ID: 6VYnWsnVeh
+              Title: Clown Mask
+              Description: "Clowned on \U0001F921"
+              Attribution: '"Clown Mask" by J-Toastie, https://poly.pizza/m/6VYnWsnVeh. Licence at https://creativecommons.org/licenses/by/3.0'
+              Thumbnail: 'https://static.poly.pizza/5493bb52-de34-4cdd-b8fc-401f392b9bb6.webp'
+              Download: 'https://static.poly.pizza/5493bb52-de34-4cdd-b8fc-401f392b9bb6.glb'
+              Tri Count: 536
+              Creator:
+                Username: J-Toastie
+              Category: Objects
+              Tags:
+                - Mask
+                - Clown
+              Licence: CC-BY 3.0
+              Animated: false
+              Orbit:
+                phi: '1.30900'
+                radius: 100%
+                theta: '1.14950'
+            - ID: jcXfae4GiZ
+              Title: Cowboy Hat
+              Description: "hee haw \U0001F920"
+              Attribution: '"Cowboy Hat" by J-Toastie, https://poly.pizza/m/jcXfae4GiZ. Licence at https://creativecommons.org/licenses/by/3.0'
+              Thumbnail: 'https://static.poly.pizza/e267f068-2de9-40d5-8748-f3e46ffbffc8.webp'
+              Download: 'https://static.poly.pizza/e267f068-2de9-40d5-8748-f3e46ffbffc8.glb'
+              Tri Count: 390
+              Creator:
+                Username: J-Toastie
+              Category: People & Characters
+              Tags:
+                - Hat
+                - Cowboy Hat
+              Licence: CC-BY 3.0
+              Animated: false
+              Orbit:
+                phi: '1.30900'
+                radius: 100%
+                theta: '1.14950'
+            - ID: aWxhfEnYwl
+              Title: Cap
+              Description: "\U0001F9E2"
+              Attribution: '"Cap" by J-Toastie, https://poly.pizza/m/aWxhfEnYwl. Licence at https://creativecommons.org/licenses/by/3.0'
+              Thumbnail: 'https://static.poly.pizza/b50f564c-03d3-4a07-8817-199eb9d76fa0.webp'
+              Download: 'https://static.poly.pizza/b50f564c-03d3-4a07-8817-199eb9d76fa0.glb'
+              Tri Count: 418
+              Creator:
+                Username: J-Toastie
+              Category: Objects
+              Tags:
+                - Cap
+                - Hat
+              Licence: CC-BY 3.0
+              Animated: false
+              Orbit:
+                phi: '1.30900'
+                radius: 100%
+                theta: '1.14950'
+            - ID: fy1Elzr3nl
+              Title: Witch Hat
+              Description: "baguette magique\U0001F9F9"
+              Attribution: '"Witch Hat" by J-Toastie, https://poly.pizza/m/fy1Elzr3nl. Licence at https://creativecommons.org/licenses/by/3.0'
+              Thumbnail: 'https://static.poly.pizza/a7544e41-d523-4c82-b3b6-1695ba198359.webp'
+              Download: 'https://static.poly.pizza/a7544e41-d523-4c82-b3b6-1695ba198359.glb'
+              Tri Count: 465
+              Creator:
+                Username: J-Toastie
+              Category: Objects
+              Tags:
+                - Hat
+                - Witch
+              Licence: CC-BY 3.0
+              Animated: false
+              Orbit:
+                phi: '1.30900'
+                radius: 100%
+                theta: '1.14950'
+            - ID: 6B6ijFF01X
+              Title: Heart Glasses
+              Description: "Omg like slay\U0001F63B\U0001F63B\U0001F63B(i'm never saying this again)"
+              Attribution: '"Heart Glasses" by J-Toastie, https://poly.pizza/m/6B6ijFF01X. Licence at https://creativecommons.org/licenses/by/3.0'
+              Thumbnail: 'https://static.poly.pizza/b5db43c1-155f-44de-be8c-76476eb759a9.webp'
+              Download: 'https://static.poly.pizza/b5db43c1-155f-44de-be8c-76476eb759a9.glb'
+              Tri Count: 425
+              Creator:
+                Username: J-Toastie
+              Category: Objects
+              Tags:
+                - Accessories
+                - Sunglasses
+                - Glasses
+              Licence: CC-BY 3.0
+              Animated: false
+              Orbit:
+                phi: '1.30900'
+                radius: 100%
+                theta: '1.14950'
+            - ID: IWnizIOIyu
+              Title: Hat Stand
+              Description: A fat forehead to place your hats on
+              Attribution: '"Hat Stand" by J-Toastie, https://poly.pizza/m/IWnizIOIyu. Licence at https://creativecommons.org/licenses/by/3.0'
+              Thumbnail: 'https://static.poly.pizza/f9aa955b-0515-4d32-8b27-0e48062b7c34.webp'
+              Download: 'https://static.poly.pizza/f9aa955b-0515-4d32-8b27-0e48062b7c34.glb'
+              Tri Count: 262
+              Creator:
+                Username: J-Toastie
+              Category: Objects
+              Tags:
+                - Mannequin
+                - Hat stand
+              Licence: CC-BY 3.0
+              Animated: false
+              Orbit:
+                phi: '1.30900'
+                radius: 100%
+                theta: '1.14950'
+            - ID: vIhmiBqBtr
+              Title: Fox Hat
+              Description: Foxes are cool
+              Attribution: '"Fox Hat" by J-Toastie, https://poly.pizza/m/vIhmiBqBtr. Licence at https://creativecommons.org/licenses/by/3.0'
+              Thumbnail: 'https://static.poly.pizza/de759e7b-7be7-4033-9b00-3c0155f41506.webp'
+              Download: 'https://static.poly.pizza/de759e7b-7be7-4033-9b00-3c0155f41506.glb'
+              Tri Count: 982
+              Creator:
+                Username: J-Toastie
+              Category: Objects
+              Tags:
+                - Fox
+                - Hat
+              Licence: CC-BY 3.0
+              Animated: false
+              Orbit:
+                phi: '1.28930'
+                radius: '1.3333911240792469'
+                theta: '0.24838'
+          Visibility: Public
+          Images:
+            - listimg/2EndVQfy7lmKtdFnS27W.webp
+          Tags:
+            - Hats
+            - Bundle
+          LastUpdated: '2023-06-20T20:26:43.976Z'
+          Created: '2023-06-20T18:01:23.986Z'
+          Views: 830
+          Downloads: 133
+          Name: Cosmetic Pack Two
+          Owner:
+            username: J-Toastie
+            DPURL: 'https://static.poly.pizza/dp%2F2a18493e-a521-40ff-8c30-f7cfcdb513dd.jpg'
+          Category: 999
+          Description: '{"blocks":[{"key":"d853p","text":"The second instalment to my cosmetic collection","type":"unstyled","depth":0,"inlineStyleRanges":[],"entityRanges":[],"data":{}},{"key":"9ckf2","text":"free for commercial and personal use. Enjoy fellow hat enjoyers!","type":"unstyled","depth":0,"inlineStyleRanges":[],"entityRanges":[],"data":{}}],"entityMap":{}}'
+          FeaturedAsset: 649208b35ed77b001c6889c6
+          ThumbnailImage: listimg/2EndVQfy7lmKtdFnS27W.webp
+    Model:
+      type: object
+      title: Model
+      properties:
+        ID:
+          type: string
+        Title:
+          type: string
+        Description:
+          type: string
+        Attribution:
+          type: string
+        Thumbnail:
+          type: string
+          format: uri
+        Download:
+          type: string
+          format: uri
+        Tri Count:
+          type: integer
+          format: int32
+        Creator:
+          $ref: '#/components/schemas/Creator'
+        Uploaded:
+          type: string
+          format: date-time
+        Category:
+          type: string
+        Licence:
+          type: string
+        Animated:
+          type: boolean
+        Orbit:
+          $ref: '#/components/schemas/Orbit'
+      required:
+        - ID
+        - Title
+        - Description
+        - Attribution
+        - Thumbnail
+        - Download
+        - Tri Count
+        - Creator
+        - Uploaded
+        - Category
+        - Licence
+        - Animated
+        - Orbit
+      example:
+        ID: 52s3JpUSjmX
+        Title: Fish
+        Description: '#gill #marine #ocean'
+        Attribution: 'Fish by jeremy, https://poly.pizza/m/52s3JpUSjmX. Licence at https://creativecommons.org/licenses/by/3.0'
+        Thumbnail: 'https://static.poly.pizza/2e6df40d-305c-4ebe-b61a-dcb2df03fb03.webp'
+        Download: 'https://static.poly.pizza/2e6df40d-305c-4ebe-b61a-dcb2df03fb03.glb'
+        Tri Count: 274
+        Creator:
+          Username: jeremy
+          DPURL: 'https://static.poly.pizza/dp%2Fa5e02278-d16e-4cbc-a709-114f417fe8ef.jpg'
+        Uploaded: '2017-10-22T04:19:30.123Z'
+        Category: Animals
+        Licence: CC-BY 3.0
+        Animated: false
+    Creator:
+      type: object
+      title: Creator
+      properties:
+        Username:
+          type: string
+        DPURL:
+          type: string
+          format: uri
+      required:
+        - Username
+        - DPURL
+      example:
+        Username: jeremy
+        DPURL: 'https://static.poly.pizza/dp%2Fa5e02278-d16e-4cbc-a709-114f417fe8ef.jpg'
+    Orbit:
+      type: object
+      title: Orbit
+      properties:
+        phi:
+          type: string
+        radius:
+          type: string
+        theta:
+          type: string
+      required:
+        - phi
+        - radius
+        - theta
+      example:
+        phi: '1.35331'
+        radius: '5.53'
+        theta: '-2.05828'
+    Search:
+      type: object
+      title: Search
+      properties:
+        total:
+          type: integer
+          format: int32
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Model'
+      required:
+        - total
+        - results
+      example:
+        total: 77
+        results:
+          - ID: BwwnUrWGmV
+            Title: Police Car
+            Attribution: 'Police Car by Quaternius, https://poly.pizza/m/BwwnUrWGmV. Licence at https://creativecommons.org/publicdomain/zero/1.0/'
+            Thumbnail: 'https://static.poly.pizza/179e43ce-b9e0-40cf-8b99-641693d3207e.webp'
+            Download: 'https://static.poly.pizza/179e43ce-b9e0-40cf-8b99-641693d3207e.glb'
+            Tri Count: 2370
+            Creator:
+              Username: Quaternius
+              DPURL: 'https://static.poly.pizza/dp%2Ff63b655a-051c-4c4b-8dcc-3b346a39ece0.jpg'
+            Category: Transport
+            Tags:
+              - Car
+              - Vehicle
+              - Transportation
+              - Police Car
+            Licence: CC0 1.0
+            Animated: false
+          - ID: 4qjS9tFhsJg
+            Title: Mitsubishi L200
+            Description: |-
+              L200 / Triton 3rd Generation
+              Pickup - Double cabin - offroad
+            Attribution: 'Mitsubishi L200 by Muhammad Reyhan, https://poly.pizza/m/4qjS9tFhsJg. Licence at https://creativecommons.org/licenses/by/3.0'
+            Thumbnail: 'https://static.poly.pizza/ecae441a-cba8-4dd6-9795-207a72d7e88e.webp'
+            Download: 'https://static.poly.pizza/ecae441a-cba8-4dd6-9795-207a72d7e88e.glb'
+            Tri Count: 2899
+            Creator:
+              Username: Muhammad Reyhan
+              DPURL: ''
+            Category: Transport
+            Tags:
+              - car
+              - truck
+              - ute
+            Licence: CC-BY 3.0
+            Animated: false
+          - ID: 3oBDp9Z3OFH
+            Title: Police car
+            Description: '#vehicle'
+            Attribution: 'Police car by jeremy, https://poly.pizza/m/3oBDp9Z3OFH. Licence at https://creativecommons.org/licenses/by/3.0'
+            Thumbnail: 'https://static.poly.pizza/f326a847-b941-462b-bb4f-20c99c19b45e.webp'
+            Download: 'https://static.poly.pizza/f326a847-b941-462b-bb4f-20c99c19b45e.glb'
+            Tri Count: 2340
+            Creator:
+              Username: jeremy
+              DPURL: 'https://static.poly.pizza/dp%2Fa5e02278-d16e-4cbc-a709-114f417fe8ef.jpg'
+            Category: Transport
+            Tags:
+              - vehicle
+              - car
+            Licence: CC-BY 3.0
+            Animated: false
+    User:
+      type: object
+      title: User
+      properties:
+        username:
+          type: string
+        DPURL:
+          type: string
+          format: uri
+        About:
+          type: string
+        Socials:
+          $ref: '#/components/schemas/Socials'
+        models:
+          type: array
+          items:
+            $ref: '#/components/schemas/Model'
+        lists:
+          type: array
+          items:
+            type: string
+      required:
+        - username
+        - DPURL
+        - About
+        - Socials
+        - models
+        - lists
+      example:
+        username: dook
+        DPURL: 'https://static.poly.pizza/dp%2F394ccf8f-e9d5-488c-8557-b4f56269c36b.jpg'
+        About: hey i made this site
+        Socials:
+          Twitter: duckpizza_
+          Youtube: c/dookdook
+          Website: 'https://poly.pizza'
+        models:
+          - ID: H3BYbNwq8a
+            Title: Metal Door
+            Description: |-
+              What if door.... but metal???
+              Shattered version also included because if you're not destroying your door what the fuck is the point in making a vibeo game
+            Attribution: '"Metal Door" by dook, https://poly.pizza/m/H3BYbNwq8a. Licence at https://creativecommons.org/licenses/by/3.0'
+            Thumbnail: 'https://static.poly.pizza/44e4f447-5ba2-4ab9-ab5d-33d3b3c1f5de.webp'
+            Download: 'https://static.poly.pizza/44e4f447-5ba2-4ab9-ab5d-33d3b3c1f5de.glb'
+            Tri Count: 333
+            Creator:
+              Username: dook
+              DPURL: 'https://static.poly.pizza/dp%2F394ccf8f-e9d5-488c-8557-b4f56269c36b.jpg'
+            Category: Objects
+            Tags:
+              - door
+            Licence: CC-BY 3.0
+            Animated: false
+            Orbit:
+              phi: '1.35331'
+              radius: '5.53'
+              theta: '-2.05828'
+          - ID: SubFCu60Ga
+            Title: Conveyor Thing
+            Description: |-
+              no idea why the conveyor belt texture died lol
+              someone should fix this fucking website
+            Attribution: '"Conveyor Thing" by dook, https://poly.pizza/m/SubFCu60Ga. Licence at https://creativecommons.org/licenses/by/3.0'
+            Thumbnail: 'https://static.poly.pizza/bcf6014e-064d-48dc-a219-682e5b1cdabc.webp'
+            Download: 'https://static.poly.pizza/bcf6014e-064d-48dc-a219-682e5b1cdabc.glb'
+            Tri Count: 1520
+            Creator:
+              Username: dook
+              DPURL: 'https://static.poly.pizza/dp%2F394ccf8f-e9d5-488c-8557-b4f56269c36b.jpg'
+            Category: Furniture & Decor
+            Tags:
+              - conveyor
+              - airport
+            Licence: CC-BY 3.0
+            Animated: false
+            Orbit:
+              phi: '1.26960'
+              radius: '10.15'
+              theta: '-2.49653'
+          - ID: LtrzDvRya9
+            Title: Fire Extinguisher
+            Description: Always handy to have nearby when you're playing my mixtape
+            Attribution: '"Fire Extinguisher" by dook, https://poly.pizza/m/LtrzDvRya9. Licence at https://creativecommons.org/licenses/by/3.0'
+            Thumbnail: 'https://static.poly.pizza/30244587-f6af-4700-9a4e-d8f9338f5a20.webp'
+            Download: 'https://static.poly.pizza/30244587-f6af-4700-9a4e-d8f9338f5a20.glb'
+            Tri Count: 692
+            Creator:
+              Username: dook
+              DPURL: 'https://static.poly.pizza/dp%2F394ccf8f-e9d5-488c-8557-b4f56269c36b.jpg'
+            Category: Objects
+            Tags:
+              - Extinguisher
+            Licence: CC-BY 3.0
+            Animated: false
+            Orbit:
+              phi: '1.23514'
+              radius: '8.89'
+              theta: '1.18671'
+          - ID: zV3WXbyjMf
+            Title: Katana
+            Description: |-
+              Legends say that a mysterious waterfowl with a firearm used to wield this weapon...
+
+              Literally just a much more optimised version of Nick Ladd's blocks katana at https://poly.pizza/m/7Ly4_Ou8HXK
+            Attribution: '"Katana" by dook, https://poly.pizza/m/zV3WXbyjMf. Licence at https://creativecommons.org/licenses/by/3.0'
+            Thumbnail: 'https://static.poly.pizza/55abcdd7-a800-400e-bca5-95532d763ad3.webp'
+            Download: 'https://static.poly.pizza/55abcdd7-a800-400e-bca5-95532d763ad3.glb'
+            Tri Count: 332
+            Creator:
+              Username: dook
+              DPURL: 'https://static.poly.pizza/dp%2F394ccf8f-e9d5-488c-8557-b4f56269c36b.jpg'
+            Category: Weapons
+            Tags:
+              - sword
+              - katana
+            Licence: CC-BY 3.0
+            Animated: false
+            Orbit:
+              phi: '1.44195'
+              radius: '10.61'
+              theta: '1.29012'
+          - ID: 5acg61YOSv
+            Title: Ralsei deltarune
+            Description: goot lookin mf
+            Attribution: '"Ralsei deltarune" by dook, https://poly.pizza/m/5acg61YOSv. Licence at https://creativecommons.org/licenses/by/3.0'
+            Thumbnail: 'https://static.poly.pizza/68f09735-98eb-4977-b861-b725795bb4b1.webp'
+            Download: 'https://static.poly.pizza/68f09735-98eb-4977-b861-b725795bb4b1.glb'
+            Tri Count: 2706
+            Creator:
+              Username: dook
+              DPURL: 'https://static.poly.pizza/dp%2F394ccf8f-e9d5-488c-8557-b4f56269c36b.jpg'
+            Category: Food & Drink
+            Tags:
+              - deltarune
+              - goat
+              - ralsei
+            Licence: CC-BY 3.0
+            Animated: false
+            Orbit:
+              phi: '1.33296'
+              radius: '1.6567711410845052'
+              theta: '2.12142'
+        lists:
+          - NSNpJGBQW3
+          - vRm2Zylmn6
+          - tIoOa9DHZc
+    Socials:
+      type: object
+      title: Socials
+      properties:
+        Twitter:
+          type: string
+        Youtube:
+          type: string
+        Website:
+          type: string
+      required:
+        - Twitter
+        - Youtube
+        - Website
+      example:
+        Twitter: duckpizza_
+        Youtube: c/dookdook
+        Website: 'https://poly.pizza'
+x-internal: false
