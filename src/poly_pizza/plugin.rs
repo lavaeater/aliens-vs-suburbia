@@ -8,7 +8,7 @@ use crate::poly_pizza::ui::{
     spawn_polypizza_screen, update_attribution_label, update_search_label, update_status_label,
 };
 use crate::poly_pizza::viewer::{
-    handle_toon_toggle, handle_viewer_load, orbit_viewer, spawn_viewer_camera,
+    handle_toon_toggle, handle_viewer_load, orbit_viewer, spawn_polypizza_cameras,
 };
 use crate::ui::spawn_ui::cleanup_state;
 
@@ -23,7 +23,7 @@ impl Plugin for PolyPizzaPlugin {
         app.insert_resource(PolyPizzaConfig { api_key })
             .insert_resource(channels)
             .init_resource::<PolyPizzaState>()
-            .add_systems(OnEnter(GameState::PolyPizza), (spawn_polypizza_screen, spawn_viewer_camera))
+            .add_systems(OnEnter(GameState::PolyPizza), (spawn_polypizza_screen, spawn_polypizza_cameras))
             .add_systems(OnExit(GameState::PolyPizza), cleanup_state)
             .add_systems(
                 Update,

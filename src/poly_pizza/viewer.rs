@@ -10,18 +10,30 @@ pub struct ViewerModel;
 #[derive(Component)]
 pub struct ViewerCamera;
 
-pub fn spawn_viewer_camera(mut commands: Commands) {
+pub fn spawn_polypizza_cameras(mut commands: Commands) {
+    // UI camera (renders on top of the 3D viewer)
     commands.spawn((
+        Camera2d::default(),
+        IsDefaultUiCamera,
+        Camera { order: 1, ..Default::default() },
+        StateMarker,
+    ));
+    spawn_viewer_camera_inner(&mut commands);
+}
+
+fn spawn_viewer_camera_inner(commands: &mut Commands) {
+    // Don't provide a separate Camera component — Camera3d sets up its own with the render graph.
+    // We modify it via entry after spawn to set order and clear color.
+    let cam = commands.spawn((
         Camera3d::default(),
-        Camera {
-            order: 0,
-            clear_color: ClearColorConfig::Custom(Color::srgb(0.06, 0.06, 0.10)),
-            ..Default::default()
-        },
         Transform::from_xyz(0.0, 1.0, 4.0).looking_at(Vec3::new(0.0, 0.5, 0.0), Vec3::Y),
         ViewerCamera,
         StateMarker,
-    ));
+    )).id();
+    commands.entity(cam).entry::<Camera>().and_modify(|mut c| {
+        c.order = 0;
+        c.clear_color = ClearColorConfig::Custom(Color::srgb(0.06, 0.06, 0.10));
+    });
     // Ambient light so the model is visible
     commands.spawn((
         AmbientLight {
