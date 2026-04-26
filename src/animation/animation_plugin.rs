@@ -7,7 +7,7 @@ use bevy::ecs::component::Mutable;
 use bevy::prelude::{
     Added, AnimationGraph, AnimationGraphHandle, AnimationNodeIndex, AnimationPlayer, Assets,
     ChildOf, Children, Commands, Component, Entity, IntoScheduleConfigs, Message, MessageReader,
-    OnEnter, Query, Reflect, Res, ResMut, Resource, in_state,
+    Mut, OnEnter, Query, Reflect, Res, ResMut, Resource, in_state,
 };
 use std::collections::HashMap;
 
@@ -127,15 +127,25 @@ pub fn leave_animation_state_handler(
                 && let Ok(mut player) = player_query.get_mut(player_entity)
             {
                 current_key.key = new_key;
-                if let Some(idx) = anim_store
-                    .anims
-                    .get(&current_key.group)
-                    .and_then(|m| m.get(&current_key.key))
-                {
-                    player.play(*idx).repeat();
-                }
+                anim_thingie(
+                    &anim_store,
+                    &current_key.group,
+                    &current_key.key,
+                    &mut player,
+                );
             }
         }
+    }
+}
+
+fn anim_thingie(
+    anim_store: &Res<AnimationStore>,
+    group: &str,
+    key: &AnimationKey,
+    player: &mut Mut<AnimationPlayer>,
+) {
+    if let Some(idx) = anim_store.anims.get(group).and_then(|m| m.get(key)) {
+        player.play(*idx).repeat();
     }
 }
 
@@ -147,25 +157,20 @@ pub fn goto_animation_state_handler(
     child_query: Query<&Children>,
 ) {
     for AnimationEvent(event_type, entity, anim_key) in update_er.read() {
-        if event_type == &AnimationEventType::GotoAnimState {
-            if let Ok((mut current_key, mut character_state)) = anim_key_query.get_mut(*entity) {
-                if character_state.enter_state(*anim_key) {
-                    if let Some(player_entity) =
-                        get_child_with_component_recursive(*entity, &child_query, &player_query)
-                    {
-                        if let Ok(mut player) = player_query.get_mut(player_entity) {
-                            current_key.key = *anim_key;
-                            if let Some(idx) = anim_store
-                                .anims
-                                .get(&current_key.group)
-                                .and_then(|m| m.get(&current_key.key))
-                            {
-                                player.play(*idx).repeat();
-                            }
-                        }
-                    }
-                }
-            }
+        if event_type == &AnimationEventType::GotoAnimState
+            && let Ok((mut current_key, mut character_state)) = anim_key_query.get_mut(*entity)
+            && character_state.enter_state(*anim_key)
+            && let Some(player_entity) =
+                get_child_with_component_recursive(*entity, &child_query, &player_query)
+            && let Ok(mut player) = player_query.get_mut(player_entity)
+        {
+            current_key.key = *anim_key;
+            anim_thingie(
+                &anim_store,
+                &current_key.group,
+                &current_key.key,
+                &mut player,
+            );
         }
     }
 }
@@ -252,21 +257,20 @@ pub fn start_some_animations(
     mut commands: Commands,
 ) {
     for (entity, mut anim_player) in players.iter_mut() {
-        if let Some(super_ent) = get_parent_recursive(entity, &parent_query) {
-            if let Ok(anim_key) = anim_key_query.get(super_ent) {
-                if let Some(graph_handle) = anim_store.graphs.get(&anim_key.group) {
-                    commands
-                        .entity(entity)
-                        .insert(AnimationGraphHandle(graph_handle.clone()));
-                    if let Some(idx) = anim_store
-                        .anims
-                        .get(&anim_key.group)
-                        .and_then(|m| m.get(&anim_key.key))
-                    {
-                        anim_player.play(*idx).repeat();
-                    }
-                }
-            }
+        if let Some(super_ent) = get_parent_recursive(entity, &parent_query)
+            && let Ok(anim_key) = anim_key_query.get(super_ent)
+            && let Some(graph_handle) = anim_store.graphs.get(&anim_key.group)
+        {
+            commands
+                .entity(entity)
+                .insert(AnimationGraphHandle(graph_handle.clone()));
+
+            anim_thingie(
+                &anim_store,
+                &anim_key.group,
+                &anim_key.key,
+                &mut anim_player,
+            );
         }
     }
 }
