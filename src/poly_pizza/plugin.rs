@@ -4,8 +4,9 @@ use crate::game_state::GameState;
 use crate::poly_pizza::async_bridge::{PolyPizzaConfig, spawn_api_thread};
 use crate::poly_pizza::state::PolyPizzaState;
 use crate::poly_pizza::ui::{
-    handle_api_responses, handle_key_input, handle_search_submit, rebuild_results_ui,
-    spawn_polypizza_screen, update_attribution_label, update_search_label, update_status_label,
+    handle_api_responses, handle_key_input, handle_search_submit, handle_user_search_submit,
+    rebuild_results_ui, spawn_polypizza_screen, update_attribution_label, update_search_label,
+    update_status_label, update_username_label,
 };
 use crate::poly_pizza::viewer::{
     handle_toon_toggle, handle_viewer_load, orbit_viewer, spawn_polypizza_cameras,
@@ -30,6 +31,7 @@ impl Plugin for PolyPizzaPlugin {
                 (
                     handle_key_input,
                     handle_search_submit,
+                    handle_user_search_submit,
                     handle_api_responses,
                     rebuild_results_ui,
                     handle_viewer_load,
@@ -42,6 +44,7 @@ impl Plugin for PolyPizzaPlugin {
                     orbit_viewer,
                     handle_toon_toggle,
                     update_search_label,
+                    update_username_label,
                     update_status_label,
                     update_attribution_label,
                 )

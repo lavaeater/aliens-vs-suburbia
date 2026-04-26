@@ -16,6 +16,9 @@ use crate::ui::spawn_ui::StateMarker;
 pub struct SearchLabel;
 
 #[derive(Component)]
+pub struct UsernameLabel;
+
+#[derive(Component)]
 pub struct StatusLabel;
 
 #[derive(Component)]
@@ -63,7 +66,7 @@ pub fn spawn_polypizza_screen(
             t.insert_bundle(lava_ui_builder::header("Poly Pizza", &text_theme));
         });
 
-        // Search box display
+        // Search box display — clicking focuses keyword input
         left.with_child(|row| {
             row.display_flex()
                 .flex_row()
@@ -81,6 +84,9 @@ pub fn spawn_polypizza_screen(
                 }))
                 .insert(SearchLabel);
             });
+        })
+        .observe(|_: On<Pointer<Click>>, mut s: ResMut<PolyPizzaState>| {
+            s.input_focus = crate::poly_pizza::state::InputFocus::Keyword;
         });
 
         // Search button
@@ -162,6 +168,46 @@ pub fn spawn_polypizza_screen(
             );
         });
 
+        // ── User search ───────────────────────────────────────────────────────
+        left.with_child(|sep| {
+            sep.insert_bundle(lava_ui_builder::label("── By creator ──", &TextTheme {
+                label_size: 11.0,
+                label_color: Color::srgb(0.4, 0.6, 0.4),
+                ..text_theme.clone()
+            }));
+        });
+
+        // Username input display — clicking switches focus to it
+        left.with_child(|row| {
+            row.display_flex()
+                .flex_row()
+                .gap_px(4.0)
+                .align_items_center()
+                .padding_all_px(6.0)
+                .bg_color(Color::srgba(0.10, 0.14, 0.20, 1.0))
+                .border_all_px(1.0, Color::srgb(0.3, 0.5, 0.5));
+
+            row.with_child(|lbl| {
+                lbl.insert_bundle(lava_ui_builder::label("user: _", &TextTheme {
+                    label_size: 14.0,
+                    label_color: Color::srgb(0.7, 0.9, 0.8),
+                    ..text_theme.clone()
+                }))
+                .insert(UsernameLabel);
+            });
+        })
+        .observe(|_: On<Pointer<Click>>, mut s: ResMut<PolyPizzaState>| {
+            s.input_focus = crate::poly_pizza::state::InputFocus::Username;
+        });
+
+        left.add_button_observe(
+            "Search by user",
+            |b| { b.size_px(240.0, 32.0).font_size(13.0); },
+            |_: On<Activate>, mut s: ResMut<PolyPizzaState>| {
+                s.user_search_requested = true;
+            },
+        );
+
         // Status label
         left.with_child(|lbl| {
             lbl.insert_bundle(lava_ui_builder::label("", &TextTheme {
@@ -229,15 +275,40 @@ pub fn handle_key_input(
     mut keyboard_reader: MessageReader<KeyboardInput>,
     mut state: ResMut<PolyPizzaState>,
 ) {
+    use crate::poly_pizza::state::InputFocus;
     for event in keyboard_reader.read() {
         if event.state != ButtonState::Pressed { continue; }
         match &event.logical_key {
-            Key::Character(s) => {
-                state.search_term.push_str(s.as_str());
+            Key::Tab => {
+                state.input_focus = match state.input_focus {
+                    InputFocus::Keyword => InputFocus::Username,
+                    InputFocus::Username => InputFocus::Keyword,
+                };
             }
-            Key::Space => state.search_term.push(' '),
-            Key::Backspace => { state.search_term.pop(); }
-            Key::Enter => state.search_requested = true,
+            Key::Character(s) => {
+                match state.input_focus {
+                    InputFocus::Keyword => state.search_term.push_str(s.as_str()),
+                    InputFocus::Username => state.username_term.push_str(s.as_str()),
+                }
+            }
+            Key::Space => {
+                match state.input_focus {
+                    InputFocus::Keyword => state.search_term.push(' '),
+                    InputFocus::Username => state.username_term.push(' '),
+                }
+            }
+            Key::Backspace => {
+                match state.input_focus {
+                    InputFocus::Keyword => { state.search_term.pop(); }
+                    InputFocus::Username => { state.username_term.pop(); }
+                }
+            }
+            Key::Enter => {
+                match state.input_focus {
+                    InputFocus::Keyword => state.search_requested = true,
+                    InputFocus::Username => state.user_search_requested = true,
+                }
+            }
             _ => {}
         }
     }
@@ -411,15 +482,44 @@ fn result_card_clicked(
     }
 }
 
+// ── User search submit ────────────────────────────────────────────────────────
+
+pub fn handle_user_search_submit(
+    mut state: ResMut<PolyPizzaState>,
+    channels: Res<ApiChannels>,
+) {
+    if !state.user_search_requested || state.pending { return; }
+    let username = state.username_term.trim().to_string();
+    if username.is_empty() { state.user_search_requested = false; return; }
+    state.user_search_requested = false;
+    state.pending = true;
+    state.status = format!("Loading models by {username}…");
+    channels.tx.send(ApiRequest::GetUser(username)).ok();
+}
+
 // ── Update labels ──────────────────────────────────────────────────────────────
 
 pub fn update_search_label(
     state: Res<PolyPizzaState>,
     mut labels: Query<&mut Text, With<SearchLabel>>,
 ) {
+    use crate::poly_pizza::state::InputFocus;
     if !state.is_changed() { return; }
+    let cursor = if state.input_focus == InputFocus::Keyword { "█" } else { "_" };
     for mut text in labels.iter_mut() {
-        **text = format!("> {}█", state.search_term);
+        **text = format!("> {}{}", state.search_term, cursor);
+    }
+}
+
+pub fn update_username_label(
+    state: Res<PolyPizzaState>,
+    mut labels: Query<&mut Text, With<UsernameLabel>>,
+) {
+    use crate::poly_pizza::state::InputFocus;
+    if !state.is_changed() { return; }
+    let cursor = if state.input_focus == InputFocus::Username { "█" } else { "_" };
+    for mut text in labels.iter_mut() {
+        **text = format!("user: {}{}", state.username_term, cursor);
     }
 }
 
