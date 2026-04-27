@@ -1,19 +1,19 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Creator {
     #[serde(rename = "Username")]
     pub username: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Orbit {
     pub phi: String,
     pub radius: String,
     pub theta: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PizzaModel {
     #[serde(rename = "ID")]
     pub id: String,
@@ -41,13 +41,13 @@ pub struct PizzaModel {
     pub orbit: Option<Orbit>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchResponse {
     pub total: u32,
     pub results: Vec<PizzaModel>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ListResponse {
     #[serde(rename = "Models")]
     pub models: Vec<PizzaModel>,
@@ -55,7 +55,7 @@ pub struct ListResponse {
     pub name: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserResponse {
     pub username: String,
     pub models: Vec<PizzaModel>,

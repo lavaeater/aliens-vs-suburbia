@@ -78,10 +78,22 @@ pub fn get_user(api_key: &str, username: &str) -> Result<UserResponse, BoxError>
 }
 
 pub fn download_glb(url: &str, dest: &Path) -> Result<(), BoxError> {
+    download_file_with_auth(url, dest, None)
+}
+
+pub fn download_thumbnail(url: &str, dest: &Path) -> Result<(), BoxError> {
+    download_file_with_auth(url, dest, None)
+}
+
+fn download_file_with_auth(url: &str, dest: &Path, auth: Option<&str>) -> Result<(), BoxError> {
     if let Some(parent) = dest.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    let mut reader = ureq::get(url).call()?.into_reader();
+    let mut req = ureq::get(url);
+    if let Some(key) = auth {
+        req = req.set("x-auth-token", key);
+    }
+    let mut reader = req.call()?.into_reader();
     let mut file = std::fs::File::create(dest)?;
     std::io::copy(&mut reader, &mut file)?;
     Ok(())

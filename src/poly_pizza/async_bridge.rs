@@ -16,6 +16,7 @@ pub enum ApiRequest {
     GetList(String),
     GetUser(String),
     DownloadGlb { id: String, url: String, dest: PathBuf },
+    DownloadThumbnail { id: String, url: String, dest: PathBuf },
 }
 
 pub enum ApiResponse {
@@ -23,6 +24,7 @@ pub enum ApiResponse {
     ListResults(ListResponse),
     UserResults(UserResponse),
     DownloadComplete { id: String },
+    ThumbnailComplete { id: String },
     Error(String),
 }
 
@@ -69,6 +71,12 @@ pub fn spawn_api_thread(api_key: String) -> ApiChannels {
                         ApiRequest::DownloadGlb { id, url, dest } => {
                             match client::download_glb(&url, &dest) {
                                 Ok(()) => ApiResponse::DownloadComplete { id },
+                                Err(e) => ApiResponse::Error(e.to_string()),
+                            }
+                        }
+                        ApiRequest::DownloadThumbnail { id, url, dest } => {
+                            match client::download_thumbnail(&url, &dest) {
+                                Ok(()) => ApiResponse::ThumbnailComplete { id },
                                 Err(e) => ApiResponse::Error(e.to_string()),
                             }
                         }

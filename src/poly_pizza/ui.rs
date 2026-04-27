@@ -31,6 +31,12 @@ pub struct ResultsContainer;
 pub struct ViewerPanel;
 
 #[derive(Component)]
+pub struct AnimatedFilterButton;
+
+#[derive(Component)]
+pub struct SaveButton;
+
+#[derive(Component)]
 pub struct ResultCard {
     pub index: usize,
 }
@@ -147,10 +153,10 @@ pub fn spawn_polypizza_screen(
             );
         });
 
-        // Animated filter
+        // Animated filter — button text updated at runtime by update_animated_filter_button
         left.add_button_observe(
             "Animated only: OFF",
-            |b| { b.size_px(240.0, 28.0).font_size(12.0); },
+            |b| { b.size_px(240.0, 28.0).font_size(12.0).insert(AnimatedFilterButton); },
             |_: On<Activate>, mut s: ResMut<PolyPizzaState>| {
                 s.animated_only = !s.animated_only;
             },
@@ -278,17 +284,44 @@ pub fn spawn_polypizza_screen(
             .padding_all_px(6.0)
             .insert(ViewerPanel);
 
-        // Hint label at bottom-left of the viewer area
+        // Spacer pushes bottom bar down
         viewer.with_child(|spacer| { spacer.with_flex_grow(1.0); });
-        viewer.with_child(|hint| {
-            hint.insert_bundle(lava_ui_builder::label(
-                "[drag to rotate · T = toon shader]",
-                &lava_ui_builder::TextTheme {
-                    label_size: 11.0,
-                    label_color: Color::srgba(0.7, 0.8, 0.7, 0.5),
-                    ..Default::default()
+
+        // Bottom bar: hint text + save button
+        viewer.with_child(|row| {
+            row.display_flex().flex_row().gap_px(8.0).align_items_center();
+
+            row.with_child(|hint| {
+                hint.insert_bundle(lava_ui_builder::label(
+                    "[drag to rotate · T = toon shader]",
+                    &lava_ui_builder::TextTheme {
+                        label_size: 11.0,
+                        label_color: Color::srgba(0.7, 0.8, 0.7, 0.5),
+                        ..Default::default()
+                    },
+                ));
+            });
+
+            row.with_child(|sp| { sp.with_flex_grow(1.0); });
+
+            row.add_button_observe(
+                "☆ Save",
+                |b| { b.size_px(80.0, 28.0).font_size(13.0).insert(SaveButton); },
+                |_: On<Activate>,
+                 mut state: ResMut<PolyPizzaState>,
+                 mut library: ResMut<crate::poly_pizza::library::ModelLibrary>| {
+                    if let Some(model) = state.selected_model.clone() {
+                        let local_glb = if state.glb_cache_path(&model.id).exists() {
+                            Some(state.glb_asset_path(&model.id))
+                        } else {
+                            None
+                        };
+                        library.toggle(&model, local_glb);
+                        library.save();
+                        state.set_changed();
+                    }
                 },
-            ));
+            );
         });
     });
 
@@ -386,6 +419,7 @@ pub fn handle_api_responses(
                     state.pending = false;
                     state.results_dirty = true;
                     state.status = format!("{} results (page {})", state.total, state.page + 1);
+                    queue_thumbnail_downloads(&mut state, &channels);
                 }
                 ApiResponse::ListResults(lr) => {
                     state.results = lr.models;
@@ -393,6 +427,7 @@ pub fn handle_api_responses(
                     state.pending = false;
                     state.results_dirty = true;
                     state.status = format!("{} models in list", state.total);
+                    queue_thumbnail_downloads(&mut state, &channels);
                 }
                 ApiResponse::UserResults(ur) => {
                     state.results = ur.models;
@@ -400,6 +435,7 @@ pub fn handle_api_responses(
                     state.pending = false;
                     state.results_dirty = true;
                     state.status = format!("{} models by user", state.total);
+                    queue_thumbnail_downloads(&mut state, &channels);
                 }
                 ApiResponse::DownloadComplete { id } => {
                     state.viewer_downloading = false;
@@ -409,6 +445,10 @@ pub fn handle_api_responses(
                         state.viewer_entity = Some(entity);
                         state.status = "Model loaded".to_string();
                     }
+                }
+                ApiResponse::ThumbnailComplete { id } => {
+                    state.downloading_thumbnails.remove(&id);
+                    state.results_dirty = true;
                 }
                 ApiResponse::Error(e) => {
                     state.pending = false;
@@ -420,39 +460,81 @@ pub fn handle_api_responses(
     }
 }
 
+fn queue_thumbnail_downloads(state: &mut PolyPizzaState, channels: &ApiChannels) {
+    let to_fetch: Vec<_> = state.results.iter()
+        .filter(|m| {
+            !state.downloading_thumbnails.contains(&m.id)
+                && !state.thumb_cache_path(&m.id).exists()
+        })
+        .map(|m| (m.id.clone(), m.thumbnail_url.clone()))
+        .collect();
+
+    for (id, url) in to_fetch {
+        let dest = state.thumb_cache_path(&id);
+        state.downloading_thumbnails.insert(id.clone());
+        channels.tx.send(ApiRequest::DownloadThumbnail { id, url, dest }).ok();
+    }
+}
+
 // ── Rebuild the results list when results change ──────────────────────────────
 
 pub fn rebuild_results_ui(
     mut state: ResMut<PolyPizzaState>,
     mut commands: Commands,
     container_query: Query<Entity, With<ResultsContainer>>,
-    theme: Res<LavaTheme>,
+    library: Res<crate::poly_pizza::library::ModelLibrary>,
+    asset_server: Res<AssetServer>,
 ) {
     if !state.results_dirty { return; }
     state.results_dirty = false;
 
     let Ok(container) = container_query.single() else { return; };
-
-    // Clear old children
     commands.entity(container).despawn_related::<Children>();
 
-    let results: Vec<_> = state.results.iter().enumerate().map(|(i, m)| {
-        (i, m.title.clone(), m.creator.username.clone(), m.tri_count, m.animated.unwrap_or(false))
+    struct CardData {
+        index: usize,
+        title: String,
+        creator: String,
+        tri_count: u32,
+        animated: bool,
+        model_id: String,
+        thumb_asset: Option<String>,
+        saved: bool,
+    }
+
+    let cards: Vec<CardData> = state.results.iter().enumerate().map(|(i, m)| {
+        let thumb_path = state.thumb_cache_path(&m.id);
+        CardData {
+            index: i,
+            title: m.title.clone(),
+            creator: m.creator.username.clone(),
+            tri_count: m.tri_count,
+            animated: m.animated.unwrap_or(false),
+            saved: library.is_saved(&m.id),
+            model_id: m.id.clone(),
+            thumb_asset: if thumb_path.exists() {
+                Some(state.thumb_asset_path(&m.id))
+            } else {
+                None
+            },
+        }
     }).collect();
 
-    let theme_clone = theme.clone();
     commands.entity(container).with_children(|parent| {
-        for (index, title, creator, tri_count, animated) in results {
-            let anim_tag = if animated { " ★" } else { "" };
-            let label = format!("{title}{anim_tag}\n  by {creator} · {tri_count} tris");
+        for card in cards {
+            let anim_tag = if card.animated { " ★" } else { "" };
+            let saved_tag = if card.saved { "♥ " } else { "" };
+            let detail = format!("{saved_tag}{}{anim_tag}\n  {} · {}t",
+                card.title, card.creator, card.tri_count);
 
             let card_entity = parent.spawn((
                 Node {
                     width: Val::Percent(100.0),
-                    padding: UiRect::all(Val::Px(8.0)),
+                    padding: UiRect::all(Val::Px(6.0)),
                     margin: UiRect::bottom(Val::Px(2.0)),
-                    flex_direction: FlexDirection::Column,
-                    justify_content: JustifyContent::Center,
+                    flex_direction: FlexDirection::Row,
+                    align_items: AlignItems::Center,
+                    column_gap: Val::Px(8.0),
                     border_radius: BorderRadius::all(Val::Px(4.0)),
                     border: UiRect::all(Val::Px(1.0)),
                     ..Default::default()
@@ -466,14 +548,40 @@ pub fn rebuild_results_ui(
                 },
                 bevy::picking::hover::Hovered::default(),
                 bevy::ui_widgets::Button,
-                ResultCard { index },
+                ResultCard { index: card.index },
             )).id();
 
-            // Text child — spawn directly under card_entity, not under the container
-            parent.commands().entity(card_entity).with_children(|card| {
-                card.spawn((
-                    Text::new(label),
-                    TextFont::default().with_font_size(12.0),
+            parent.commands().entity(card_entity).with_children(|row| {
+                // Thumbnail or placeholder
+                if let Some(thumb_path) = card.thumb_asset {
+                    let handle = asset_server.load(thumb_path);
+                    row.spawn((
+                        Node {
+                            width: Val::Px(56.0),
+                            height: Val::Px(56.0),
+                            flex_shrink: 0.0,
+                            border_radius: BorderRadius::all(Val::Px(3.0)),
+                            overflow: Overflow::clip(),
+                            ..Default::default()
+                        },
+                        ImageNode::new(handle),
+                    ));
+                } else {
+                    row.spawn((
+                        Node {
+                            width: Val::Px(56.0),
+                            height: Val::Px(56.0),
+                            flex_shrink: 0.0,
+                            border_radius: BorderRadius::all(Val::Px(3.0)),
+                            ..Default::default()
+                        },
+                        BackgroundColor(Color::srgba(0.12, 0.15, 0.22, 0.8)),
+                    ));
+                }
+
+                row.spawn((
+                    Text::new(detail),
+                    TextFont::default().with_font_size(11.0),
                     TextColor(Color::srgb(0.85, 0.90, 0.95)),
                 ));
             });
@@ -590,6 +698,42 @@ pub fn sync_viewer_viewport(
         physical_size: bevy::math::UVec2::new(w, h),
         depth: 0.0..1.0,
     });
+}
+
+pub fn update_animated_filter_button(
+    state: Res<PolyPizzaState>,
+    buttons: Query<&Children, With<AnimatedFilterButton>>,
+    mut texts: Query<&mut Text>,
+) {
+    if !state.is_changed() { return; }
+    let label = if state.animated_only { "Animated only: ON" } else { "Animated only: OFF" };
+    for children in buttons.iter() {
+        for child in children.iter() {
+            if let Ok(mut text) = texts.get_mut(child) {
+                **text = label.to_string();
+            }
+        }
+    }
+}
+
+pub fn update_save_button_label(
+    state: Res<PolyPizzaState>,
+    library: Res<crate::poly_pizza::library::ModelLibrary>,
+    buttons: Query<&Children, With<SaveButton>>,
+    mut texts: Query<&mut Text>,
+) {
+    if !state.is_changed() && !library.is_changed() { return; }
+    let is_saved = state.selected_model.as_ref()
+        .map(|m| library.is_saved(&m.id))
+        .unwrap_or(false);
+    let label = if is_saved { "★ Saved" } else { "☆ Save" };
+    for children in buttons.iter() {
+        for child in children.iter() {
+            if let Ok(mut text) = texts.get_mut(child) {
+                **text = label.to_string();
+            }
+        }
+    }
 }
 
 pub fn update_attribution_label(

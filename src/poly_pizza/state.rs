@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use bevy::prelude::{Entity, Resource};
 use crate::poly_pizza::types::PizzaModel;
 
@@ -37,6 +38,9 @@ pub struct PolyPizzaState {
     pub status_label: Option<Entity>,
     pub attribution_label: Option<Entity>,
 
+    // Thumbnails
+    pub downloading_thumbnails: HashSet<String>,
+
     // Viewer
     pub selected_model: Option<PizzaModel>,
     pub viewer_entity: Option<Entity>,
@@ -55,6 +59,7 @@ impl PolyPizzaState {
         self.viewer_entity = None;
         self.viewer_needs_load = false;
         self.viewer_downloading = false;
+        self.downloading_thumbnails.clear();
         self.pending = false;
         self.search_requested = false;
         self.results_dirty = false;
@@ -67,5 +72,13 @@ impl PolyPizzaState {
 
     pub fn glb_asset_path(&self, id: &str) -> String {
         format!("poly_pizza_cache/{id}.glb#Scene0")
+    }
+
+    pub fn thumb_cache_path(&self, id: &str) -> std::path::PathBuf {
+        std::path::PathBuf::from("assets/poly_pizza_cache/thumbs").join(format!("{id}.jpg"))
+    }
+
+    pub fn thumb_asset_path(&self, id: &str) -> String {
+        format!("poly_pizza_cache/thumbs/{id}.jpg")
     }
 }
