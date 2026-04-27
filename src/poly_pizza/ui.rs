@@ -568,17 +568,26 @@ pub fn sync_viewer_viewport(
     let Ok(mut camera) = cameras.single_mut() else { return };
     let Ok(window) = windows.single() else { return };
 
-    let scale = window.scale_factor() as f32;
-    // ComputedNode.size is in physical pixels already.
-    let phys_size = node.size;
-    // UiGlobalTransform holds an Affine2; translation is in logical pixels.
-    let logical_pos = transform.affine().translation;
-    let phys_x = (logical_pos.x * scale) as u32;
-    let phys_y = (logical_pos.y * scale) as u32;
+    // UiGlobalTransform.translation is the physical-pixel CENTER of the node.
+    // ComputedNode.size is in physical pixels.
+    let phys_size = node.size();
+    let center = transform.affine().translation;
+    let top_left = center - phys_size * 0.5;
+
+    let win_w = window.physical_width();
+    let win_h = window.physical_height();
+    let x = top_left.x.max(0.0) as u32;
+    let y = top_left.y.max(0.0) as u32;
+    let w = (phys_size.x as u32).min(win_w.saturating_sub(x));
+    let h = (phys_size.y as u32).min(win_h.saturating_sub(y));
+
+    if w == 0 || h == 0 {
+        return;
+    }
 
     camera.viewport = Some(bevy::camera::Viewport {
-        physical_position: bevy::math::UVec2::new(phys_x, phys_y),
-        physical_size: bevy::math::UVec2::new(phys_size.x as u32, phys_size.y as u32),
+        physical_position: bevy::math::UVec2::new(x, y),
+        physical_size: bevy::math::UVec2::new(w, h),
         depth: 0.0..1.0,
     });
 }
