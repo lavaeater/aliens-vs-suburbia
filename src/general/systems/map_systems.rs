@@ -88,10 +88,15 @@ pub struct MapDef {
     pub tiles: Vec<MapTile>,
 } //No data needed now
 
-pub fn load_map_one(
-    mut send_event: MessageWriter<LoadMap>
-) {
-    send_event.write(LoadMap {});
+pub fn load_map_one(mut send_event: MessageWriter<LoadMap>) {
+    let text = std::fs::read_to_string("assets/maps/level_01.ron")
+        .expect("assets/maps/level_01.ron not found");
+    let mut map: crate::general::components::map_components::MapFile =
+        ron::from_str(&text).expect("Failed to parse assets/maps/level_01.ron");
+    if map.generated {
+        map = crate::map::map_generator::generate_suburb_map(map.seed);
+    }
+    send_event.write(LoadMap { map });
 }
 
 
@@ -192,36 +197,9 @@ pub fn map_loader(
     tile_defs: Res<TileDefinitions>,
     model_defs: Res<MapModelDefinitions>,
 ) {
-    for _load_map in load_map_event_reader.read() {
-        let m = [
-            [17, 1, 1, 1,1, 1, 5],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 9, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-        ];
+    for load_map in load_map_event_reader.read() {
+        let map_file = &load_map.map;
+        let m = &map_file.tiles;
         let rows = m.len();
         let cols = m[0].len();
         map_graph.path_finding_grid = Grid::new(cols, rows);
@@ -497,6 +475,21 @@ pub fn map_loader(
                     position: (tile.x as usize, tile.y as usize).to_world_coords(&tile_defs) + Vec3::new(0.0, 1.0, 0.0),
                 });
             }
+        }
+
+        for dec in &map_file.decorations {
+            let pos = Vec3::new(
+                tile_defs.tile_width * dec.x as f32,
+                tile_defs.floor_level + tile_defs.tile_depth,
+                tile_defs.tile_width * dec.y as f32,
+            );
+            commands.spawn((
+                Name::from(format!("Decoration {}:{} {}", dec.x, dec.y, dec.model)),
+                SceneRoot(asset_server.load(format!("{}#Scene0", dec.model))),
+                Transform::from_translation(pos)
+                    .with_rotation(Quat::from_rotation_y(dec.rotation_y.to_radians()))
+                    .with_scale(bevy::math::Vec3::splat(dec.scale)),
+            ));
         }
     }
 }

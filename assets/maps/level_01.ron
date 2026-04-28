@@ -1,0 +1,6 @@
+// Procedurally generated suburban level.
+// Change seed for a different layout; set generated: false and fill in tiles/decorations to hand-craft.
+(
+    generated: true,
+    seed: 7,
+)
