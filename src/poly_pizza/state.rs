@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::path::PathBuf;
 use bevy::prelude::{Entity, Resource};
 use crate::poly_pizza::types::PizzaModel;
 
@@ -7,6 +8,7 @@ pub enum InputFocus {
     #[default]
     Keyword,
     Username,
+    Tags,
 }
 
 #[derive(Resource, Default)]
@@ -47,6 +49,9 @@ pub struct PolyPizzaState {
     pub viewer_needs_load: bool,
     pub viewer_downloading: bool,
     pub toon_shader: bool,
+
+    // Tag editing
+    pub tag_input: String,
 }
 
 impl PolyPizzaState {
@@ -64,21 +69,53 @@ impl PolyPizzaState {
         self.search_requested = false;
         self.results_dirty = false;
         self.status = String::new();
+        self.tag_input = String::new();
     }
 
-    pub fn glb_cache_path(&self, id: &str) -> std::path::PathBuf {
-        std::path::PathBuf::from("assets/poly_pizza_cache").join(format!("{id}.glb"))
+    pub fn glb_cache_path(&self, id: &str) -> PathBuf {
+        PathBuf::from("assets/poly_pizza_cache").join(format!("{id}.glb"))
     }
 
     pub fn glb_asset_path(&self, id: &str) -> String {
         format!("poly_pizza_cache/{id}.glb#Scene0")
     }
 
-    pub fn thumb_cache_path(&self, id: &str) -> std::path::PathBuf {
-        std::path::PathBuf::from("assets/poly_pizza_cache/thumbs").join(format!("{id}.jpg"))
+    /// Returns the on-disk path for a thumbnail, using the correct extension.
+    pub fn thumb_cache_path(&self, id: &str, url: &str) -> PathBuf {
+        let ext = thumb_ext(url);
+        PathBuf::from("assets/poly_pizza_cache/thumbs").join(format!("{id}.{ext}"))
     }
 
-    pub fn thumb_asset_path(&self, id: &str) -> String {
-        format!("poly_pizza_cache/thumbs/{id}.jpg")
+    /// Scans for a cached thumbnail with any supported extension.
+    pub fn find_thumb_asset_path(&self, id: &str) -> Option<String> {
+        for ext in ["webp", "jpg", "png"] {
+            let p = PathBuf::from("assets/poly_pizza_cache/thumbs").join(format!("{id}.{ext}"));
+            if p.exists() {
+                return Some(format!("poly_pizza_cache/thumbs/{id}.{ext}"));
+            }
+        }
+        None
+    }
+
+    pub fn has_cached_thumb(&self, id: &str) -> bool {
+        for ext in ["webp", "jpg", "png"] {
+            if PathBuf::from("assets/poly_pizza_cache/thumbs")
+                .join(format!("{id}.{ext}"))
+                .exists()
+            {
+                return true;
+            }
+        }
+        false
+    }
+}
+
+pub fn thumb_ext(url: &str) -> &'static str {
+    if url.contains(".webp") || url.contains("webp") {
+        "webp"
+    } else if url.contains(".png") {
+        "png"
+    } else {
+        "jpg"
     }
 }

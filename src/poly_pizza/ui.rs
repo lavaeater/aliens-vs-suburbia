@@ -37,6 +37,12 @@ pub struct AnimatedFilterButton;
 pub struct SaveButton;
 
 #[derive(Component)]
+pub struct RemoveButton;
+
+#[derive(Component)]
+pub struct TagInputLabel;
+
+#[derive(Component)]
 pub struct ResultCard {
     pub index: usize,
 }
@@ -287,9 +293,41 @@ pub fn spawn_polypizza_screen(
         // Spacer pushes bottom bar down
         viewer.with_child(|spacer| { spacer.with_flex_grow(1.0); });
 
-        // Bottom bar: hint text + save button
+        // Tag input row — click to focus, type space-separated tags
         viewer.with_child(|row| {
-            row.display_flex().flex_row().gap_px(8.0).align_items_center();
+            row.display_flex()
+                .flex_row()
+                .gap_px(6.0)
+                .align_items_center()
+                .padding_all_px(6.0)
+                .bg_color(Color::srgba(0.06, 0.08, 0.12, 0.85))
+                .border_all_px(1.0, Color::srgb(0.3, 0.5, 0.4));
+
+            row.with_child(|lbl| {
+                lbl.insert_bundle(lava_ui_builder::label("tags:", &lava_ui_builder::TextTheme {
+                    label_size: 11.0,
+                    label_color: Color::srgba(0.6, 0.8, 0.6, 0.7),
+                    ..Default::default()
+                }));
+            });
+
+            row.with_child(|lbl| {
+                lbl.insert_bundle(lava_ui_builder::label("_", &lava_ui_builder::TextTheme {
+                    label_size: 12.0,
+                    label_color: Color::srgb(0.8, 0.95, 0.8),
+                    ..Default::default()
+                }))
+                .insert(TagInputLabel)
+                .with_flex_grow(1.0);
+            });
+        })
+        .observe(|_: On<Pointer<Click>>, mut s: ResMut<PolyPizzaState>| {
+            s.input_focus = crate::poly_pizza::state::InputFocus::Tags;
+        });
+
+        // Bottom hint + save/remove buttons
+        viewer.with_child(|row| {
+            row.display_flex().flex_row().gap_px(6.0).align_items_center().padding_all_px(4.0);
 
             row.with_child(|hint| {
                 hint.insert_bundle(lava_ui_builder::label(
@@ -304,6 +342,7 @@ pub fn spawn_polypizza_screen(
 
             row.with_child(|sp| { sp.with_flex_grow(1.0); });
 
+            // Save / update button — always upserts with current tags
             row.add_button_observe(
                 "☆ Save",
                 |b| { b.size_px(80.0, 28.0).font_size(13.0).insert(SaveButton); },
@@ -316,9 +355,25 @@ pub fn spawn_polypizza_screen(
                         } else {
                             None
                         };
-                        library.toggle(&model, local_glb);
+                        library.upsert(&model, local_glb, &state.tag_input.clone());
                         library.save();
-                        state.set_changed();
+                        state.results_dirty = true; // refresh card badges
+                    }
+                },
+            );
+
+            // Remove button — only meaningful when saved, but always present
+            row.add_button_observe(
+                "✕",
+                |b| { b.size_px(28.0, 28.0).font_size(13.0).insert(RemoveButton); },
+                |_: On<Activate>,
+                 mut state: ResMut<PolyPizzaState>,
+                 mut library: ResMut<crate::poly_pizza::library::ModelLibrary>| {
+                    if let Some(model) = &state.selected_model {
+                        library.remove(&model.id);
+                        library.save();
+                        state.tag_input.clear();
+                        state.results_dirty = true;
                     }
                 },
             );
@@ -341,31 +396,36 @@ pub fn handle_key_input(
             Key::Tab => {
                 state.input_focus = match state.input_focus {
                     InputFocus::Keyword => InputFocus::Username,
-                    InputFocus::Username => InputFocus::Keyword,
+                    InputFocus::Username => InputFocus::Tags,
+                    InputFocus::Tags => InputFocus::Keyword,
                 };
             }
             Key::Character(s) => {
                 match state.input_focus {
                     InputFocus::Keyword => state.search_term.push_str(s.as_str()),
                     InputFocus::Username => state.username_term.push_str(s.as_str()),
+                    InputFocus::Tags => state.tag_input.push_str(s.as_str()),
                 }
             }
             Key::Space => {
                 match state.input_focus {
                     InputFocus::Keyword => state.search_term.push(' '),
                     InputFocus::Username => state.username_term.push(' '),
+                    InputFocus::Tags => state.tag_input.push(' '),
                 }
             }
             Key::Backspace => {
                 match state.input_focus {
                     InputFocus::Keyword => { state.search_term.pop(); }
                     InputFocus::Username => { state.username_term.pop(); }
+                    InputFocus::Tags => { state.tag_input.pop(); }
                 }
             }
             Key::Enter => {
                 match state.input_focus {
                     InputFocus::Keyword => state.search_requested = true,
                     InputFocus::Username => state.user_search_requested = true,
+                    InputFocus::Tags => {}
                 }
             }
             _ => {}
@@ -464,13 +524,13 @@ fn queue_thumbnail_downloads(state: &mut PolyPizzaState, channels: &ApiChannels)
     let to_fetch: Vec<_> = state.results.iter()
         .filter(|m| {
             !state.downloading_thumbnails.contains(&m.id)
-                && !state.thumb_cache_path(&m.id).exists()
+                && !state.has_cached_thumb(&m.id)
         })
         .map(|m| (m.id.clone(), m.thumbnail_url.clone()))
         .collect();
 
     for (id, url) in to_fetch {
-        let dest = state.thumb_cache_path(&id);
+        let dest = state.thumb_cache_path(&id, &url);
         state.downloading_thumbnails.insert(id.clone());
         channels.tx.send(ApiRequest::DownloadThumbnail { id, url, dest }).ok();
     }
@@ -503,7 +563,6 @@ pub fn rebuild_results_ui(
     }
 
     let cards: Vec<CardData> = state.results.iter().enumerate().map(|(i, m)| {
-        let thumb_path = state.thumb_cache_path(&m.id);
         CardData {
             index: i,
             title: m.title.clone(),
@@ -512,11 +571,7 @@ pub fn rebuild_results_ui(
             animated: m.animated.unwrap_or(false),
             saved: library.is_saved(&m.id),
             model_id: m.id.clone(),
-            thumb_asset: if thumb_path.exists() {
-                Some(state.thumb_asset_path(&m.id))
-            } else {
-                None
-            },
+            thumb_asset: state.find_thumb_asset_path(&m.id),
         }
     }).collect();
 
@@ -596,6 +651,7 @@ fn result_card_clicked(
     cards: Query<&ResultCard>,
     mut state: ResMut<PolyPizzaState>,
     channels: Res<ApiChannels>,
+    library: Res<crate::poly_pizza::library::ModelLibrary>,
 ) {
     let Ok(card) = cards.get(trigger.event().entity) else { return; };
     let index = card.index;
@@ -604,6 +660,10 @@ fn result_card_clicked(
     let model = state.results[index].clone();
     let id = model.id.clone();
     let download_url = model.download_url.clone();
+
+    // Pre-populate tag input with existing saved tags for this model
+    state.tag_input = library.tags_string(&id);
+
     state.selected_model = Some(model);
     state.viewer_needs_load = true;
 
@@ -716,6 +776,23 @@ pub fn update_animated_filter_button(
     }
 }
 
+pub fn update_tag_input_label(
+    state: Res<PolyPizzaState>,
+    mut labels: Query<&mut Text, With<TagInputLabel>>,
+) {
+    if !state.is_changed() { return; }
+    use crate::poly_pizza::state::InputFocus;
+    let cursor = if state.input_focus == InputFocus::Tags { "█" } else { "_" };
+    let display = if state.tag_input.is_empty() {
+        format!("{cursor}")
+    } else {
+        format!("{} {cursor}", state.tag_input.trim_end())
+    };
+    for mut text in labels.iter_mut() {
+        **text = display.clone();
+    }
+}
+
 pub fn update_save_button_label(
     state: Res<PolyPizzaState>,
     library: Res<crate::poly_pizza::library::ModelLibrary>,
@@ -726,7 +803,7 @@ pub fn update_save_button_label(
     let is_saved = state.selected_model.as_ref()
         .map(|m| library.is_saved(&m.id))
         .unwrap_or(false);
-    let label = if is_saved { "★ Saved" } else { "☆ Save" };
+    let label = if is_saved { "★ Update" } else { "☆ Save" };
     for children in buttons.iter() {
         for child in children.iter() {
             if let Ok(mut text) = texts.get_mut(child) {

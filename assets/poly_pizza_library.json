@@ -1,0 +1,27 @@
+{
+  "entries": {
+    "cwYvO5UauX": {
+      "model": {
+        "ID": "cwYvO5UauX",
+        "Title": "Animated Base Character",
+        "Description": "See https://quaternius.itch.io/universal-animation-library for specific engine instructions",
+        "Attribution": "\"Animated Base Character\" by Quaternius, https://poly.pizza/m/cwYvO5UauX. Licence at https://creativecommons.org/licenses/by/3.0",
+        "Thumbnail": "https://static.poly.pizza/0b65e14d-a349-44cc-836c-efdeb6933d48.webp",
+        "Download": "https://static.poly.pizza/0b65e14d-a349-44cc-836c-efdeb6933d48.glb",
+        "Tri Count": 13744,
+        "Creator": {
+          "Username": "Quaternius"
+        },
+        "Category": "People & Characters",
+        "Licence": "CC-BY 3.0",
+        "Animated": true,
+        "Orbit": {
+          "phi": "1.25566",
+          "radius": "3.042712025362237",
+          "theta": "2.82690"
+        }
+      },
+      "local_glb": "poly_pizza_cache/cwYvO5UauX.glb#Scene0"
+    }
+  }
+}

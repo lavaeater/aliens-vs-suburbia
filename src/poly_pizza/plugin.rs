@@ -8,7 +8,7 @@ use crate::poly_pizza::ui::{
     handle_api_responses, handle_key_input, handle_search_submit, handle_user_search_submit,
     rebuild_results_ui, spawn_polypizza_screen, sync_viewer_viewport, update_animated_filter_button,
     update_attribution_label, update_save_button_label, update_search_label, update_status_label,
-    update_username_label,
+    update_tag_input_label, update_username_label,
 };
 use crate::poly_pizza::viewer::{
     handle_toon_toggle, handle_viewer_load, orbit_viewer, spawn_polypizza_cameras,
@@ -52,6 +52,7 @@ impl Plugin for PolyPizzaPlugin {
                     update_status_label,
                     update_attribution_label,
                     update_animated_filter_button,
+                    update_tag_input_label,
                     update_save_button_label,
                 )
                     .run_if(in_state(GameState::PolyPizza)),

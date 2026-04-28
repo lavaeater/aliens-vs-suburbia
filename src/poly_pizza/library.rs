@@ -10,6 +10,8 @@ pub struct LibraryEntry {
     pub model: PizzaModel,
     /// Relative to `assets/`, e.g. `"poly_pizza_cache/abc123.glb"`.
     pub local_glb: Option<String>,
+    /// Space-separated tags supplied by the user.
+    pub tags: Vec<String>,
 }
 
 #[derive(Resource, Default, Serialize, Deserialize)]
@@ -35,16 +37,24 @@ impl ModelLibrary {
         self.entries.contains_key(id)
     }
 
-    /// Toggles the model in/out of the library. Returns `true` if it was added.
-    pub fn toggle(&mut self, model: &PizzaModel, local_glb: Option<String>) -> bool {
-        if self.entries.remove(&model.id).is_some() {
-            false
-        } else {
-            self.entries.insert(model.id.clone(), LibraryEntry {
-                model: model.clone(),
-                local_glb,
-            });
-            true
-        }
+    /// Returns existing tags for a model, space-joined, or an empty string.
+    pub fn tags_string(&self, id: &str) -> String {
+        self.entries.get(id)
+            .map(|e| e.tags.join(" "))
+            .unwrap_or_default()
+    }
+
+    /// Saves or updates a model entry. Tags come from a space-separated string.
+    pub fn upsert(&mut self, model: &PizzaModel, local_glb: Option<String>, tag_str: &str) {
+        let tags: Vec<String> = tag_str.split_whitespace().map(String::from).collect();
+        self.entries.insert(model.id.clone(), LibraryEntry {
+            model: model.clone(),
+            local_glb,
+            tags,
+        });
+    }
+
+    pub fn remove(&mut self, id: &str) {
+        self.entries.remove(id);
     }
 }
