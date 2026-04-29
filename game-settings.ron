@@ -1,7 +1,11 @@
 (
-    projection: Perspective,
-    zoom: 5.0,
-    pitch_degrees: -45.0,
-    yaw_degrees: 225.0,
+    projection: Orthographic,
+    zoom: 54.0,
+    pitch_degrees: -40.0,
+    yaw_degrees: 165.0,
     player_speed_multiplier: 1.0,
+    // One "player unit" (p) — the player character's approximate height in world space.
+    // Decoration scales in the map are expressed as multiples of p (trees ~3–5p, bushes ~0.5–1p).
+    // Increase to make all props larger, decrease to shrink them.
+    player_unit: 1.0,
 )

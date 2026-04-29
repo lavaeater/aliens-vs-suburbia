@@ -17,6 +17,9 @@ pub struct DecorationItem {
 
 fn default_scale() -> f32 { 1.0 }
 
+fn default_map_width() -> usize { 14 }
+fn default_map_height() -> usize { 24 }
+
 #[derive(Deserialize, Clone, Debug, Default)]
 pub struct MapFile {
     /// When true, `tiles` and `decorations` are ignored and the map is procedurally generated from `seed`.
@@ -24,6 +27,11 @@ pub struct MapFile {
     pub generated: bool,
     #[serde(default)]
     pub seed: u64,
+    /// Procedural map dimensions. Only used when `generated: true`.
+    #[serde(default = "default_map_width")]
+    pub map_width: usize,
+    #[serde(default = "default_map_height")]
+    pub map_height: usize,
     /// Row-major grid; 0=void, 1=floor, 5=alien spawn, 9=alien goal, 17=player spawn.
     #[serde(default)]
     pub tiles: Vec<Vec<u8>>,

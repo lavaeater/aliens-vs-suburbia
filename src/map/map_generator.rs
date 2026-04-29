@@ -1,9 +1,5 @@
 use crate::general::components::map_components::{DecorationItem, MapFile};
 
-// Generated map dimensions
-const W: usize = 14;
-const H: usize = 24;
-
 // ── Seeded RNG (xorshift64) ──────────────────────────────────────────────────
 
 struct Rng(u64);
@@ -44,128 +40,130 @@ impl Rng {
 }
 
 // ── Model palettes ───────────────────────────────────────────────────────────
-// (path relative to assets/, visual scale)
-// Scale values are approximate for Quaternius poly-pizza models at tile_width=1.0.
-// Adjust per-model in level_01.ron if a specific prop looks wrong in-game.
+// Scale values represent target height in player units (1.0 = player character height).
+// Assumes poly-pizza models are ~1 world unit tall at scale=1.0; adjust GameSettings.player_unit
+// or individual values here if a model looks wrong in-game.
 
 type Prop = (&'static str, f32);
 
+// Trees: significantly taller than the player (3–5p)
 const TREES: &[Prop] = &[
-    ("packs/nature/Pine.glb", 1.0),
-    ("packs/nature/Pine-79gmlLnweB.glb", 1.0),
-    ("packs/nature/Pine-Zt62gceKXZ.glb", 1.0),
-    ("packs/nature/Tree.glb", 1.0),
-    ("packs/nature/Tree-aVOxaHRPWe.glb", 1.0),
-    ("packs/nature/Twisted Tree.glb", 1.0),
-    ("packs/nature/Twisted Tree-8oraKn9m0x.glb", 1.0),
-    ("packs/nature/Dead Tree.glb", 0.9),
-    ("packs/nature/Dead Tree-MlmK5488ou.glb", 0.9),
-    ("packs/city/Tree.glb", 1.0),
-    ("packs/toon-shooter/Tree.glb", 1.0),
-    ("packs/toon-shooter/Tree-1BkD9JnKrE.glb", 1.0),
+    ("packs/nature/Pine.glb", 3.5),
+    ("packs/nature/Pine-79gmlLnweB.glb", 3.5),
+    ("packs/nature/Pine-Zt62gceKXZ.glb", 4.0),
+    ("packs/nature/Tree.glb", 4.0),
+    ("packs/nature/Tree-aVOxaHRPWe.glb", 4.5),
+    ("packs/nature/Twisted Tree.glb", 3.5),
+    ("packs/nature/Twisted Tree-8oraKn9m0x.glb", 3.5),
+    ("packs/nature/Dead Tree.glb", 3.0),
+    ("packs/nature/Dead Tree-MlmK5488ou.glb", 3.0),
+    ("packs/city/Tree.glb", 4.0),
+    ("packs/toon-shooter/Tree.glb", 3.5),
+    ("packs/toon-shooter/Tree-1BkD9JnKrE.glb", 3.5),
 ];
 
+// Bushes / ground plants: about knee to shoulder height (0.4–1.2p)
 const BUSHES: &[Prop] = &[
     ("packs/nature/Bush.glb", 0.8),
     ("packs/nature/Bush with Flowers.glb", 0.8),
-    ("packs/nature/Fern.glb", 0.7),
+    ("packs/nature/Fern.glb", 0.6),
     ("packs/nature/Plant.glb", 0.7),
-    ("packs/nature/Plant Big.glb", 0.9),
-    ("packs/nature/Plant Big-MbhbP7JrTI.glb", 0.9),
-    ("packs/city/Planter & Bushes.glb", 0.8),
-    ("packs/city/Flower Pot.glb", 0.7),
-    ("packs/nature/Flower Group.glb", 0.6),
-    ("packs/nature/Tall Grass.glb", 0.7),
+    ("packs/nature/Plant Big.glb", 1.1),
+    ("packs/nature/Plant Big-MbhbP7JrTI.glb", 1.1),
+    ("packs/city/Planter & Bushes.glb", 0.9),
+    ("packs/city/Flower Pot.glb", 0.4),
+    ("packs/nature/Flower Group.glb", 0.4),
+    ("packs/nature/Tall Grass.glb", 0.6),
 ];
 
-// Street/yard props that sell the "suburb under siege" atmosphere
+// Street/yard props: small to mid-size suburban scatter (0.3–1.2p)
 const SUBURBAN: &[Prop] = &[
-    ("packs/city/Bench.glb", 0.8),
-    ("packs/city/Trash Can.glb", 0.7),
-    ("packs/city/Fire hydrant.glb", 0.7),
-    ("packs/city/Mailbox.glb", 0.7),
+    ("packs/city/Bench.glb", 0.7),
+    ("packs/city/Trash Can.glb", 0.5),
+    ("packs/city/Fire hydrant.glb", 0.35),
+    ("packs/city/Mailbox.glb", 0.5),
     ("packs/city/Bicycle.glb", 0.8),
-    ("packs/city/Cone.glb", 0.6),
-    ("packs/city/Dumpster.glb", 0.9),
-    ("packs/city/Bus Stop.glb", 0.9),
-    ("packs/city/Traffic Light.glb", 0.8),
-    ("packs/city/Stop sign.glb", 0.7),
-    ("packs/city/Washing Line.glb", 0.8),
-    ("packs/survival/Tent.glb", 0.8),
-    ("packs/survival/Bonfire.glb", 0.7),
-    ("packs/post-apocalypse/Damaged Couch.glb", 0.8),
-    ("packs/interiors/Couch Medium.glb", 0.8),
-    // Parked vehicles – large props, but decorative only
-    ("packs/city/Car.glb", 1.0),
-    ("packs/city/Car-unqqkULtRU.glb", 1.0),
-    ("packs/city/SUV.glb", 1.0),
+    ("packs/city/Cone.glb", 0.35),
+    ("packs/city/Dumpster.glb", 1.0),
+    ("packs/city/Bus Stop.glb", 1.8),
+    ("packs/city/Traffic Light.glb", 2.0),
+    ("packs/city/Stop sign.glb", 1.5),
+    ("packs/city/Washing Line.glb", 1.2),
+    ("packs/survival/Tent.glb", 1.0),
+    ("packs/survival/Bonfire.glb", 0.5),
+    ("packs/post-apocalypse/Damaged Couch.glb", 0.6),
+    ("packs/interiors/Couch Medium.glb", 0.6),
+    // Parked vehicles
+    ("packs/city/Car.glb", 0.9),
+    ("packs/city/Car-unqqkULtRU.glb", 0.9),
+    ("packs/city/SUV.glb", 1.1),
     ("packs/city/Pickup Truck.glb", 1.0),
-    ("packs/city/Van.glb", 1.0),
-    ("packs/city/Motorcycle.glb", 0.8),
-    ("packs/toon-shooter/Broken Car.glb", 1.0),
+    ("packs/city/Van.glb", 1.2),
+    ("packs/city/Motorcycle.glb", 0.7),
+    ("packs/toon-shooter/Broken Car.glb", 0.9),
 ];
 
-// Alien-side dressing: sci-fi plants, invasion debris
+// Alien-side dressing: sci-fi plants (tall) and invasion debris (varied)
 const ALIEN_DRESSING: &[Prop] = &[
-    ("packs/space/Rock.glb", 0.8),
-    ("packs/space/Rock Large.glb", 1.0),
-    ("packs/space/Rock Large-d2VWOdthtR.glb", 1.0),
-    ("packs/space/Tree Blob.glb", 1.0),
-    ("packs/space/Tree Blob-j0byyoIGOv.glb", 1.0),
-    ("packs/space/Tree Lava.glb", 1.0),
-    ("packs/space/Tree Spikes.glb", 1.0),
-    ("packs/space/Tree Spiral.glb", 1.0),
+    ("packs/space/Rock.glb", 0.5),
+    ("packs/space/Rock Large.glb", 0.8),
+    ("packs/space/Rock Large-d2VWOdthtR.glb", 0.8),
+    ("packs/space/Tree Blob.glb", 2.5),
+    ("packs/space/Tree Blob-j0byyoIGOv.glb", 2.5),
+    ("packs/space/Tree Lava.glb", 3.0),
+    ("packs/space/Tree Spikes.glb", 3.0),
+    ("packs/space/Tree Spiral.glb", 3.0),
     ("packs/space/Plant.glb", 0.8),
     ("packs/space/Plant-VwXvoIpCHP.glb", 0.8),
-    ("packs/space/Bush.glb", 0.8),
-    ("packs/space/Bush-RfUP3gXj69.glb", 0.8),
-    ("packs/space/Grass.glb", 0.7),
-    ("packs/post-apocalypse/Traffic Cone.glb", 0.6),
-    ("packs/post-apocalypse/Trash Bag.glb", 0.7),
-    ("packs/post-apocalypse/Trash Bags.glb", 0.7),
-    ("packs/space/Pickup Crate.glb", 0.8),
-    ("packs/space/Solar Panel.glb", 0.9),
-    ("packs/space/Roof Antenna.glb", 0.8),
+    ("packs/space/Bush.glb", 0.7),
+    ("packs/space/Bush-RfUP3gXj69.glb", 0.7),
+    ("packs/space/Grass.glb", 0.5),
+    ("packs/post-apocalypse/Traffic Cone.glb", 0.35),
+    ("packs/post-apocalypse/Trash Bag.glb", 0.4),
+    ("packs/post-apocalypse/Trash Bags.glb", 0.5),
+    ("packs/space/Pickup Crate.glb", 0.7),
+    ("packs/space/Solar Panel.glb", 0.8),
+    ("packs/space/Roof Antenna.glb", 1.0),
 ];
 
-// Battle debris – mid-map where fighting has occurred
+// Battle debris: crates, barriers, barrels (0.5–1.5p)
 const COMBAT: &[Prop] = &[
-    ("packs/toon-shooter/Crate.glb", 0.8),
-    ("packs/toon-shooter/Cardboard Boxes.glb", 0.8),
-    ("packs/toon-shooter/Cardboard Boxes-rdKKO0DvMG.glb", 0.8),
+    ("packs/toon-shooter/Crate.glb", 0.7),
+    ("packs/toon-shooter/Cardboard Boxes.glb", 0.7),
+    ("packs/toon-shooter/Cardboard Boxes-rdKKO0DvMG.glb", 0.7),
     ("packs/post-apocalypse/Barrel.glb", 0.8),
-    ("packs/post-apocalypse/Pallet.glb", 0.8),
-    ("packs/post-apocalypse/Pallet Broken.glb", 0.8),
+    ("packs/post-apocalypse/Pallet.glb", 0.2),
+    ("packs/post-apocalypse/Pallet Broken.glb", 0.2),
     ("packs/toon-shooter/Barrier Single.glb", 0.9),
-    ("packs/toon-shooter/Sack Trench Small.glb", 0.9),
-    ("packs/toon-shooter/Gas Tank.glb", 0.7),
-    ("packs/toon-shooter/Dumpster.glb", 0.9),
-    ("packs/toon-shooter/Pallet.glb", 0.8),
-    ("packs/toon-shooter/Tires.glb", 0.8),
-    ("packs/post-apocalypse/Cinder Block.glb", 0.7),
+    ("packs/toon-shooter/Sack Trench Small.glb", 0.8),
+    ("packs/toon-shooter/Gas Tank.glb", 0.6),
+    ("packs/toon-shooter/Dumpster.glb", 1.0),
+    ("packs/toon-shooter/Pallet.glb", 0.2),
+    ("packs/toon-shooter/Tires.glb", 0.6),
+    ("packs/post-apocalypse/Cinder Block.glb", 0.3),
     ("packs/post-apocalypse/Plastic Barrier.glb", 0.9),
-    ("packs/post-apocalypse/Water Tower.glb", 1.0),
+    ("packs/post-apocalypse/Water Tower.glb", 2.5),
 ];
 
-// Small ground-level scatter — fills empty floor without dominating the view
+// Tiny ground-level scatter (0.05–0.25p) — fills empty floor without dominating the view
 const CLUTTER: &[Prop] = &[
-    ("packs/nature/Rock Medium.glb", 0.7),
-    ("packs/nature/Rock Medium-JQxF95498B.glb", 0.7),
-    ("packs/nature/Pebble Round.glb", 0.6),
-    ("packs/nature/Pebble Square.glb", 0.6),
-    ("packs/nature/Mushroom.glb", 0.6),
-    ("packs/nature/Mushroom Laetiporus.glb", 0.6),
-    ("packs/nature/Flower Petal.glb", 0.5),
-    ("packs/nature/Clover.glb", 0.5),
-    ("packs/city/Box.glb", 0.6),
-    ("packs/post-apocalypse/Blood Splat.glb", 0.5),
-    ("packs/toon-shooter/Debris Papers.glb", 0.6),
-    ("packs/toon-shooter/Debris Pile.glb", 0.7),
-    ("packs/city/Debris Papers.glb", 0.6),
-    ("packs/survival/Wood Log.glb", 0.7),
-    ("packs/survival/Can.glb", 0.5),
-    ("packs/survival/Gas Can.glb", 0.6),
-    ("packs/post-apocalypse/Wheel.glb", 0.7),
+    ("packs/nature/Rock Medium.glb", 0.2),
+    ("packs/nature/Rock Medium-JQxF95498B.glb", 0.2),
+    ("packs/nature/Pebble Round.glb", 0.08),
+    ("packs/nature/Pebble Square.glb", 0.08),
+    ("packs/nature/Mushroom.glb", 0.15),
+    ("packs/nature/Mushroom Laetiporus.glb", 0.15),
+    ("packs/nature/Flower Petal.glb", 0.1),
+    ("packs/nature/Clover.glb", 0.1),
+    ("packs/city/Box.glb", 0.25),
+    ("packs/post-apocalypse/Blood Splat.glb", 0.05),
+    ("packs/toon-shooter/Debris Papers.glb", 0.1),
+    ("packs/toon-shooter/Debris Pile.glb", 0.2),
+    ("packs/city/Debris Papers.glb", 0.1),
+    ("packs/survival/Wood Log.glb", 0.2),
+    ("packs/survival/Can.glb", 0.15),
+    ("packs/survival/Gas Can.glb", 0.2),
+    ("packs/post-apocalypse/Wheel.glb", 0.25),
 ];
 
 // ── Zone classification ──────────────────────────────────────────────────────
@@ -321,21 +319,23 @@ fn try_place_house(
 
 // ── Public entry point ───────────────────────────────────────────────────────
 
-pub fn generate_suburb_map(seed: u64) -> MapFile {
+pub fn generate_suburb_map(seed: u64, width: usize, height: usize) -> MapFile {
+    let w = width.max(8);
+    let h = height.max(12);
     let mut rng = Rng::new(seed);
-    let mut grid: Vec<Vec<u8>> = vec![vec![1u8; W]; H];
+    let mut grid: Vec<Vec<u8>> = vec![vec![1u8; w]; h];
 
     // Anchor points
     let player = (0usize, 0usize);
     grid[player.0][player.1] = 17;
 
     // 1–3 alien spawn points spread across the far end of row 0
-    let spawn_candidates: &[(usize, usize)] = &[
-        (0, W - 1),
-        (0, W - 3),
-        (2, W - 1),
-        (0, W - 5),
-        (4, W - 1),
+    let spawn_candidates: Vec<(usize, usize)> = vec![
+        (0, w - 1),
+        (0, w.saturating_sub(3)),
+        (2, w - 1),
+        (0, w.saturating_sub(5)),
+        (4.min(h - 1), w - 1),
     ];
     let spawn_count = rng.range(1, 4);
     let alien_spawns: Vec<(usize, usize)> = spawn_candidates[..spawn_count].to_vec();
@@ -344,8 +344,8 @@ pub fn generate_suburb_map(seed: u64) -> MapFile {
     }
 
     // Alien goal deep in the map, slightly off-center for asymmetry
-    let goal_col = W / 2 + rng.range(0, 3).wrapping_sub(1);
-    let goal = (H - 5, goal_col.min(W - 2).max(1));
+    let goal_col = w / 2 + rng.range(0, 3).wrapping_sub(1);
+    let goal = (h - 5, goal_col.min(w - 2).max(1));
     grid[goal.0][goal.1] = 9;
 
     // Place houses — 3–5 attempts, each verified against pathfinding
@@ -356,8 +356,8 @@ pub fn generate_suburb_map(seed: u64) -> MapFile {
 
     // Decorate every plain-floor tile according to its zone
     let mut decorations: Vec<DecorationItem> = Vec::new();
-    for row in 0..H {
-        for col in 0..W {
+    for row in 0..h {
+        for col in 0..w {
             // Only decorate plain floor; skip specials and void
             if grid[row][col] != 1 { continue; }
             // Keep the tile immediately around goal clear for readability
@@ -386,6 +386,8 @@ pub fn generate_suburb_map(seed: u64) -> MapFile {
     MapFile {
         generated: false,
         seed,
+        map_width: w,
+        map_height: h,
         tiles: grid,
         decorations,
     }

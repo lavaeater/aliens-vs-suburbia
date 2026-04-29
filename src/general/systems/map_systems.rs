@@ -23,6 +23,7 @@ use crate::general::components::CollisionLayer;
 use crate::general::components::map_components::{AlienGoal, AlienSpawnPoint, CurrentTile, Floor, MapModelDefinitions, Wall};
 use crate::general::events::map_events::{LoadMap, SpawnPlayer};
 use crate::general::resources::map_resources::MapGraph;
+use crate::settings::resources::GameSettings;
 use bevy::math::EulerRot;
 use bevy_wind_waker_shader::WindWakerShaderBuilder;
 use crate::assets::assets_plugin::GameAssets;
@@ -94,7 +95,7 @@ pub fn load_map_one(mut send_event: MessageWriter<LoadMap>) {
     let mut map: crate::general::components::map_components::MapFile =
         ron::from_str(&text).expect("Failed to parse assets/maps/level_01.ron");
     if map.generated {
-        map = crate::map::map_generator::generate_suburb_map(map.seed);
+        map = crate::map::map_generator::generate_suburb_map(map.seed, map.map_width, map.map_height);
     }
     send_event.write(LoadMap { map });
 }
@@ -196,6 +197,7 @@ pub fn map_loader(
     game_assets: Res<GameAssets>,
     tile_defs: Res<TileDefinitions>,
     model_defs: Res<MapModelDefinitions>,
+    game_settings: Res<GameSettings>,
 ) {
     for load_map in load_map_event_reader.read() {
         let map_file = &load_map.map;
@@ -483,12 +485,14 @@ pub fn map_loader(
                 tile_defs.floor_level + tile_defs.tile_depth,
                 tile_defs.tile_width * dec.y as f32,
             );
+            // dec.scale is expressed in player units; multiply by player_unit to get world-unit scale
+            let world_scale = dec.scale * game_settings.player_unit;
             commands.spawn((
                 Name::from(format!("Decoration {}:{} {}", dec.x, dec.y, dec.model)),
                 SceneRoot(asset_server.load(format!("{}#Scene0", dec.model))),
                 Transform::from_translation(pos)
                     .with_rotation(Quat::from_rotation_y(dec.rotation_y.to_radians()))
-                    .with_scale(bevy::math::Vec3::splat(dec.scale)),
+                    .with_scale(bevy::math::Vec3::splat(world_scale)),
             ));
         }
     }
