@@ -354,25 +354,31 @@ pub fn generate_suburb_map(seed: u64, width: usize, height: usize) -> MapFile {
         try_place_house(&mut grid, &mut rng, player, &alien_spawns, goal);
     }
 
-    // Decorate every plain-floor tile according to its zone
+    MapFile {
+        generated: false,
+        seed,
+        map_width: w,
+        map_height: h,
+        tiles: grid,
+        decorations: vec![],
+    }
+}
+
+// ── Showcase entry point ─────────────────────────────────────────────────────
+
+const ALL_PALETTES: &[&[Prop]] = &[TREES, BUSHES, SUBURBAN, ALIEN_DRESSING, COMBAT, CLUTTER];
+
+pub fn generate_showcase_map(seed: u64) -> MapFile {
+    let w: usize = 20;
+    let h: usize = 20;
+    let mut rng = Rng::new(seed);
+    let grid: Vec<Vec<u8>> = vec![vec![1u8; w]; h];
     let mut decorations: Vec<DecorationItem> = Vec::new();
+
     for row in 0..h {
         for col in 0..w {
-            // Only decorate plain floor; skip specials and void
-            if grid[row][col] != 1 { continue; }
-            // Keep the tile immediately around goal clear for readability
-            if row.abs_diff(goal.0) + col.abs_diff(goal.1) <= 1 { continue; }
-
-            let zone = classify(row, col, &grid, player, &alien_spawns);
-            let prob = match zone {
-                Zone::PlayerArea => 0.30,
-                Zone::AlienArea  => 0.35,
-                Zone::Perimeter  => 0.42,
-                Zone::Open       => 0.13,
-            };
-            if !rng.prob(prob) { continue; }
-
-            let (model, scale) = pick_prop(&mut rng, zone);
+            let palette = ALL_PALETTES[rng.range(0, ALL_PALETTES.len())];
+            let (model, scale) = *rng.pick(palette);
             decorations.push(DecorationItem {
                 x: col as i32,
                 y: row as i32,

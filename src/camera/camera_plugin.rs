@@ -1,4 +1,5 @@
 use bevy::app::{App, Plugin, PostUpdate, Update};
+use bevy::ecs::schedule::SystemCondition;
 use bevy::prelude::{in_state, IntoScheduleConfigs, OnEnter};
 use avian3d::prelude::PhysicsSystems;
 use bevy::transform::TransformSystems;
@@ -11,25 +12,25 @@ impl Plugin for StatefulCameraPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             OnEnter(GameState::InGame),
-            (
-              spawn_camera
-              // spawn_pixelated_camera,
-            )
+            spawn_camera,
         )
-            .add_systems(
-                PostUpdate,
-                camera_follow
-                    .before(TransformSystems::Propagate)
-                    .run_if(in_state(GameState::InGame)),
-            )
-            .add_systems(
-                Update,
-                (
-                    init_wall_materials,
-                    wall_occlusion_system,
-                    apply_camera_settings,
-                    // resize_pixel_canvas,
-                ).run_if(in_state(GameState::InGame)),
-            );
+        .add_systems(
+            OnEnter(GameState::ModelShowcase),
+            spawn_camera,
+        )
+        .add_systems(
+            PostUpdate,
+            camera_follow
+                .before(TransformSystems::Propagate)
+                .run_if(in_state(GameState::InGame)),
+        )
+        .add_systems(
+            Update,
+            (
+                init_wall_materials,
+                wall_occlusion_system,
+                apply_camera_settings,
+            ).run_if(in_state(GameState::InGame).or(in_state(GameState::ModelShowcase))),
+        );
     }
 }

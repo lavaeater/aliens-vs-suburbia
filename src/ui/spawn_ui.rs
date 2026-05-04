@@ -77,10 +77,40 @@ pub fn spawn_menu(commands: Commands, theme: Res<LavaTheme>) {
     );
 
     ui.add_button_observe(
+        "Model Showcase",
+        |btn| { btn.size_px(220.0, 52.0).font_size(20.0); },
+        |_: On<Activate>, mut next_state: ResMut<NextState<GameState>>| {
+            next_state.set(GameState::ModelShowcase);
+        },
+    );
+
+    ui.add_button_observe(
         "Browse Models",
         |btn| { btn.size_px(220.0, 52.0).font_size(20.0); },
         |_: On<Activate>, mut next_state: ResMut<NextState<GameState>>| {
             next_state.set(GameState::PolyPizza);
+        },
+    );
+
+    ui.build();
+}
+
+pub fn spawn_showcase_ui(commands: Commands, theme: Res<LavaTheme>) {
+    let mut ui = UIBuilder::new(commands, Some(theme.clone()));
+
+    ui.component::<StateMarker>()
+        .size_percent(100.0, 100.0)
+        .display_flex()
+        .flex_column()
+        .align_items_start()
+        .justify_start()
+        .padding_all_px(16.0);
+
+    ui.add_button_observe(
+        "Back to Menu",
+        |btn| { btn.size_px(160.0, 44.0).font_size(18.0); },
+        |_: On<Activate>, mut next_state: ResMut<NextState<GameState>>| {
+            next_state.set(GameState::Menu);
         },
     );
 

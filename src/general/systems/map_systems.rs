@@ -100,6 +100,11 @@ pub fn load_map_one(mut send_event: MessageWriter<LoadMap>) {
     send_event.write(LoadMap { map });
 }
 
+pub fn load_map_showcase(mut send_event: MessageWriter<LoadMap>) {
+    let map = crate::map::map_generator::generate_showcase_map(42);
+    send_event.write(LoadMap { map });
+}
+
 
 #[derive(Resource)]
 pub struct TileDefinitions {

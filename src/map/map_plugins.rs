@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use avian3d::prelude::{LayerMask, RigidBody};
 use pathfinding::grid::Grid;
 use std::collections::HashSet;
+use bevy::ecs::schedule::SystemCondition;
 use bevy::prelude::{in_state, IntoScheduleConfigs, OnEnter};
 use crate::alien::components::general::AlienCounter;
 use crate::game_state::GameState;
@@ -10,7 +11,7 @@ use crate::general::components::CollisionLayer;
 use crate::general::components::map_components::{ModelDefinition, MapModelDefinitions};
 use crate::general::events::map_events::{LoadMap, SpawnAlien, SpawnPlayer};
 use crate::general::resources::map_resources::MapGraph;
-use crate::general::systems::map_systems::{load_map_one, map_loader, TileDefinitions, update_current_tile_system};
+use crate::general::systems::map_systems::{load_map_one, load_map_showcase, map_loader, TileDefinitions, update_current_tile_system};
 
 pub struct NonStateMapStuff;
 
@@ -88,17 +89,17 @@ impl Plugin for NonStateMapStuff {
 pub struct StatefulMapPlugin;
 
 impl Plugin for StatefulMapPlugin {
-    //
     fn build(&self, app: &mut App) {
         app
             .add_plugins(NonStateMapStuff)
             .add_systems(OnEnter(GameState::InGame), load_map_one)
+            .add_systems(OnEnter(GameState::ModelShowcase), load_map_showcase)
             .add_systems(
                 Update, (
                     update_current_tile_system,
-                    map_loader //Will this read the event from the load_map_one system?
+                    map_loader,
                 )
-                    .run_if(in_state(GameState::InGame)),
+                    .run_if(in_state(GameState::InGame).or(in_state(GameState::ModelShowcase))),
             );
     }
 }
