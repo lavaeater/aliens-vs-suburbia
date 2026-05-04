@@ -12,3 +12,6 @@ pub struct CameraOffset(pub Vec3);
 pub struct FollowCamera {
     pub offset: Vec3
 }
+
+#[derive(Component)]
+pub struct PixelCanvas;

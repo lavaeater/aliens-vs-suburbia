@@ -23,7 +23,9 @@ use crate::general::components::CollisionLayer;
 use crate::general::components::map_components::{AlienGoal, AlienSpawnPoint, CurrentTile, Floor, MapModelDefinitions, Wall};
 use crate::general::events::map_events::{LoadMap, SpawnPlayer};
 use crate::general::resources::map_resources::MapGraph;
+use crate::settings::resources::GameSettings;
 use bevy::math::EulerRot;
+use bevy_wind_waker_shader::WindWakerShaderBuilder;
 use crate::assets::assets_plugin::GameAssets;
 use crate::building::systems::ToWorldCoordinates;
 use crate::player::components::IsBuildIndicator;
@@ -87,10 +89,20 @@ pub struct MapDef {
     pub tiles: Vec<MapTile>,
 } //No data needed now
 
-pub fn load_map_one(
-    mut send_event: MessageWriter<LoadMap>
-) {
-    send_event.write(LoadMap {});
+pub fn load_map_one(mut send_event: MessageWriter<LoadMap>) {
+    let text = std::fs::read_to_string("assets/maps/level_01.ron")
+        .expect("assets/maps/level_01.ron not found");
+    let mut map: crate::general::components::map_components::MapFile =
+        ron::from_str(&text).expect("Failed to parse assets/maps/level_01.ron");
+    if map.generated {
+        map = crate::map::map_generator::generate_suburb_map(map.seed, map.map_width, map.map_height);
+    }
+    send_event.write(LoadMap { map });
+}
+
+pub fn load_map_showcase(mut send_event: MessageWriter<LoadMap>) {
+    let map = crate::map::map_generator::generate_showcase_map(42);
+    send_event.write(LoadMap { map });
 }
 
 
@@ -190,37 +202,11 @@ pub fn map_loader(
     game_assets: Res<GameAssets>,
     tile_defs: Res<TileDefinitions>,
     model_defs: Res<MapModelDefinitions>,
+    game_settings: Res<GameSettings>,
 ) {
-    for _load_map in load_map_event_reader.read() {
-        let m = [
-            [17, 1, 1, 1,1, 1, 5],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 9, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-        ];
+    for load_map in load_map_event_reader.read() {
+        let map_file = &load_map.map;
+        let m = &map_file.tiles;
         let rows = m.len();
         let cols = m[0].len();
         map_graph.path_finding_grid = Grid::new(cols, rows);
@@ -345,6 +331,7 @@ pub fn map_loader(
                         tile_defs.create_collider(floor_model_def.width * w, floor_model_def.height, floor_model_def.depth * h),
                         Position::from(center),
                         floor_model_def.create_collision_layers(),
+                        WindWakerShaderBuilder::default().build(),
                     ));
                 }
             }
@@ -393,6 +380,7 @@ pub fn map_loader(
                             Position::from(Vec3::new(center_x, -tile_defs.wall_height, z)),
                             Rotation::from(tile_defs.get_wall_rotation(dir)),
                             wall_model_def.create_collision_layers(),
+                            WindWakerShaderBuilder::default().build(),
                         ));
                     }
                 }
@@ -423,6 +411,7 @@ pub fn map_loader(
                             Position::from(Vec3::new(x, -tile_defs.wall_height, center_z)),
                             Rotation::from(tile_defs.get_wall_rotation(dir)),
                             wall_model_def.create_collision_layers(),
+                            WindWakerShaderBuilder::default().build(),
                         ));
                     }
                 }
@@ -468,6 +457,7 @@ pub fn map_loader(
                     AlienSpawnPoint::new(2.0),
                     SceneRoot(game_assets.alien_construct.clone()),
                     RigidBody::Static,
+                    WindWakerShaderBuilder::default().build(),
                     Collider::cuboid(0.5, 0.5, 0.45),
                     Position::from((tile.x as usize, tile.y as usize).to_world_coords(&tile_defs) + Vec3::new(0.0, -tile_defs.wall_height, 0.0)),
                     CollisionLayers::new([CollisionLayer::AlienSpawnPoint], [CollisionLayer::Player]),
@@ -480,6 +470,7 @@ pub fn map_loader(
                     AlienGoal::new(tile.x as usize, tile.y as usize),
                     SceneRoot(game_assets.alien_construct.clone()),
                     RigidBody::Static,
+                    WindWakerShaderBuilder::default().build(),
                     Collider::cuboid(0.5, 0.5, 0.45),
                     Position::from((tile.x as usize, tile.y as usize).to_world_coords(&tile_defs) + Vec3::new(0.0, -tile_defs.wall_height, 0.0)),
                     CollisionLayers::new([CollisionLayer::AlienGoal], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
@@ -491,6 +482,23 @@ pub fn map_loader(
                     position: (tile.x as usize, tile.y as usize).to_world_coords(&tile_defs) + Vec3::new(0.0, 1.0, 0.0),
                 });
             }
+        }
+
+        for dec in &map_file.decorations {
+            let pos = Vec3::new(
+                tile_defs.tile_width * dec.x as f32,
+                tile_defs.floor_level + tile_defs.tile_depth,
+                tile_defs.tile_width * dec.y as f32,
+            );
+            // dec.scale is expressed in player units; multiply by player_unit to get world-unit scale
+            let world_scale = dec.scale * game_settings.player_unit;
+            commands.spawn((
+                Name::from(format!("Decoration {}:{} {}", dec.x, dec.y, dec.model)),
+                SceneRoot(asset_server.load(format!("{}#Scene0", dec.model))),
+                Transform::from_translation(pos)
+                    .with_rotation(Quat::from_rotation_y(dec.rotation_y.to_radians()))
+                    .with_scale(bevy::math::Vec3::splat(world_scale)),
+            ));
         }
     }
 }

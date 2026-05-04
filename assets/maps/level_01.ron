@@ -1,0 +1,9 @@
+// Procedurally generated suburban level.
+// Change seed for a different layout; set generated: false and fill in tiles/decorations to hand-craft.
+// map_width / map_height control the generated grid size (minimum 8x12).
+(
+    generated: true,
+    seed: 7,
+    map_width: 20,
+    map_height: 32,
+)

@@ -4,6 +4,7 @@ use bevy::math::{Vec2, Vec3, Vec3Swizzles};
 use bevy::prelude::{AlphaMode, Assets, Children, Color, Commands, Component, Entity, MeshMaterial3d, MessageReader, MessageWriter, Name, Query, Res, ResMut, StandardMaterial, With, Without};
 use bevy::scene::{SceneRoot, SceneInstance, SceneSpawner};
 use avian3d::prelude::{Collider, CollisionLayers, LockedAxes, Position, RigidBody, Rotation, Sensor};
+use bevy_wind_waker_shader::WindWakerShaderBuilder;
 use crate::control::components::{ControlCommand, CharacterControl};
 use crate::general::components::{CollisionLayer, Health};
 use crate::general::components::map_components::{CurrentTile, MapModelDefinitions};
@@ -312,6 +313,7 @@ pub fn build_tower_system(
                     TowerSensor {},
                     TowerShooter::new(20.0),
                     Sensor,
+                    WindWakerShaderBuilder::default().build(),
                 ));
             });
         }

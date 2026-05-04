@@ -2,6 +2,42 @@ use bevy::prelude::{Component, Resource};
 use bevy::reflect::Reflect;
 use std::collections::HashMap;
 use avian3d::prelude::{CollisionLayers, LayerMask, RigidBody};
+use serde::Deserialize;
+
+#[derive(Deserialize, Clone, Debug)]
+pub struct DecorationItem {
+    pub x: i32,
+    pub y: i32,
+    /// Path relative to `assets/`, e.g. `"packs/nature/Pine.glb"`. `#Scene0` is appended automatically.
+    pub model: String,
+    pub rotation_y: f32,
+    #[serde(default = "default_scale")]
+    pub scale: f32,
+}
+
+fn default_scale() -> f32 { 1.0 }
+
+fn default_map_width() -> usize { 14 }
+fn default_map_height() -> usize { 24 }
+
+#[derive(Deserialize, Clone, Debug, Default)]
+pub struct MapFile {
+    /// When true, `tiles` and `decorations` are ignored and the map is procedurally generated from `seed`.
+    #[serde(default)]
+    pub generated: bool,
+    #[serde(default)]
+    pub seed: u64,
+    /// Procedural map dimensions. Only used when `generated: true`.
+    #[serde(default = "default_map_width")]
+    pub map_width: usize,
+    #[serde(default = "default_map_height")]
+    pub map_height: usize,
+    /// Row-major grid; 0=void, 1=floor, 5=alien spawn, 9=alien goal, 17=player spawn.
+    #[serde(default)]
+    pub tiles: Vec<Vec<u8>>,
+    #[serde(default)]
+    pub decorations: Vec<DecorationItem>,
+}
 
 #[derive(Component)]
 pub struct Wall {}

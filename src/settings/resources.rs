@@ -24,6 +24,11 @@ pub struct GameSettings {
     pub yaw_degrees: f32,
     #[serde(default = "default_speed")]
     pub player_speed_multiplier: f32,
+    /// One "player unit" (p) in world space. Set to the player character's visual height.
+    /// All decoration scales in the map are expressed as multiples of this value.
+    /// E.g. trees scaled 3–4p, bushes 0.5–1p, clutter 0.1–0.25p.
+    #[serde(default = "default_player_unit")]
+    pub player_unit: f32,
 }
 
 fn default_projection() -> ProjectionMode { ProjectionMode::Orthographic }
@@ -31,6 +36,7 @@ fn default_zoom() -> f32 { 8.0 }
 fn default_pitch() -> f32 { -45.0 }
 fn default_yaw() -> f32 { 45.0 }
 fn default_speed() -> f32 { 1.0 }
+fn default_player_unit() -> f32 { 1.0 }
 
 impl Default for GameSettings {
     fn default() -> Self {
@@ -40,6 +46,7 @@ impl Default for GameSettings {
             pitch_degrees: default_pitch(),
             yaw_degrees: default_yaw(),
             player_speed_multiplier: default_speed(),
+            player_unit: default_player_unit(),
         }
     }
 }

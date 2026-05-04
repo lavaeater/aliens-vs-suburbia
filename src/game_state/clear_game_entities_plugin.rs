@@ -7,7 +7,8 @@ pub struct ClearGameEntitiesPlugin;
 impl Plugin for ClearGameEntitiesPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_systems(OnExit(GameState::InGame), clear_game_entities);
+            .add_systems(OnExit(GameState::InGame), clear_game_entities)
+            .add_systems(OnExit(GameState::ModelShowcase), clear_game_entities);
     }
 }
 

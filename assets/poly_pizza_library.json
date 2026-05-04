@@ -1,0 +1,396 @@
+{
+  "entries": {
+    "ZwF0K7WBmu": {
+      "model": {
+        "ID": "ZwF0K7WBmu",
+        "Title": "Adventurer",
+        "Description": null,
+        "Attribution": "\"Adventurer\" by Quaternius, https://poly.pizza/m/ZwF0K7WBmu. Licence at https://creativecommons.org/publicdomain/zero/1.0/",
+        "Thumbnail": "https://static.poly.pizza/69689495-028d-4b81-8678-792338a5693e.webp",
+        "Download": "https://static.poly.pizza/69689495-028d-4b81-8678-792338a5693e.glb",
+        "Tri Count": 3452,
+        "Creator": {
+          "Username": "Quaternius"
+        },
+        "Category": "People & Characters",
+        "Licence": "CC0 1.0",
+        "Animated": true,
+        "Orbit": {
+          "phi": "1.35630",
+          "radius": "100%",
+          "theta": "0.25227"
+        }
+      },
+      "local_glb": "poly_pizza_cache/ZwF0K7WBmu.glb#Scene0",
+      "tags": [
+        "player"
+      ]
+    },
+    "oAArCNHjFB": {
+      "model": {
+        "ID": "oAArCNHjFB",
+        "Title": "Soldier",
+        "Description": null,
+        "Attribution": "\"Soldier\" by Quaternius, https://poly.pizza/m/oAArCNHjFB. Licence at https://creativecommons.org/licenses/by/3.0",
+        "Thumbnail": "https://static.poly.pizza/66a55d04-4286-44a3-b289-0d774c27db5b.webp",
+        "Download": "https://static.poly.pizza/66a55d04-4286-44a3-b289-0d774c27db5b.glb",
+        "Tri Count": 4400,
+        "Creator": {
+          "Username": "Quaternius"
+        },
+        "Category": "People & Characters",
+        "Licence": "CC-BY 3.0",
+        "Animated": true,
+        "Orbit": {
+          "phi": "1.34053",
+          "radius": "100%",
+          "theta": "0.11037"
+        }
+      },
+      "local_glb": "poly_pizza_cache/oAArCNHjFB.glb#Scene0",
+      "tags": [
+        "player"
+      ]
+    },
+    "E8079Ahx7k": {
+      "model": {
+        "ID": "E8079Ahx7k",
+        "Title": "Worker",
+        "Description": null,
+        "Attribution": "\"Worker\" by Quaternius, https://poly.pizza/m/E8079Ahx7k. Licence at https://creativecommons.org/licenses/by/3.0",
+        "Thumbnail": "https://static.poly.pizza/c0253218-85f2-4d67-b3f2-a4611a7901fe.webp",
+        "Download": "https://static.poly.pizza/c0253218-85f2-4d67-b3f2-a4611a7901fe.glb",
+        "Tri Count": 3422,
+        "Creator": {
+          "Username": "Quaternius"
+        },
+        "Category": "People & Characters",
+        "Licence": "CC-BY 3.0",
+        "Animated": true,
+        "Orbit": {
+          "phi": "1.34053",
+          "radius": "100%",
+          "theta": "0.11037"
+        }
+      },
+      "local_glb": "poly_pizza_cache/E8079Ahx7k.glb#Scene0",
+      "tags": [
+        "player"
+      ]
+    },
+    "8wDmuvrSya": {
+      "model": {
+        "ID": "8wDmuvrSya",
+        "Title": "Rock Path Square Wide",
+        "Description": null,
+        "Attribution": "\"Rock Path Square Wide\" by Quaternius, https://poly.pizza/m/8wDmuvrSya. Licence at https://creativecommons.org/publicdomain/zero/1.0/",
+        "Thumbnail": "https://static.poly.pizza/d4b8dc53-4a35-4e09-bac2-4eda41c07d48.webp",
+        "Download": "https://static.poly.pizza/d4b8dc53-4a35-4e09-bac2-4eda41c07d48.glb",
+        "Tri Count": 2256,
+        "Creator": {
+          "Username": "Quaternius"
+        },
+        "Category": "Nature",
+        "Licence": "CC0 1.0",
+        "Animated": false,
+        "Orbit": {
+          "phi": "0.93424",
+          "radius": "100%",
+          "theta": "-0.27908"
+        }
+      },
+      "local_glb": "poly_pizza_cache/8wDmuvrSya.glb#Scene0",
+      "tags": [
+        "path"
+      ]
+    },
+    "y9KWOVG21R": {
+      "model": {
+        "ID": "y9KWOVG21R",
+        "Title": "Hooded Adventurer",
+        "Description": " ",
+        "Attribution": "\"Hooded Adventurer\" by Quaternius, https://poly.pizza/m/y9KWOVG21R. Licence at https://creativecommons.org/publicdomain/zero/1.0/",
+        "Thumbnail": "https://static.poly.pizza/3186b8e9-afd5-4d48-846c-b2b530cd23e2.webp",
+        "Download": "https://static.poly.pizza/3186b8e9-afd5-4d48-846c-b2b530cd23e2.glb",
+        "Tri Count": 3412,
+        "Creator": {
+          "Username": "Quaternius"
+        },
+        "Category": "People & Characters",
+        "Licence": "CC0 1.0",
+        "Animated": true,
+        "Orbit": {
+          "phi": "1.24304",
+          "radius": "2.6509628186239045",
+          "theta": "0.76438"
+        }
+      },
+      "local_glb": "poly_pizza_cache/y9KWOVG21R.glb#Scene0",
+      "tags": [
+        "player"
+      ]
+    },
+    "igSu0cPoBz": {
+      "model": {
+        "ID": "igSu0cPoBz",
+        "Title": "Pine",
+        "Description": null,
+        "Attribution": "\"Pine\" by Quaternius, https://poly.pizza/m/igSu0cPoBz. Licence at https://creativecommons.org/publicdomain/zero/1.0/",
+        "Thumbnail": "https://static.poly.pizza/712aaefa-ae7f-4cb3-8834-a1b8860df3b2.webp",
+        "Download": "https://static.poly.pizza/712aaefa-ae7f-4cb3-8834-a1b8860df3b2.glb",
+        "Tri Count": 1646,
+        "Creator": {
+          "Username": "Quaternius"
+        },
+        "Category": "Nature",
+        "Licence": "CC0 1.0",
+        "Animated": false,
+        "Orbit": {
+          "phi": "0.93424",
+          "radius": "100%",
+          "theta": "-0.27908"
+        }
+      },
+      "local_glb": "poly_pizza_cache/igSu0cPoBz.glb#Scene0",
+      "tags": [
+        "tree"
+      ]
+    },
+    "sOUciDsoVV": {
+      "model": {
+        "ID": "sOUciDsoVV",
+        "Title": "Suit",
+        "Description": null,
+        "Attribution": "\"Suit\" by Quaternius, https://poly.pizza/m/sOUciDsoVV. Licence at https://creativecommons.org/licenses/by/3.0",
+        "Thumbnail": "https://static.poly.pizza/1bd7759c-ab76-4178-8fe6-7706dffa7d5f.webp",
+        "Download": "https://static.poly.pizza/1bd7759c-ab76-4178-8fe6-7706dffa7d5f.glb",
+        "Tri Count": 3956,
+        "Creator": {
+          "Username": "Quaternius"
+        },
+        "Category": "People & Characters",
+        "Licence": "CC-BY 3.0",
+        "Animated": true,
+        "Orbit": {
+          "phi": "1.34053",
+          "radius": "100%",
+          "theta": "0.11037"
+        }
+      },
+      "local_glb": "poly_pizza_cache/sOUciDsoVV.glb#Scene0",
+      "tags": [
+        "player"
+      ]
+    },
+    "699sFuLCN2": {
+      "model": {
+        "ID": "699sFuLCN2",
+        "Title": "Pine",
+        "Description": null,
+        "Attribution": "\"Pine\" by Quaternius, https://poly.pizza/m/699sFuLCN2. Licence at https://creativecommons.org/publicdomain/zero/1.0/",
+        "Thumbnail": "https://static.poly.pizza/c55b8641-4679-4a85-8bd8-2a20e79abecd.webp",
+        "Download": "https://static.poly.pizza/c55b8641-4679-4a85-8bd8-2a20e79abecd.glb",
+        "Tri Count": 4502,
+        "Creator": {
+          "Username": "Quaternius"
+        },
+        "Category": "Nature",
+        "Licence": "CC0 1.0",
+        "Animated": false,
+        "Orbit": {
+          "phi": "0.93424",
+          "radius": "100%",
+          "theta": "-0.27908"
+        }
+      },
+      "local_glb": "poly_pizza_cache/699sFuLCN2.glb#Scene0",
+      "tags": [
+        "tree"
+      ]
+    },
+    "KZdEP3uUpa": {
+      "model": {
+        "ID": "KZdEP3uUpa",
+        "Title": "Rock Medium",
+        "Description": null,
+        "Attribution": "\"Rock Medium\" by Quaternius, https://poly.pizza/m/KZdEP3uUpa. Licence at https://creativecommons.org/publicdomain/zero/1.0/",
+        "Thumbnail": "https://static.poly.pizza/aaf0aaa7-c244-430a-908b-2ac57567d81c.webp",
+        "Download": "https://static.poly.pizza/aaf0aaa7-c244-430a-908b-2ac57567d81c.glb",
+        "Tri Count": 244,
+        "Creator": {
+          "Username": "Quaternius"
+        },
+        "Category": "Nature",
+        "Licence": "CC0 1.0",
+        "Animated": false,
+        "Orbit": {
+          "phi": "0.93424",
+          "radius": "100%",
+          "theta": "-0.27908"
+        }
+      },
+      "local_glb": "poly_pizza_cache/KZdEP3uUpa.glb#Scene0",
+      "tags": [
+        "rock"
+      ]
+    },
+    "Zt62gceKXZ": {
+      "model": {
+        "ID": "Zt62gceKXZ",
+        "Title": "Pine",
+        "Description": null,
+        "Attribution": "\"Pine\" by Quaternius, https://poly.pizza/m/Zt62gceKXZ. Licence at https://creativecommons.org/publicdomain/zero/1.0/",
+        "Thumbnail": "https://static.poly.pizza/be462d46-2e48-401e-8da9-2f4d9bc9df0c.webp",
+        "Download": "https://static.poly.pizza/be462d46-2e48-401e-8da9-2f4d9bc9df0c.glb",
+        "Tri Count": 3648,
+        "Creator": {
+          "Username": "Quaternius"
+        },
+        "Category": "Nature",
+        "Licence": "CC0 1.0",
+        "Animated": false,
+        "Orbit": {
+          "phi": "0.93424",
+          "radius": "100%",
+          "theta": "-0.27908"
+        }
+      },
+      "local_glb": "poly_pizza_cache/Zt62gceKXZ.glb#Scene0",
+      "tags": [
+        "tree"
+      ]
+    },
+    "eEcIqgJzJ1": {
+      "model": {
+        "ID": "eEcIqgJzJ1",
+        "Title": "Chest",
+        "Description": null,
+        "Attribution": "\"Chest\" by Quaternius, https://poly.pizza/m/eEcIqgJzJ1. Licence at https://creativecommons.org/publicdomain/zero/1.0/",
+        "Thumbnail": "https://static.poly.pizza/0bf6e981-5d81-446b-aeda-1908bc8d7990.webp",
+        "Download": "https://static.poly.pizza/0bf6e981-5d81-446b-aeda-1908bc8d7990.glb",
+        "Tri Count": 7406,
+        "Creator": {
+          "Username": "Quaternius"
+        },
+        "Category": "Objects",
+        "Licence": "CC0 1.0",
+        "Animated": true,
+        "Orbit": {
+          "phi": "1.30900",
+          "radius": "100%",
+          "theta": "0.00000"
+        }
+      },
+      "local_glb": "poly_pizza_cache/eEcIqgJzJ1.glb#Scene0",
+      "tags": [
+        "loot",
+        "chest"
+      ]
+    },
+    "s1OJ3bBzqc": {
+      "model": {
+        "ID": "s1OJ3bBzqc",
+        "Title": "Rock Medium",
+        "Description": null,
+        "Attribution": "\"Rock Medium\" by Quaternius, https://poly.pizza/m/s1OJ3bBzqc. Licence at https://creativecommons.org/publicdomain/zero/1.0/",
+        "Thumbnail": "https://static.poly.pizza/be5fef3a-4fa1-4d08-b2d4-82e02284588d.webp",
+        "Download": "https://static.poly.pizza/be5fef3a-4fa1-4d08-b2d4-82e02284588d.glb",
+        "Tri Count": 342,
+        "Creator": {
+          "Username": "Quaternius"
+        },
+        "Category": "Nature",
+        "Licence": "CC0 1.0",
+        "Animated": false,
+        "Orbit": {
+          "phi": "0.93424",
+          "radius": "100%",
+          "theta": "-0.27908"
+        }
+      },
+      "local_glb": "poly_pizza_cache/s1OJ3bBzqc.glb#Scene0",
+      "tags": [
+        "rock"
+      ]
+    },
+    "Mo2ky6vkf8": {
+      "model": {
+        "ID": "Mo2ky6vkf8",
+        "Title": "Demon",
+        "Description": null,
+        "Attribution": "\"Demon\" by Quaternius, https://poly.pizza/m/Mo2ky6vkf8. Licence at https://creativecommons.org/publicdomain/zero/1.0/",
+        "Thumbnail": "https://static.poly.pizza/c2e39eb4-4b8e-4d31-b014-d637bf4e15c6.webp",
+        "Download": "https://static.poly.pizza/c2e39eb4-4b8e-4d31-b014-d637bf4e15c6.glb",
+        "Tri Count": 3712,
+        "Creator": {
+          "Username": "Quaternius"
+        },
+        "Category": "Animals",
+        "Licence": "CC0 1.0",
+        "Animated": true,
+        "Orbit": {
+          "phi": "1.37207",
+          "radius": "100%",
+          "theta": "-0.03153"
+        }
+      },
+      "local_glb": "poly_pizza_cache/Mo2ky6vkf8.glb#Scene0",
+      "tags": [
+        "monster"
+      ]
+    },
+    "mPDR0L5uKx": {
+      "model": {
+        "ID": "mPDR0L5uKx",
+        "Title": "Robot Enemy Large",
+        "Description": null,
+        "Attribution": "\"Robot Enemy Large\" by Quaternius, https://poly.pizza/m/mPDR0L5uKx. Licence at https://creativecommons.org/publicdomain/zero/1.0/",
+        "Thumbnail": "https://static.poly.pizza/86da7c34-9196-43b3-975d-db2325c83a65.webp",
+        "Download": "https://static.poly.pizza/86da7c34-9196-43b3-975d-db2325c83a65.glb",
+        "Tri Count": 4256,
+        "Creator": {
+          "Username": "Quaternius"
+        },
+        "Category": "People & Characters",
+        "Licence": "CC0 1.0",
+        "Animated": true,
+        "Orbit": {
+          "phi": "1.31687",
+          "radius": "100%",
+          "theta": "-0.20472"
+        }
+      },
+      "local_glb": "poly_pizza_cache/mPDR0L5uKx.glb#Scene0",
+      "tags": [
+        "robot",
+        "monster"
+      ]
+    },
+    "8oraKn9m0x": {
+      "model": {
+        "ID": "8oraKn9m0x",
+        "Title": "Twisted Tree",
+        "Description": null,
+        "Attribution": "\"Twisted Tree\" by Quaternius, https://poly.pizza/m/8oraKn9m0x. Licence at https://creativecommons.org/publicdomain/zero/1.0/",
+        "Thumbnail": "https://static.poly.pizza/24873d46-c90a-4c3e-8981-a98d3bd816c5.webp",
+        "Download": "https://static.poly.pizza/24873d46-c90a-4c3e-8981-a98d3bd816c5.glb",
+        "Tri Count": 10089,
+        "Creator": {
+          "Username": "Quaternius"
+        },
+        "Category": "Nature",
+        "Licence": "CC0 1.0",
+        "Animated": false,
+        "Orbit": {
+          "phi": "1.30900",
+          "radius": "100%",
+          "theta": "0.00000"
+        }
+      },
+      "local_glb": "poly_pizza_cache/8oraKn9m0x.glb#Scene0",
+      "tags": [
+        "tree"
+      ]
+    }
+  }
+}
