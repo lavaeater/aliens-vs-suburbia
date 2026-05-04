@@ -30,6 +30,8 @@ mod inspection;
 pub(crate) mod settings;
 pub(crate) mod model_settings;
 pub(crate) mod poly_pizza;
+pub(crate) mod character_creator;
+pub(crate) mod sprite_billboard;
 
 
 fn main() {

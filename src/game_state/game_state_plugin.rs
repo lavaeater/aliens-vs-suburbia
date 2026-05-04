@@ -26,6 +26,8 @@ use crate::model_settings::plugin::ModelSettingsPlugin;
 use crate::towers::systems::shoot_alien_system;
 use crate::ui::ui_plugin::UiPlugin;
 use crate::poly_pizza::plugin::PolyPizzaPlugin;
+use crate::character_creator::plugin::CharacterCreatorPlugin;
+use crate::sprite_billboard::plugin::SpriteBillboardPlugin;
 
 pub struct GamePlugin;
 
@@ -54,6 +56,8 @@ impl Plugin for GamePlugin {
                 SettingsPlugin,
                 ModelSettingsPlugin,
                 PolyPizzaPlugin,
+                CharacterCreatorPlugin,
+                SpriteBillboardPlugin,
             ))
             .add_systems(
                 OnEnter(GameState::InGame),

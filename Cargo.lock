@@ -118,6 +118,7 @@ dependencies = [
  "bevy_wind_waker_shader",
  "dotenvy",
  "flagset",
+ "image",
  "itertools 0.14.0",
  "lava_ui_builder",
  "pathfinding",
