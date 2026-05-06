@@ -104,6 +104,7 @@ pub fn recompose_character_system(
     mut images: ResMut<Assets<Image>>,
 ) {
     if !config.is_changed() { return; }
+    if config.body_type.is_empty() { return; }
 
     let Some(idle) = composite_anim(&config, "idle.png") else {
         warn!("Failed to composite idle animation — skipping.");

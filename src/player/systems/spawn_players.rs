@@ -70,6 +70,7 @@ pub fn spawn_players(
 
             let mut entity_cmds = commands.spawn((
                 pos,
+                Visibility::default(),
                 Collider::cuboid(0.5, 0.5, 0.45),
                 PlayerBundle::new(
                     "player",

@@ -1,9 +1,9 @@
 #import bevy_pbr::forward_io::VertexOutput
 
-@group(2) @binding(0) var sprite_texture: texture_2d<f32>;
-@group(2) @binding(1) var sprite_sampler: sampler;
+@group(3) @binding(0) var sprite_texture: texture_2d<f32>;
+@group(3) @binding(1) var sprite_sampler: sampler;
 // uv_rect: (offset_u, offset_v, width_u, height_v) all in [0..1] UV space
-@group(2) @binding(2) var<uniform> uv_rect: vec4<f32>;
+@group(3) @binding(2) var<uniform> uv_rect: vec4<f32>;
 
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
