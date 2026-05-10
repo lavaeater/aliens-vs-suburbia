@@ -19,6 +19,7 @@ ureq = { version = "2", features = ["json"] }
 dotenvy = "0.15"
 urlencoding = "2"
 bevy_wind_waker_shader = "0.6.0"
+image = { version = "0.25", default-features = false, features = ["png"] }
 
 # Enable max optimizations for dependencies, but not for our code:h
 [profile.dev.package."*"]

@@ -77,6 +77,14 @@ pub fn spawn_menu(commands: Commands, theme: Res<LavaTheme>) {
     );
 
     ui.add_button_observe(
+        "Create Character",
+        |btn| { btn.size_px(220.0, 52.0).font_size(20.0); },
+        |_: On<Activate>, mut next_state: ResMut<NextState<GameState>>| {
+            next_state.set(GameState::CharacterCreator);
+        },
+    );
+
+    ui.add_button_observe(
         "Model Showcase",
         |btn| { btn.size_px(220.0, 52.0).font_size(20.0); },
         |_: On<Activate>, mut next_state: ResMut<NextState<GameState>>| {

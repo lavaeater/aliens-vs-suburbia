@@ -10,5 +10,6 @@ pub enum GameState {
     Menu,
     InGame,
     ModelShowcase,
+    CharacterCreator,
     PolyPizza,
 }
