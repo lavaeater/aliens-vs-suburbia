@@ -32,6 +32,7 @@ pub(crate) mod model_settings;
 pub(crate) mod poly_pizza;
 pub(crate) mod character_creator;
 pub(crate) mod sprite_billboard;
+pub(crate) mod asset_browser;
 
 
 fn main() {

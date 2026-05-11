@@ -12,4 +12,5 @@ pub enum GameState {
     ModelShowcase,
     CharacterCreator,
     PolyPizza,
+    AssetBrowser,
 }
