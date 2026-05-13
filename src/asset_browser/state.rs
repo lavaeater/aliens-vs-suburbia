@@ -63,7 +63,6 @@ impl AssetBrowserState {
         self.anim_node_indices.clear();
         self.anim_names.clear();
         self.mesh_nodes.clear();
-        self.hidden_nodes.clear();
         self.nodes_dirty = false;
     }
 
