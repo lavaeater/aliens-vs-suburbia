@@ -174,6 +174,7 @@ pub fn apply_node_visibility(
     state.nodes_dirty = false;
 
     for (name, mut vis) in named_entities.iter_mut() {
+        if name.contains("Character_") { continue; }
         if state.mesh_nodes.iter().any(|n| n == name.as_str()) {
             *vis = if state.hidden_nodes.contains(name.as_str()) {
                 Visibility::Hidden

@@ -317,6 +317,7 @@ pub fn rebuild_node_list(
     commands.entity(container).despawn_related::<Children>();
 
     let nodes: Vec<(String, bool)> = state.mesh_nodes.iter()
+        .filter(|n| !n.contains("Character_"))
         .map(|n| (n.clone(), state.hidden_nodes.contains(n)))
         .collect();
 
