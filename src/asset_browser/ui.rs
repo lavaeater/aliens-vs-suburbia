@@ -71,7 +71,7 @@ pub fn spawn_asset_browser_ui(
 
         left.with_child(|lbl| {
             lbl.insert_bundle(lava_ui_builder::label(
-                "[PgUp/PgDn] jump  [T] toon  [Esc] back",
+                "[PgUp/PgDn] jump  [Esc] back",
                 &TextTheme {
                     label_size: 11.0,
                     label_color: Color::srgb(0.4, 0.55, 0.4),
@@ -166,10 +166,6 @@ pub fn handle_key_input(
             Key::PageDown => state.page_down(),
             Key::Enter => state.load_requested = true,
             Key::Escape => next_state.set(GameState::Menu),
-            Key::Character(c) if c.eq_ignore_ascii_case("t") => {
-                state.toon_shader = !state.toon_shader;
-                state.load_requested = true;
-            }
             Key::Character(c) if c == "]" => state.anim_next(),
             Key::Character(c) if c == "[" => state.anim_prev(),
             _ => {}
@@ -309,7 +305,7 @@ pub fn scroll_to_selection(
 }
 
 pub fn rebuild_node_list(
-    mut state: ResMut<AssetBrowserState>,
+    state: ResMut<AssetBrowserState>,
     mut commands: Commands,
     container_q: Query<Entity, With<NodeListContainer>>,
 ) {

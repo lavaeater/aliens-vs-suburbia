@@ -2,6 +2,7 @@ use bevy::app::{App, PluginGroup};
 use bevy::{DefaultPlugins, log};
 use bevy::log::LogPlugin;
 use avian3d::prelude::PhysicsPlugins;
+use bevy_wind_waker_shader::flat::FlatShaderPlugin;
 use crate::ai::components::approach_and_attack_player_components::ApproachAndAttackPlayerData;
 use crate::ai::components::avoid_wall_components::AvoidWallsData;
 use camera::components::CameraOffset;
@@ -48,6 +49,7 @@ fn main() {
                     ..Default::default()
                 }))
         .add_plugins(PhysicsPlugins::default())
+        .add_plugins(FlatShaderPlugin::global())
         .add_plugins(GamePlugin)
         .run();
 }

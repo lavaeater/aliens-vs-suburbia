@@ -1,6 +1,5 @@
 use bevy::gltf::{Gltf, GltfNode};
 use bevy::prelude::*;
-use bevy_wind_waker_shader::WindWakerShaderBuilder;
 use crate::asset_browser::state::AssetBrowserState;
 use crate::asset_browser::ui::AssetAnimLabel;
 use crate::ui::spawn_ui::StateMarker;
@@ -66,24 +65,20 @@ pub fn handle_model_load(
         let handle: Handle<Scene> = asset_server.load(
             GltfAssetLabel::Scene(0).from_asset(path.clone()),
         );
-        let entity = spawn_viewer_model(&mut commands, handle, state.toon_shader);
+        let entity = spawn_viewer_model(&mut commands, handle);
         state.viewer_entity = Some(entity);
         state.reset_anim();
         state.gltf_handle = Some(asset_server.load(path));
     }
 }
 
-fn spawn_viewer_model(commands: &mut Commands, handle: Handle<Scene>, toon: bool) -> Entity {
-    let mut ec = commands.spawn((
+fn spawn_viewer_model(commands: &mut Commands, handle: Handle<Scene>) -> Entity {
+    commands.spawn((
         SceneRoot(handle),
         Transform::from_xyz(0.0, 0.0, 0.0),
         AssetBrowserViewerModel,
         StateMarker,
-    ));
-    if toon {
-        ec.insert(WindWakerShaderBuilder::default().build());
-    }
-    ec.id()
+    )).id()
 }
 
 pub fn orbit_viewer(
