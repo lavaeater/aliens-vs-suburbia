@@ -52,7 +52,7 @@ fn build_combined_sheet(idle: &RgbaImage, walk: &RgbaImage) -> RgbaImage {
     let mut sheet = RgbaImage::new(w, h);
 
     // Copy idle (128×256) into left portion.
-    let idle_w = (IDLE_FRAMES * TILE_PX);
+    let idle_w = IDLE_FRAMES * TILE_PX;
     for y in 0..h {
         for x in 0..idle_w {
             if x < idle.width() && y < idle.height() {
@@ -63,7 +63,7 @@ fn build_combined_sheet(idle: &RgbaImage, walk: &RgbaImage) -> RgbaImage {
 
     // Copy walk (576×256) starting at x=128.
     let walk_offset = idle_w;
-    let walk_w = (WALK_FRAMES * TILE_PX);
+    let walk_w = WALK_FRAMES * TILE_PX;
     for y in 0..h {
         for x in 0..walk_w {
             if x < walk.width() && y < walk.height() {

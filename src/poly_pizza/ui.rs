@@ -557,6 +557,7 @@ pub fn rebuild_results_ui(
         creator: String,
         tri_count: u32,
         animated: bool,
+        #[allow(dead_code)]
         model_id: String,
         thumb_asset: Option<String>,
         saved: bool,

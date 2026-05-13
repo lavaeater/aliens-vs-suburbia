@@ -60,9 +60,9 @@ pub fn spawn_players(
             .then(|| sheet.as_ref().and_then(|s| s.billboard_handle.clone()))
             .flatten();
 
-        let player = if use_billboard && billboard_sheet.is_some() && billboard_mesh.is_some() {
-            let sheet_handle = billboard_sheet.unwrap();
-            let mesh_handle = billboard_mesh.as_ref().unwrap().0.clone();
+        let player = if use_billboard && let Some(billboard_sheet) = billboard_sheet && let Some(billboard_mesh) = billboard_mesh.as_ref() {
+            let sheet_handle = billboard_sheet;
+            let mesh_handle = billboard_mesh.0.clone();
 
             let mat = sprite_materials.add(SpriteBillboardMaterial {
                 sprite_sheet: sheet_handle,
