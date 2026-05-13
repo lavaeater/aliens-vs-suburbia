@@ -10,6 +10,7 @@ pub struct AssetBrowserState {
     pub viewer_entity: Option<Entity>,
     pub load_requested: bool,
     pub list_dirty: bool,
+    pub toon_shader: bool,
 }
 
 impl Default for AssetBrowserState {
@@ -21,6 +22,7 @@ impl Default for AssetBrowserState {
             viewer_entity: None,
             load_requested: false,
             list_dirty: true,
+            toon_shader: false,
         }
     }
 }
