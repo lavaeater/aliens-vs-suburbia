@@ -87,7 +87,7 @@ impl AssetBrowserState {
 }
 
 fn scan_assets() -> Vec<String> {
-    let assets_dir = std::path::PathBuf::from("assets");
+    let assets_dir = std::path::PathBuf::from("assets/packs/toon-shooter");
     let mut files = Vec::new();
     scan_dir(&assets_dir, &assets_dir, &mut files);
     files.sort();
