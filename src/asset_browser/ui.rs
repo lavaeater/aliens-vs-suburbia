@@ -84,6 +84,7 @@ pub fn spawn_asset_browser_ui(
 
         left.with_child(|list_wrap| {
             list_wrap.with_flex_grow(1.0)
+                .width_percent(100.0)
                 .overflow_scroll_y()
                 .display_flex()
                 .flex_column()

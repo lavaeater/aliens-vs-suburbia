@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use crate::asset_browser::state::AssetBrowserState;
 use crate::ui::spawn_ui::StateMarker;
+use bevy::prelude::IsDefaultUiCamera;
 
 #[derive(Component)]
 pub struct AssetBrowserViewerCamera;
@@ -12,6 +13,12 @@ pub struct AssetBrowserViewerModel;
 pub struct AssetBrowserViewerPanel;
 
 pub fn spawn_asset_browser_cameras(mut commands: Commands) {
+    commands.spawn((
+        Camera2d,
+        IsDefaultUiCamera,
+        Camera { order: 1, ..Default::default() },
+        StateMarker,
+    ));
     let cam = commands.spawn((
         Camera3d::default(),
         Transform::from_xyz(0.0, 1.0, 2.5).looking_at(Vec3::new(0.0, 0.5, 0.0), Vec3::Y),
