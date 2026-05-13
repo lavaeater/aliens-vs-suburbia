@@ -1,7 +1,7 @@
 use bevy::prelude::*;
+use bevy_wind_waker_shader::WindWakerShaderBuilder;
 use crate::asset_browser::state::AssetBrowserState;
 use crate::ui::spawn_ui::StateMarker;
-use bevy::prelude::IsDefaultUiCamera;
 
 #[derive(Component)]
 pub struct AssetBrowserViewerCamera;
@@ -64,14 +64,22 @@ pub fn handle_model_load(
         let handle: Handle<Scene> = asset_server.load(
             GltfAssetLabel::Scene(0).from_asset(path.to_string()),
         );
-        let entity = commands.spawn((
-            SceneRoot(handle),
-            Transform::from_xyz(0.0, 0.0, 0.0),
-            AssetBrowserViewerModel,
-            StateMarker,
-        )).id();
+        let entity = spawn_viewer_model(&mut commands, handle, state.toon_shader);
         state.viewer_entity = Some(entity);
     }
+}
+
+fn spawn_viewer_model(commands: &mut Commands, handle: Handle<Scene>, toon: bool) -> Entity {
+    let mut ec = commands.spawn((
+        SceneRoot(handle),
+        Transform::from_xyz(0.0, 0.0, 0.0),
+        AssetBrowserViewerModel,
+        StateMarker,
+    ));
+    if toon {
+        ec.insert(WindWakerShaderBuilder::default().build());
+    }
+    ec.id()
 }
 
 pub fn orbit_viewer(

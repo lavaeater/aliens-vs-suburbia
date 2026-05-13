@@ -1,6 +1,7 @@
 use bevy::input::ButtonState;
 use bevy::input::keyboard::{Key, KeyboardInput};
 use bevy::prelude::*;
+use bevy::ui::ScrollPosition;
 use bevy::ui_widgets::Activate;
 use lava_ui_builder::{InteractionPalette, LavaTheme, TextTheme, UIBuilder};
 use crate::asset_browser::state::AssetBrowserState;
@@ -13,6 +14,9 @@ pub struct AssetListContainer;
 
 #[derive(Component)]
 pub struct AssetPathLabel;
+
+#[derive(Component)]
+pub struct ListItem(pub usize);
 
 pub fn spawn_asset_browser_ui(
     commands: Commands,
@@ -61,7 +65,7 @@ pub fn spawn_asset_browser_ui(
 
         left.with_child(|lbl| {
             lbl.insert_bundle(lava_ui_builder::label(
-                "[PgUp/PgDn] jump 20  [Esc] back",
+                "[PgUp/PgDn] jump 20  [T] toon  [Esc] back",
                 &TextTheme {
                     label_size: 11.0,
                     label_color: Color::srgb(0.4, 0.55, 0.4),
@@ -89,7 +93,8 @@ pub fn spawn_asset_browser_ui(
                 .display_flex()
                 .flex_column()
                 .gap_px(1.0)
-                .insert(AssetListContainer);
+                .insert(AssetListContainer)
+                .insert(ScrollPosition::default());
         });
 
         left.add_button_observe(
@@ -126,6 +131,10 @@ pub fn handle_key_input(
             Key::PageDown => state.page_down(),
             Key::Enter => state.load_requested = true,
             Key::Escape => next_state.set(GameState::Menu),
+            Key::Character(c) if c.eq_ignore_ascii_case("t") => {
+                state.toon_shader = !state.toon_shader;
+                state.load_requested = true;
+            }
             _ => {}
         }
     }
@@ -156,7 +165,6 @@ pub fn rebuild_list(
     let scroll_offset = state.scroll_offset;
 
     commands.entity(container).with_children(|parent| {
-        // Position counter at top of window
         let window_end = (scroll_offset + 40).min(total);
         parent.spawn((
             Text::new(format!("{}-{} / {total}", scroll_offset + 1, window_end)),
@@ -207,6 +215,7 @@ pub fn rebuild_list(
                 },
                 bevy::picking::hover::Hovered::default(),
                 bevy::ui_widgets::Button,
+                ListItem(idx),
             ))
             .with_children(|row| {
                 row.spawn((
@@ -229,4 +238,35 @@ pub fn rebuild_list(
             });
         }
     });
+}
+
+pub fn scroll_to_selection(
+    state: Res<AssetBrowserState>,
+    mut container_q: Query<(Entity, &ComputedNode, &mut ScrollPosition), With<AssetListContainer>>,
+    child_q: Query<(Option<&ListItem>, &ComputedNode)>,
+    children_q: Query<&Children>,
+) {
+    let Ok((container_entity, container_node, mut scroll)) = container_q.single_mut() else { return };
+    let Ok(children) = children_q.get(container_entity) else { return };
+
+    let container_height = container_node.size().y;
+    if container_height == 0.0 { return; }
+
+    let mut y = 0.0f32;
+    for child in children.iter() {
+        let Ok((opt_item, child_node)) = child_q.get(child) else { continue };
+        let h = child_node.size().y + 1.0; // +1 matches the gap
+        if let Some(item) = opt_item {
+            if item.0 == state.selected {
+                let cur = scroll.0.y;
+                if y < cur {
+                    scroll.0.y = y;
+                } else if y + h > cur + container_height {
+                    scroll.0.y = y + h - container_height;
+                }
+                return;
+            }
+        }
+        y += h;
+    }
 }
