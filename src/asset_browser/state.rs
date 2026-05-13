@@ -1,3 +1,5 @@
+use bevy::animation::graph::AnimationNodeIndex;
+use bevy::gltf::Gltf;
 use bevy::prelude::*;
 
 const WINDOW_SIZE: usize = 40;
@@ -11,6 +13,12 @@ pub struct AssetBrowserState {
     pub load_requested: bool,
     pub list_dirty: bool,
     pub toon_shader: bool,
+    pub gltf_handle: Option<Handle<Gltf>>,
+    pub anim_index: usize,
+    pub anim_count: usize,
+    pub anim_dirty: bool,
+    pub anim_node_indices: Vec<AnimationNodeIndex>,
+    pub anim_names: Vec<String>,
 }
 
 impl Default for AssetBrowserState {
@@ -23,6 +31,12 @@ impl Default for AssetBrowserState {
             load_requested: false,
             list_dirty: true,
             toon_shader: false,
+            gltf_handle: None,
+            anim_index: 0,
+            anim_count: 0,
+            anim_dirty: false,
+            anim_node_indices: Vec::new(),
+            anim_names: Vec::new(),
         }
     }
 }
@@ -32,6 +46,29 @@ impl AssetBrowserState {
         self.viewer_entity = None;
         self.load_requested = false;
         self.list_dirty = true;
+    }
+
+    pub fn reset_anim(&mut self) {
+        self.gltf_handle = None;
+        self.anim_index = 0;
+        self.anim_count = 0;
+        self.anim_dirty = false;
+        self.anim_node_indices.clear();
+        self.anim_names.clear();
+    }
+
+    pub fn anim_next(&mut self) {
+        if self.anim_count > 0 {
+            self.anim_index = (self.anim_index + 1) % self.anim_count;
+            self.anim_dirty = true;
+        }
+    }
+
+    pub fn anim_prev(&mut self) {
+        if self.anim_count > 0 {
+            self.anim_index = (self.anim_index + self.anim_count - 1) % self.anim_count;
+            self.anim_dirty = true;
+        }
     }
 
     pub fn move_up(&mut self) {
@@ -87,9 +124,10 @@ impl AssetBrowserState {
 }
 
 fn scan_assets() -> Vec<String> {
-    let assets_dir = std::path::PathBuf::from("assets/packs/toon-shooter");
+    let base = std::path::PathBuf::from("assets");
+    let scan_dir_path = base.join("packs/toon-shooter");
     let mut files = Vec::new();
-    scan_dir(&assets_dir, &assets_dir, &mut files);
+    scan_dir(&base, &scan_dir_path, &mut files);
     files.sort();
     files
 }

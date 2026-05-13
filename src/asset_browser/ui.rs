@@ -16,6 +16,9 @@ pub struct AssetListContainer;
 pub struct AssetPathLabel;
 
 #[derive(Component)]
+pub struct AssetAnimLabel;
+
+#[derive(Component)]
 pub struct ListItem(pub usize);
 
 pub fn spawn_asset_browser_ui(
@@ -65,7 +68,18 @@ pub fn spawn_asset_browser_ui(
 
         left.with_child(|lbl| {
             lbl.insert_bundle(lava_ui_builder::label(
-                "[PgUp/PgDn] jump 20  [T] toon  [Esc] back",
+                "[PgUp/PgDn] jump  [T] toon  [Esc] back",
+                &TextTheme {
+                    label_size: 11.0,
+                    label_color: Color::srgb(0.4, 0.55, 0.4),
+                    ..text_theme.clone()
+                },
+            ));
+        });
+
+        left.with_child(|lbl| {
+            lbl.insert_bundle(lava_ui_builder::label(
+                "[[/]] prev/next anim",
                 &TextTheme {
                     label_size: 11.0,
                     label_color: Color::srgb(0.4, 0.55, 0.4),
@@ -84,6 +98,15 @@ pub fn spawn_asset_browser_ui(
             .modify_node(|mut n| {
                 n.overflow = Overflow::clip();
             });
+        });
+
+        left.with_child(|lbl| {
+            lbl.insert_bundle(lava_ui_builder::label("", &TextTheme {
+                label_size: 11.0,
+                label_color: Color::srgb(0.8, 0.65, 1.0),
+                ..text_theme.clone()
+            }))
+            .insert(AssetAnimLabel);
         });
 
         left.with_child(|list_wrap| {
@@ -135,6 +158,8 @@ pub fn handle_key_input(
                 state.toon_shader = !state.toon_shader;
                 state.load_requested = true;
             }
+            Key::Character(c) if c == "]" => state.anim_next(),
+            Key::Character(c) if c == "[" => state.anim_prev(),
             _ => {}
         }
     }
