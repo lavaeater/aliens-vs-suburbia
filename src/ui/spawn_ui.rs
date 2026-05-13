@@ -489,6 +489,7 @@ pub fn update_hud(
 #[derive(Message, Clone)]
 pub struct AddHealthBar {
     pub entity: Entity,
+    #[allow(dead_code)]
     pub name: &'static str,
 }
 

@@ -5,6 +5,7 @@ use crate::general::systems::kinematic_movement_system::kinematic_movement;
 use crate::control::keyboard_input::{keyboard_input};
 use crate::game_state::GameState;
 
+#[allow(dead_code)]
 pub struct ControlPlugin;
 
 impl Plugin for ControlPlugin {

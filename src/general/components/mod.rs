@@ -60,12 +60,6 @@ pub struct Health {
     pub max_health: i32,
 }
 
-impl Health {
-    pub fn as_f32(&self)->f32{
-        self.health as f32
-    }
-}
-
 impl Default for Health {
     fn default() -> Self {
         Self {

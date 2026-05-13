@@ -32,8 +32,12 @@ pub fn spawn_asset_browser_ui(
     let text_theme = theme.text.clone();
 
     ui.with_child(|left| {
-        left.width_px(340.0)
-            .height_percent(100.0)
+        left.modify_node(|mut n| {
+                n.width = Val::Percent(22.0);
+                n.min_width = Val::Px(220.0);
+                n.max_width = Val::Px(480.0);
+                n.height = Val::Percent(100.0);
+            })
             .display_flex()
             .flex_column()
             .gap_px(4.0)
@@ -89,7 +93,9 @@ pub fn spawn_asset_browser_ui(
 
         left.add_button_observe(
             "← Back to Menu",
-            |b| { b.size_px(290.0, 36.0).font_size(14.0); },
+            |b| {
+                b.width(percent(100.0)).height(px(36.0)).font_size(14.0);
+            },
             |_: On<Activate>, mut next: ResMut<NextState<GameState>>| {
                 next.set(GameState::Menu);
             },

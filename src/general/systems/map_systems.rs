@@ -84,8 +84,6 @@ impl MapTile {
 }
 
 pub struct MapDef {
-    pub x: i32,
-    pub y: i32,
     pub tiles: Vec<MapTile>,
 } //No data needed now
 
@@ -114,20 +112,14 @@ pub struct TileDefinitions {
     pub tile_width: f32,
     pub wall_height: f32,
     pub tile_depth: f32,
-    pub floor_level: f32,
-    pub wall_file: String,
-    pub floor_file: String,
-    pub obstacle_file: String,
+    pub floor_level: f32
 }
 
 impl TileDefinitions {
     pub fn new(tile_size: f32,
                tile_basis: f32,
                wall_basis: f32,
-               tile_depth_basis: f32,
-               wall_file: String,
-               floor_file: String,
-               obstacle_file: String) -> Self {
+               tile_depth_basis: f32) -> Self {
         let tile_unit = tile_size / tile_basis;
         let tile_width = tile_basis * tile_unit;
         let wall_height = wall_basis * tile_unit;
@@ -140,9 +132,6 @@ impl TileDefinitions {
             wall_height,
             tile_depth,
             floor_level: -wall_height * 2.0,
-            wall_file,
-            floor_file,
-            obstacle_file,
         }
     }
 
@@ -153,11 +142,7 @@ impl TileDefinitions {
     pub fn get_floor_position(&self, x: i32, y: i32) -> Vec3 {
         Vec3::new(self.tile_width * x as f32, self.floor_level, self.tile_width * y as f32)
     }
-
-    pub fn create_wall_collider(&self) -> Collider {
-        Collider::cuboid(self.tile_width, self.wall_height, self.tile_depth)
-    }
-
+    
     pub fn create_wall_collider_merged(&self, tile_count: f32) -> Collider {
         Collider::cuboid(self.tile_width * tile_count, self.wall_height, self.tile_depth)
     }
@@ -275,8 +260,6 @@ pub fn map_loader(
         map_graph.path_finding_grid.enable_diagonal_mode();
 
         let map = MapDef {
-            x: 0,
-            y: 0,
             tiles,
         };
 
@@ -467,7 +450,7 @@ pub fn map_loader(
                 map_graph.goal = (tile.x as usize, tile.y as usize);
                 commands.spawn((
                     Name::from(format!("Alien Goal {}:{}", tile.x, tile.y)),
-                    AlienGoal::new(tile.x as usize, tile.y as usize),
+                    AlienGoal,
                     SceneRoot(game_assets.alien_construct.clone()),
                     RigidBody::Static,
                     WindWakerShaderBuilder::default().build(),

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy::asset::RenderAssetUsages;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
-use image::{DynamicImage, GenericImage, GenericImageView, RgbaImage};
+use image::{DynamicImage, RgbaImage};
 use image::imageops;
 
 use crate::character_creator::config::{CharacterConfig, ComposedSpriteSheet};

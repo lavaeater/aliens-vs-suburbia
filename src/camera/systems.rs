@@ -18,8 +18,11 @@ use crate::general::systems::map_systems::{WallMaterials, WallOccluder};
 use crate::player::components::Player;
 use crate::settings::resources::{GameSettings, ProjectionMode};
 
+#[allow(dead_code)]
 const PIXEL_WIDTH: u32 = 480;
+#[allow(dead_code)]
 const PIXEL_HEIGHT: u32 = 360;
+#[allow(dead_code)]
 const CANVAS_LAYER: usize = 1;
 
 pub fn spawn_camera(mut commands: Commands) {
@@ -44,6 +47,7 @@ pub fn spawn_camera(mut commands: Commands) {
   ));
 }
 
+#[allow(dead_code)]
 pub fn spawn_pixelated_camera(
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
@@ -122,11 +126,12 @@ pub fn spawn_pixelated_camera(
             ..default()
         },
         Transform::default(),
-        PixelCanvas,
+        PixelCanvas {},
         RenderLayers::layer(CANVAS_LAYER),
     ));
 }
 
+#[allow(dead_code)]
 pub fn resize_pixel_canvas(
     window_q: Query<&Window, With<PrimaryWindow>>,
     mut canvas_q: Query<&mut Sprite, With<PixelCanvas>>,

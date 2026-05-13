@@ -34,7 +34,7 @@ pub fn shoot_alien_system(
                 a_dist.partial_cmp(&b_dist).unwrap()
             });
 
-            if let Some((alien_entity, alien_position)) = closest_alien {
+            if let Some((_, alien_position)) = closest_alien {
                 let direction = (alien_position.0 - tower_position.0).normalize();
                 let launch_p = tower_position.0 + direction + Vec3::new(0.0, 0.25, 0.0);
 

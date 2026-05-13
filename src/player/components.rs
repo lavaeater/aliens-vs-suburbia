@@ -3,9 +3,7 @@ use bevy::prelude::{Component, Entity};
 use bevy::reflect::Reflect;
 
 #[derive(Component)]
-pub struct Player {
-    pub key: String
-}
+pub struct Player;
 
 #[derive(Hash, PartialEq, Eq, Clone, Reflect, Component)]
 pub struct IsBuilding;

@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy::input::keyboard::{Key, KeyboardInput};
 use bevy::input::ButtonState;
 use bevy::ui_widgets::Activate;
-use lava_ui_builder::{InteractionPalette, LavaTheme, TextTheme, UIBuilder};
+use lava_ui_builder::{LavaTheme, TextTheme, UIBuilder};
 use crate::game_state::GameState;
 use crate::poly_pizza::async_bridge::{ApiChannels, ApiRequest, ApiResponse};
 use crate::poly_pizza::client::SearchFilters;

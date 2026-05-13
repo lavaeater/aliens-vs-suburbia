@@ -1,5 +1,3 @@
-use avian3d::debug_render::PhysicsDebugPlugin;
-use avian3d::interpolation::PhysicsInterpolationPlugin;
 use bevy::app::{App, PluginGroup};
 use bevy::{DefaultPlugins, log};
 use bevy::log::LogPlugin;
@@ -26,7 +24,6 @@ pub(crate) mod game_state;
 mod animation;
 mod constants;
 mod assets;
-mod inspection;
 pub(crate) mod settings;
 pub(crate) mod model_settings;
 pub(crate) mod poly_pizza;
@@ -51,7 +48,6 @@ fn main() {
                     ..Default::default()
                 }))
         .add_plugins(PhysicsPlugins::default())
-        // .add_plugins(PhysicsDebugPlugin)
         .add_plugins(GamePlugin)
         .run();
 }

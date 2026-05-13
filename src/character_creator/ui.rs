@@ -176,7 +176,7 @@ fn spawn_group(
     parent: &mut UIBuilder,
     title: &str,
     group: CategoryGroup,
-    text_theme: &lava_ui_builder::TextTheme,
+    _: &lava_ui_builder::TextTheme,
 ) {
     parent.with_collapsible(title, false, |inner| {
         inner.gap_px(4.0).padding_all_px(6.0);

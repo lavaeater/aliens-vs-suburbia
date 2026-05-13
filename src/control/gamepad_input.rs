@@ -1,6 +1,6 @@
 use bevy::app::{App, Plugin, Update};
-use bevy::input::gamepad::{Gamepad, GamepadButton};
-use bevy::prelude::{ButtonInput, Commands, Component, Entity, MessageReader, in_state, IntoScheduleConfigs, Query, Reflect, Res, With};
+use bevy::input::gamepad::Gamepad;
+use bevy::prelude::{ Commands, Component, Entity, MessageReader, in_state, IntoScheduleConfigs, Query, Reflect, With};
 use bevy::input::gamepad::GamepadConnectionEvent;
 use crate::control::components::{CharacterControl, InputKeyboard};
 use crate::game_state::GameState;

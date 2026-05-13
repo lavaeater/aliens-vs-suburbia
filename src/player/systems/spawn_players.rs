@@ -32,6 +32,7 @@ impl FixSceneTransform {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn spawn_players(
     mut spawn_player_event_reader: MessageReader<SpawnPlayer>,
     mut commands: Commands,
@@ -68,13 +69,12 @@ pub fn spawn_players(
                 uv_rect: bevy::prelude::Vec4::new(0.0, 0.5, 64.0 / 704.0, 64.0 / 256.0),
             });
 
-            let mut entity_cmds = commands.spawn((
+            let entity_cmds = commands.spawn((
                 pos,
                 Visibility::default(),
                 Collider::cuboid(0.5, 0.5, 0.45),
                 PlayerBundle::new(
                     "player",
-                    "Player One",
                     [CollisionLayer::Player],
                     [
                         CollisionLayer::Ball,
@@ -112,7 +112,6 @@ pub fn spawn_players(
                 Collider::cuboid(0.5, 0.5, 0.45),
                 PlayerBundle::new(
                     "player",
-                    "Player One",
                     [CollisionLayer::Player],
                     [
                         CollisionLayer::Ball,

@@ -43,10 +43,7 @@ pub struct MapFile {
 pub struct Wall {}
 
 #[derive(Component)]
-pub struct AlienGoal {
-    pub x: usize,
-    pub y: usize
-}
+pub struct AlienGoal;
 
 pub struct ModelDefinition {
     pub name: &'static str,
@@ -72,15 +69,6 @@ impl ModelDefinition {
 pub struct MapModelDefinitions {
     pub definitions: HashMap<&'static str, ModelDefinition>,
     pub build_indicators: Vec<&'static str>,
-}
-
-impl AlienGoal {
-    pub fn new(x: usize, y: usize) -> Self {
-        Self {
-            x,
-            y
-        }
-    }
 }
 
 #[derive(Component, Debug, Reflect, Default)]

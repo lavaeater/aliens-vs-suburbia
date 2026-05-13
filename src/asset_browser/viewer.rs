@@ -14,7 +14,7 @@ pub struct AssetBrowserViewerPanel;
 pub fn spawn_asset_browser_cameras(mut commands: Commands) {
     let cam = commands.spawn((
         Camera3d::default(),
-        Transform::from_xyz(0.0, 1.0, 4.0).looking_at(Vec3::new(0.0, 0.5, 0.0), Vec3::Y),
+        Transform::from_xyz(0.0, 1.0, 2.5).looking_at(Vec3::new(0.0, 0.5, 0.0), Vec3::Y),
         AssetBrowserViewerCamera,
         StateMarker,
     )).id();
@@ -81,6 +81,20 @@ pub fn orbit_viewer(
             transform.rotate_axis(Dir3::new_unchecked(right.normalize()), motion.delta.y * 0.008);
         }
     }
+}
+
+pub fn zoom_viewer(
+    mut cameras: Query<&mut Transform, With<AssetBrowserViewerCamera>>,
+    mut scroll: MessageReader<bevy::input::mouse::MouseWheel>,
+) {
+    let mut delta = 0.0f32;
+    for ev in scroll.read() {
+        delta -= ev.y;
+    }
+    if delta == 0.0 { return; }
+    let Ok(mut transform) = cameras.single_mut() else { return };
+    let forward = transform.forward().as_vec3();
+    transform.translation += forward * delta * 0.3;
 }
 
 pub fn sync_viewer_viewport(
