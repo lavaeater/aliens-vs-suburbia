@@ -100,13 +100,11 @@ fn scan_dir(base: &std::path::Path, dir: &std::path::Path, files: &mut Vec<Strin
             scan_dir(base, &path, files);
         } else {
             let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
-            if ext == "gltf" || ext == "glb" {
-                if let Ok(rel) = path.strip_prefix(base) {
-                    if let Some(s) = rel.to_str() {
+            if (ext == "gltf" || ext == "glb")
+                && let Ok(rel) = path.strip_prefix(base)
+                    && let Some(s) = rel.to_str() {
                         files.push(s.replace('\\', "/"));
                     }
-                }
-            }
         }
     }
 }

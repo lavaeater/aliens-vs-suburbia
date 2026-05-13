@@ -35,12 +35,11 @@ fn gamepad_connection(
     mut commands: Commands,
 ) {
     for event in connection_evr.read() {
-        if event.connected() {
-            if let Ok(entity) = player_query.single_mut() {
+        if event.connected()
+            && let Ok(entity) = player_query.single_mut() {
                 commands.entity(entity).remove::<InputKeyboard>();
                 commands.entity(entity).insert(InputGamepad::new(event.gamepad));
             }
-        }
     }
 }
 

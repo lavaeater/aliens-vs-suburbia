@@ -50,11 +50,10 @@ fn poll_model_settings_file(
     let mtime = mtime_of_settings();
     if mtime != watch.last_mtime {
         watch.last_mtime = mtime;
-        if let Ok(text) = std::fs::read_to_string(MODEL_SETTINGS_PATH) {
-            if let Ok(loaded) = ron::from_str::<ModelSettings>(&text) {
+        if let Ok(text) = std::fs::read_to_string(MODEL_SETTINGS_PATH)
+            && let Ok(loaded) = ron::from_str::<ModelSettings>(&text) {
                 *model_settings = loaded;
             }
-        }
     }
 }
 
@@ -72,12 +71,10 @@ fn apply_debug_anim_selection(
     let key = ANIM_KEYS[anim_sel.index % ANIM_KEYS.len()];
 
     for player_entity in player_query.iter() {
-        if let Some(anim_entity) = get_child_with_component_recursive(player_entity, &child_query, &anim_player_query) {
-            if let Ok(mut anim_player) = anim_player_query.get_mut(anim_entity) {
-                if let Some(idx) = anim_store.anims.get("players").and_then(|m| m.get(&key)) {
+        if let Some(anim_entity) = get_child_with_component_recursive(player_entity, &child_query, &anim_player_query)
+            && let Ok(mut anim_player) = anim_player_query.get_mut(anim_entity)
+                && let Some(idx) = anim_store.anims.get("players").and_then(|m| m.get(&key)) {
                     anim_player.play(*idx).repeat();
                 }
-            }
-        }
     }
 }

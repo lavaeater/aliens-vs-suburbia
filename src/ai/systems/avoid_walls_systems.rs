@@ -24,8 +24,8 @@ pub fn avoid_walls_data_system(
 
         let filter = SpatialQueryFilter::from_mask([CollisionLayer::Impassable]);
 
-        if let Ok(forward_dir) = bevy::math::Dir3::new(forward) {
-            if let Some(hit) = spatial_query.cast_ray(
+        if let Ok(forward_dir) = bevy::math::Dir3::new(forward)
+            && let Some(hit) = spatial_query.cast_ray(
                 position.0,
                 forward_dir,
                 avoid_wall_data.max_forward_distance,
@@ -34,10 +34,9 @@ pub fn avoid_walls_data_system(
             ) {
                 avoid_wall_data.forward_distance = hit.distance;
             }
-        }
 
-        if let Ok(left_dir) = bevy::math::Dir3::new(left) {
-            if let Some(hit) = spatial_query.cast_ray(
+        if let Ok(left_dir) = bevy::math::Dir3::new(left)
+            && let Some(hit) = spatial_query.cast_ray(
                 position.0,
                 left_dir,
                 avoid_wall_data.max_left_distance,
@@ -46,10 +45,9 @@ pub fn avoid_walls_data_system(
             ) {
                 avoid_wall_data.left_distance = hit.distance;
             }
-        }
 
-        if let Ok(right_dir) = bevy::math::Dir3::new(right) {
-            if let Some(hit) = spatial_query.cast_ray(
+        if let Ok(right_dir) = bevy::math::Dir3::new(right)
+            && let Some(hit) = spatial_query.cast_ray(
                 position.0,
                 right_dir,
                 avoid_wall_data.max_right_distance,
@@ -58,7 +56,6 @@ pub fn avoid_walls_data_system(
             ) {
                 avoid_wall_data.right_distance = hit.distance;
             }
-        }
     }
 }
 

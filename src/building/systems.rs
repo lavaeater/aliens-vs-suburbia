@@ -97,8 +97,8 @@ pub fn init_build_indicator_tint(
         collect_descendants(entity, &children_q, &mut descendants);
 
         for desc in descendants {
-            if let Ok(mut mat_handle) = mat_q.get_mut(desc) {
-                if let Some(new_mat) = materials.get(&mat_handle.0).cloned() {
+            if let Ok(mut mat_handle) = mat_q.get_mut(desc)
+                && let Some(new_mat) = materials.get(&mat_handle.0).cloned() {
                     let mut tinted = new_mat;
                     tinted.alpha_mode = AlphaMode::Blend;
                     tinted.base_color = Color::srgba(0.2, 1.0, 0.2, 0.55);
@@ -106,7 +106,6 @@ pub fn init_build_indicator_tint(
                     tint.handles.push(handle.clone());
                     mat_handle.0 = handle;
                 }
-            }
         }
         tint.initialized = true;
     }
@@ -158,9 +157,9 @@ pub fn execute_build(
     mut build_tower_mw: MessageWriter<BuildTower>,
 ) {
     for execute_event in execute_evr.read() {
-        if let Ok(build_indicator) = player_build_indicator_query.get(execute_event.0) {
-            if let Ok((position, current_tile)) = building_indicator.get(build_indicator.0) {
-                if !map_graph.occupied_tiles.contains(&current_tile.tile) {
+        if let Ok(build_indicator) = player_build_indicator_query.get(execute_event.0)
+            && let Ok((position, current_tile)) = building_indicator.get(build_indicator.0)
+                && !map_graph.occupied_tiles.contains(&current_tile.tile) {
 
                     let current_index = build_indicator.1;
                     let current_key = model_defs.build_indicators[current_index as usize];
@@ -171,8 +170,6 @@ pub fn execute_build(
 
                     remove_tile_mw.write(RemoveTile(current_tile.tile));
                 }
-            }
-        }
     }
 }
 

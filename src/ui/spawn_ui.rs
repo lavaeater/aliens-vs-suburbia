@@ -458,11 +458,10 @@ pub fn update_hud(
         ),
     >,
 ) {
-    if let Some(counter) = alien_counter {
-        if let Ok(mut t) = alien_text.single_mut() {
+    if let Some(counter) = alien_counter
+        && let Ok(mut t) = alien_text.single_mut() {
             **t = format!("Aliens: {}", counter.count);
         }
-    }
 
     if let Ok(mut t) = build_text.single_mut() {
         **t = if building_query.iter().next().is_some() {

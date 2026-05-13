@@ -13,7 +13,7 @@ pub struct ViewerCamera;
 pub fn spawn_polypizza_cameras(mut commands: Commands) {
     // UI camera (renders on top of the 3D viewer)
     commands.spawn((
-        Camera2d::default(),
+        Camera2d,
         IsDefaultUiCamera,
         Camera { order: 1, ..Default::default() },
         StateMarker,

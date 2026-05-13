@@ -49,13 +49,11 @@ impl Default for ModelSettings {
 impl ModelSettings {
     pub fn load() -> Self {
         let path = std::path::Path::new(MODEL_SETTINGS_PATH);
-        if path.exists() {
-            if let Ok(text) = std::fs::read_to_string(path) {
-                if let Ok(settings) = ron::from_str::<ModelSettings>(&text) {
+        if path.exists()
+            && let Ok(text) = std::fs::read_to_string(path)
+                && let Ok(settings) = ron::from_str::<ModelSettings>(&text) {
                     return settings;
                 }
-            }
-        }
         ModelSettings::default()
     }
 

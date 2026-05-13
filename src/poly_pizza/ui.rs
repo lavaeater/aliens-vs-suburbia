@@ -784,7 +784,7 @@ pub fn update_tag_input_label(
     use crate::poly_pizza::state::InputFocus;
     let cursor = if state.input_focus == InputFocus::Tags { "█" } else { "_" };
     let display = if state.tag_input.is_empty() {
-        format!("{cursor}")
+        cursor.to_string()
     } else {
         format!("{} {cursor}", state.tag_input.trim_end())
     };

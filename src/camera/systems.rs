@@ -167,15 +167,14 @@ pub fn init_wall_materials(
         collect_descendants(entity, &children_q, &mut descendants);
 
         for desc in descendants {
-            if let Ok(mut mat_handle) = mat_q.get_mut(desc) {
-                if let Some(cloned) = materials.get(&mat_handle.0).cloned() {
+            if let Ok(mut mat_handle) = mat_q.get_mut(desc)
+                && let Some(cloned) = materials.get(&mat_handle.0).cloned() {
                     let mut new_mat = cloned;
                     new_mat.alpha_mode = AlphaMode::Blend;
                     let handle = materials.add(new_mat);
                     wall_mats.handles.push(handle.clone());
                     mat_handle.0 = handle;
                 }
-            }
         }
         wall_mats.initialized = true;
     }

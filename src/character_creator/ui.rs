@@ -34,11 +34,10 @@ impl CreatorSelections {
         let body = self.body_type();
         let mut layers = Vec::new();
         for (i, cat) in CATEGORIES.iter().enumerate() {
-            if let Some(opt_idx) = self.selections[i] {
-                if let Some(path) = cat.options[opt_idx].resolve(body) {
+            if let Some(opt_idx) = self.selections[i]
+                && let Some(path) = cat.options[opt_idx].resolve(body) {
                     layers.push(path);
                 }
-            }
         }
         CharacterConfig {
             body_type: body.to_string(),

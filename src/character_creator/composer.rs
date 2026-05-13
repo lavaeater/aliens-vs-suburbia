@@ -52,7 +52,7 @@ fn build_combined_sheet(idle: &RgbaImage, walk: &RgbaImage) -> RgbaImage {
     let mut sheet = RgbaImage::new(w, h);
 
     // Copy idle (128×256) into left portion.
-    let idle_w = (IDLE_FRAMES * TILE_PX) as u32;
+    let idle_w = (IDLE_FRAMES * TILE_PX);
     for y in 0..h {
         for x in 0..idle_w {
             if x < idle.width() && y < idle.height() {
@@ -63,7 +63,7 @@ fn build_combined_sheet(idle: &RgbaImage, walk: &RgbaImage) -> RgbaImage {
 
     // Copy walk (576×256) starting at x=128.
     let walk_offset = idle_w;
-    let walk_w = (WALK_FRAMES * TILE_PX) as u32;
+    let walk_w = (WALK_FRAMES * TILE_PX);
     for y in 0..h {
         for x in 0..walk_w {
             if x < walk.width() && y < walk.height() {
@@ -76,12 +76,12 @@ fn build_combined_sheet(idle: &RgbaImage, walk: &RgbaImage) -> RgbaImage {
 
 /// Extract a single 64×64 portrait tile: idle animation, facing down (row DIR_DOWN, frame 0).
 fn extract_portrait(idle: &RgbaImage) -> RgbaImage {
-    let tile = TILE_PX as u32;
+    let tile = TILE_PX;
     let y_off = DIR_DOWN * tile;
-    let sub = DynamicImage::ImageRgba8(idle.clone())
+    
+    DynamicImage::ImageRgba8(idle.clone())
         .crop_imm(0, y_off, tile, tile)
-        .to_rgba8();
-    sub
+        .to_rgba8()
 }
 
 fn to_bevy_image(rgba: RgbaImage) -> Image {

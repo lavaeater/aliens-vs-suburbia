@@ -41,7 +41,7 @@ impl Plugin for UiPlugin {
 
 pub fn spawn_ui_camera(mut commands: Commands) {
     commands.spawn((
-        Camera2d::default(),
+        Camera2d,
         IsDefaultUiCamera,
         bevy::prelude::Camera { order: 1, ..Default::default() },
         StateMarker,

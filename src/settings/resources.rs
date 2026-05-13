@@ -54,13 +54,11 @@ impl Default for GameSettings {
 impl GameSettings {
     pub fn load() -> Self {
         let path = std::path::Path::new(SETTINGS_PATH);
-        if path.exists() {
-            if let Ok(text) = std::fs::read_to_string(path) {
-                if let Ok(settings) = ron::from_str::<GameSettings>(&text) {
+        if path.exists()
+            && let Ok(text) = std::fs::read_to_string(path)
+                && let Ok(settings) = ron::from_str::<GameSettings>(&text) {
                     return settings;
                 }
-            }
-        }
         GameSettings::default()
     }
 

@@ -180,7 +180,7 @@ pub fn rebuild_list(
                 Color::srgb(0.72, 0.80, 0.88)
             };
 
-            let filename = path.split('/').last().unwrap_or(&path).to_string();
+            let filename = path.split('/').next_back().unwrap_or(&path).to_string();
             let dir_hint = {
                 let parts: Vec<&str> = path.split('/').collect();
                 if parts.len() > 1 {

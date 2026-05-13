@@ -29,12 +29,11 @@ pub fn keyboard_input(
                             start_build_ew.write(EnterBuildMode(entity));
                         }
                     }
-                    KeyCode::Escape => {
-                        if controller.triggers.contains(&ControlCommand::Build) {
+                    KeyCode::Escape
+                        if controller.triggers.contains(&ControlCommand::Build) => {
                             animation_ew.write(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Building));
                             exit_build.write(ExitBuildMode(entity));
                         }
-                    }
                     KeyCode::KeyA => {
                         animation_ew.write(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walking));
                         controller.rotations.insert(ControlRotation::Left);
