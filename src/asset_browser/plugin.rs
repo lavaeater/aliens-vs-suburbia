@@ -1,10 +1,10 @@
 use bevy::app::{App, Plugin, Update};
 use bevy::prelude::{IntoScheduleConfigs, OnEnter, OnExit, in_state};
 use crate::asset_browser::state::AssetBrowserState;
-use crate::asset_browser::ui::{handle_key_input, rebuild_list, scroll_to_selection, spawn_asset_browser_ui};
+use crate::asset_browser::ui::{handle_key_input, rebuild_list, rebuild_node_list, scroll_to_selection, spawn_asset_browser_ui};
 use crate::asset_browser::viewer::{
-    apply_viewer_animation, handle_model_load, orbit_viewer, setup_viewer_animation,
-    spawn_asset_browser_cameras, sync_viewer_viewport, zoom_viewer,
+    apply_node_visibility, apply_viewer_animation, handle_model_load, orbit_viewer,
+    setup_viewer_animation, spawn_asset_browser_cameras, sync_viewer_viewport, zoom_viewer,
 };
 use crate::game_state::GameState;
 use crate::ui::spawn_ui::cleanup_state;
@@ -31,6 +31,8 @@ impl Plugin for AssetBrowserPlugin {
                     sync_viewer_viewport,
                     setup_viewer_animation,
                     apply_viewer_animation,
+                    apply_node_visibility,
+                    rebuild_node_list,
                 )
                     .run_if(in_state(GameState::AssetBrowser)),
             );

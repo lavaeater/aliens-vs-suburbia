@@ -1,4 +1,4 @@
-use bevy::gltf::Gltf;
+use bevy::gltf::{Gltf, GltfNode};
 use bevy::prelude::*;
 use bevy_wind_waker_shader::WindWakerShaderBuilder;
 use crate::asset_browser::state::AssetBrowserState;
@@ -119,6 +119,7 @@ pub fn zoom_viewer(
 pub fn setup_viewer_animation(
     mut state: ResMut<AssetBrowserState>,
     gltf_assets: Res<Assets<Gltf>>,
+    gltf_node_assets: Res<Assets<GltfNode>>,
     mut animation_graphs: ResMut<Assets<AnimationGraph>>,
     mut commands: Commands,
     mut anim_players: Query<Entity, With<AnimationPlayer>>,
@@ -128,6 +129,18 @@ pub fn setup_viewer_animation(
         None => return,
     };
     let Some(gltf) = gltf_assets.get(&gltf_handle) else { return };
+
+    // Collect mesh node names from the Gltf hierarchy.
+    let mut mesh_nodes: Vec<String> = gltf.named_nodes.iter()
+        .filter_map(|(name, handle)| {
+            gltf_node_assets.get(handle)
+                .filter(|n| n.mesh.is_some())
+                .map(|_| name.to_string())
+        })
+        .collect();
+    mesh_nodes.sort();
+    state.mesh_nodes = mesh_nodes;
+    state.nodes_dirty = true;
 
     if gltf.animations.is_empty() {
         state.gltf_handle = None;
@@ -156,6 +169,24 @@ pub fn setup_viewer_animation(
     state.anim_names = names_by_index;
     state.anim_dirty = true;
     state.gltf_handle = None;
+}
+
+pub fn apply_node_visibility(
+    mut state: ResMut<AssetBrowserState>,
+    mut named_entities: Query<(&Name, &mut Visibility)>,
+) {
+    if !state.nodes_dirty { return; }
+    state.nodes_dirty = false;
+
+    for (name, mut vis) in named_entities.iter_mut() {
+        if state.mesh_nodes.iter().any(|n| n == name.as_str()) {
+            *vis = if state.hidden_nodes.contains(name.as_str()) {
+                Visibility::Hidden
+            } else {
+                Visibility::Visible
+            };
+        }
+    }
 }
 
 pub fn apply_viewer_animation(

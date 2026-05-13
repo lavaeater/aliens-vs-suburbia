@@ -19,6 +19,9 @@ pub struct AssetPathLabel;
 pub struct AssetAnimLabel;
 
 #[derive(Component)]
+pub struct NodeListContainer;
+
+#[derive(Component)]
 pub struct ListItem(pub usize);
 
 pub fn spawn_asset_browser_ui(
@@ -107,6 +110,15 @@ pub fn spawn_asset_browser_ui(
                 ..text_theme.clone()
             }))
             .insert(AssetAnimLabel);
+        });
+
+        left.with_child(|node_list| {
+            node_list
+                .display_flex()
+                .flex_wrap()
+                .gap_px(3.0)
+                .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
+                .insert(NodeListContainer);
         });
 
         left.with_child(|list_wrap| {
@@ -294,4 +306,62 @@ pub fn scroll_to_selection(
         }
         y += h;
     }
+}
+
+pub fn rebuild_node_list(
+    mut state: ResMut<AssetBrowserState>,
+    mut commands: Commands,
+    container_q: Query<Entity, With<NodeListContainer>>,
+) {
+    // Rebuild whenever the mesh node list changes (model just loaded) or nodes_dirty triggered by toggle.
+    // We track this via a separate flag so we don't rebuild every frame.
+    if !state.nodes_dirty { return; }
+
+    let Ok(container) = container_q.single() else { return };
+    commands.entity(container).despawn_related::<Children>();
+
+    let nodes: Vec<(String, bool)> = state.mesh_nodes.iter()
+        .map(|n| (n.clone(), state.hidden_nodes.contains(n)))
+        .collect();
+
+    if nodes.is_empty() { return; }
+
+    commands.entity(container).with_children(|parent| {
+        for (name, hidden) in nodes {
+            let bg = if hidden {
+                Color::srgba(0.12, 0.10, 0.18, 0.85)
+            } else {
+                Color::srgba(0.25, 0.18, 0.40, 0.90)
+            };
+            let text_color = if hidden {
+                Color::srgba(0.45, 0.40, 0.55, 0.70)
+            } else {
+                Color::srgb(0.88, 0.75, 1.0)
+            };
+            let name_clone = name.clone();
+            parent.spawn((
+                Node {
+                    padding: UiRect::axes(Val::Px(6.0), Val::Px(3.0)),
+                    border_radius: BorderRadius::all(Val::Px(4.0)),
+                    ..Default::default()
+                },
+                BackgroundColor(bg),
+                InteractionPalette {
+                    none: bg,
+                    hovered: Color::srgba(0.35, 0.25, 0.55, 0.95),
+                    pressed: Color::srgba(0.20, 0.14, 0.35, 1.0),
+                },
+                bevy::picking::hover::Hovered::default(),
+                bevy::ui_widgets::Button,
+            ))
+            .with_child((
+                Text::new(name.clone()),
+                TextFont::default().with_font_size(10.0),
+                TextColor(text_color),
+            ))
+            .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                s.toggle_node(&name_clone);
+            });
+        }
+    });
 }

@@ -1,6 +1,7 @@
 use bevy::animation::graph::AnimationNodeIndex;
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
+use std::collections::HashSet;
 
 const WINDOW_SIZE: usize = 40;
 
@@ -19,6 +20,9 @@ pub struct AssetBrowserState {
     pub anim_dirty: bool,
     pub anim_node_indices: Vec<AnimationNodeIndex>,
     pub anim_names: Vec<String>,
+    pub mesh_nodes: Vec<String>,
+    pub hidden_nodes: HashSet<String>,
+    pub nodes_dirty: bool,
 }
 
 impl Default for AssetBrowserState {
@@ -37,6 +41,9 @@ impl Default for AssetBrowserState {
             anim_dirty: false,
             anim_node_indices: Vec::new(),
             anim_names: Vec::new(),
+            mesh_nodes: Vec::new(),
+            hidden_nodes: HashSet::new(),
+            nodes_dirty: false,
         }
     }
 }
@@ -55,6 +62,18 @@ impl AssetBrowserState {
         self.anim_dirty = false;
         self.anim_node_indices.clear();
         self.anim_names.clear();
+        self.mesh_nodes.clear();
+        self.hidden_nodes.clear();
+        self.nodes_dirty = false;
+    }
+
+    pub fn toggle_node(&mut self, name: &str) {
+        if self.hidden_nodes.contains(name) {
+            self.hidden_nodes.remove(name);
+        } else {
+            self.hidden_nodes.insert(name.to_string());
+        }
+        self.nodes_dirty = true;
     }
 
     pub fn anim_next(&mut self) {
