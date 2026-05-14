@@ -360,11 +360,25 @@ pub fn spawn_model_panel(commands: Commands, theme: &LavaTheme) {
 
 fn key_label(key: AnimationKey) -> &'static str {
     match key {
-        AnimationKey::Idle     => "Idle",
-        AnimationKey::Walking  => "Walking",
-        AnimationKey::Throwing => "Throwing",
-        AnimationKey::Crawling => "Crawling",
-        AnimationKey::Building => "Building",
+        AnimationKey::Idle      => "Idle",
+        AnimationKey::IdleShoot => "Idle Shoot",
+        AnimationKey::Walk      => "Walk",
+        AnimationKey::WalkShoot => "Walk Shoot",
+        AnimationKey::Run       => "Run",
+        AnimationKey::RunShoot  => "Run Shoot",
+        AnimationKey::RunGun    => "Run Gun",
+        AnimationKey::Duck      => "Duck",
+        AnimationKey::Jump      => "Jump",
+        AnimationKey::JumpIdle  => "Jump Idle",
+        AnimationKey::JumpLand  => "Jump Land",
+        AnimationKey::Punch     => "Punch",
+        AnimationKey::Wave      => "Wave",
+        AnimationKey::Yes       => "Yes",
+        AnimationKey::No        => "No",
+        AnimationKey::Death     => "Death",
+        AnimationKey::HitReact  => "Hit React",
+        AnimationKey::Throwing  => "Throwing",
+        AnimationKey::Building  => "Building",
     }
 }
 

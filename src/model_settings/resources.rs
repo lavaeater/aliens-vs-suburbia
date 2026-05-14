@@ -5,34 +5,78 @@ use crate::animation::animation_plugin::AnimationKey;
 pub const MODEL_SETTINGS_PATH: &str = "player-settings.ron";
 pub const DEFAULT_CHARACTER_FOLDER: &str = "packs/toon-shooter/characters";
 
-/// Substring match against GLTF clip names, one entry per animation state.
+/// Per-animation-key clip name override.  If empty the default search
+/// fragment from `AnimationKey::default_search()` is used.  Names are
+/// matched against GLTF clip names via `clip_matches()`.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct AnimMapping {
     #[serde(default)] pub idle: String,
-    #[serde(default)] pub walking: String,
+    #[serde(default)] pub idle_shoot: String,
+    #[serde(default)] pub walk: String,
+    #[serde(default)] pub walk_shoot: String,
+    #[serde(default)] pub run: String,
+    #[serde(default)] pub run_shoot: String,
+    #[serde(default)] pub run_gun: String,
+    #[serde(default)] pub duck: String,
+    #[serde(default)] pub jump: String,
+    #[serde(default)] pub jump_idle: String,
+    #[serde(default)] pub jump_land: String,
+    #[serde(default)] pub punch: String,
+    #[serde(default)] pub wave: String,
+    #[serde(default)] pub yes: String,
+    #[serde(default)] pub no: String,
+    #[serde(default)] pub death: String,
+    #[serde(default)] pub hit_react: String,
     #[serde(default)] pub throwing: String,
-    #[serde(default)] pub crawling: String,
     #[serde(default)] pub building: String,
 }
 
 impl AnimMapping {
     pub fn get(&self, key: AnimationKey) -> &str {
         match key {
-            AnimationKey::Idle     => &self.idle,
-            AnimationKey::Walking  => &self.walking,
-            AnimationKey::Throwing => &self.throwing,
-            AnimationKey::Crawling => &self.crawling,
-            AnimationKey::Building => &self.building,
+            AnimationKey::Idle      => &self.idle,
+            AnimationKey::IdleShoot => &self.idle_shoot,
+            AnimationKey::Walk      => &self.walk,
+            AnimationKey::WalkShoot => &self.walk_shoot,
+            AnimationKey::Run       => &self.run,
+            AnimationKey::RunShoot  => &self.run_shoot,
+            AnimationKey::RunGun    => &self.run_gun,
+            AnimationKey::Duck      => &self.duck,
+            AnimationKey::Jump      => &self.jump,
+            AnimationKey::JumpIdle  => &self.jump_idle,
+            AnimationKey::JumpLand  => &self.jump_land,
+            AnimationKey::Punch     => &self.punch,
+            AnimationKey::Wave      => &self.wave,
+            AnimationKey::Yes       => &self.yes,
+            AnimationKey::No        => &self.no,
+            AnimationKey::Death     => &self.death,
+            AnimationKey::HitReact  => &self.hit_react,
+            AnimationKey::Throwing  => &self.throwing,
+            AnimationKey::Building  => &self.building,
         }
     }
 
     pub fn set(&mut self, key: AnimationKey, name: String) {
         match key {
-            AnimationKey::Idle     => self.idle     = name,
-            AnimationKey::Walking  => self.walking  = name,
-            AnimationKey::Throwing => self.throwing = name,
-            AnimationKey::Crawling => self.crawling = name,
-            AnimationKey::Building => self.building = name,
+            AnimationKey::Idle      => self.idle       = name,
+            AnimationKey::IdleShoot => self.idle_shoot = name,
+            AnimationKey::Walk      => self.walk       = name,
+            AnimationKey::WalkShoot => self.walk_shoot = name,
+            AnimationKey::Run       => self.run        = name,
+            AnimationKey::RunShoot  => self.run_shoot  = name,
+            AnimationKey::RunGun    => self.run_gun    = name,
+            AnimationKey::Duck      => self.duck       = name,
+            AnimationKey::Jump      => self.jump       = name,
+            AnimationKey::JumpIdle  => self.jump_idle  = name,
+            AnimationKey::JumpLand  => self.jump_land  = name,
+            AnimationKey::Punch     => self.punch      = name,
+            AnimationKey::Wave      => self.wave       = name,
+            AnimationKey::Yes       => self.yes        = name,
+            AnimationKey::No        => self.no         = name,
+            AnimationKey::Death     => self.death      = name,
+            AnimationKey::HitReact  => self.hit_react  = name,
+            AnimationKey::Throwing  => self.throwing   = name,
+            AnimationKey::Building  => self.building   = name,
         }
     }
 }

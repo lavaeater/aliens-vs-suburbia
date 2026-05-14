@@ -4,7 +4,7 @@ use bevy::gltf::{Gltf, GltfAssetLabel};
 use bevy::prelude::*;
 use bevy::prelude::IntoScheduleConfigs;
 use crate::animation::animation_plugin::{
-    AnimationStore, ANIM_KEYS,
+    AnimationStore, ANIM_KEYS, clip_matches,
     get_child_with_component_recursive,
 };
 use crate::assets::assets_plugin::GameAssets;
@@ -180,12 +180,19 @@ fn build_player_anim_graph(
     for &key in ANIM_KEYS {
         let mapped = model_settings.anim_mapping.get(key);
         let search = if mapped.is_empty() { key.default_search() } else { mapped };
-        let search_lc = search.to_lowercase();
-        if let Some(handle) = gltf.named_animations.iter()
-            .find(|(name, _)| name.to_lowercase().contains(&search_lc))
-            .map(|(_, h)| h.clone())
-        {
-            anims.insert(key, graph.add_clip(handle, 1.0, graph.root));
+        // Two-pass: prefer exact anim-part / suffix match, then substring.
+        let handle = gltf.named_animations.iter()
+            .find(|(name, _)| {
+                let lower = name.to_lowercase();
+                let s = search.to_lowercase();
+                let anim_part = lower.rsplit('|').next().unwrap_or(&lower);
+                anim_part == s || lower.ends_with(&s)
+            })
+            .or_else(|| gltf.named_animations.iter()
+                .find(|(name, _)| clip_matches(name, search)))
+            .map(|(_, h)| h.clone());
+        if let Some(h) = handle {
+            anims.insert(key, graph.add_clip(h, 1.0, graph.root));
         }
     }
 
@@ -201,7 +208,10 @@ fn build_player_anim_graph(
         let Ok(mut anim_player) = anim_player_query.get_mut(anim_entity) else { continue };
         commands.entity(anim_entity).insert(AnimationGraphHandle(graph_handle.clone()));
         if let Some(&idx) = store.anims.get("players").and_then(|m| m.get(&anim_key.key)) {
-            anim_player.play(idx).repeat();
+            let active = anim_player.play(idx);
+            if anim_key.key.loops() {
+                active.repeat();
+            }
         }
     }
 }

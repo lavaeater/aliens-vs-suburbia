@@ -56,34 +56,112 @@ pub struct AnimationStore {
     pub graphs: HashMap<String, Handle<AnimationGraph>>,
 }
 
+/// Animation keys.  Keys without a direct clip (e.g. `Throwing`) are
+/// intent-only: they are pushed onto `CharacterState`'s stack and resolved
+/// by `CharacterState::resolve()` into a concrete clip key at runtime.
 #[derive(Eq, Hash, PartialEq, Copy, Clone, Debug, Reflect)]
 pub enum AnimationKey {
-    Building,
+    // ── Locomotion ─────────────────────────────────────────────────────────
     Idle,
-    Walking,
-    Throwing,
-    Crawling,
+    IdleShoot,
+    Walk,
+    WalkShoot,
+    Run,
+    RunShoot,
+    RunGun,
+    Duck,
+    // ── Airborne ───────────────────────────────────────────────────────────
+    Jump,
+    JumpIdle,
+    JumpLand,
+    // ── Actions ────────────────────────────────────────────────────────────
+    Punch,
+    Wave,
+    Yes,
+    No,
+    // ── Reactions ──────────────────────────────────────────────────────────
+    Death,
+    HitReact,
+    // ── Game-intent keys (resolved to composite clips by CharacterState) ───
+    Throwing,   // → IdleShoot or WalkShoot depending on movement
+    Building,   // direct clip ("interact" / "wave") or falls back to Idle
 }
 
 impl AnimationKey {
-    /// Fallback clip-name fragment used when the user hasn't configured a mapping.
-    /// Matched case-insensitively as a substring against the GLTF's clip names.
+    /// Whether this animation should loop.  One-shot animations (Death,
+    /// reactions, landing) hold their last frame instead of restarting.
+    pub fn loops(self) -> bool {
+        !matches!(
+            self,
+            AnimationKey::Death | AnimationKey::HitReact | AnimationKey::JumpLand
+        )
+    }
+
+    /// Fallback clip-name fragment used when the user hasn't configured a
+    /// mapping.  Matched against the last `|`-delimited segment of the GLTF
+    /// clip name (case-insensitive exact), then as a full-name suffix, then
+    /// as a substring.  See `clip_matches()`.
     pub fn default_search(self) -> &'static str {
         match self {
-            AnimationKey::Idle     => "idle",
-            AnimationKey::Walking  => "walk",
-            AnimationKey::Throwing => "attack",
-            AnimationKey::Crawling => "crawl",
-            AnimationKey::Building => "interact",
+            AnimationKey::Idle      => "idle",
+            AnimationKey::IdleShoot => "idle_shoot",
+            AnimationKey::Walk      => "walk",
+            AnimationKey::WalkShoot => "walk_shoot",
+            AnimationKey::Run       => "run",
+            AnimationKey::RunShoot  => "run_shoot",
+            AnimationKey::RunGun    => "run_gun",
+            AnimationKey::Duck      => "duck",
+            AnimationKey::Jump      => "jump",
+            AnimationKey::JumpIdle  => "jump_idle",
+            AnimationKey::JumpLand  => "jump_land",
+            AnimationKey::Punch     => "punch",
+            AnimationKey::Wave      => "wave",
+            AnimationKey::Yes       => "yes",
+            AnimationKey::No        => "no",
+            AnimationKey::Death     => "death",
+            AnimationKey::HitReact  => "hitreact",
+            AnimationKey::Throwing  => "attack",
+            AnimationKey::Building  => "interact",
         }
     }
 }
 
+/// Match a GLTF clip name against a search fragment.
+///
+/// Priority:
+/// 1. Exact match on the segment after the last `|` (handles `"Armature|Walk"`
+///    vs `"Armature|Walk_Shoot"` correctly).
+/// 2. Full-name suffix match (handles models without an armature prefix).
+/// 3. Substring fallback (for user-configured partial names).
+pub fn clip_matches(clip_name: &str, search: &str) -> bool {
+    if search.is_empty() {
+        return false;
+    }
+    let lower = clip_name.to_lowercase();
+    let s = search.to_lowercase();
+    let anim_part = lower.rsplit('|').next().unwrap_or(&lower);
+    anim_part == s || lower.ends_with(&s) || lower.contains(&s)
+}
+
 pub const ANIM_KEYS: &[AnimationKey] = &[
     AnimationKey::Idle,
-    AnimationKey::Walking,
+    AnimationKey::IdleShoot,
+    AnimationKey::Walk,
+    AnimationKey::WalkShoot,
+    AnimationKey::Run,
+    AnimationKey::RunShoot,
+    AnimationKey::RunGun,
+    AnimationKey::Duck,
+    AnimationKey::Jump,
+    AnimationKey::JumpIdle,
+    AnimationKey::JumpLand,
+    AnimationKey::Punch,
+    AnimationKey::Wave,
+    AnimationKey::Yes,
+    AnimationKey::No,
+    AnimationKey::Death,
+    AnimationKey::HitReact,
     AnimationKey::Throwing,
-    AnimationKey::Crawling,
     AnimationKey::Building,
 ];
 
@@ -141,33 +219,37 @@ pub fn leave_animation_state_handler(
     for AnimationEvent(event_type, entity, anim_key) in update_er.read() {
         if event_type == &AnimationEventType::LeaveAnimState
             && let Ok((mut current_key, mut character_state)) = anim_key_query.get_mut(*entity)
+            && let Some(resolved) = character_state.leave_state(*anim_key)
+            && let Some(player_entity) =
+                get_child_with_component_recursive(*entity, &child_query, &player_query)
+            && let Ok(mut player) = player_query.get_mut(player_entity)
         {
-            let (changed, new_key) = character_state.leave_state(*anim_key);
-            if changed
-                && let Some(player_entity) =
-                    get_child_with_component_recursive(*entity, &child_query, &player_query)
-                && let Ok(mut player) = player_query.get_mut(player_entity)
-            {
-                current_key.key = new_key;
-                anim_thingie(
-                    &anim_store,
-                    &current_key.group,
-                    &current_key.key,
-                    &mut player,
-                );
-            }
+            let old = current_key.key;
+            current_key.key = resolved;
+            anim_thingie(&anim_store, &current_key.group, resolved, &mut player, Some(old));
         }
     }
 }
 
+/// Play `key`'s clip, stopping `old_key`'s clip first to clear any held pose
+/// (important after one-shot animations like Death).
 fn anim_thingie(
     anim_store: &Res<AnimationStore>,
     group: &str,
-    key: &AnimationKey,
+    key: AnimationKey,
     player: &mut Mut<AnimationPlayer>,
+    old_key: Option<AnimationKey>,
 ) {
-    if let Some(idx) = anim_store.anims.get(group).and_then(|m| m.get(key)) {
-        player.play(*idx).repeat();
+    if let Some(old) = old_key {
+        if let Some(idx) = anim_store.anims.get(group).and_then(|m| m.get(&old)) {
+            player.stop(*idx);
+        }
+    }
+    if let Some(idx) = anim_store.anims.get(group).and_then(|m| m.get(&key)) {
+        let active = player.play(*idx);
+        if key.loops() {
+            active.repeat();
+        }
     }
 }
 
@@ -181,18 +263,14 @@ pub fn goto_animation_state_handler(
     for AnimationEvent(event_type, entity, anim_key) in update_er.read() {
         if event_type == &AnimationEventType::GotoAnimState
             && let Ok((mut current_key, mut character_state)) = anim_key_query.get_mut(*entity)
-            && character_state.enter_state(*anim_key)
+            && let Some(resolved) = character_state.enter_state(*anim_key)
             && let Some(player_entity) =
                 get_child_with_component_recursive(*entity, &child_query, &player_query)
             && let Ok(mut player) = player_query.get_mut(player_entity)
         {
-            current_key.key = *anim_key;
-            anim_thingie(
-                &anim_store,
-                &current_key.group,
-                &current_key.key,
-                &mut player,
-            );
+            let old = current_key.key;
+            current_key.key = resolved;
+            anim_thingie(&anim_store, &current_key.group, resolved, &mut player, Some(old));
         }
     }
 }
@@ -212,7 +290,7 @@ pub fn load_animations(
         asset_server.load("quaternius/alien.glb#Animation2"); // AlienArmature|Alien_Idle
 
     alien_anims.insert(
-        AnimationKey::Walking,
+        AnimationKey::Walk,
         alien_graph.add_clip(alien_walking_clip, 1.0, alien_graph.root),
     );
     alien_anims.insert(
@@ -253,8 +331,9 @@ pub fn start_some_animations(
             anim_thingie(
                 &anim_store,
                 &anim_key.group,
-                &anim_key.key,
+                anim_key.key,
                 &mut anim_player,
+                None,
             );
         }
     }

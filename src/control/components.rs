@@ -114,30 +114,50 @@ pub struct CharacterState {
 }
 
 impl CharacterState {
-    pub fn enter_state(&mut self, state: AnimationKey) -> bool {
-        if let Some(latest_state) = self.state.last()
-            && latest_state != &state {
-                self.state.push(state);
-                return true;
-            }
-        false
+    /// Resolves the current intent stack to the concrete animation clip that
+    /// should play.  Handles composite states (e.g. Walk + Throwing →
+    /// WalkShoot) so callers only need to push/pop simple intent keys.
+    pub fn resolve(&self) -> AnimationKey {
+        let has = |k: AnimationKey| self.state.contains(&k);
+        if has(AnimationKey::Death)    { return AnimationKey::Death; }
+        if has(AnimationKey::Building) { return AnimationKey::Building; }
+        if has(AnimationKey::Duck)     { return AnimationKey::Duck; }
+        match (has(AnimationKey::Walk), has(AnimationKey::Throwing)) {
+            (true,  true)  => AnimationKey::WalkShoot,
+            (true,  false) => AnimationKey::Walk,
+            (false, true)  => AnimationKey::IdleShoot,
+            (false, false) => AnimationKey::Idle,
+        }
     }
 
-    pub fn leave_state(&mut self, state: AnimationKey) -> (bool, AnimationKey) {
-        if self.state.len() > 1
-            && let Some(latest_state) = self.state.last()
-                && latest_state == &state {
-                    self.state.pop();
-                    return (true, *self.state.last().unwrap());
-                }
-        (false, state)
+    /// Push an intent state.  Returns the resolved clip key if the visible
+    /// animation changed, `None` if it stayed the same.
+    pub fn enter_state(&mut self, state: AnimationKey) -> Option<AnimationKey> {
+        let prev = self.resolve();
+        if !self.state.contains(&state) {
+            self.state.push(state);
+        }
+        let next = self.resolve();
+        if next != prev { Some(next) } else { None }
+    }
+
+    /// Remove an intent state.  Returns the resolved clip key if the visible
+    /// animation changed, `None` if it stayed the same.
+    pub fn leave_state(&mut self, state: AnimationKey) -> Option<AnimationKey> {
+        let prev = self.resolve();
+        self.state.retain(|s| s != &state);
+        if self.state.is_empty() {
+            self.state.push(AnimationKey::Idle);
+        }
+        let next = self.resolve();
+        if next != prev { Some(next) } else { None }
     }
 }
 
 impl Default for CharacterState {
     fn default() -> Self {
         Self {
-            state: vec![AnimationKey::Idle]
+            state: vec![AnimationKey::Idle],
         }
     }
 }

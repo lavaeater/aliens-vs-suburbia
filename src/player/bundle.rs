@@ -55,7 +55,7 @@ impl PlayerBundle {
             current_tile: CurrentTile {
                 tile: (0, 0)
             },
-            current_animation_key: CurrentAnimationKey::new("players".into(), AnimationKey::Walking),
+            current_animation_key: CurrentAnimationKey::new("players".into(), AnimationKey::Idle),
             character_state: CharacterState::default(),
             score: Score::new(),
             auto_aim: AutoAim(Vec3::Z),
