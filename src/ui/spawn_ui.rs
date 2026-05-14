@@ -219,7 +219,7 @@ pub fn spawn_camera_panel(commands: Commands, theme: &LavaTheme) {
             n.flex_direction = FlexDirection::Column;
             n.row_gap = Val::Px(6.0);
             n.padding = UiRect::all(Val::Px(12.0));
-            n.min_width = Val::Px(300.0);
+            n.min_width = Val::Px(350.0);
         })
         .bg_color(Color::srgba(0.05, 0.12, 0.07, 0.92))
         .insert(StateMarker);
@@ -234,37 +234,55 @@ pub fn spawn_camera_panel(commands: Commands, theme: &LavaTheme) {
             |_: On<Activate>, mut s: ResMut<GameSettings>| { s.projection = ProjectionMode::Perspective; s.save(); });
     });
     cam_row(&mut ui, "Zoom",  &t, CameraSetting::Zoom,
-        |s: &mut GameSettings| s.zoom = (s.zoom - 1.0).max(1.0),
-        |s: &mut GameSettings| s.zoom = (s.zoom + 1.0).min(60.0));
+        |s| s.zoom = (s.zoom - 1.0).max(1.0),
+        |s| s.zoom = (s.zoom - 0.1).max(1.0),
+        |s| s.zoom = (s.zoom + 0.1).min(60.0),
+        |s| s.zoom = (s.zoom + 1.0).min(60.0));
     cam_row(&mut ui, "Pitch", &t, CameraSetting::Pitch,
-        |s: &mut GameSettings| s.pitch_degrees = (s.pitch_degrees - 5.0).max(-89.0),
-        |s: &mut GameSettings| s.pitch_degrees = (s.pitch_degrees + 5.0).min(-5.0));
+        |s| s.pitch_degrees = (s.pitch_degrees - 5.0).max(-89.0),
+        |s| s.pitch_degrees = (s.pitch_degrees - 1.0).max(-89.0),
+        |s| s.pitch_degrees = (s.pitch_degrees + 1.0).min(-5.0),
+        |s| s.pitch_degrees = (s.pitch_degrees + 5.0).min(-5.0));
     cam_row(&mut ui, "Yaw",   &t, CameraSetting::Yaw,
-        |s: &mut GameSettings| s.yaw_degrees = (s.yaw_degrees - 15.0).rem_euclid(360.0),
-        |s: &mut GameSettings| s.yaw_degrees = (s.yaw_degrees + 15.0).rem_euclid(360.0));
+        |s| s.yaw_degrees = (s.yaw_degrees - 15.0).rem_euclid(360.0),
+        |s| s.yaw_degrees = (s.yaw_degrees -  1.0).rem_euclid(360.0),
+        |s| s.yaw_degrees = (s.yaw_degrees +  1.0).rem_euclid(360.0),
+        |s| s.yaw_degrees = (s.yaw_degrees + 15.0).rem_euclid(360.0));
     cam_row(&mut ui, "Speed", &t, CameraSetting::Speed,
-        |s: &mut GameSettings| s.player_speed_multiplier = (s.player_speed_multiplier - 0.25).max(0.25),
-        |s: &mut GameSettings| s.player_speed_multiplier = (s.player_speed_multiplier + 0.25).min(5.0));
+        |s| s.player_speed_multiplier = (s.player_speed_multiplier - 0.25).max(0.25),
+        |s| s.player_speed_multiplier = (s.player_speed_multiplier - 0.05).max(0.05),
+        |s| s.player_speed_multiplier = (s.player_speed_multiplier + 0.05).min(5.0),
+        |s| s.player_speed_multiplier = (s.player_speed_multiplier + 0.25).min(5.0));
 
     let sep = TextTheme { label_size: 12.0, label_color: Color::srgb(0.4, 0.65, 0.5), ..t.clone() };
     ui.with_child(|c| { c.insert_bundle(lava_ui_builder::label("— Ortho —", &sep)); });
     cam_row(&mut ui, "V.Height", &t, CameraSetting::OrthoVH,
-        |s: &mut GameSettings| s.ortho_viewport_height = (s.ortho_viewport_height - 0.25).max(0.25),
-        |s: &mut GameSettings| s.ortho_viewport_height += 0.25);
+        |s| s.ortho_viewport_height = (s.ortho_viewport_height - 0.25).max(0.25),
+        |s| s.ortho_viewport_height = (s.ortho_viewport_height - 0.05).max(0.05),
+        |s| s.ortho_viewport_height += 0.05,
+        |s| s.ortho_viewport_height += 0.25);
     cam_row(&mut ui, "Near", &t, CameraSetting::OrthoNear,
-        |s: &mut GameSettings| s.ortho_near -= 50.0,
-        |s: &mut GameSettings| s.ortho_near = (s.ortho_near + 50.0).min(0.0));
+        |s| s.ortho_near -= 50.0,
+        |s| s.ortho_near -=  1.0,
+        |s| s.ortho_near = (s.ortho_near +  1.0).min(0.0),
+        |s| s.ortho_near = (s.ortho_near + 50.0).min(0.0));
     cam_row(&mut ui, "Far", &t, CameraSetting::OrthoFar,
-        |s: &mut GameSettings| s.ortho_far = (s.ortho_far - 100.0).max(1.0),
-        |s: &mut GameSettings| s.ortho_far += 100.0);
+        |s| s.ortho_far = (s.ortho_far - 100.0).max(1.0),
+        |s| s.ortho_far = (s.ortho_far -   1.0).max(1.0),
+        |s| s.ortho_far += 1.0,
+        |s| s.ortho_far += 100.0);
 
     ui.with_child(|c| { c.insert_bundle(lava_ui_builder::label("— Persp —", &sep)); });
     cam_row(&mut ui, "Near", &t, CameraSetting::PerspNear,
-        |s: &mut GameSettings| s.persp_near = (s.persp_near - 0.05).max(0.01),
-        |s: &mut GameSettings| s.persp_near = (s.persp_near + 0.05).min(s.persp_far - 0.1));
+        |s| s.persp_near = (s.persp_near - 0.05).max(0.01),
+        |s| s.persp_near = (s.persp_near - 0.01).max(0.001),
+        |s| s.persp_near = (s.persp_near + 0.01).min(s.persp_far - 0.1),
+        |s| s.persp_near = (s.persp_near + 0.05).min(s.persp_far - 0.1));
     cam_row(&mut ui, "Far",  &t, CameraSetting::PerspFar,
-        |s: &mut GameSettings| s.persp_far = (s.persp_far - 100.0).max(s.persp_near + 1.0),
-        |s: &mut GameSettings| s.persp_far += 100.0);
+        |s| s.persp_far = (s.persp_far - 100.0).max(s.persp_near + 1.0),
+        |s| s.persp_far = (s.persp_far -   1.0).max(s.persp_near + 1.0),
+        |s| s.persp_far += 1.0,
+        |s| s.persp_far += 100.0);
 
     ui.build();
 }
@@ -276,11 +294,11 @@ pub fn spawn_model_panel(commands: Commands, theme: &LavaTheme) {
         .modify_node(|mut n| {
             n.position_type = PositionType::Absolute;
             n.top = Val::Px(8.0);
-            n.right = Val::Px(316.0);
+            n.right = Val::Px(366.0);
             n.flex_direction = FlexDirection::Column;
             n.row_gap = Val::Px(6.0);
             n.padding = UiRect::all(Val::Px(12.0));
-            n.min_width = Val::Px(300.0);
+            n.min_width = Val::Px(350.0);
         })
         .bg_color(Color::srgba(0.05, 0.08, 0.15, 0.92))
         .insert(StateMarker);
@@ -311,14 +329,20 @@ pub fn spawn_model_panel(commands: Commands, theme: &LavaTheme) {
     let sep = TextTheme { label_size: 12.0, label_color: Color::srgb(0.4, 0.65, 0.5), ..t.clone() };
     ui.with_child(|c| { c.insert_bundle(lava_ui_builder::label("— Transform —", &sep)); });
     mdl_row(&mut ui, "Scale",    &t, ModelSetting::Scale,
-        |s: &mut ModelSettings| s.scale = (s.scale - 0.1).max(0.1),
-        |s: &mut ModelSettings| s.scale = (s.scale + 0.1).min(10.0));
+        |s| s.scale = (s.scale - 0.1).max(0.01),
+        |s| s.scale = (s.scale - 0.01).max(0.01),
+        |s| s.scale = (s.scale + 0.01).min(20.0),
+        |s| s.scale = (s.scale + 0.1).min(20.0));
     mdl_row(&mut ui, "Offset Y", &t, ModelSetting::OffsetY,
-        |s: &mut ModelSettings| s.translation_y -= 0.05,
-        |s: &mut ModelSettings| s.translation_y += 0.05);
+        |s| s.translation_y -= 0.1,
+        |s| s.translation_y -= 0.01,
+        |s| s.translation_y += 0.01,
+        |s| s.translation_y += 0.1);
     mdl_row(&mut ui, "Rot Y",    &t, ModelSetting::RotY,
-        |s: &mut ModelSettings| s.rotation_y_degrees = (s.rotation_y_degrees - 15.0).rem_euclid(360.0),
-        |s: &mut ModelSettings| s.rotation_y_degrees = (s.rotation_y_degrees + 15.0).rem_euclid(360.0));
+        |s| s.rotation_y_degrees = (s.rotation_y_degrees - 15.0).rem_euclid(360.0),
+        |s| s.rotation_y_degrees = (s.rotation_y_degrees -  1.0).rem_euclid(360.0),
+        |s| s.rotation_y_degrees = (s.rotation_y_degrees +  1.0).rem_euclid(360.0),
+        |s| s.rotation_y_degrees = (s.rotation_y_degrees + 15.0).rem_euclid(360.0));
 
     // Animation mapping
     ui.with_child(|c| { c.insert_bundle(lava_ui_builder::label("— Animation Mapping —", &sep)); });
@@ -370,45 +394,60 @@ fn anim_mapping_row(ui: &mut UIBuilder, label: &str, t: &TextTheme, key: Animati
     });
 }
 
-/// Helper: a camera setting row with label, value display, and dec/inc buttons.
+/// Camera setting row: `[ << ][ < ]  value  [ > ][ >> ]`
+/// Outer buttons are the coarse step, inner are the fine step.
 fn cam_row(
     ui: &mut UIBuilder,
     label: &str,
     t: &TextTheme,
     setting: CameraSetting,
-    dec: impl Fn(&mut GameSettings) + Send + Sync + 'static,
-    inc: impl Fn(&mut GameSettings) + Send + Sync + 'static,
+    coarse_dec: impl Fn(&mut GameSettings) + Send + Sync + 'static,
+    fine_dec:   impl Fn(&mut GameSettings) + Send + Sync + 'static,
+    fine_inc:   impl Fn(&mut GameSettings) + Send + Sync + 'static,
+    coarse_inc: impl Fn(&mut GameSettings) + Send + Sync + 'static,
 ) {
     setting_row(ui, label, t, move |row| {
-        row.add_button_observe("-", |b| { b.size_px(32.0, 32.0); },
-            move |_: On<Activate>, mut s: ResMut<GameSettings>| { dec(&mut s); s.save(); });
+        row.add_button_observe("<<", |b| { b.size_px(28.0, 28.0); },
+            move |_: On<Activate>, mut s: ResMut<GameSettings>| { coarse_dec(&mut s); s.save(); });
+        row.add_button_observe("<",  |b| { b.size_px(24.0, 28.0); },
+            move |_: On<Activate>, mut s: ResMut<GameSettings>| { fine_dec(&mut s); s.save(); });
         row.with_child(|v| {
             v.insert_bundle(lava_ui_builder::label("", &TextTheme::default()))
-             .insert(setting);
+             .insert(setting)
+             .modify_node(|mut n| n.min_width = Val::Px(44.0));
         });
-        row.add_button_observe("+", |b| { b.size_px(32.0, 32.0); },
-            move |_: On<Activate>, mut s: ResMut<GameSettings>| { inc(&mut s); s.save(); });
+        row.add_button_observe(">",  |b| { b.size_px(24.0, 28.0); },
+            move |_: On<Activate>, mut s: ResMut<GameSettings>| { fine_inc(&mut s); s.save(); });
+        row.add_button_observe(">>", |b| { b.size_px(28.0, 28.0); },
+            move |_: On<Activate>, mut s: ResMut<GameSettings>| { coarse_inc(&mut s); s.save(); });
     });
 }
 
-/// Helper: a model setting row with label, value display, and dec/inc buttons.
+/// Model setting row: `[ << ][ < ]  value  [ > ][ >> ]`
 fn mdl_row(
     ui: &mut UIBuilder,
     label: &str,
     t: &TextTheme,
     setting: ModelSetting,
-    dec: impl Fn(&mut ModelSettings) + Send + Sync + 'static,
-    inc: impl Fn(&mut ModelSettings) + Send + Sync + 'static,
+    coarse_dec: impl Fn(&mut ModelSettings) + Send + Sync + 'static,
+    fine_dec:   impl Fn(&mut ModelSettings) + Send + Sync + 'static,
+    fine_inc:   impl Fn(&mut ModelSettings) + Send + Sync + 'static,
+    coarse_inc: impl Fn(&mut ModelSettings) + Send + Sync + 'static,
 ) {
     setting_row(ui, label, t, move |row| {
-        row.add_button_observe("-", |b| { b.size_px(32.0, 32.0); },
-            move |_: On<Activate>, mut s: ResMut<ModelSettings>| { dec(&mut s); s.save(); });
+        row.add_button_observe("<<", |b| { b.size_px(28.0, 28.0); },
+            move |_: On<Activate>, mut s: ResMut<ModelSettings>| { coarse_dec(&mut s); s.save(); });
+        row.add_button_observe("<",  |b| { b.size_px(24.0, 28.0); },
+            move |_: On<Activate>, mut s: ResMut<ModelSettings>| { fine_dec(&mut s); s.save(); });
         row.with_child(|v| {
             v.insert_bundle(lava_ui_builder::label("", &TextTheme::default()))
-             .insert(setting);
+             .insert(setting)
+             .modify_node(|mut n| n.min_width = Val::Px(44.0));
         });
-        row.add_button_observe("+", |b| { b.size_px(32.0, 32.0); },
-            move |_: On<Activate>, mut s: ResMut<ModelSettings>| { inc(&mut s); s.save(); });
+        row.add_button_observe(">",  |b| { b.size_px(24.0, 28.0); },
+            move |_: On<Activate>, mut s: ResMut<ModelSettings>| { fine_inc(&mut s); s.save(); });
+        row.add_button_observe(">>", |b| { b.size_px(28.0, 28.0); },
+            move |_: On<Activate>, mut s: ResMut<ModelSettings>| { coarse_inc(&mut s); s.save(); });
     });
 }
 
@@ -420,7 +459,7 @@ fn setting_row<F: FnOnce(&mut UIBuilder)>(
 ) {
     let label_theme = TextTheme { label_size: 16.0, ..text_theme.clone() };
     ui.add_row(|row| {
-        row.gap_px(6.0).align_items_center().width_px(260.0);
+        row.gap_px(4.0).align_items_center().width_px(310.0);
         row.with_child(|c| {
             c.insert_bundle(lava_ui_builder::label(label, &label_theme));
             c.modify_node(|mut n| n.width = Val::Px(70.0));
