@@ -249,17 +249,19 @@ pub fn apply_camera_settings(
 
         *proj = match settings.projection {
             ProjectionMode::Orthographic => Projection::Orthographic(OrthographicProjection {
-                near: -1000.0,
-                far: 1000.0,
+                near: settings.ortho_near,
+                far: settings.ortho_far,
                 viewport_origin: Vec2::new(0.5, 0.5),
-                scaling_mode: ScalingMode::FixedVertical { viewport_height: 2.0 },
+                scaling_mode: ScalingMode::FixedVertical {
+                    viewport_height: settings.ortho_viewport_height,
+                },
                 area: Rect::new(-1.0, -1.0, 1.0, 1.0),
                 scale: settings.zoom,
             }),
             ProjectionMode::Perspective => Projection::Perspective(PerspectiveProjection {
                 fov: (settings.zoom).clamp(10.0, 120.0).to_radians(),
-                near: 0.1,
-                far: 1000.0,
+                near: settings.persp_near,
+                far: settings.persp_far,
                 ..default()
             }),
         };
