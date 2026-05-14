@@ -1,0 +1,16 @@
+(
+    character_folder: "packs/toon-shooter/characters",
+    character_index: 0,
+    scale: 0.39999992,
+    translation_x: 0.0,
+    translation_y: -0.3,
+    translation_z: 0.0,
+    rotation_y_degrees: 180.0,
+    anim_mapping: (
+        idle: "Idle",
+        walking: "CharacterArmature|Walk",
+        throwing: "Punch",
+        crawling: "Yes",
+        building: "CharacterArmature|Duck",
+    ),
+)
