@@ -65,6 +65,20 @@ pub enum AnimationKey {
     Crawling,
 }
 
+impl AnimationKey {
+    /// Fallback clip-name fragment used when the user hasn't configured a mapping.
+    /// Matched case-insensitively as a substring against the GLTF's clip names.
+    pub fn default_search(self) -> &'static str {
+        match self {
+            AnimationKey::Idle     => "idle",
+            AnimationKey::Walking  => "walk",
+            AnimationKey::Throwing => "attack",
+            AnimationKey::Crawling => "crawl",
+            AnimationKey::Building => "interact",
+        }
+    }
+}
+
 pub const ANIM_KEYS: &[AnimationKey] = &[
     AnimationKey::Idle,
     AnimationKey::Walking,

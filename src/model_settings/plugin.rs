@@ -2,6 +2,7 @@ use std::time::UNIX_EPOCH;
 use bevy::app::{App, Plugin, Update};
 use bevy::gltf::{Gltf, GltfAssetLabel};
 use bevy::prelude::*;
+use bevy::prelude::IntoScheduleConfigs;
 use crate::animation::animation_plugin::{
     AnimationStore, ANIM_KEYS,
     get_child_with_component_recursive,
@@ -9,7 +10,7 @@ use crate::animation::animation_plugin::{
 use crate::assets::assets_plugin::GameAssets;
 use crate::game_state::GameState;
 use crate::model_settings::resources::{
-    CharacterFolder, DebugAnimSelection, ModelSettings, PlayerAnimClips,
+    CharacterFolder, ModelSettings, PlayerAnimClips,
     MODEL_SETTINGS_PATH, scan_character_folder,
 };
 use crate::player::components::{OutlineDone, Player};
@@ -27,7 +28,6 @@ impl Plugin for ModelSettingsPlugin {
             .insert_resource(settings)
             .insert_resource(CharacterFolder { files })
             .insert_resource(PlayerAnimClips::default())
-            .insert_resource(DebugAnimSelection::default())
             .insert_resource(FileWatchTimer {
                 last_mtime: mtime_of_settings(),
                 timer: 0.0,
@@ -39,7 +39,6 @@ impl Plugin for ModelSettingsPlugin {
                 apply_model_settings_live,
                 sync_player_anim_clips,
                 build_player_anim_graph,
-                apply_debug_anim_selection,
             ).run_if(in_state(GameState::InGame)));
     }
 }
@@ -180,10 +179,10 @@ fn build_player_anim_graph(
 
     for &key in ANIM_KEYS {
         let mapped = model_settings.anim_mapping.get(key);
-        if mapped.is_empty() { continue; }
-        let mapped_lc = mapped.to_lowercase();
+        let search = if mapped.is_empty() { key.default_search() } else { mapped };
+        let search_lc = search.to_lowercase();
         if let Some(handle) = gltf.named_animations.iter()
-            .find(|(name, _)| name.to_lowercase().contains(&mapped_lc))
+            .find(|(name, _)| name.to_lowercase().contains(&search_lc))
             .map(|(_, h)| h.clone())
         {
             anims.insert(key, graph.add_clip(handle, 1.0, graph.root));
@@ -207,28 +206,3 @@ fn build_player_anim_graph(
     }
 }
 
-// ── Debug anim selection ──────────────────────────────────────────────────────
-
-fn apply_debug_anim_selection(
-    mut anim_sel: ResMut<DebugAnimSelection>,
-    anim_store: Option<Res<AnimationStore>>,
-    player_query: Query<Entity, With<Player>>,
-    mut anim_player_query: Query<&mut AnimationPlayer>,
-    child_query: Query<&Children>,
-) {
-    if !anim_sel.dirty { return; }
-    anim_sel.dirty = false;
-
-    let Some(anim_store) = anim_store else { return };
-    let key = ANIM_KEYS[anim_sel.index % ANIM_KEYS.len()];
-
-    for player_entity in player_query.iter() {
-        let Some(anim_entity) = get_child_with_component_recursive(
-            player_entity, &child_query, &anim_player_query,
-        ) else { continue };
-        let Ok(mut anim_player) = anim_player_query.get_mut(anim_entity) else { continue };
-        if let Some(&idx) = anim_store.anims.get("players").and_then(|m| m.get(&key)) {
-            anim_player.play(idx).repeat();
-        }
-    }
-}

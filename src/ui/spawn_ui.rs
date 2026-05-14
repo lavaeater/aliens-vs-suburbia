@@ -4,7 +4,7 @@ use crate::game_state::GameState;
 use crate::general::components::Health;
 use crate::player::components::IsBuilding;
 use crate::settings::resources::{GameSettings, ProjectionMode};
-use crate::model_settings::resources::{CharacterFolder, DebugAnimSelection, ModelSettings, PlayerAnimClips};
+use crate::model_settings::resources::{CharacterFolder, ModelSettings, PlayerAnimClips};
 use bevy::prelude::*;
 use bevy::ui_widgets::Activate;
 use lava_ui_builder::{
@@ -326,22 +326,6 @@ pub fn spawn_model_panel(commands: Commands, theme: &LavaTheme) {
         anim_mapping_row(&mut ui, key_label(*key), &t, *key);
     }
 
-    // Debug anim selector
-    ui.with_child(|c| { c.insert_bundle(lava_ui_builder::label("— Debug —", &sep)); });
-    setting_row(&mut ui, "Play", &t, |row| {
-        row.add_button_observe("<", |b| { b.size_px(32.0, 32.0); },
-            |_: On<Activate>, mut sel: ResMut<DebugAnimSelection>| {
-                sel.index = (sel.index + ANIM_KEYS.len() - 1) % ANIM_KEYS.len();
-                sel.dirty = true;
-            });
-        row.with_child(|v| { v.insert_bundle(lava_ui_builder::label("", &TextTheme::default())).insert(AnimSelectorLabel); });
-        row.add_button_observe(">", |b| { b.size_px(32.0, 32.0); },
-            |_: On<Activate>, mut sel: ResMut<DebugAnimSelection>| {
-                sel.index = (sel.index + 1) % ANIM_KEYS.len();
-                sel.dirty = true;
-            });
-    });
-
     ui.build();
 }
 
@@ -471,8 +455,6 @@ pub enum ModelSetting {
 #[derive(Component, Clone, Copy)]
 pub struct AnimMappingLabel(pub AnimationKey);
 
-#[derive(Component)]
-pub struct AnimSelectorLabel;
 
 // ── Toggle systems ────────────────────────────────────────────────────────────
 
@@ -548,15 +530,6 @@ pub fn update_anim_mapping_labels(
     }
 }
 
-pub fn update_anim_selector_label(
-    anim_sel: Res<DebugAnimSelection>,
-    mut label: Query<&mut Text, With<AnimSelectorLabel>>,
-) {
-    if !anim_sel.is_changed() { return; }
-    if let Ok(mut t) = label.single_mut() {
-        **t = format!("{:?}", ANIM_KEYS[anim_sel.index % ANIM_KEYS.len()]);
-    }
-}
 
 pub fn update_hud(
     alien_counter: Option<Res<AlienCounter>>,

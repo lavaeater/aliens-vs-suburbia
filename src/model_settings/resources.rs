@@ -81,12 +81,6 @@ pub struct PlayerAnimClips {
     pub names: Vec<String>,
 }
 
-#[derive(Resource, Default)]
-pub struct DebugAnimSelection {
-    pub index: usize,
-    pub dirty: bool,
-}
-
 #[derive(Debug, Clone, Resource, Serialize, Deserialize)]
 pub struct ModelSettings {
     /// Folder containing character models, relative to `assets/`.

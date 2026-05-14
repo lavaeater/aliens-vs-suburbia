@@ -8,7 +8,7 @@ use crate::ui::spawn_ui::{
     spawn_menu, spawn_showcase_ui, spawn_ui, sync_health_bars,
     toggle_settings_panel, toggle_model_panel,
     update_camera_panel, update_model_labels, update_anim_mapping_labels,
-    update_anim_selector_label, update_hud,
+    update_hud,
     AddHealthBar, StateMarker,
 };
 
@@ -39,7 +39,6 @@ impl Plugin for UiPlugin {
                     update_camera_panel,
                     update_model_labels,
                     update_anim_mapping_labels,
-                    update_anim_selector_label,
                 ).run_if(in_state(GameState::InGame)),
             );
     }

@@ -1,5 +1,5 @@
 use bevy::math::{Quat, Vec3};
-use bevy::prelude::{Children, Commands, Component, DetectChanges, Entity, MessageReader, MessageWriter,
+use bevy::prelude::{Children, Commands, Component, DetectChanges, Entity, Local, MessageReader, MessageWriter,
                     Assets, Query, Res, ResMut, Transform, Visibility, With};
 use bevy::scene::SceneRoot;
 use avian3d::prelude::Collider;
@@ -156,9 +156,13 @@ pub fn fix_scene_transform(
 pub fn apply_model_settings_live(
     model_settings: Res<ModelSettings>,
     mut root_query: Query<&mut Transform, With<PlayerModelRoot>>,
+    mut last: Local<(f32, f32, f32, f32, f32)>,
 ) {
     if !model_settings.is_changed() { return; }
     let s = &*model_settings;
+    let sig = (s.scale, s.translation_x, s.translation_y, s.translation_z, s.rotation_y_degrees);
+    if *last == sig { return; }
+    *last = sig;
     for mut transform in root_query.iter_mut() {
         transform.translation = Vec3::new(s.translation_x, s.translation_y, s.translation_z);
         transform.rotation = Quat::from_rotation_y(s.rotation_y_degrees.to_radians());
