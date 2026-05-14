@@ -1,6 +1,6 @@
 use bevy::gltf::{Gltf, GltfNode};
 use bevy::prelude::*;
-use crate::asset_browser::state::AssetBrowserState;
+use crate::asset_browser::state::{AssetBrowserState, CHARACTER_NODE_PREFIX};
 use crate::asset_browser::ui::AssetAnimLabel;
 use crate::ui::spawn_ui::StateMarker;
 
@@ -174,7 +174,7 @@ pub fn apply_node_visibility(
     state.nodes_dirty = false;
 
     for (name, mut vis) in named_entities.iter_mut() {
-        if name.contains("Character_") { continue; }
+        if name.starts_with(CHARACTER_NODE_PREFIX) { continue; }
         if state.mesh_nodes.iter().any(|n| n == name.as_str()) {
             *vis = if state.hidden_nodes.contains(name.as_str()) {
                 Visibility::Hidden

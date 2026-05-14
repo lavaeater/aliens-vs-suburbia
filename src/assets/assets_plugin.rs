@@ -1,18 +1,16 @@
-use bevy::app::{App, Plugin, Startup, Update};
-use bevy::asset::{AssetServer, Assets, Handle};
-use bevy::gltf::Gltf;
-use bevy::prelude::{Local, Res, ResMut, Resource};
+use bevy::app::{App, Plugin, Startup};
+use bevy::asset::{AssetServer, Handle};
+use bevy::gltf::{Gltf, GltfAssetLabel};
+use bevy::prelude::{Res, ResMut, Resource};
 use bevy::scene::Scene;
+use crate::model_settings::resources::{CharacterFolder, ModelSettings};
 
 pub struct AssetsPlugin;
 
 impl Plugin for AssetsPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .init_resource::<GameAssets>()
-            .add_systems(Startup, load_assets)
-            .add_systems(Update, log_animation_names)
-        ;
+        app.init_resource::<GameAssets>()
+            .add_systems(Startup, load_assets);
     }
 }
 
@@ -26,48 +24,27 @@ pub struct GameAssets {
     pub alien_gltf: Handle<Gltf>,
 }
 
+pub fn load_player_assets(
+    asset_server: &AssetServer,
+    game_assets: &mut GameAssets,
+    model_settings: &ModelSettings,
+    char_folder: &CharacterFolder,
+) {
+    let path = model_settings.current_model_path(char_folder)
+        .unwrap_or_else(|| "packs/toon-shooter/characters/Character Soldier.glb".to_string());
+    game_assets.player_scene = asset_server.load(GltfAssetLabel::Scene(0).from_asset(path.clone()));
+    game_assets.player_gltf = asset_server.load(path);
+}
+
 fn load_assets(
     asset_server: Res<AssetServer>,
     mut game_assets: ResMut<GameAssets>,
+    model_settings: Res<ModelSettings>,
+    char_folder: Res<CharacterFolder>,
 ) {
-    *game_assets = GameAssets {
-        player_scene: asset_server.load("models/Adventurer.glb#Scene0"),
-        ball_scene: asset_server.load("ball_fab.glb#Scene0"),
-        alien_scene: asset_server.load("quaternius/alien.glb#Scene0"),
-        alien_construct: asset_server.load("player.glb#Scene0"),
-        player_gltf: asset_server.load("models/Adventurer.glb"),
-        alien_gltf: asset_server.load("quaternius/alien.glb"),
-    }
-}
-
-fn log_animation_names(
-    game_assets: Res<GameAssets>,
-    gltf_assets: Res<Assets<Gltf>>,
-    mut logged: Local<bool>,
-) {
-    if *logged {
-        return;
-    }
-    let Some(player_gltf) = gltf_assets.get(&game_assets.player_gltf) else { return };
-    let Some(alien_gltf) = gltf_assets.get(&game_assets.alien_gltf) else { return };
-
-    println!("=== Adventurer.glb animations ===");
-    for (i, _) in player_gltf.animations.iter().enumerate() {
-        let name = player_gltf.named_animations.iter()
-            .find(|(_, h)| player_gltf.animations[i] == **h)
-            .map(|(n, _)| n.as_ref())
-            .unwrap_or("<unnamed>");
-        println!("  [{i}] {name}");
-    }
-
-    println!("=== alien.glb animations ===");
-    for (i, _) in alien_gltf.animations.iter().enumerate() {
-        let name = alien_gltf.named_animations.iter()
-            .find(|(_, h)| alien_gltf.animations[i] == **h)
-            .map(|(n, _)| n.as_ref())
-            .unwrap_or("<unnamed>");
-        println!("  [{i}] {name}");
-    }
-
-    *logged = true;
+    load_player_assets(&asset_server, &mut game_assets, &model_settings, &char_folder);
+    game_assets.ball_scene = asset_server.load("ball_fab.glb#Scene0");
+    game_assets.alien_scene = asset_server.load("quaternius/alien.glb#Scene0");
+    game_assets.alien_construct = asset_server.load("player.glb#Scene0");
+    game_assets.alien_gltf = asset_server.load("quaternius/alien.glb");
 }

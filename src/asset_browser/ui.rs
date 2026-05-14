@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy::ui::ScrollPosition;
 use bevy::ui_widgets::Activate;
 use lava_ui_builder::{InteractionPalette, LavaTheme, TextTheme, UIBuilder};
-use crate::asset_browser::state::AssetBrowserState;
+use crate::asset_browser::state::{AssetBrowserState, CHARACTER_NODE_PREFIX};
 use crate::asset_browser::viewer::AssetBrowserViewerPanel;
 use crate::game_state::GameState;
 use crate::ui::spawn_ui::StateMarker;
@@ -317,7 +317,7 @@ pub fn rebuild_node_list(
     commands.entity(container).despawn_related::<Children>();
 
     let nodes: Vec<(String, bool)> = state.mesh_nodes.iter()
-        .filter(|n| !n.contains("Character_"))
+        .filter(|n| !n.starts_with(CHARACTER_NODE_PREFIX))
         .map(|n| (n.clone(), state.hidden_nodes.contains(n)))
         .collect();
 

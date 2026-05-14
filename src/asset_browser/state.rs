@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use std::collections::HashSet;
 
 const WINDOW_SIZE: usize = 40;
+pub const CHARACTER_NODE_PREFIX: &str = "Character_";
 
 #[derive(Resource)]
 pub struct AssetBrowserState {

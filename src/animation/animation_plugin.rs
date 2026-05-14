@@ -65,6 +65,14 @@ pub enum AnimationKey {
     Crawling,
 }
 
+pub const ANIM_KEYS: &[AnimationKey] = &[
+    AnimationKey::Idle,
+    AnimationKey::Walking,
+    AnimationKey::Throwing,
+    AnimationKey::Crawling,
+    AnimationKey::Building,
+];
+
 /*
 [0] AlienArmature|Alien_Clapping
   [1] AlienArmature|Alien_Death
@@ -200,51 +208,14 @@ pub fn load_animations(
 
     let alien_graph_handle = animation_graphs.add(alien_graph);
 
-    // --- Players ---
-    let mut player_graph = AnimationGraph::new();
-    let mut player_anims: HashMap<AnimationKey, AnimationNodeIndex> = HashMap::new();
-
-    let player_idle_clip: Handle<AnimationClip> =
-        asset_server.load("models/Adventurer.glb#Animation4"); // CharacterArmature|Idle
-    let player_walking_clip: Handle<AnimationClip> =
-        asset_server.load("models/Adventurer.glb#Animation22"); // CharacterArmature|Walk
-    let player_throwing_clip: Handle<AnimationClip> =
-        asset_server.load("models/Adventurer.glb#Animation1"); // CharacterArmature|Gun_Shoot
-    let player_crawling_clip: Handle<AnimationClip> =
-        asset_server.load("models/Adventurer.glb#Animation15"); // CharacterArmature|Roll
-    let player_building_clip: Handle<AnimationClip> =
-        asset_server.load("models/Adventurer.glb#Animation10"); // CharacterArmature|Interact
-
-    player_anims.insert(
-        AnimationKey::Idle,
-        player_graph.add_clip(player_idle_clip, 1.0, player_graph.root),
-    );
-    player_anims.insert(
-        AnimationKey::Walking,
-        player_graph.add_clip(player_walking_clip, 1.0, player_graph.root),
-    );
-    player_anims.insert(
-        AnimationKey::Throwing,
-        player_graph.add_clip(player_throwing_clip, 1.0, player_graph.root),
-    );
-    player_anims.insert(
-        AnimationKey::Crawling,
-        player_graph.add_clip(player_crawling_clip, 1.0, player_graph.root),
-    );
-    player_anims.insert(
-        AnimationKey::Building,
-        player_graph.add_clip(player_building_clip, 1.0, player_graph.root),
-    );
-
-    let player_graph_handle = animation_graphs.add(player_graph);
-
+    // Player animations are built dynamically from the character GLTF by
+    // build_player_anim_graph in model_settings/plugin.rs once the asset loads.
     let mut anims = HashMap::new();
     anims.insert("aliens".to_string(), alien_anims);
-    anims.insert("players".to_string(), player_anims);
+    anims.insert("players".to_string(), HashMap::new());
 
     let mut graphs = HashMap::new();
     graphs.insert("aliens".to_string(), alien_graph_handle);
-    graphs.insert("players".to_string(), player_graph_handle);
 
     commands.insert_resource(AnimationStore { anims, graphs });
 }

@@ -119,7 +119,7 @@ fn settings_keyboard_system(
         changed = true;
     }
 
-    if keys.just_pressed(KeyCode::F2) || changed {
+    if changed {
         settings.save();
     }
 }

@@ -1,9 +1,10 @@
 use crate::alien::components::general::AlienCounter;
+use crate::animation::animation_plugin::{AnimationKey, ANIM_KEYS};
 use crate::game_state::GameState;
 use crate::general::components::Health;
 use crate::player::components::IsBuilding;
 use crate::settings::resources::{GameSettings, ProjectionMode};
-use crate::model_settings::resources::{ANIM_KEYS, DebugAnimSelection, ModelSettings};
+use crate::model_settings::resources::{CharacterFolder, DebugAnimSelection, ModelSettings, PlayerAnimClips};
 use bevy::prelude::*;
 use bevy::ui_widgets::Activate;
 use lava_ui_builder::{
@@ -203,14 +204,14 @@ pub fn spawn_ui(mut commands: Commands, theme: Res<LavaTheme>) {
         ui.build();
     }
 
-    spawn_settings_panel(commands, theme);
+    spawn_camera_panel(commands.reborrow(), &theme);
+    spawn_model_panel(commands, &theme);
 }
 
-fn spawn_settings_panel(commands: Commands, theme: Res<LavaTheme>) {
+pub fn spawn_camera_panel(commands: Commands, theme: &LavaTheme) {
     let mut ui = UIBuilder::new(commands, Some(theme.clone()));
-
     ui.component::<SettingsPanel>()
-        .display_none() // hidden until F1
+        .display_none()
         .modify_node(|mut n| {
             n.position_type = PositionType::Absolute;
             n.top = Val::Px(8.0);
@@ -218,129 +219,116 @@ fn spawn_settings_panel(commands: Commands, theme: Res<LavaTheme>) {
             n.flex_direction = FlexDirection::Column;
             n.row_gap = Val::Px(6.0);
             n.padding = UiRect::all(Val::Px(12.0));
+            n.min_width = Val::Px(300.0);
         })
         .bg_color(Color::srgba(0.05, 0.12, 0.07, 0.92))
         .insert(StateMarker);
 
-    let text_theme = ui.theme().text.clone();
+    let t = ui.theme().text.clone();
+    ui.with_child(|c| { c.insert_bundle(lava_ui_builder::header("Camera  [F1]", &t)); });
 
-    // Title
-    ui.with_child(|c| {
-        c.insert_bundle(lava_ui_builder::header("Settings  [F1]", &text_theme));
-    });
-
-    // Projection
-    setting_row(&mut ui, "Projection", &text_theme, |row| {
+    setting_row(&mut ui, "Projection", &t, |row| {
         row.add_button_observe("Ortho", |b| { b.size_px(70.0, 32.0); },
-            |_: On<Activate>, mut s: ResMut<GameSettings>| {
-                s.projection = ProjectionMode::Orthographic; s.save();
-            });
+            |_: On<Activate>, mut s: ResMut<GameSettings>| { s.projection = ProjectionMode::Orthographic; s.save(); });
         row.add_button_observe("Persp", |b| { b.size_px(70.0, 32.0); },
-            |_: On<Activate>, mut s: ResMut<GameSettings>| {
-                s.projection = ProjectionMode::Perspective; s.save();
+            |_: On<Activate>, mut s: ResMut<GameSettings>| { s.projection = ProjectionMode::Perspective; s.save(); });
+    });
+    cam_row(&mut ui, "Zoom",  &t, CameraSetting::Zoom,
+        |s: &mut GameSettings| s.zoom = (s.zoom - 1.0).max(1.0),
+        |s: &mut GameSettings| s.zoom = (s.zoom + 1.0).min(60.0));
+    cam_row(&mut ui, "Pitch", &t, CameraSetting::Pitch,
+        |s: &mut GameSettings| s.pitch_degrees = (s.pitch_degrees - 5.0).max(-89.0),
+        |s: &mut GameSettings| s.pitch_degrees = (s.pitch_degrees + 5.0).min(-5.0));
+    cam_row(&mut ui, "Yaw",   &t, CameraSetting::Yaw,
+        |s: &mut GameSettings| s.yaw_degrees = (s.yaw_degrees - 15.0).rem_euclid(360.0),
+        |s: &mut GameSettings| s.yaw_degrees = (s.yaw_degrees + 15.0).rem_euclid(360.0));
+    cam_row(&mut ui, "Speed", &t, CameraSetting::Speed,
+        |s: &mut GameSettings| s.player_speed_multiplier = (s.player_speed_multiplier - 0.25).max(0.25),
+        |s: &mut GameSettings| s.player_speed_multiplier = (s.player_speed_multiplier + 0.25).min(5.0));
+
+    let sep = TextTheme { label_size: 12.0, label_color: Color::srgb(0.4, 0.65, 0.5), ..t.clone() };
+    ui.with_child(|c| { c.insert_bundle(lava_ui_builder::label("— Ortho —", &sep)); });
+    cam_row(&mut ui, "V.Height", &t, CameraSetting::OrthoVH,
+        |s: &mut GameSettings| s.ortho_viewport_height = (s.ortho_viewport_height - 0.25).max(0.25),
+        |s: &mut GameSettings| s.ortho_viewport_height += 0.25);
+    cam_row(&mut ui, "Near", &t, CameraSetting::OrthoNear,
+        |s: &mut GameSettings| s.ortho_near -= 50.0,
+        |s: &mut GameSettings| s.ortho_near = (s.ortho_near + 50.0).min(0.0));
+    cam_row(&mut ui, "Far", &t, CameraSetting::OrthoFar,
+        |s: &mut GameSettings| s.ortho_far = (s.ortho_far - 100.0).max(1.0),
+        |s: &mut GameSettings| s.ortho_far += 100.0);
+
+    ui.with_child(|c| { c.insert_bundle(lava_ui_builder::label("— Persp —", &sep)); });
+    cam_row(&mut ui, "Near", &t, CameraSetting::PerspNear,
+        |s: &mut GameSettings| s.persp_near = (s.persp_near - 0.05).max(0.01),
+        |s: &mut GameSettings| s.persp_near = (s.persp_near + 0.05).min(s.persp_far - 0.1));
+    cam_row(&mut ui, "Far",  &t, CameraSetting::PerspFar,
+        |s: &mut GameSettings| s.persp_far = (s.persp_far - 100.0).max(s.persp_near + 1.0),
+        |s: &mut GameSettings| s.persp_far += 100.0);
+
+    ui.build();
+}
+
+pub fn spawn_model_panel(commands: Commands, theme: &LavaTheme) {
+    let mut ui = UIBuilder::new(commands, Some(theme.clone()));
+    ui.component::<ModelPanel>()
+        .display_none()
+        .modify_node(|mut n| {
+            n.position_type = PositionType::Absolute;
+            n.top = Val::Px(8.0);
+            n.right = Val::Px(316.0);
+            n.flex_direction = FlexDirection::Column;
+            n.row_gap = Val::Px(6.0);
+            n.padding = UiRect::all(Val::Px(12.0));
+            n.min_width = Val::Px(300.0);
+        })
+        .bg_color(Color::srgba(0.05, 0.08, 0.15, 0.92))
+        .insert(StateMarker);
+
+    let t = ui.theme().text.clone();
+    ui.with_child(|c| { c.insert_bundle(lava_ui_builder::header("Model  [F2]", &t)); });
+
+    // Character selector
+    setting_row(&mut ui, "Character", &t, |row| {
+        row.add_button_observe("<", |b| { b.size_px(32.0, 32.0); },
+            |_: On<Activate>, mut s: ResMut<ModelSettings>, folder: Res<CharacterFolder>| {
+                let n = folder.files.len();
+                if n > 0 { s.character_index = (s.character_index + n - 1) % n; s.save(); }
+            });
+        row.with_child(|v| {
+            v.insert_bundle(lava_ui_builder::label("", &TextTheme {
+                label_size: 12.0, ..t.clone()
+            })).insert(ModelSetting::CharacterName);
+        });
+        row.add_button_observe(">", |b| { b.size_px(32.0, 32.0); },
+            |_: On<Activate>, mut s: ResMut<ModelSettings>, folder: Res<CharacterFolder>| {
+                let n = folder.files.len();
+                if n > 0 { s.character_index = (s.character_index + 1) % n; s.save(); }
             });
     });
 
-    // Zoom
-    setting_row(&mut ui, "Zoom", &text_theme, |row| {
-        row.add_button_observe("-", |b| { b.size_px(32.0, 32.0); },
-            |_: On<Activate>, mut s: ResMut<GameSettings>| {
-                s.zoom = (s.zoom - 1.0).max(1.0); s.save();
-            });
-        row.with_child(|v| { v.insert_bundle(lava_ui_builder::label("", &TextTheme::default())).insert(SettingValueZoom); });
-        row.add_button_observe("+", |b| { b.size_px(32.0, 32.0); },
-            |_: On<Activate>, mut s: ResMut<GameSettings>| {
-                s.zoom = (s.zoom + 1.0).min(60.0); s.save();
-            });
-    });
+    // Transform
+    let sep = TextTheme { label_size: 12.0, label_color: Color::srgb(0.4, 0.65, 0.5), ..t.clone() };
+    ui.with_child(|c| { c.insert_bundle(lava_ui_builder::label("— Transform —", &sep)); });
+    mdl_row(&mut ui, "Scale",    &t, ModelSetting::Scale,
+        |s: &mut ModelSettings| s.scale = (s.scale - 0.1).max(0.1),
+        |s: &mut ModelSettings| s.scale = (s.scale + 0.1).min(10.0));
+    mdl_row(&mut ui, "Offset Y", &t, ModelSetting::OffsetY,
+        |s: &mut ModelSettings| s.translation_y -= 0.05,
+        |s: &mut ModelSettings| s.translation_y += 0.05);
+    mdl_row(&mut ui, "Rot Y",    &t, ModelSetting::RotY,
+        |s: &mut ModelSettings| s.rotation_y_degrees = (s.rotation_y_degrees - 15.0).rem_euclid(360.0),
+        |s: &mut ModelSettings| s.rotation_y_degrees = (s.rotation_y_degrees + 15.0).rem_euclid(360.0));
 
-    // Pitch
-    setting_row(&mut ui, "Pitch", &text_theme, |row| {
-        row.add_button_observe("-", |b| { b.size_px(32.0, 32.0); },
-            |_: On<Activate>, mut s: ResMut<GameSettings>| {
-                s.pitch_degrees = (s.pitch_degrees - 5.0).max(-89.0); s.save();
-            });
-        row.with_child(|v| { v.insert_bundle(lava_ui_builder::label("", &TextTheme::default())).insert(SettingValuePitch); });
-        row.add_button_observe("+", |b| { b.size_px(32.0, 32.0); },
-            |_: On<Activate>, mut s: ResMut<GameSettings>| {
-                s.pitch_degrees = (s.pitch_degrees + 5.0).min(-5.0); s.save();
-            });
-    });
+    // Animation mapping
+    ui.with_child(|c| { c.insert_bundle(lava_ui_builder::label("— Animation Mapping —", &sep)); });
+    for key in ANIM_KEYS {
+        anim_mapping_row(&mut ui, key_label(*key), &t, *key);
+    }
 
-    // Yaw
-    setting_row(&mut ui, "Yaw", &text_theme, |row| {
-        row.add_button_observe("-", |b| { b.size_px(32.0, 32.0); },
-            |_: On<Activate>, mut s: ResMut<GameSettings>| {
-                s.yaw_degrees = (s.yaw_degrees - 15.0).rem_euclid(360.0); s.save();
-            });
-        row.with_child(|v| { v.insert_bundle(lava_ui_builder::label("", &TextTheme::default())).insert(SettingValueYaw); });
-        row.add_button_observe("+", |b| { b.size_px(32.0, 32.0); },
-            |_: On<Activate>, mut s: ResMut<GameSettings>| {
-                s.yaw_degrees = (s.yaw_degrees + 15.0).rem_euclid(360.0); s.save();
-            });
-    });
-
-    // Speed multiplier
-    setting_row(&mut ui, "Speed", &text_theme, |row| {
-        row.add_button_observe("-", |b| { b.size_px(32.0, 32.0); },
-            |_: On<Activate>, mut s: ResMut<GameSettings>| {
-                s.player_speed_multiplier = (s.player_speed_multiplier - 0.25).max(0.25); s.save();
-            });
-        row.with_child(|v| { v.insert_bundle(lava_ui_builder::label("", &TextTheme::default())).insert(SettingValueSpeed); });
-        row.add_button_observe("+", |b| { b.size_px(32.0, 32.0); },
-            |_: On<Activate>, mut s: ResMut<GameSettings>| {
-                s.player_speed_multiplier = (s.player_speed_multiplier + 0.25).min(5.0); s.save();
-            });
-    });
-
-    // ── Model settings ────────────────────────────────────────────────────────
-    let sep_theme = TextTheme { label_size: 13.0, label_color: Color::srgb(0.4, 0.7, 0.5), ..text_theme.clone() };
-    ui.with_child(|c| { c.insert_bundle(lava_ui_builder::label("— Model —", &sep_theme)); });
-
-    // Scale
-    setting_row(&mut ui, "Scale", &text_theme, |row| {
-        row.add_button_observe("-", |b| { b.size_px(32.0, 32.0); },
-            |_: On<Activate>, mut s: ResMut<ModelSettings>| {
-                s.scale = (s.scale - 0.1).max(0.1); s.save();
-            });
-        row.with_child(|v| { v.insert_bundle(lava_ui_builder::label("", &TextTheme::default())).insert(ModelSettingValueScale); });
-        row.add_button_observe("+", |b| { b.size_px(32.0, 32.0); },
-            |_: On<Activate>, mut s: ResMut<ModelSettings>| {
-                s.scale = (s.scale + 0.1).min(10.0); s.save();
-            });
-    });
-
-    // Offset Y
-    setting_row(&mut ui, "Offset Y", &text_theme, |row| {
-        row.add_button_observe("-", |b| { b.size_px(32.0, 32.0); },
-            |_: On<Activate>, mut s: ResMut<ModelSettings>| {
-                s.translation_y -= 0.05; s.save();
-            });
-        row.with_child(|v| { v.insert_bundle(lava_ui_builder::label("", &TextTheme::default())).insert(ModelSettingValueOffsetY); });
-        row.add_button_observe("+", |b| { b.size_px(32.0, 32.0); },
-            |_: On<Activate>, mut s: ResMut<ModelSettings>| {
-                s.translation_y += 0.05; s.save();
-            });
-    });
-
-    // Rotation Y
-    setting_row(&mut ui, "Rot Y", &text_theme, |row| {
-        row.add_button_observe("-", |b| { b.size_px(32.0, 32.0); },
-            |_: On<Activate>, mut s: ResMut<ModelSettings>| {
-                s.rotation_y_degrees = (s.rotation_y_degrees - 15.0).rem_euclid(360.0); s.save();
-            });
-        row.with_child(|v| { v.insert_bundle(lava_ui_builder::label("", &TextTheme::default())).insert(ModelSettingValueRotY); });
-        row.add_button_observe("+", |b| { b.size_px(32.0, 32.0); },
-            |_: On<Activate>, mut s: ResMut<ModelSettings>| {
-                s.rotation_y_degrees = (s.rotation_y_degrees + 15.0).rem_euclid(360.0); s.save();
-            });
-    });
-
-    // ── Animation selector ────────────────────────────────────────────────────
-    let sep2_theme = TextTheme { label_size: 13.0, label_color: Color::srgb(0.4, 0.7, 0.5), ..text_theme.clone() };
-    ui.with_child(|c| { c.insert_bundle(lava_ui_builder::label("— Animation —", &sep2_theme)); });
-
-    setting_row(&mut ui, "Anim", &text_theme, |row| {
+    // Debug anim selector
+    ui.with_child(|c| { c.insert_bundle(lava_ui_builder::label("— Debug —", &sep)); });
+    setting_row(&mut ui, "Play", &t, |row| {
         row.add_button_observe("<", |b| { b.size_px(32.0, 32.0); },
             |_: On<Activate>, mut sel: ResMut<DebugAnimSelection>| {
                 sel.index = (sel.index + ANIM_KEYS.len() - 1) % ANIM_KEYS.len();
@@ -355,6 +343,89 @@ fn spawn_settings_panel(commands: Commands, theme: Res<LavaTheme>) {
     });
 
     ui.build();
+}
+
+fn key_label(key: AnimationKey) -> &'static str {
+    match key {
+        AnimationKey::Idle     => "Idle",
+        AnimationKey::Walking  => "Walking",
+        AnimationKey::Throwing => "Throwing",
+        AnimationKey::Crawling => "Crawling",
+        AnimationKey::Building => "Building",
+    }
+}
+
+fn anim_mapping_row(ui: &mut UIBuilder, label: &str, t: &TextTheme, key: AnimationKey) {
+    setting_row(ui, label, t, move |row| {
+        row.add_button_observe("<", |b| { b.size_px(28.0, 28.0); },
+            move |_: On<Activate>, mut s: ResMut<ModelSettings>, clips: Res<PlayerAnimClips>| {
+                let names = &clips.names;
+                if names.is_empty() { return; }
+                let cur = s.anim_mapping.get(key).to_string();
+                let idx = names.iter().position(|n| n == &cur)
+                    .map(|i| (i + names.len() - 1) % names.len())
+                    .unwrap_or(0);
+                s.anim_mapping.set(key, names[idx].clone());
+                s.save();
+            });
+        row.with_child(|v| {
+            v.insert_bundle(lava_ui_builder::label("—", &TextTheme { label_size: 11.0, ..t.clone() }))
+             .insert(AnimMappingLabel(key));
+        });
+        row.add_button_observe(">", |b| { b.size_px(28.0, 28.0); },
+            move |_: On<Activate>, mut s: ResMut<ModelSettings>, clips: Res<PlayerAnimClips>| {
+                let names = &clips.names;
+                if names.is_empty() { return; }
+                let cur = s.anim_mapping.get(key).to_string();
+                let idx = names.iter().position(|n| n == &cur)
+                    .map(|i| (i + 1) % names.len())
+                    .unwrap_or(0);
+                s.anim_mapping.set(key, names[idx].clone());
+                s.save();
+            });
+    });
+}
+
+/// Helper: a camera setting row with label, value display, and dec/inc buttons.
+fn cam_row(
+    ui: &mut UIBuilder,
+    label: &str,
+    t: &TextTheme,
+    setting: CameraSetting,
+    dec: impl Fn(&mut GameSettings) + Send + Sync + 'static,
+    inc: impl Fn(&mut GameSettings) + Send + Sync + 'static,
+) {
+    setting_row(ui, label, t, move |row| {
+        row.add_button_observe("-", |b| { b.size_px(32.0, 32.0); },
+            move |_: On<Activate>, mut s: ResMut<GameSettings>| { dec(&mut s); s.save(); });
+        row.with_child(|v| {
+            v.insert_bundle(lava_ui_builder::label("", &TextTheme::default()))
+             .insert(setting);
+        });
+        row.add_button_observe("+", |b| { b.size_px(32.0, 32.0); },
+            move |_: On<Activate>, mut s: ResMut<GameSettings>| { inc(&mut s); s.save(); });
+    });
+}
+
+/// Helper: a model setting row with label, value display, and dec/inc buttons.
+fn mdl_row(
+    ui: &mut UIBuilder,
+    label: &str,
+    t: &TextTheme,
+    setting: ModelSetting,
+    dec: impl Fn(&mut ModelSettings) + Send + Sync + 'static,
+    inc: impl Fn(&mut ModelSettings) + Send + Sync + 'static,
+) {
+    setting_row(ui, label, t, move |row| {
+        row.add_button_observe("-", |b| { b.size_px(32.0, 32.0); },
+            move |_: On<Activate>, mut s: ResMut<ModelSettings>| { dec(&mut s); s.save(); });
+        row.with_child(|v| {
+            v.insert_bundle(lava_ui_builder::label("", &TextTheme::default()))
+             .insert(setting);
+        });
+        row.add_button_observe("+", |b| { b.size_px(32.0, 32.0); },
+            move |_: On<Activate>, mut s: ResMut<ModelSettings>| { inc(&mut s); s.save(); });
+    });
 }
 
 fn setting_row<F: FnOnce(&mut UIBuilder)>(
@@ -374,17 +445,36 @@ fn setting_row<F: FnOnce(&mut UIBuilder)>(
     });
 }
 
+// ── Panel marker components ───────────────────────────────────────────────────
+
 #[derive(Component, Default)]
 pub struct SettingsPanel;
 
-#[derive(Component)] pub struct SettingValueZoom;
-#[derive(Component)] pub struct SettingValuePitch;
-#[derive(Component)] pub struct SettingValueYaw;
-#[derive(Component)] pub struct SettingValueSpeed;
-#[derive(Component)] pub struct ModelSettingValueScale;
-#[derive(Component)] pub struct ModelSettingValueOffsetY;
-#[derive(Component)] pub struct ModelSettingValueRotY;
-#[derive(Component)] pub struct AnimSelectorLabel;
+#[derive(Component, Default)]
+pub struct ModelPanel;
+
+/// Identifies a camera-setting value label. One component type covers all rows.
+#[derive(Component, Clone, Copy)]
+pub enum CameraSetting {
+    Zoom, Pitch, Yaw, Speed,
+    OrthoVH, OrthoNear, OrthoFar,
+    PerspNear, PerspFar,
+}
+
+/// Identifies a model-setting value label.
+#[derive(Component, Clone, Copy)]
+pub enum ModelSetting {
+    CharacterName, Scale, OffsetY, RotY,
+}
+
+/// Identifies an animation-mapping value label; holds the key it represents.
+#[derive(Component, Clone, Copy)]
+pub struct AnimMappingLabel(pub AnimationKey);
+
+#[derive(Component)]
+pub struct AnimSelectorLabel;
+
+// ── Toggle systems ────────────────────────────────────────────────────────────
 
 pub fn toggle_settings_panel(
     keys: Res<ButtonInput<KeyCode>>,
@@ -392,31 +482,70 @@ pub fn toggle_settings_panel(
 ) {
     if !keys.just_pressed(KeyCode::F1) { return; }
     if let Ok(mut node) = panel.single_mut() {
-        node.display = match node.display {
-            Display::None => Display::Flex,
-            _ => Display::None,
+        node.display = match node.display { Display::None => Display::Flex, _ => Display::None };
+    }
+}
+
+pub fn toggle_model_panel(
+    keys: Res<ButtonInput<KeyCode>>,
+    mut panel: Query<&mut Node, With<ModelPanel>>,
+) {
+    if !keys.just_pressed(KeyCode::F2) { return; }
+    if let Ok(mut node) = panel.single_mut() {
+        node.display = match node.display { Display::None => Display::Flex, _ => Display::None };
+    }
+}
+
+// ── Update systems ────────────────────────────────────────────────────────────
+
+pub fn update_camera_panel(
+    settings: Res<GameSettings>,
+    mut labels: Query<(&CameraSetting, &mut Text)>,
+) {
+    if !settings.is_changed() { return; }
+    for (setting, mut text) in labels.iter_mut() {
+        **text = match setting {
+            CameraSetting::Zoom      => format!("{:.0}",  settings.zoom),
+            CameraSetting::Pitch     => format!("{:.0}°", settings.pitch_degrees),
+            CameraSetting::Yaw       => format!("{:.0}°", settings.yaw_degrees),
+            CameraSetting::Speed     => format!("{:.2}×", settings.player_speed_multiplier),
+            CameraSetting::OrthoVH   => format!("{:.2}",  settings.ortho_viewport_height),
+            CameraSetting::OrthoNear => format!("{:.0}",  settings.ortho_near),
+            CameraSetting::OrthoFar  => format!("{:.0}",  settings.ortho_far),
+            CameraSetting::PerspNear => format!("{:.2}",  settings.persp_near),
+            CameraSetting::PerspFar  => format!("{:.0}",  settings.persp_far),
         };
     }
 }
 
-pub fn update_settings_panel(
-    settings: Res<GameSettings>,
-    model_settings: Res<ModelSettings>,
-    mut zoom: Query<&mut Text, (With<SettingValueZoom>, Without<SettingValuePitch>, Without<SettingValueYaw>, Without<SettingValueSpeed>, Without<ModelSettingValueScale>, Without<ModelSettingValueOffsetY>, Without<ModelSettingValueRotY>)>,
-    mut pitch: Query<&mut Text, (With<SettingValuePitch>, Without<SettingValueZoom>, Without<SettingValueYaw>, Without<SettingValueSpeed>, Without<ModelSettingValueScale>, Without<ModelSettingValueOffsetY>, Without<ModelSettingValueRotY>)>,
-    mut yaw: Query<&mut Text, (With<SettingValueYaw>, Without<SettingValueZoom>, Without<SettingValuePitch>, Without<SettingValueSpeed>, Without<ModelSettingValueScale>, Without<ModelSettingValueOffsetY>, Without<ModelSettingValueRotY>)>,
-    mut speed: Query<&mut Text, (With<SettingValueSpeed>, Without<SettingValueZoom>, Without<SettingValuePitch>, Without<SettingValueYaw>, Without<ModelSettingValueScale>, Without<ModelSettingValueOffsetY>, Without<ModelSettingValueRotY>)>,
-    mut model_scale: Query<&mut Text, (With<ModelSettingValueScale>, Without<SettingValueZoom>, Without<SettingValuePitch>, Without<SettingValueYaw>, Without<SettingValueSpeed>, Without<ModelSettingValueOffsetY>, Without<ModelSettingValueRotY>)>,
-    mut model_offset_y: Query<&mut Text, (With<ModelSettingValueOffsetY>, Without<SettingValueZoom>, Without<SettingValuePitch>, Without<SettingValueYaw>, Without<SettingValueSpeed>, Without<ModelSettingValueScale>, Without<ModelSettingValueRotY>)>,
-    mut model_rot_y: Query<&mut Text, (With<ModelSettingValueRotY>, Without<SettingValueZoom>, Without<SettingValuePitch>, Without<SettingValueYaw>, Without<SettingValueSpeed>, Without<ModelSettingValueScale>, Without<ModelSettingValueOffsetY>)>,
+pub fn update_model_labels(
+    settings: Res<ModelSettings>,
+    folder: Res<CharacterFolder>,
+    mut labels: Query<(&ModelSetting, &mut Text)>,
 ) {
-    if let Ok(mut t) = zoom.single_mut() { **t = format!("{:.0}", settings.zoom); }
-    if let Ok(mut t) = pitch.single_mut() { **t = format!("{:.0}°", settings.pitch_degrees); }
-    if let Ok(mut t) = yaw.single_mut() { **t = format!("{:.0}°", settings.yaw_degrees); }
-    if let Ok(mut t) = speed.single_mut() { **t = format!("{:.2}×", settings.player_speed_multiplier); }
-    if let Ok(mut t) = model_scale.single_mut() { **t = format!("{:.2}", model_settings.scale); }
-    if let Ok(mut t) = model_offset_y.single_mut() { **t = format!("{:.2}", model_settings.translation_y); }
-    if let Ok(mut t) = model_rot_y.single_mut() { **t = format!("{:.0}°", model_settings.rotation_y_degrees); }
+    if !settings.is_changed() { return; }
+    for (setting, mut text) in labels.iter_mut() {
+        **text = match setting {
+            ModelSetting::CharacterName => folder.files
+                .get(settings.character_index)
+                .map(|f| CharacterFolder::display_name(f).to_string())
+                .unwrap_or_else(|| "—".to_string()),
+            ModelSetting::Scale   => format!("{:.2}",  settings.scale),
+            ModelSetting::OffsetY => format!("{:.2}",  settings.translation_y),
+            ModelSetting::RotY    => format!("{:.0}°", settings.rotation_y_degrees),
+        };
+    }
+}
+
+pub fn update_anim_mapping_labels(
+    settings: Res<ModelSettings>,
+    mut labels: Query<(&AnimMappingLabel, &mut Text)>,
+) {
+    if !settings.is_changed() { return; }
+    for (label, mut text) in labels.iter_mut() {
+        let name = settings.anim_mapping.get(label.0);
+        **text = if name.is_empty() { "—".to_string() } else { name.to_string() };
+    }
 }
 
 pub fn update_anim_selector_label(

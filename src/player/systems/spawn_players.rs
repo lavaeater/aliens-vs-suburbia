@@ -3,8 +3,8 @@ use bevy::prelude::{Children, Commands, Component, DetectChanges, Entity, Messag
                     Assets, Query, Res, ResMut, Transform, Visibility, With};
 use bevy::scene::SceneRoot;
 use avian3d::prelude::Collider;
-use bevy_wind_waker_shader::WindWakerShaderBuilder;
 use crate::assets::assets_plugin::GameAssets;
+pub use crate::player::components::WeaponsHidden;
 use crate::character_creator::config::{CharacterConfig, ComposedSpriteSheet};
 use crate::game_state::score_keeper::GameTrackingEvent;
 use crate::general::components::CollisionLayer;
@@ -123,8 +123,7 @@ pub fn spawn_players(
                         CollisionLayer::AlienGoal,
                     ],
                 ),
-                WindWakerShaderBuilder::default().build(),
-            )).id()
+                )).id()
         };
 
         add_health_bar_mw.write(AddHealthBar { entity: player, name: "PLAYER" });
