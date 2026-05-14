@@ -12,11 +12,11 @@ impl Plugin for StatefulCameraPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             OnEnter(GameState::InGame),
-            spawn_camera,
+            (spawn_camera, apply_camera_settings).chain(),
         )
         .add_systems(
             OnEnter(GameState::ModelShowcase),
-            spawn_camera,
+            (spawn_camera, apply_camera_settings).chain(),
         )
         .add_systems(
             PostUpdate,
