@@ -27,6 +27,27 @@ pub struct AutoAim(pub Vec3);
 #[derive(Component)]
 pub struct OutlineDone;
 
-/// Marks a player entity whose non-Character_ weapon nodes have been hidden.
+/// Marks a player entity whose weapon nodes have been hidden.
 #[derive(Component)]
 pub struct WeaponsHidden;
+
+/// Weapon mesh-node names present in the toon-shooter character models.
+/// Nodes matching any of these names are hidden on spawn and can be revealed
+/// individually by a pickup system later.
+pub const WEAPON_NODES: &[&str] = &[
+    "AK",
+    "GrenadeLauncher",
+    "Knife",
+    "Knife_1",
+    "Knife_2",
+    "Pistol",
+    "Revolver",
+    "RevolverSmall",
+    "RocketLauncher",
+    "ShortCannon",
+    "Shotgun",
+    "Shovel",
+    "SMG",
+    "Sniper",
+    "Sniper_2",
+];

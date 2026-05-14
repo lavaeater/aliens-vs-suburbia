@@ -1,6 +1,5 @@
-use crate::asset_browser::state::CHARACTER_NODE_PREFIX;
 use crate::game_state::GameState;
-use crate::player::components::{OutlineDone, WeaponsHidden};
+use crate::player::components::{OutlineDone, WeaponsHidden, WEAPON_NODES};
 use crate::player::systems::auto_aim::{auto_aim, debug_gizmos};
 use crate::player::systems::spawn_players::{fix_scene_transform, spawn_players};
 use bevy::prelude::*;
@@ -60,7 +59,7 @@ fn hide_player_weapon_nodes(
         commands.entity(player_entity).insert(WeaponsHidden);
         for entity in scene_spawner.iter_instance_entities(**scene_instance) {
             if let Ok((_, name)) = named_mesh_query.get(entity) {
-                if !name.starts_with(CHARACTER_NODE_PREFIX) {
+                if WEAPON_NODES.contains(&name.as_str()) {
                     commands.entity(entity).insert(Visibility::Hidden);
                 }
             }
