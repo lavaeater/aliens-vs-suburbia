@@ -42,11 +42,17 @@ fn settings_keyboard_system(
     }
 
     if keys.just_pressed(KeyCode::KeyZ) {
-        settings.zoom = (settings.zoom - 1.0).max(1.0);
+        match settings.projection {
+            ProjectionMode::Orthographic => settings.zoom = (settings.zoom - 1.0).max(1.0),
+            ProjectionMode::Perspective  => settings.persp_fov = (settings.persp_fov - 5.0).max(10.0),
+        }
         changed = true;
     }
     if keys.just_pressed(KeyCode::KeyX) {
-        settings.zoom = (settings.zoom + 1.0).min(60.0);
+        match settings.projection {
+            ProjectionMode::Orthographic => settings.zoom = (settings.zoom + 1.0).min(60.0),
+            ProjectionMode::Perspective  => settings.persp_fov = (settings.persp_fov + 5.0).min(170.0),
+        }
         changed = true;
     }
 

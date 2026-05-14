@@ -38,6 +38,8 @@ pub struct GameSettings {
     #[serde(default = "default_ortho_viewport_height")]
     pub ortho_viewport_height: f32,
     // Perspective-specific
+    #[serde(default = "default_persp_fov")]
+    pub persp_fov: f32,
     #[serde(default = "default_persp_near")]
     pub persp_near: f32,
     #[serde(default = "default_persp_far")]
@@ -53,6 +55,7 @@ fn default_player_unit() -> f32 { 1.0 }
 fn default_ortho_near() -> f32 { -1000.0 }
 fn default_ortho_far() -> f32 { 1000.0 }
 fn default_ortho_viewport_height() -> f32 { 2.0 }
+fn default_persp_fov()  -> f32 { 60.0 }
 fn default_persp_near() -> f32 { 0.1 }
 fn default_persp_far() -> f32 { 1000.0 }
 
@@ -68,6 +71,7 @@ impl Default for GameSettings {
             ortho_near: default_ortho_near(),
             ortho_far: default_ortho_far(),
             ortho_viewport_height: default_ortho_viewport_height(),
+            persp_fov: default_persp_fov(),
             persp_near: default_persp_near(),
             persp_far: default_persp_far(),
         }

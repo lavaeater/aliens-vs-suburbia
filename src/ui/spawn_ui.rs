@@ -273,6 +273,11 @@ pub fn spawn_camera_panel(commands: Commands, theme: &LavaTheme) {
         |s| s.ortho_far += 100.0);
 
     ui.with_child(|c| { c.insert_bundle(lava_ui_builder::label("— Persp —", &sep)); });
+    cam_row(&mut ui, "FOV", &t, CameraSetting::PerspFOV,
+        |s| s.persp_fov = (s.persp_fov - 5.0).max(10.0),
+        |s| s.persp_fov = (s.persp_fov - 1.0).max(10.0),
+        |s| s.persp_fov = (s.persp_fov + 1.0).min(170.0),
+        |s| s.persp_fov = (s.persp_fov + 5.0).min(170.0));
     cam_row(&mut ui, "Near", &t, CameraSetting::PerspNear,
         |s| s.persp_near = (s.persp_near - 0.05).max(0.01),
         |s| s.persp_near = (s.persp_near - 0.01).max(0.001),
@@ -481,7 +486,7 @@ pub struct ModelPanel;
 pub enum CameraSetting {
     Zoom, Pitch, Yaw, Speed,
     OrthoVH, OrthoNear, OrthoFar,
-    PerspNear, PerspFar,
+    PerspFOV, PerspNear, PerspFar,
 }
 
 /// Identifies a model-setting value label.
@@ -533,6 +538,7 @@ pub fn update_camera_panel(
             CameraSetting::OrthoVH   => format!("{:.2}",  settings.ortho_viewport_height),
             CameraSetting::OrthoNear => format!("{:.0}",  settings.ortho_near),
             CameraSetting::OrthoFar  => format!("{:.0}",  settings.ortho_far),
+            CameraSetting::PerspFOV  => format!("{:.0}°", settings.persp_fov),
             CameraSetting::PerspNear => format!("{:.2}",  settings.persp_near),
             CameraSetting::PerspFar  => format!("{:.0}",  settings.persp_far),
         };

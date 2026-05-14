@@ -259,7 +259,7 @@ pub fn apply_camera_settings(
                 scale: settings.zoom,
             }),
             ProjectionMode::Perspective => Projection::Perspective(PerspectiveProjection {
-                fov: (settings.zoom).clamp(10.0, 120.0).to_radians(),
+                fov: settings.persp_fov.clamp(10.0, 170.0).to_radians(),
                 near: settings.persp_near,
                 far: settings.persp_far,
                 ..default()
