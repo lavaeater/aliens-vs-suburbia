@@ -1,13 +1,14 @@
 (
     projection: Perspective,
     zoom: 18.0,
-    pitch_degrees: -30.0,
+    pitch_degrees: -40.0,
     yaw_degrees: 0.0,
     player_speed_multiplier: 1.0,
     player_unit: 1.0,
     ortho_near: -1050.0,
     ortho_far: 1000.0,
     ortho_viewport_height: 2.0,
-    persp_near: 3.349998,
+    persp_fov: 20.0,
+    persp_near: 1.9999993,
     persp_far: 201.1,
 )
