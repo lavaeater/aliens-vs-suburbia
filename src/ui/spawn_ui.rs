@@ -314,7 +314,9 @@ pub fn spawn_model_panel(commands: Commands, theme: &LavaTheme) {
     // Character selector
     setting_row(&mut ui, "Character", &t, |row| {
         row.add_button_observe("<", |b| { b.size_px(32.0, 32.0); },
-            |_: On<Activate>, mut s: ResMut<ModelSettings>, folder: Res<CharacterFolder>| {
+            |_: On<Activate>, mut s: ResMut<ModelSettings>, folder: Res<CharacterFolder>,
+             panel: Query<&Node, With<ModelPanel>>| {
+                if panel.single().is_ok_and(|n| n.display == Display::None) { return; }
                 let n = folder.files.len();
                 if n > 0 { s.character_index = (s.character_index + n - 1) % n; s.save(); }
             });
@@ -324,7 +326,9 @@ pub fn spawn_model_panel(commands: Commands, theme: &LavaTheme) {
             })).insert(ModelSetting::CharacterName);
         });
         row.add_button_observe(">", |b| { b.size_px(32.0, 32.0); },
-            |_: On<Activate>, mut s: ResMut<ModelSettings>, folder: Res<CharacterFolder>| {
+            |_: On<Activate>, mut s: ResMut<ModelSettings>, folder: Res<CharacterFolder>,
+             panel: Query<&Node, With<ModelPanel>>| {
+                if panel.single().is_ok_and(|n| n.display == Display::None) { return; }
                 let n = folder.files.len();
                 if n > 0 { s.character_index = (s.character_index + 1) % n; s.save(); }
             });

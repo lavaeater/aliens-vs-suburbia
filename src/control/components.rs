@@ -123,9 +123,9 @@ impl CharacterState {
         if has(AnimationKey::Building) { return AnimationKey::Building; }
         if has(AnimationKey::Duck)     { return AnimationKey::Duck; }
         match (has(AnimationKey::Walk), has(AnimationKey::Throwing)) {
-            (true,  true)  => AnimationKey::WalkShoot,
+            (true,  true)  => AnimationKey::Throwing,
             (true,  false) => AnimationKey::Walk,
-            (false, true)  => AnimationKey::IdleShoot,
+            (false, true)  => AnimationKey::Throwing,
             (false, false) => AnimationKey::Idle,
         }
     }

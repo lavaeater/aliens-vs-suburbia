@@ -120,7 +120,7 @@ impl AnimationKey {
             AnimationKey::No        => "no",
             AnimationKey::Death     => "death",
             AnimationKey::HitReact  => "hitreact",
-            AnimationKey::Throwing  => "attack",
+            AnimationKey::Throwing  => "punch",
             AnimationKey::Building  => "interact",
         }
     }
