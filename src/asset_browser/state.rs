@@ -23,6 +23,9 @@ pub struct AssetBrowserState {
     pub mesh_nodes: Vec<String>,
     pub hidden_nodes: HashSet<String>,
     pub nodes_dirty: bool,
+    /// The AnimationPlayer entity inside the current viewer model, cached to
+    /// avoid querying all players each frame and to scope playback correctly.
+    pub anim_player_entity: Option<Entity>,
 }
 
 impl Default for AssetBrowserState {
@@ -43,6 +46,7 @@ impl Default for AssetBrowserState {
             mesh_nodes: Vec::new(),
             hidden_nodes: HashSet::new(),
             nodes_dirty: false,
+            anim_player_entity: None,
         }
     }
 }
@@ -63,6 +67,7 @@ impl AssetBrowserState {
         self.anim_names.clear();
         self.mesh_nodes.clear();
         self.nodes_dirty = false;
+        self.anim_player_entity = None;
     }
 
     pub fn toggle_node(&mut self, name: &str) {
@@ -142,7 +147,7 @@ impl AssetBrowserState {
 
 fn scan_assets() -> Vec<String> {
     let base = std::path::PathBuf::from("assets");
-    let scan_dir_path = base.join("packs/toon-shooter");
+    let scan_dir_path = base.join("packs/monsters");
     let mut files = Vec::new();
     scan_dir(&base, &scan_dir_path, &mut files);
     files.sort();

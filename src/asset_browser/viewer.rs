@@ -1,5 +1,6 @@
 use bevy::gltf::{Gltf, GltfNode};
 use bevy::prelude::*;
+use crate::animation::animation_plugin::get_child_with_component_recursive;
 use crate::asset_browser::state::{AssetBrowserState, CHARACTER_NODE_PREFIX};
 use crate::asset_browser::ui::AssetAnimLabel;
 use crate::ui::spawn_ui::StateMarker;
@@ -117,7 +118,8 @@ pub fn setup_viewer_animation(
     gltf_node_assets: Res<Assets<GltfNode>>,
     mut animation_graphs: ResMut<Assets<AnimationGraph>>,
     mut commands: Commands,
-    mut anim_players: Query<Entity, With<AnimationPlayer>>,
+    child_query: Query<&Children>,
+    mut anim_players: Query<&mut AnimationPlayer>,
 ) {
     let gltf_handle = match state.gltf_handle.clone() {
         Some(h) => h,
@@ -142,7 +144,15 @@ pub fn setup_viewer_animation(
         return;
     }
 
-    let Some(player_entity) = anim_players.iter_mut().next() else { return };
+    // Find the AnimationPlayer inside the viewer model's hierarchy specifically.
+    let Some(viewer_entity) = state.viewer_entity else { return };
+    let Some(player_entity) = get_child_with_component_recursive(viewer_entity, &child_query, &anim_players)
+        else { return };
+
+    // Stop whatever was playing on the old or new player before rebuilding.
+    if let Ok(mut player) = anim_players.get_mut(player_entity) {
+        player.stop_all();
+    }
 
     let mut names_by_index = vec![String::new(); gltf.animations.len()];
     for (name, handle) in &gltf.named_animations {
@@ -159,6 +169,7 @@ pub fn setup_viewer_animation(
     let graph_handle = animation_graphs.add(graph);
     commands.entity(player_entity).insert(AnimationGraphHandle(graph_handle));
 
+    state.anim_player_entity = Some(player_entity);
     state.anim_count = nodes.len();
     state.anim_node_indices = nodes;
     state.anim_names = names_by_index;
@@ -187,20 +198,18 @@ pub fn apply_node_visibility(
 
 pub fn apply_viewer_animation(
     mut state: ResMut<AssetBrowserState>,
-    mut anim_players: Query<&mut AnimationPlayer, With<AnimationGraphHandle>>,
+    mut anim_players: Query<&mut AnimationPlayer>,
     mut anim_label: Query<&mut Text, With<AssetAnimLabel>>,
 ) {
     if !state.anim_dirty || state.anim_node_indices.is_empty() { return; }
 
+    let Some(player_entity) = state.anim_player_entity else { return };
+    let Ok(mut player) = anim_players.get_mut(player_entity) else { return };
+
     let idx = state.anim_index;
     let node = state.anim_node_indices[idx];
-
-    let mut played = false;
-    for mut player in anim_players.iter_mut() {
-        player.play(node).repeat();
-        played = true;
-    }
-    if !played { return; } // AnimationGraphHandle not applied yet — retry next frame
+    player.stop_all();
+    player.play(node).repeat();
     state.anim_dirty = false;
 
     let name = state.anim_names.get(idx).filter(|s| !s.is_empty()).map(|s| s.as_str());
