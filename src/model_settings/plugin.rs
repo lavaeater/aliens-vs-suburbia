@@ -13,7 +13,8 @@ use crate::model_settings::resources::{
     CharacterFolder, ModelSettings, PlayerAnimClips,
     MODEL_SETTINGS_PATH, scan_character_folder,
 };
-use crate::player::components::{OutlineDone, Player};
+use crate::player::components::Player;
+use bevy_mod_outline::AsyncSceneInheritOutline;
 use crate::player::systems::spawn_players::{
     FixSceneTransform, WeaponsHidden, apply_model_settings_live,
 };
@@ -124,7 +125,7 @@ fn reload_player_model(
                 Vec3::splat(s.scale),
             ))
             .remove::<WeaponsHidden>()
-            .remove::<OutlineDone>();
+            .remove::<AsyncSceneInheritOutline>();
     }
 }
 

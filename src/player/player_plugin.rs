@@ -1,10 +1,10 @@
 use crate::game_state::GameState;
-use crate::player::components::{OutlineDone, WeaponsHidden, WEAPON_NODES};
+use crate::player::components::{WeaponsHidden, WEAPON_NODES};
 use crate::player::systems::auto_aim::{auto_aim, debug_gizmos};
 use crate::player::systems::spawn_players::{fix_scene_transform, spawn_players};
 use bevy::prelude::*;
-use bevy::scene::SceneInstance;
-use bevy_mod_outline::{AutoGenerateOutlineNormalsPlugin, InheritOutline, OutlinePlugin};
+use bevy::scene::{SceneInstance, SceneRoot};
+use bevy_mod_outline::{AsyncSceneInheritOutline, AutoGenerateOutlineNormalsPlugin, OutlinePlugin, OutlineVolume};
 
 #[derive(Default)]
 pub struct PlayerPlugin {
@@ -17,11 +17,11 @@ impl Plugin for PlayerPlugin {
             app.add_systems(Update, debug_gizmos.run_if(in_state(GameState::InGame)));
         }
         app.add_plugins((OutlinePlugin, AutoGenerateOutlineNormalsPlugin::default()))
+            .add_systems(Update, auto_outline_scenes)
             .add_systems(
                 Update,
                 (
                     spawn_players,
-                    setup_scene_once_loaded,
                     fix_scene_transform,
                     auto_aim,
                     hide_player_weapon_nodes,
@@ -31,18 +31,19 @@ impl Plugin for PlayerPlugin {
     }
 }
 
-fn setup_scene_once_loaded(
+fn auto_outline_scenes(
     mut commands: Commands,
-    scene_query: Query<(Entity, &SceneInstance), Without<OutlineDone>>,
-    scene_manager: Res<SceneSpawner>,
+    query: Query<Entity, (With<SceneRoot>, Without<AsyncSceneInheritOutline>)>,
 ) {
-    for (scene_entity, scene) in scene_query.iter() {
-        if scene_manager.instance_is_ready(**scene) {
-            for entity in scene_manager.iter_instance_entities(**scene) {
-                commands.entity(entity).insert(InheritOutline);
-            }
-            commands.entity(scene_entity).insert(OutlineDone);
-        }
+    for entity in query.iter() {
+        commands.entity(entity).insert((
+            OutlineVolume {
+                visible: true,
+                width: 4.0,
+                colour: Color::BLACK,
+            },
+            AsyncSceneInheritOutline::default(),
+        ));
     }
 }
 

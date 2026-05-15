@@ -23,10 +23,6 @@ pub struct ShootingTower;
 #[derive(Component)]
 pub struct AutoAim(pub Vec3);
 
-/// Marks a scene entity whose outline InheritOutline components have been applied.
-#[derive(Component)]
-pub struct OutlineDone;
-
 /// Marks a player entity whose weapon nodes have been hidden.
 #[derive(Component)]
 pub struct WeaponsHidden;
