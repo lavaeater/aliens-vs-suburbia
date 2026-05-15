@@ -2,6 +2,7 @@ use bevy::prelude::{Query, With};
 use crate::alien::components::general::Alien;
 use crate::control::components::{ControlDirection, CharacterControl};
 
+#[allow(dead_code)]
 pub fn move_forward_system(
     mut controller_query: Query<&mut CharacterControl, With<Alien>>,
 ) {

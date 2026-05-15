@@ -3,16 +3,18 @@ use std::sync::Mutex;
 use std::sync::mpsc::{Receiver, Sender, channel};
 use bevy::prelude::Resource;
 use crate::poly_pizza::client::{self, SearchFilters};
-use crate::poly_pizza::types::{ListResponse, PizzaModel, SearchResponse, UserResponse};
+use crate::poly_pizza::types::{ListResponse, SearchResponse, UserResponse};
 
 #[derive(Resource)]
 pub struct PolyPizzaConfig {
+    #[allow(dead_code)]
     pub api_key: String,
 }
 
 pub enum ApiRequest {
     SearchKeyword { keyword: String, filters: SearchFilters },
     SearchFilters { filters: SearchFilters },
+    #[allow(dead_code)]
     GetList(String),
     GetUser(String),
     DownloadGlb { id: String, url: String, dest: PathBuf },

@@ -29,6 +29,21 @@ pub struct GameSettings {
     /// E.g. trees scaled 3–4p, bushes 0.5–1p, clutter 0.1–0.25p.
     #[serde(default = "default_player_unit")]
     pub player_unit: f32,
+    // Orthographic-specific
+    #[serde(default = "default_ortho_near")]
+    pub ortho_near: f32,
+    #[serde(default = "default_ortho_far")]
+    pub ortho_far: f32,
+    /// Base vertical world units visible at ortho scale = 1. Keyboard: [ / ]
+    #[serde(default = "default_ortho_viewport_height")]
+    pub ortho_viewport_height: f32,
+    // Perspective-specific
+    #[serde(default = "default_persp_fov")]
+    pub persp_fov: f32,
+    #[serde(default = "default_persp_near")]
+    pub persp_near: f32,
+    #[serde(default = "default_persp_far")]
+    pub persp_far: f32,
 }
 
 fn default_projection() -> ProjectionMode { ProjectionMode::Orthographic }
@@ -37,6 +52,12 @@ fn default_pitch() -> f32 { -45.0 }
 fn default_yaw() -> f32 { 45.0 }
 fn default_speed() -> f32 { 1.0 }
 fn default_player_unit() -> f32 { 1.0 }
+fn default_ortho_near() -> f32 { -1000.0 }
+fn default_ortho_far() -> f32 { 1000.0 }
+fn default_ortho_viewport_height() -> f32 { 2.0 }
+fn default_persp_fov()  -> f32 { 60.0 }
+fn default_persp_near() -> f32 { 0.1 }
+fn default_persp_far() -> f32 { 1000.0 }
 
 impl Default for GameSettings {
     fn default() -> Self {
@@ -47,6 +68,12 @@ impl Default for GameSettings {
             yaw_degrees: default_yaw(),
             player_speed_multiplier: default_speed(),
             player_unit: default_player_unit(),
+            ortho_near: default_ortho_near(),
+            ortho_far: default_ortho_far(),
+            ortho_viewport_height: default_ortho_viewport_height(),
+            persp_fov: default_persp_fov(),
+            persp_near: default_persp_near(),
+            persp_far: default_persp_far(),
         }
     }
 }
@@ -54,13 +81,11 @@ impl Default for GameSettings {
 impl GameSettings {
     pub fn load() -> Self {
         let path = std::path::Path::new(SETTINGS_PATH);
-        if path.exists() {
-            if let Ok(text) = std::fs::read_to_string(path) {
-                if let Ok(settings) = ron::from_str::<GameSettings>(&text) {
+        if path.exists()
+            && let Ok(text) = std::fs::read_to_string(path)
+                && let Ok(settings) = ron::from_str::<GameSettings>(&text) {
                     return settings;
                 }
-            }
-        }
         GameSettings::default()
     }
 

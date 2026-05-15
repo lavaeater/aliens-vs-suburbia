@@ -4,7 +4,7 @@ use bevy::prelude::{Component, Entity, Message, MessageReader, MessageWriter, Re
 use crate::game_state::GameState;
 use crate::ui::spawn_ui::GotoState;
 
-
+#[allow(dead_code)]
 #[derive(Debug, Component)]
 pub struct Shooter(Entity);
 
@@ -36,10 +36,12 @@ pub enum LevelState {
 
 #[derive(Debug, Resource)]
 pub struct LevelTracker {
+    #[allow(dead_code)]
     pub level_name: String,
     pub aliens_to_spawn: i32,
     pub aliens_left_to_spawn: i32,
     pub aliens_killed: i32,
+    #[allow(dead_code)]
     pub spawn_rate_per_minute: f32,
     pub level_state: LevelState,
     pub aliens_reached_goal: i32,
@@ -62,6 +64,7 @@ impl Default for LevelTracker {
 }
 
 impl LevelTracker {
+    #[allow(dead_code)]
     pub fn update(level_name: String, aliens_to_spawn: i32, spawn_rate_per_minute: f32, aliens_win_cutoff: i32) -> Self {
         Self {
             level_name,
@@ -79,6 +82,7 @@ impl LevelTracker {
 #[derive(Debug, Message, Clone)]
 pub enum GameTrackingEvent {
     PlayerAdded(Entity),
+    #[allow(dead_code)]
     PlayerRemoved(Entity),
     AlienKilled(Entity),
     ShotFired(Entity),

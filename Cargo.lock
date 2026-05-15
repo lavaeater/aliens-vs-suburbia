@@ -1834,8 +1834,6 @@ dependencies = [
 [[package]]
 name = "bevy_wind_waker_shader"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "86ca0266e119de37fc08992d307a5aef9424f883e13504a2bb92f31b6379dc5f"
 dependencies = [
  "bevy",
 ]

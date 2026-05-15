@@ -1,15 +1,11 @@
 use crate::game_state::GameState;
+use crate::general::components::map_components::Floor;
+use crate::player::components::{WeaponsHidden, WEAPON_NODES};
 use crate::player::systems::auto_aim::{auto_aim, debug_gizmos};
 use crate::player::systems::spawn_players::{fix_scene_transform, spawn_players};
-use bevy::app::{App, Plugin, Update};
-use bevy::pbr::{ExtendedMaterial, MeshMaterial3d, StandardMaterial};
-use bevy::prelude::{
-    Added, Assets, Commands, Component, Entity, IntoScheduleConfigs, Query, Res, ResMut,
-    SceneSpawner, Without, in_state,
-};
-use bevy::scene::SceneInstance;
-use bevy_mod_outline::{AutoGenerateOutlineNormalsPlugin, InheritOutline, OutlinePlugin};
-use bevy_wind_waker_shader::{WindWakerShader, WindWakerShaderPlugin};
+use bevy::prelude::*;
+use bevy::scene::{SceneInstance, SceneRoot};
+use bevy_mod_outline::{AsyncSceneInheritOutline, AutoGenerateOutlineNormalsPlugin, InheritOutline, OutlinePlugin, OutlineVolume};
 
 #[derive(Default)]
 pub struct PlayerPlugin {
@@ -19,61 +15,86 @@ pub struct PlayerPlugin {
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         if self.with_debug {
-            app
-              .add_systems(Update, 
-                           debug_gizmos.run_if(in_state(GameState::InGame)));
+            app.add_systems(Update, debug_gizmos.run_if(in_state(GameState::InGame)));
         }
-        app.add_plugins((
-            OutlinePlugin,
-            AutoGenerateOutlineNormalsPlugin::default(),
-            WindWakerShaderPlugin::default(),
-        ))
-        .add_systems(
-            Update,
-            (
-                spawn_players,
-                setup_scene_once_loaded,
-                fix_scene_transform,
-                auto_aim,
-                flatten_toon_materials,
-            )
+        app.add_plugins((OutlinePlugin, AutoGenerateOutlineNormalsPlugin::default()))
+            .add_systems(Update, (auto_outline_scenes, sync_outline_with_visibility))
+            .add_systems(
+                Update,
+                (
+                    spawn_players,
+                    fix_scene_transform,
+                    auto_aim,
+                    hide_player_weapon_nodes,
+                )
                 .run_if(in_state(GameState::InGame)),
-        );
+            );
     }
 }
 
-#[derive(Component)]
-pub struct OutlineDone;
-
-// The Wind Waker shader clones StandardMaterial verbatim from the GLB, including any metallic /
-// roughness values baked in by the exporter. Zero those out so the toon shading isn't buried under
-// a specular highlight.
-fn flatten_toon_materials(
-    new_entities: Query<
-        &MeshMaterial3d<ExtendedMaterial<StandardMaterial, WindWakerShader>>,
-        Added<MeshMaterial3d<ExtendedMaterial<StandardMaterial, WindWakerShader>>>,
-    >,
-    mut toon_materials: ResMut<Assets<ExtendedMaterial<StandardMaterial, WindWakerShader>>>,
+fn auto_outline_scenes(
+    mut commands: Commands,
+    query: Query<Entity, (With<SceneRoot>, Without<AsyncSceneInheritOutline>, Without<Floor>)>,
 ) {
-    for handle in new_entities.iter() {
-        if let Some(mat) = toon_materials.get_mut(handle) {
-            mat.base.metallic = 0.0;
-            mat.base.perceptual_roughness = 1.0;
+    for entity in query.iter() {
+        commands.entity(entity).insert((
+            OutlineVolume {
+                visible: true,
+                width: 4.0,
+                colour: Color::BLACK,
+            },
+            AsyncSceneInheritOutline::default(),
+        ));
+    }
+}
+
+/// Keeps outline rendering in sync with Visibility.
+///
+/// Two races to handle:
+/// 1. Visibility::Hidden set first, InheritOutline added later by AsyncSceneInheritOutline.
+/// 2. InheritOutline already present, Visibility::Hidden set later.
+///
+/// When a weapon is later made visible again, re-insert InheritOutline alongside Visibility::Visible.
+fn sync_outline_with_visibility(
+    mut commands: Commands,
+    mut volume_query: Query<
+        (&Visibility, &mut OutlineVolume),
+        Or<(Changed<Visibility>, Added<OutlineVolume>)>,
+    >,
+    // Race 1: InheritOutline just added to an already-hidden entity.
+    added_query: Query<(Entity, &Visibility), Added<InheritOutline>>,
+    // Race 2: Visibility changed on an entity that already has InheritOutline.
+    changed_query: Query<(Entity, &Visibility), (With<InheritOutline>, Changed<Visibility>)>,
+) {
+    for (vis, mut outline) in volume_query.iter_mut() {
+        if outline.visible != !matches!(vis, Visibility::Hidden) {
+            outline.visible = !matches!(vis, Visibility::Hidden);
+        }
+    }
+    for (entity, vis) in added_query.iter().chain(changed_query.iter()) {
+        if matches!(vis, Visibility::Hidden) {
+            commands.entity(entity).remove::<InheritOutline>();
         }
     }
 }
 
-fn setup_scene_once_loaded(
+/// After the player scene loads, hide all named mesh nodes whose name does not
+/// start with "Character_" — those are weapons and other optional accessories.
+fn hide_player_weapon_nodes(
     mut commands: Commands,
-    scene_query: Query<(Entity, &SceneInstance), Without<OutlineDone>>,
-    scene_manager: Res<SceneSpawner>,
+    player_query: Query<(Entity, &SceneInstance), (With<crate::player::components::Player>, Without<WeaponsHidden>)>,
+    scene_spawner: Res<SceneSpawner>,
+    named_query: Query<(Entity, &Name)>,
 ) {
-    for (scene_entity, scene) in scene_query.iter() {
-        if scene_manager.instance_is_ready(**scene) {
-            for entity in scene_manager.iter_instance_entities(**scene) {
-                commands.entity(entity).insert(InheritOutline);
+    for (player_entity, scene_instance) in player_query.iter() {
+        if !scene_spawner.instance_is_ready(**scene_instance) { continue; }
+        commands.entity(player_entity).insert(WeaponsHidden);
+        for entity in scene_spawner.iter_instance_entities(**scene_instance) {
+            if let Ok((_, name)) = named_query.get(entity) {
+                if WEAPON_NODES.contains(&name.as_str()) {
+                    commands.entity(entity).insert(Visibility::Hidden);
+                }
             }
-            commands.entity(scene_entity).insert(OutlineDone);
         }
     }
 }

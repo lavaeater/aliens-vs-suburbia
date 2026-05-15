@@ -1,10 +1,15 @@
 use bevy::math::Quat;
-use bevy::light::{CascadeShadowConfigBuilder, DirectionalLight};
-use bevy::prelude::{Commands, EulerRot, Name, Transform, default};
+use bevy::light::{CascadeShadowConfigBuilder, DirectionalLight, GlobalAmbientLight};
+use bevy::prelude::{Color, Commands, EulerRot, Name, Transform, default};
 
 pub fn spawn_lights(
     mut commands: Commands,
 ) {
+    commands.insert_resource(GlobalAmbientLight {
+        color: Color::WHITE,
+        brightness: 300.0,
+        ..default()
+    });
     commands.spawn((
         Name::from("Directional Light"),
         DirectionalLight {

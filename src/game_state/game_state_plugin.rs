@@ -18,7 +18,6 @@ use crate::general::systems::health_monitor_system::health_monitor_system;
 use crate::general::systems::death_effect_system::{spawn_death_effects, tick_death_effects};
 use crate::general::systems::lights_systems::spawn_lights;
 use crate::general::systems::throwing_system::throwing;
-use crate::inspection::inspector::InspectorPlugin;
 use crate::map::map_plugins::StatefulMapPlugin;
 use crate::player::player_plugin::PlayerPlugin;
 use crate::settings::plugin::SettingsPlugin;
@@ -27,6 +26,7 @@ use crate::towers::systems::shoot_alien_system;
 use crate::ui::ui_plugin::UiPlugin;
 use crate::poly_pizza::plugin::PolyPizzaPlugin;
 use crate::character_creator::plugin::CharacterCreatorPlugin;
+use crate::asset_browser::plugin::AssetBrowserPlugin;
 use crate::sprite_billboard::plugin::SpriteBillboardPlugin;
 
 pub struct GamePlugin;
@@ -50,7 +50,6 @@ impl Plugin for GamePlugin {
                 PlayerPlugin::default(),
                 ScoreKeeperPlugin,
                 GamepadPlugin,
-                InspectorPlugin,
             ))
             .add_plugins((
                 SettingsPlugin,
@@ -58,6 +57,7 @@ impl Plugin for GamePlugin {
                 PolyPizzaPlugin,
                 CharacterCreatorPlugin,
                 SpriteBillboardPlugin,
+                AssetBrowserPlugin,
             ))
             .add_systems(
                 OnEnter(GameState::InGame),

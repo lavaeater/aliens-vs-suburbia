@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy::input::keyboard::{Key, KeyboardInput};
 use bevy::input::ButtonState;
 use bevy::ui_widgets::Activate;
-use lava_ui_builder::{InteractionPalette, LavaTheme, TextTheme, UIBuilder};
+use lava_ui_builder::{LavaTheme, TextTheme, UIBuilder};
 use crate::game_state::GameState;
 use crate::poly_pizza::async_bridge::{ApiChannels, ApiRequest, ApiResponse};
 use crate::poly_pizza::client::SearchFilters;
@@ -557,6 +557,7 @@ pub fn rebuild_results_ui(
         creator: String,
         tri_count: u32,
         animated: bool,
+        #[allow(dead_code)]
         model_id: String,
         thumb_asset: Option<String>,
         saved: bool,
@@ -784,7 +785,7 @@ pub fn update_tag_input_label(
     use crate::poly_pizza::state::InputFocus;
     let cursor = if state.input_focus == InputFocus::Tags { "█" } else { "_" };
     let display = if state.tag_input.is_empty() {
-        format!("{cursor}")
+        cursor.to_string()
     } else {
         format!("{} {cursor}", state.tag_input.trim_end())
     };

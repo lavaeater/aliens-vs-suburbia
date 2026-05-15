@@ -5,7 +5,7 @@ use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
 use crate::control::components::{CharacterControl, DynamicMovement, InputKeyboard};
 use crate::control::components::CharacterState;
 use crate::game_state::score_keeper::Score;
-use crate::general::components::{CollisionLayer, Health};
+use crate::general::components::{Health};
 use crate::general::components::map_components::CurrentTile;
 use crate::player::components::{AutoAim, Player};
 
@@ -33,15 +33,12 @@ pub struct PlayerBundle {
 impl PlayerBundle {
     pub fn new(
         name: &str,
-        player_key: &str,
         groups: impl Into<LayerMask>,
         masks: impl Into<LayerMask>,
     ) -> Self {
         Self {
             name: Name::new(name.to_string()),
-            player: Player {
-                key: player_key.into(),
-            },
+            player: Player {},
             input: InputKeyboard,
             character_controller: CharacterControl::new(3.0, 3.0, 60.0),
             dynamic_movement: DynamicMovement,
@@ -58,7 +55,7 @@ impl PlayerBundle {
             current_tile: CurrentTile {
                 tile: (0, 0)
             },
-            current_animation_key: CurrentAnimationKey::new("players".into(), AnimationKey::Walking),
+            current_animation_key: CurrentAnimationKey::new("players".into(), AnimationKey::Idle),
             character_state: CharacterState::default(),
             score: Score::new(),
             auto_aim: AutoAim(Vec3::Z),

@@ -39,6 +39,7 @@ pub enum CategoryGroup {
 
 /// A named collection of `LayerOption`s representing one slot in the character.
 pub struct LayerCategory {
+    #[allow(dead_code)]
     pub id: &'static str,
     pub label: &'static str,
     pub group: CategoryGroup,

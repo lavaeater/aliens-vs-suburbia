@@ -1,10 +1,10 @@
 use bevy::math::{Quat, Vec3};
-use bevy::prelude::{Children, Commands, Component, DetectChanges, Entity, MessageReader, MessageWriter,
+use bevy::prelude::{Children, Commands, Component, DetectChanges, Entity, Local, MessageReader, MessageWriter,
                     Assets, Query, Res, ResMut, Transform, Visibility, With};
 use bevy::scene::SceneRoot;
 use avian3d::prelude::Collider;
-use bevy_wind_waker_shader::WindWakerShaderBuilder;
 use crate::assets::assets_plugin::GameAssets;
+pub use crate::player::components::WeaponsHidden;
 use crate::character_creator::config::{CharacterConfig, ComposedSpriteSheet};
 use crate::game_state::score_keeper::GameTrackingEvent;
 use crate::general::components::CollisionLayer;
@@ -32,6 +32,7 @@ impl FixSceneTransform {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn spawn_players(
     mut spawn_player_event_reader: MessageReader<SpawnPlayer>,
     mut commands: Commands,
@@ -59,22 +60,21 @@ pub fn spawn_players(
             .then(|| sheet.as_ref().and_then(|s| s.billboard_handle.clone()))
             .flatten();
 
-        let player = if use_billboard && billboard_sheet.is_some() && billboard_mesh.is_some() {
-            let sheet_handle = billboard_sheet.unwrap();
-            let mesh_handle = billboard_mesh.as_ref().unwrap().0.clone();
+        let player = if use_billboard && let Some(billboard_sheet) = billboard_sheet && let Some(billboard_mesh) = billboard_mesh.as_ref() {
+            let sheet_handle = billboard_sheet;
+            let mesh_handle = billboard_mesh.0.clone();
 
             let mat = sprite_materials.add(SpriteBillboardMaterial {
                 sprite_sheet: sheet_handle,
                 uv_rect: bevy::prelude::Vec4::new(0.0, 0.5, 64.0 / 704.0, 64.0 / 256.0),
             });
 
-            let mut entity_cmds = commands.spawn((
+            let entity_cmds = commands.spawn((
                 pos,
                 Visibility::default(),
                 Collider::cuboid(0.5, 0.5, 0.45),
                 PlayerBundle::new(
                     "player",
-                    "Player One",
                     [CollisionLayer::Player],
                     [
                         CollisionLayer::Ball,
@@ -112,7 +112,6 @@ pub fn spawn_players(
                 Collider::cuboid(0.5, 0.5, 0.45),
                 PlayerBundle::new(
                     "player",
-                    "Player One",
                     [CollisionLayer::Player],
                     [
                         CollisionLayer::Ball,
@@ -124,8 +123,7 @@ pub fn spawn_players(
                         CollisionLayer::AlienGoal,
                     ],
                 ),
-                WindWakerShaderBuilder::default().build(),
-            )).id()
+                )).id()
         };
 
         add_health_bar_mw.write(AddHealthBar { entity: player, name: "PLAYER" });
@@ -158,9 +156,13 @@ pub fn fix_scene_transform(
 pub fn apply_model_settings_live(
     model_settings: Res<ModelSettings>,
     mut root_query: Query<&mut Transform, With<PlayerModelRoot>>,
+    mut last: Local<(f32, f32, f32, f32, f32)>,
 ) {
     if !model_settings.is_changed() { return; }
     let s = &*model_settings;
+    let sig = (s.scale, s.translation_x, s.translation_y, s.translation_z, s.rotation_y_degrees);
+    if *last == sig { return; }
+    *last = sig;
     for mut transform in root_query.iter_mut() {
         transform.translation = Vec3::new(s.translation_x, s.translation_y, s.translation_z);
         transform.rotation = Quat::from_rotation_y(s.rotation_y_degrees.to_radians());

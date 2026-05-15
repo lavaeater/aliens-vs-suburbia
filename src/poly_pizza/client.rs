@@ -49,7 +49,7 @@ pub fn search_filters(api_key: &str, filters: &SearchFilters) -> Result<SearchRe
     let resp: SearchResponse = req.call()?.into_json()?;
     Ok(resp)
 }
-
+#[allow(dead_code)]
 pub fn get_model(api_key: &str, id: &str) -> Result<PizzaModel, BoxError> {
     let url = format!("{BASE}/model/{id}");
     let resp: PizzaModel = ureq::get(&url)

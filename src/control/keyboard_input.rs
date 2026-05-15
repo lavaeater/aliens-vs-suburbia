@@ -29,26 +29,25 @@ pub fn keyboard_input(
                             start_build_ew.write(EnterBuildMode(entity));
                         }
                     }
-                    KeyCode::Escape => {
-                        if controller.triggers.contains(&ControlCommand::Build) {
+                    KeyCode::Escape
+                        if controller.triggers.contains(&ControlCommand::Build) => {
                             animation_ew.write(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Building));
                             exit_build.write(ExitBuildMode(entity));
                         }
-                    }
                     KeyCode::KeyA => {
-                        animation_ew.write(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walking));
+                        animation_ew.write(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walk));
                         controller.rotations.insert(ControlRotation::Left);
                     }
                     KeyCode::KeyD => {
-                        animation_ew.write(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walking));
+                        animation_ew.write(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walk));
                         controller.rotations.insert(ControlRotation::Right);
                     }
                     KeyCode::KeyW => {
-                        animation_ew.write(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walking));
+                        animation_ew.write(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walk));
                         controller.directions.insert(ControlDirection::Forward);
                     }
                     KeyCode::KeyS => {
-                        animation_ew.write(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walking));
+                        animation_ew.write(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walk));
                         controller.directions.insert(ControlDirection::Backward);
                     }
                     KeyCode::Space => {
@@ -87,7 +86,7 @@ pub fn keyboard_input(
                 }
             }
             if controller.directions.is_empty() && controller.rotations.is_empty() {
-                animation_ew.write(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Walking));
+                animation_ew.write(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Walk));
             }
 
             controller.walk_direction = Vec3::ZERO;

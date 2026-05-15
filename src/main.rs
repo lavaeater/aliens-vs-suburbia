@@ -1,9 +1,9 @@
-use avian3d::debug_render::PhysicsDebugPlugin;
-use avian3d::interpolation::PhysicsInterpolationPlugin;
 use bevy::app::{App, PluginGroup};
 use bevy::{DefaultPlugins, log};
 use bevy::log::LogPlugin;
 use avian3d::prelude::PhysicsPlugins;
+use bevy_mod_outline::OutlinePlugin;
+use bevy_wind_waker_shader::flat::FlatShaderPlugin;
 use crate::ai::components::approach_and_attack_player_components::ApproachAndAttackPlayerData;
 use crate::ai::components::avoid_wall_components::AvoidWallsData;
 use camera::components::CameraOffset;
@@ -26,12 +26,12 @@ pub(crate) mod game_state;
 mod animation;
 mod constants;
 mod assets;
-mod inspection;
 pub(crate) mod settings;
 pub(crate) mod model_settings;
 pub(crate) mod poly_pizza;
 pub(crate) mod character_creator;
 pub(crate) mod sprite_billboard;
+pub(crate) mod asset_browser;
 
 
 fn main() {
@@ -50,7 +50,7 @@ fn main() {
                     ..Default::default()
                 }))
         .add_plugins(PhysicsPlugins::default())
-        // .add_plugins(PhysicsDebugPlugin)
+        .add_plugins(FlatShaderPlugin::global())
         .add_plugins(GamePlugin)
         .run();
 }

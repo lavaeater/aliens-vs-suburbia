@@ -12,6 +12,7 @@ pub struct CharacterConfig {
 }
 
 impl CharacterConfig {
+    #[allow(dead_code)]
     pub fn new_male() -> Self {
         Self {
             body_type: "male".into(),

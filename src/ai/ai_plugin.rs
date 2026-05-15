@@ -6,7 +6,7 @@ use crate::ai::systems::avoid_walls_systems::{avoid_walls_action_system, avoid_w
 use crate::ai::systems::destroy_the_map_systems::{agent_cant_find_path, destroy_the_map_action_system};
 use crate::ai::systems::move_towards_goal_systems::{agent_reached_goal_handler, move_towards_goal_system};
 use crate::game_state::GameState;
-
+#[allow(dead_code)]
 pub struct AiPlugin;
 
 impl Plugin for AiPlugin {

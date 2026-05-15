@@ -21,11 +21,12 @@ impl Rng {
     fn range(&mut self, lo: usize, hi: usize) -> usize {
         lo + (self.next() as usize % (hi - lo))
     }
-
+    #[allow(dead_code)]
     fn f32(&mut self) -> f32 {
         (self.next() >> 40) as f32 / (1u64 << 24) as f32
     }
-
+    
+    #[allow(dead_code)]
     fn prob(&mut self, p: f32) -> bool {
         self.f32() < p
     }
@@ -168,6 +169,7 @@ const CLUTTER: &[Prop] = &[
 
 // ── Zone classification ──────────────────────────────────────────────────────
 
+#[allow(dead_code)]
 #[derive(Clone, Copy, PartialEq)]
 enum Zone {
     PlayerArea,  // near player spawn — suburban props, parked cars
@@ -175,7 +177,7 @@ enum Zone {
     Perimeter,   // map edge and house-adjacent — trees, hedges
     Open,        // mid-map — mixed combat debris and suburban clutter
 }
-
+#[allow(dead_code)]
 fn classify(
     row: usize,
     col: usize,
@@ -209,7 +211,7 @@ fn classify(
         Zone::Open
     }
 }
-
+#[allow(dead_code)]
 fn pick_prop(rng: &mut Rng, zone: Zone) -> (&'static str, f32) {
     let palette: &[Prop] = match zone {
         Zone::PlayerArea => match rng.range(0, 5) {

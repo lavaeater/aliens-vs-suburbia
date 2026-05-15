@@ -85,7 +85,7 @@ pub fn spawn_aliens(
             ),
             (
                 CurrentTile::default(),
-                CurrentAnimationKey::new("aliens".into(), AnimationKey::Walking),
+                CurrentAnimationKey::new("aliens".into(), AnimationKey::Walk),
                 Alien {},
                 AvoidWallsData::new(0.125, 0.125, 0.125, 5.0),
                 ApproachAndAttackPlayerData::default(),

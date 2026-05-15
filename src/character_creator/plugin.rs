@@ -6,7 +6,7 @@ use crate::character_creator::ui::{
     spawn_character_creator_ui, sync_labels, sync_preview_image, CreatorSelections,
 };
 use crate::game_state::GameState;
-use crate::ui::spawn_ui::{cleanup_state, StateMarker};
+use crate::ui::spawn_ui::{cleanup_state};
 use crate::ui::ui_plugin::spawn_ui_camera;
 
 pub struct CharacterCreatorPlugin;

@@ -18,8 +18,11 @@ use crate::general::systems::map_systems::{WallMaterials, WallOccluder};
 use crate::player::components::Player;
 use crate::settings::resources::{GameSettings, ProjectionMode};
 
+#[allow(dead_code)]
 const PIXEL_WIDTH: u32 = 480;
+#[allow(dead_code)]
 const PIXEL_HEIGHT: u32 = 360;
+#[allow(dead_code)]
 const CANVAS_LAYER: usize = 1;
 
 pub fn spawn_camera(mut commands: Commands) {
@@ -44,6 +47,7 @@ pub fn spawn_camera(mut commands: Commands) {
   ));
 }
 
+#[allow(dead_code)]
 pub fn spawn_pixelated_camera(
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
@@ -122,11 +126,12 @@ pub fn spawn_pixelated_camera(
             ..default()
         },
         Transform::default(),
-        PixelCanvas,
+        PixelCanvas {},
         RenderLayers::layer(CANVAS_LAYER),
     ));
 }
 
+#[allow(dead_code)]
 pub fn resize_pixel_canvas(
     window_q: Query<&Window, With<PrimaryWindow>>,
     mut canvas_q: Query<&mut Sprite, With<PixelCanvas>>,
@@ -162,15 +167,14 @@ pub fn init_wall_materials(
         collect_descendants(entity, &children_q, &mut descendants);
 
         for desc in descendants {
-            if let Ok(mut mat_handle) = mat_q.get_mut(desc) {
-                if let Some(cloned) = materials.get(&mat_handle.0).cloned() {
+            if let Ok(mut mat_handle) = mat_q.get_mut(desc)
+                && let Some(cloned) = materials.get(&mat_handle.0).cloned() {
                     let mut new_mat = cloned;
                     new_mat.alpha_mode = AlphaMode::Blend;
                     let handle = materials.add(new_mat);
                     wall_mats.handles.push(handle.clone());
                     mat_handle.0 = handle;
                 }
-            }
         }
         wall_mats.initialized = true;
     }
@@ -245,17 +249,19 @@ pub fn apply_camera_settings(
 
         *proj = match settings.projection {
             ProjectionMode::Orthographic => Projection::Orthographic(OrthographicProjection {
-                near: -1000.0,
-                far: 1000.0,
+                near: settings.ortho_near,
+                far: settings.ortho_far,
                 viewport_origin: Vec2::new(0.5, 0.5),
-                scaling_mode: ScalingMode::FixedVertical { viewport_height: 2.0 },
+                scaling_mode: ScalingMode::FixedVertical {
+                    viewport_height: settings.ortho_viewport_height,
+                },
                 area: Rect::new(-1.0, -1.0, 1.0, 1.0),
                 scale: settings.zoom,
             }),
             ProjectionMode::Perspective => Projection::Perspective(PerspectiveProjection {
-                fov: (settings.zoom).clamp(10.0, 120.0).to_radians(),
-                near: 0.1,
-                far: 1000.0,
+                fov: settings.persp_fov.clamp(10.0, 170.0).to_radians(),
+                near: settings.persp_near,
+                far: settings.persp_far,
                 ..default()
             }),
         };

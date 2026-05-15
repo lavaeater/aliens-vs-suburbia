@@ -73,10 +73,7 @@ impl Plugin for NonStateMapStuff {
             TileDefinitions::new(1.0,
                                  32.0,
                                  9.5,
-                                 1.0,
-                                 "map/wall_small.glb#Scene0".into(),
-                                 "map/floor_small.glb#Scene0".into(),
-                                 "map/obstacle.glb#Scene0".into()))
+                                 1.0,))
             .insert_resource(AlienCounter::new(50))
             .insert_resource(MapGraph {
                 path_finding_grid: Grid::new(0, 0),
@@ -103,7 +100,7 @@ impl Plugin for StatefulMapPlugin {
             );
     }
 }
-
+#[allow(dead_code)]
 pub struct MapPlugin;
 
 impl Plugin for MapPlugin {

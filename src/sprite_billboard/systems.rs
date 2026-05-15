@@ -58,7 +58,11 @@ pub fn billboard_system(
     };
 
     let target_anim = match anim_key.key {
-        AnimationKey::Walking | AnimationKey::Crawling => SpriteAnim::Walk,
+        AnimationKey::Walk
+        | AnimationKey::WalkShoot
+        | AnimationKey::Run
+        | AnimationKey::RunShoot
+        | AnimationKey::RunGun => SpriteAnim::Walk,
         _ => SpriteAnim::Idle,
     };
 

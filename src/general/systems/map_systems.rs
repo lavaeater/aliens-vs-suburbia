@@ -1,6 +1,9 @@
 use bevy::asset::AssetServer;
 use bevy::math::{Quat, Vec3};
-use bevy::prelude::{Commands, Component, Has, MessageReader, MessageWriter, Name, Query, Res, ResMut, Resource, Transform};
+use bevy::asset::RenderAssetUsages;
+use bevy::pbr::StandardMaterial;
+use bevy::prelude::{Assets, Color, Commands, Component, Has, Mesh, Mesh3d, MeshMaterial3d, MessageReader, MessageWriter, Name, Query, Res, ResMut, Resource, Transform};
+use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::scene::SceneRoot;
 
 /// Marks a visual wall entity for occlusion testing by the camera system.
@@ -84,8 +87,6 @@ impl MapTile {
 }
 
 pub struct MapDef {
-    pub x: i32,
-    pub y: i32,
     pub tiles: Vec<MapTile>,
 } //No data needed now
 
@@ -114,20 +115,14 @@ pub struct TileDefinitions {
     pub tile_width: f32,
     pub wall_height: f32,
     pub tile_depth: f32,
-    pub floor_level: f32,
-    pub wall_file: String,
-    pub floor_file: String,
-    pub obstacle_file: String,
+    pub floor_level: f32
 }
 
 impl TileDefinitions {
     pub fn new(tile_size: f32,
                tile_basis: f32,
                wall_basis: f32,
-               tile_depth_basis: f32,
-               wall_file: String,
-               floor_file: String,
-               obstacle_file: String) -> Self {
+               tile_depth_basis: f32) -> Self {
         let tile_unit = tile_size / tile_basis;
         let tile_width = tile_basis * tile_unit;
         let wall_height = wall_basis * tile_unit;
@@ -140,9 +135,6 @@ impl TileDefinitions {
             wall_height,
             tile_depth,
             floor_level: -wall_height * 2.0,
-            wall_file,
-            floor_file,
-            obstacle_file,
         }
     }
 
@@ -153,11 +145,7 @@ impl TileDefinitions {
     pub fn get_floor_position(&self, x: i32, y: i32) -> Vec3 {
         Vec3::new(self.tile_width * x as f32, self.floor_level, self.tile_width * y as f32)
     }
-
-    pub fn create_wall_collider(&self) -> Collider {
-        Collider::cuboid(self.tile_width, self.wall_height, self.tile_depth)
-    }
-
+    
     pub fn create_wall_collider_merged(&self, tile_count: f32) -> Collider {
         Collider::cuboid(self.tile_width * tile_count, self.wall_height, self.tile_depth)
     }
@@ -198,6 +186,8 @@ pub fn map_loader(
     mut commands: Commands,
     mut alien_counter: ResMut<AlienCounter>,
     mut map_graph: ResMut<MapGraph>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
     asset_server: Res<AssetServer>,
     game_assets: Res<GameAssets>,
     tile_defs: Res<TileDefinitions>,
@@ -275,12 +265,11 @@ pub fn map_loader(
         map_graph.path_finding_grid.enable_diagonal_mode();
 
         let map = MapDef {
-            x: 0,
-            y: 0,
             tiles,
         };
 
         // Spawn merged floor colliders using greedy maximal rectangles.
+        // All rectangles are also collected into a single procedural mesh to avoid seams.
         {
             let floor_model_def = model_defs.definitions.get("floor").unwrap();
             let floor_set: HashSet<(i32, i32)> = map.tiles.iter()
@@ -288,6 +277,12 @@ pub fn map_loader(
                 .map(|t| (t.x, t.y))
                 .collect();
             let mut covered = vec![vec![false; cols]; rows];
+
+            let mut positions: Vec<[f32; 3]> = Vec::new();
+            let mut normals: Vec<[f32; 3]> = Vec::new();
+            let mut uvs: Vec<[f32; 2]> = Vec::new();
+            let mut indices: Vec<u32> = Vec::new();
+
             for row in 0..rows {
                 for col in 0..cols {
                     if covered[row][col] || !floor_set.contains(&(col as i32, row as i32)) {
@@ -333,8 +328,38 @@ pub fn map_loader(
                         floor_model_def.create_collision_layers(),
                         WindWakerShaderBuilder::default().build(),
                     ));
+
+                    // Add this rectangle as two triangles in the shared floor mesh.
+                    let base = positions.len() as u32;
+                    let tw = tile_defs.tile_width;
+                    let x0 = tw * (col as f32 - 0.5);
+                    let x1 = tw * (max_col as f32 + 0.5);
+                    let z0 = tw * (row as f32 - 0.5);
+                    let z1 = tw * (max_row as f32 + 0.5);
+                    let y = tile_defs.floor_level;
+                    positions.extend_from_slice(&[[x0,y,z0],[x1,y,z0],[x1,y,z1],[x0,y,z1]]);
+                    normals.extend_from_slice(&[[0.0,1.0,0.0];4]);
+                    uvs.extend_from_slice(&[[0.0,0.0],[1.0,0.0],[1.0,1.0],[0.0,1.0]]);
+                    indices.extend_from_slice(&[base,base+2,base+1, base,base+3,base+2]);
                 }
             }
+
+            let mut mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD);
+            mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
+            mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+            mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
+            mesh.insert_indices(Indices::U32(indices));
+            commands.spawn((
+                Name::from("Floor"),
+                Floor {},
+                Mesh3d(meshes.add(mesh)),
+                MeshMaterial3d(materials.add(StandardMaterial {
+                    base_color: Color::srgb(0.55, 0.52, 0.48),
+                    perceptual_roughness: 1.0,
+                    metallic: 0.0,
+                    ..Default::default()
+                })),
+            ));
         }
 
         // Spawn merged wall colliders: N/S walls merge along columns, E/W merge along rows.
@@ -373,14 +398,23 @@ pub fn map_loader(
                         } else {
                             tile_defs.tile_width * row as f32 + tile_defs.tile_width / 2.0
                         };
+                        let pos = Vec3::new(center_x, -tile_defs.wall_height, z);
+                        let rot = tile_defs.get_wall_rotation(dir);
                         commands.spawn((
                             Wall {},
                             wall_model_def.rigid_body,
                             tile_defs.create_wall_collider_merged(count),
-                            Position::from(Vec3::new(center_x, -tile_defs.wall_height, z)),
-                            Rotation::from(tile_defs.get_wall_rotation(dir)),
+                            Position::from(pos),
+                            Rotation::from(rot),
                             wall_model_def.create_collision_layers(),
                             WindWakerShaderBuilder::default().build(),
+                        ));
+                        commands.spawn((
+                            Name::from(format!("Wall {:?} {}:{} count{}", dir, row, c1, count as i32)),
+                            WallOccluder,
+                            WallMaterials::default(),
+                            SceneRoot(asset_server.load(wall_model_def.file)),
+                            Transform::from_translation(pos).with_rotation(rot).with_scale(Vec3::new(count, 1.0, 1.0)),
                         ));
                     }
                 }
@@ -404,14 +438,23 @@ pub fn map_loader(
                             tile_defs.tile_width * col as f32 - tile_defs.tile_width / 2.0
                         };
                         let center_z = tile_defs.tile_width * (r1 + r2) as f32 / 2.0;
+                        let pos = Vec3::new(x, -tile_defs.wall_height, center_z);
+                        let rot = tile_defs.get_wall_rotation(dir);
                         commands.spawn((
                             Wall {},
                             wall_model_def.rigid_body,
                             tile_defs.create_wall_collider_merged(count),
-                            Position::from(Vec3::new(x, -tile_defs.wall_height, center_z)),
-                            Rotation::from(tile_defs.get_wall_rotation(dir)),
+                            Position::from(pos),
+                            Rotation::from(rot),
                             wall_model_def.create_collision_layers(),
                             WindWakerShaderBuilder::default().build(),
+                        ));
+                        commands.spawn((
+                            Name::from(format!("Wall {:?} {}:{} count{}", dir, col, r1, count as i32)),
+                            WallOccluder,
+                            WallMaterials::default(),
+                            SceneRoot(asset_server.load(wall_model_def.file)),
+                            Transform::from_translation(pos).with_rotation(rot).with_scale(Vec3::new(count, 1.0, 1.0)),
                         ));
                     }
                 }
@@ -419,37 +462,6 @@ pub fn map_loader(
         }
 
         for tile in map.tiles.iter() {
-            if tile.features.contains(TileFlags::Floor) {
-                let model_def = model_defs.definitions.get("floor").unwrap();
-                let pos = tile_defs.get_floor_position(tile.x, tile.y);
-                commands.spawn((
-                    Name::from(format!("Floor {}:{}", tile.x, tile.y)),
-                    SceneRoot(asset_server.load(model_def.file)),
-                    Transform::from_translation(pos),
-                ));
-            }
-            if tile.features.contains(TileFlags::AnyWall) {
-                let model_def = model_defs.definitions.get("wall").unwrap();
-                for (flag, label) in [
-                    (TileFlags::WallEast, "East"),
-                    (TileFlags::WallWest, "West"),
-                    (TileFlags::WallSouth, "South"),
-                    (TileFlags::WallNorth, "North"),
-                ] {
-                    if tile.features.contains(flag) {
-                        let pos = tile_defs.get_wall_position(tile.x, tile.y, flag);
-                        let rot = tile_defs.get_wall_rotation(flag);
-                        commands.spawn((
-                            Name::from(format!("Wall {} {}:{}", label, tile.x, tile.y)),
-                            WallOccluder,
-                            WallMaterials::default(),
-                            SceneRoot(asset_server.load(model_def.file)),
-                            Transform::from_translation(pos).with_rotation(rot),
-                        ));
-                    }
-                }
-            }
-
             if tile.features.contains(TileFlags::AlienSpawnPoint) {
                 alien_counter.max_count = 100;
                 commands.spawn((
@@ -467,7 +479,7 @@ pub fn map_loader(
                 map_graph.goal = (tile.x as usize, tile.y as usize);
                 commands.spawn((
                     Name::from(format!("Alien Goal {}:{}", tile.x, tile.y)),
-                    AlienGoal::new(tile.x as usize, tile.y as usize),
+                    AlienGoal,
                     SceneRoot(game_assets.alien_construct.clone()),
                     RigidBody::Static,
                     WindWakerShaderBuilder::default().build(),

@@ -20,7 +20,7 @@ impl Plugin for BuildModeEventsPlugin {
             .add_message::<BuildTower>();
     }
 }
-
+#[allow(dead_code)]
 pub struct BuildModePlugin;
 
 impl Plugin for BuildModePlugin {
