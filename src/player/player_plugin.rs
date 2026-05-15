@@ -5,7 +5,7 @@ use crate::player::systems::auto_aim::{auto_aim, debug_gizmos};
 use crate::player::systems::spawn_players::{fix_scene_transform, spawn_players};
 use bevy::prelude::*;
 use bevy::scene::{SceneInstance, SceneRoot};
-use bevy_mod_outline::{AsyncSceneInheritOutline, AutoGenerateOutlineNormalsPlugin, OutlinePlugin, OutlineVolume};
+use bevy_mod_outline::{AsyncSceneInheritOutline, AutoGenerateOutlineNormalsPlugin, InheritOutline, OutlinePlugin, OutlineVolume};
 
 #[derive(Default)]
 pub struct PlayerPlugin {
@@ -48,18 +48,32 @@ fn auto_outline_scenes(
     }
 }
 
-/// Keeps OutlineVolume.visible in sync with Visibility so hidden nodes don't show outlines.
-/// Runs on both Changed<Visibility> and Added<OutlineVolume> to handle whichever arrives last.
+/// Keeps outline rendering in sync with Visibility.
+///
+/// Two races to handle:
+/// 1. Visibility::Hidden set first, InheritOutline added later by AsyncSceneInheritOutline.
+/// 2. InheritOutline already present, Visibility::Hidden set later.
+///
+/// When a weapon is later made visible again, re-insert InheritOutline alongside Visibility::Visible.
 fn sync_outline_with_visibility(
-    mut query: Query<
+    mut commands: Commands,
+    mut volume_query: Query<
         (&Visibility, &mut OutlineVolume),
         Or<(Changed<Visibility>, Added<OutlineVolume>)>,
     >,
+    // Race 1: InheritOutline just added to an already-hidden entity.
+    added_query: Query<(Entity, &Visibility), Added<InheritOutline>>,
+    // Race 2: Visibility changed on an entity that already has InheritOutline.
+    changed_query: Query<(Entity, &Visibility), (With<InheritOutline>, Changed<Visibility>)>,
 ) {
-    for (vis, mut outline) in query.iter_mut() {
-        let should_show = !matches!(vis, Visibility::Hidden);
-        if outline.visible != should_show {
-            outline.visible = should_show;
+    for (vis, mut outline) in volume_query.iter_mut() {
+        if outline.visible != !matches!(vis, Visibility::Hidden) {
+            outline.visible = !matches!(vis, Visibility::Hidden);
+        }
+    }
+    for (entity, vis) in added_query.iter().chain(changed_query.iter()) {
+        if matches!(vis, Visibility::Hidden) {
+            commands.entity(entity).remove::<InheritOutline>();
         }
     }
 }
