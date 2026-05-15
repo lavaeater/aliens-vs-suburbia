@@ -18,7 +18,7 @@ impl Plugin for PlayerPlugin {
             app.add_systems(Update, debug_gizmos.run_if(in_state(GameState::InGame)));
         }
         app.add_plugins((OutlinePlugin, AutoGenerateOutlineNormalsPlugin::default()))
-            .add_systems(Update, auto_outline_scenes)
+            .add_systems(Update, (auto_outline_scenes, sync_outline_with_visibility))
             .add_systems(
                 Update,
                 (
@@ -48,19 +48,35 @@ fn auto_outline_scenes(
     }
 }
 
+/// Keeps OutlineVolume.visible in sync with Visibility so hidden nodes don't show outlines.
+/// Runs on both Changed<Visibility> and Added<OutlineVolume> to handle whichever arrives last.
+fn sync_outline_with_visibility(
+    mut query: Query<
+        (&Visibility, &mut OutlineVolume),
+        Or<(Changed<Visibility>, Added<OutlineVolume>)>,
+    >,
+) {
+    for (vis, mut outline) in query.iter_mut() {
+        let should_show = !matches!(vis, Visibility::Hidden);
+        if outline.visible != should_show {
+            outline.visible = should_show;
+        }
+    }
+}
+
 /// After the player scene loads, hide all named mesh nodes whose name does not
 /// start with "Character_" — those are weapons and other optional accessories.
 fn hide_player_weapon_nodes(
     mut commands: Commands,
     player_query: Query<(Entity, &SceneInstance), (With<crate::player::components::Player>, Without<WeaponsHidden>)>,
     scene_spawner: Res<SceneSpawner>,
-    named_mesh_query: Query<(Entity, &Name), With<Mesh3d>>,
+    named_query: Query<(Entity, &Name)>,
 ) {
     for (player_entity, scene_instance) in player_query.iter() {
         if !scene_spawner.instance_is_ready(**scene_instance) { continue; }
         commands.entity(player_entity).insert(WeaponsHidden);
         for entity in scene_spawner.iter_instance_entities(**scene_instance) {
-            if let Ok((_, name)) = named_mesh_query.get(entity) {
+            if let Ok((_, name)) = named_query.get(entity) {
                 if WEAPON_NODES.contains(&name.as_str()) {
                     commands.entity(entity).insert(Visibility::Hidden);
                 }

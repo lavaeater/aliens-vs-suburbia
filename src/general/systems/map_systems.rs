@@ -355,7 +355,8 @@ pub fn map_loader(
                 Mesh3d(meshes.add(mesh)),
                 MeshMaterial3d(materials.add(StandardMaterial {
                     base_color: Color::srgb(0.55, 0.52, 0.48),
-                    unlit: true,
+                    perceptual_roughness: 1.0,
+                    metallic: 0.0,
                     ..Default::default()
                 })),
             ));
