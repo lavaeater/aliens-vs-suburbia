@@ -316,6 +316,11 @@ pub fn map_loader(
                         floor_model_def.create_collision_layers(),
                         WindWakerShaderBuilder::default().build(),
                     ));
+                    commands.spawn((
+                        Name::from(format!("Floor {}:{} {}x{}", col, row, w as i32, h as i32)),
+                        SceneRoot(asset_server.load(floor_model_def.file)),
+                        Transform::from_translation(center).with_scale(Vec3::new(w, 1.0, h)),
+                    ));
                 }
             }
         }
@@ -356,14 +361,23 @@ pub fn map_loader(
                         } else {
                             tile_defs.tile_width * row as f32 + tile_defs.tile_width / 2.0
                         };
+                        let pos = Vec3::new(center_x, -tile_defs.wall_height, z);
+                        let rot = tile_defs.get_wall_rotation(dir);
                         commands.spawn((
                             Wall {},
                             wall_model_def.rigid_body,
                             tile_defs.create_wall_collider_merged(count),
-                            Position::from(Vec3::new(center_x, -tile_defs.wall_height, z)),
-                            Rotation::from(tile_defs.get_wall_rotation(dir)),
+                            Position::from(pos),
+                            Rotation::from(rot),
                             wall_model_def.create_collision_layers(),
                             WindWakerShaderBuilder::default().build(),
+                        ));
+                        commands.spawn((
+                            Name::from(format!("Wall {:?} {}:{} count{}", dir, row, c1, count as i32)),
+                            WallOccluder,
+                            WallMaterials::default(),
+                            SceneRoot(asset_server.load(wall_model_def.file)),
+                            Transform::from_translation(pos).with_rotation(rot).with_scale(Vec3::new(count, 1.0, 1.0)),
                         ));
                     }
                 }
@@ -387,14 +401,23 @@ pub fn map_loader(
                             tile_defs.tile_width * col as f32 - tile_defs.tile_width / 2.0
                         };
                         let center_z = tile_defs.tile_width * (r1 + r2) as f32 / 2.0;
+                        let pos = Vec3::new(x, -tile_defs.wall_height, center_z);
+                        let rot = tile_defs.get_wall_rotation(dir);
                         commands.spawn((
                             Wall {},
                             wall_model_def.rigid_body,
                             tile_defs.create_wall_collider_merged(count),
-                            Position::from(Vec3::new(x, -tile_defs.wall_height, center_z)),
-                            Rotation::from(tile_defs.get_wall_rotation(dir)),
+                            Position::from(pos),
+                            Rotation::from(rot),
                             wall_model_def.create_collision_layers(),
                             WindWakerShaderBuilder::default().build(),
+                        ));
+                        commands.spawn((
+                            Name::from(format!("Wall {:?} {}:{} count{}", dir, col, r1, count as i32)),
+                            WallOccluder,
+                            WallMaterials::default(),
+                            SceneRoot(asset_server.load(wall_model_def.file)),
+                            Transform::from_translation(pos).with_rotation(rot).with_scale(Vec3::new(count, 1.0, 1.0)),
                         ));
                     }
                 }
@@ -402,37 +425,6 @@ pub fn map_loader(
         }
 
         for tile in map.tiles.iter() {
-            if tile.features.contains(TileFlags::Floor) {
-                let model_def = model_defs.definitions.get("floor").unwrap();
-                let pos = tile_defs.get_floor_position(tile.x, tile.y);
-                commands.spawn((
-                    Name::from(format!("Floor {}:{}", tile.x, tile.y)),
-                    SceneRoot(asset_server.load(model_def.file)),
-                    Transform::from_translation(pos),
-                ));
-            }
-            if tile.features.contains(TileFlags::AnyWall) {
-                let model_def = model_defs.definitions.get("wall").unwrap();
-                for (flag, label) in [
-                    (TileFlags::WallEast, "East"),
-                    (TileFlags::WallWest, "West"),
-                    (TileFlags::WallSouth, "South"),
-                    (TileFlags::WallNorth, "North"),
-                ] {
-                    if tile.features.contains(flag) {
-                        let pos = tile_defs.get_wall_position(tile.x, tile.y, flag);
-                        let rot = tile_defs.get_wall_rotation(flag);
-                        commands.spawn((
-                            Name::from(format!("Wall {} {}:{}", label, tile.x, tile.y)),
-                            WallOccluder,
-                            WallMaterials::default(),
-                            SceneRoot(asset_server.load(model_def.file)),
-                            Transform::from_translation(pos).with_rotation(rot),
-                        ));
-                    }
-                }
-            }
-
             if tile.features.contains(TileFlags::AlienSpawnPoint) {
                 alien_counter.max_count = 100;
                 commands.spawn((
