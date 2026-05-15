@@ -1,6 +1,9 @@
 use bevy::asset::AssetServer;
 use bevy::math::{Quat, Vec3};
-use bevy::prelude::{Commands, Component, Has, MessageReader, MessageWriter, Name, Query, Res, ResMut, Resource, Transform};
+use bevy::asset::RenderAssetUsages;
+use bevy::pbr::StandardMaterial;
+use bevy::prelude::{Assets, Color, Commands, Component, Has, Mesh, Mesh3d, MeshMaterial3d, MessageReader, MessageWriter, Name, Query, Res, ResMut, Resource, Transform};
+use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::scene::SceneRoot;
 
 /// Marks a visual wall entity for occlusion testing by the camera system.
@@ -183,6 +186,8 @@ pub fn map_loader(
     mut commands: Commands,
     mut alien_counter: ResMut<AlienCounter>,
     mut map_graph: ResMut<MapGraph>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
     asset_server: Res<AssetServer>,
     game_assets: Res<GameAssets>,
     tile_defs: Res<TileDefinitions>,
@@ -264,6 +269,7 @@ pub fn map_loader(
         };
 
         // Spawn merged floor colliders using greedy maximal rectangles.
+        // All rectangles are also collected into a single procedural mesh to avoid seams.
         {
             let floor_model_def = model_defs.definitions.get("floor").unwrap();
             let floor_set: HashSet<(i32, i32)> = map.tiles.iter()
@@ -271,6 +277,12 @@ pub fn map_loader(
                 .map(|t| (t.x, t.y))
                 .collect();
             let mut covered = vec![vec![false; cols]; rows];
+
+            let mut positions: Vec<[f32; 3]> = Vec::new();
+            let mut normals: Vec<[f32; 3]> = Vec::new();
+            let mut uvs: Vec<[f32; 2]> = Vec::new();
+            let mut indices: Vec<u32> = Vec::new();
+
             for row in 0..rows {
                 for col in 0..cols {
                     if covered[row][col] || !floor_set.contains(&(col as i32, row as i32)) {
@@ -316,14 +328,37 @@ pub fn map_loader(
                         floor_model_def.create_collision_layers(),
                         WindWakerShaderBuilder::default().build(),
                     ));
-                    commands.spawn((
-                        Name::from(format!("Floor {}:{} {}x{}", col, row, w as i32, h as i32)),
-                        Floor {},
-                        SceneRoot(asset_server.load(floor_model_def.file)),
-                        Transform::from_translation(center).with_scale(Vec3::new(w, 1.0, h)),
-                    ));
+
+                    // Add this rectangle as two triangles in the shared floor mesh.
+                    let base = positions.len() as u32;
+                    let tw = tile_defs.tile_width;
+                    let x0 = tw * (col as f32 - 0.5);
+                    let x1 = tw * (max_col as f32 + 0.5);
+                    let z0 = tw * (row as f32 - 0.5);
+                    let z1 = tw * (max_row as f32 + 0.5);
+                    let y = tile_defs.floor_level;
+                    positions.extend_from_slice(&[[x0,y,z0],[x1,y,z0],[x1,y,z1],[x0,y,z1]]);
+                    normals.extend_from_slice(&[[0.0,1.0,0.0];4]);
+                    uvs.extend_from_slice(&[[0.0,0.0],[1.0,0.0],[1.0,1.0],[0.0,1.0]]);
+                    indices.extend_from_slice(&[base,base+2,base+1, base,base+3,base+2]);
                 }
             }
+
+            let mut mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::RENDER_WORLD);
+            mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
+            mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+            mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
+            mesh.insert_indices(Indices::U32(indices));
+            commands.spawn((
+                Name::from("Floor"),
+                Floor {},
+                Mesh3d(meshes.add(mesh)),
+                MeshMaterial3d(materials.add(StandardMaterial {
+                    base_color: Color::srgb(0.55, 0.52, 0.48),
+                    unlit: true,
+                    ..Default::default()
+                })),
+            ));
         }
 
         // Spawn merged wall colliders: N/S walls merge along columns, E/W merge along rows.
