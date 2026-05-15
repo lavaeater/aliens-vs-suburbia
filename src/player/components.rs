@@ -42,7 +42,7 @@ pub const WEAPON_NODES: &[&str] = &[
     "Revolver",
     "Revolver_1",
     "Revolver_2",
-    "RevolverSmall",
+    "Revolver_Small",
     "RocketLauncher",
     "ShortCannon",
     "Shotgun",
