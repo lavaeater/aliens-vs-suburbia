@@ -318,6 +318,7 @@ pub fn map_loader(
                     ));
                     commands.spawn((
                         Name::from(format!("Floor {}:{} {}x{}", col, row, w as i32, h as i32)),
+                        Floor {},
                         SceneRoot(asset_server.load(floor_model_def.file)),
                         Transform::from_translation(center).with_scale(Vec3::new(w, 1.0, h)),
                     ));

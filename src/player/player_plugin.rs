@@ -1,4 +1,5 @@
 use crate::game_state::GameState;
+use crate::general::components::map_components::Floor;
 use crate::player::components::{WeaponsHidden, WEAPON_NODES};
 use crate::player::systems::auto_aim::{auto_aim, debug_gizmos};
 use crate::player::systems::spawn_players::{fix_scene_transform, spawn_players};
@@ -33,7 +34,7 @@ impl Plugin for PlayerPlugin {
 
 fn auto_outline_scenes(
     mut commands: Commands,
-    query: Query<Entity, (With<SceneRoot>, Without<AsyncSceneInheritOutline>)>,
+    query: Query<Entity, (With<SceneRoot>, Without<AsyncSceneInheritOutline>, Without<Floor>)>,
 ) {
     for entity in query.iter() {
         commands.entity(entity).insert((
