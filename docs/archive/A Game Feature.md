@@ -23,5 +23,3 @@ Hey, it doesn't need to be a suburb, it can be a vacation island or something li
 Describe it! 
 
 Another idea for bevy stuff would be to solve problems for people in the help channel. That would be awesome, eh? They always have complex problems, or very simple ones, but who cares? 
-
-Ett spel om hemvärnet 
