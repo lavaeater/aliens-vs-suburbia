@@ -27,6 +27,17 @@ pub struct AutoAim(pub Vec3);
 #[derive(Component)]
 pub struct WeaponsHidden;
 
+/// Marks a player who is downed (health ≤ 0) and waiting for a revive.
+/// While this component is present the player cannot move or act.
+/// Removed when a teammate completes a revive.
+#[derive(Component)]
+pub struct PlayerDead {
+    /// Accumulated revive progress from 0.0 (none) to 1.0 (complete).
+    pub revive_progress: f32,
+    /// Entity of the WorldFollower revive-progress bar, spawned on death.
+    pub revive_bar: Option<Entity>,
+}
+
 /// Weapon mesh-node names present in the toon-shooter character models.
 /// Nodes matching any of these names are hidden on spawn and can be revealed
 /// individually by a pickup system later.

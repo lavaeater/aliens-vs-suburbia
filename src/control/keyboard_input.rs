@@ -1,14 +1,15 @@
 use bevy::input::ButtonState;
 use bevy::input::keyboard::KeyboardInput;
 use bevy::math::Vec3;
-use bevy::prelude::{Entity, MessageReader, MessageWriter, KeyCode, Query, With};
+use bevy::prelude::{Entity, MessageReader, MessageWriter, KeyCode, Query, With, Without};
 use crate::animation::animation_plugin::{AnimationEvent, AnimationEventType, AnimationKey};
 use crate::control::components::{CharacterControl, ControlCommand, ControlDirection, ControlRotation, InputKeyboard};
+use crate::player::components::PlayerDead;
 use crate::player::events::building_events::{ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode};
 
 pub fn keyboard_input(
     mut key_evr: MessageReader<KeyboardInput>,
-    mut query: Query<(Entity, &mut CharacterControl), With<InputKeyboard>>,
+    mut query: Query<(Entity, &mut CharacterControl), (With<InputKeyboard>, Without<PlayerDead>)>,
     mut start_build_ew: MessageWriter<EnterBuildMode>,
     mut execute_build: MessageWriter<ExecuteBuild>,
     mut exit_build: MessageWriter<ExitBuildMode>,

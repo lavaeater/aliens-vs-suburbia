@@ -2,6 +2,7 @@ use crate::game_state::GameState;
 use crate::general::components::map_components::Floor;
 use crate::player::components::{WeaponsHidden, WEAPON_NODES};
 use crate::player::systems::auto_aim::{auto_aim, debug_gizmos};
+use crate::player::systems::death_revive::{detect_player_death, player_revive_system};
 use crate::player::systems::spawn_players::{fix_scene_transform, spawn_players};
 use bevy::prelude::*;
 use bevy::scene::{SceneInstance, SceneRoot};
@@ -26,6 +27,8 @@ impl Plugin for PlayerPlugin {
                     fix_scene_transform,
                     auto_aim,
                     hide_player_weapon_nodes,
+                    detect_player_death,
+                    player_revive_system,
                 )
                 .run_if(in_state(GameState::InGame)),
             );

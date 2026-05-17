@@ -2,6 +2,7 @@ use bevy::app::{App, Plugin, Update};
 use bevy::prelude::{Component, Entity, Message, MessageReader, MessageWriter, Res, ResMut,
                     Resource, With, in_state, IntoScheduleConfigs, Query};
 use bevy::time::Time;
+use crate::alien::wave_manager::WaveManager;
 use crate::game_state::GameState;
 use crate::general::components::Health;
 use crate::player::components::Player;
@@ -154,16 +155,18 @@ pub fn level_state_system(
     mut goto_state_mw: MessageWriter<GotoState>,
     time: Res<Time>,
     player_query: Query<&Health, With<Player>>,
+    wave_manager: Option<Res<WaveManager>>,
 ) {
     if matches!(level_tracker.level_state, LevelState::NotStarted) {
         level_tracker.level_state = LevelState::InProgress;
     }
 
     if matches!(level_tracker.level_state, LevelState::InProgress) {
-        // Win: all aliens have spawned and been killed.
-        let all_spawned = level_tracker.aliens_left_to_spawn <= 0;
-        let all_dead = level_tracker.aliens_killed >= level_tracker.aliens_to_spawn;
-        if all_spawned && all_dead {
+        // Win: all waves done and all spawned aliens killed.
+        let all_waves_done = wave_manager.as_ref().map_or(true, |wm| !wm.waves_remaining());
+        let all_killed = level_tracker.aliens_killed >= level_tracker.aliens_to_spawn
+            && level_tracker.aliens_to_spawn > 0;
+        if all_waves_done && all_killed {
             level_tracker.level_state = LevelState::Completed;
         }
 

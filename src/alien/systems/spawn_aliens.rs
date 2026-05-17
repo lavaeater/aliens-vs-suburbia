@@ -22,7 +22,15 @@ pub fn alien_spawner_system(
     time_res: Res<Time>,
     mut spawn_alien_mw: MessageWriter<SpawnAlien>,
     mut alien_spawn_point_query: Query<(&Position, &mut AlienSpawnPoint)>,
+    wave_manager: Option<Res<crate::alien::wave_manager::WaveManager>>,
 ) {
+    // Don't spawn between waves or before the first wave starts.
+    if let Some(wm) = wave_manager {
+        if !wm.spawning { return; }
+        let wave_limit = wm.waves.get(wm.current_wave).map(|w| w.alien_count).unwrap_or(0);
+        if wm.spawned_this_wave >= wave_limit { return; }
+    }
+
     for (position, mut alien_spawn_point) in alien_spawn_point_query.iter_mut() {
         if alien_spawn_point.cool_down(time_res.delta_secs()) {
             spawn_alien_mw.write(SpawnAlien {
@@ -40,6 +48,7 @@ pub fn spawn_aliens(
     mut add_health_bar_mw: MessageWriter<AddHealthBar>,
     game_assets: Res<GameAssets>,
     mut game_tracking_mw: MessageWriter<GameTrackingEvent>,
+    mut wave_manager: Option<ResMut<crate::alien::wave_manager::WaveManager>>,
 ) {
     if alien_counter.count >= alien_counter.max_count {
         return;
@@ -103,5 +112,9 @@ pub fn spawn_aliens(
         });
 
         game_tracking_mw.write(GameTrackingEvent::AlienSpawned);
+
+        if let Some(ref mut wm) = wave_manager {
+            wm.spawned_this_wave += 1;
+        }
     }
 }

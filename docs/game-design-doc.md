@@ -8,13 +8,13 @@ Speaker 1 outlines a game concept called "Aliens vs Suburbia," which is a reimag
 
 ### Action Items
 
-- [ ] Implement the first basic map where aliens move from start points to end points
-- [ ] players build barriers that aliens cannot pass but players can, 
+- [x] Implement the first basic map where aliens move from start points to end points — aliens spawn on the left edge and path to the right edge; map generator enforces this layout.
+- [ ] Players build barriers that aliens cannot pass but players can.
 - [ ] Players can build towers of different whacky kinds that shoot at aliens, slow them down, etc.
-- [ ] A meter tracks the percentage of aliens that have passed through.
-- [ ] Implement a revive mechanic where dead players can be revived by other players.
-- [ ] Implement a game-over condition that triggers when all players die simultaneously.
-- [ ] Implement alien behavior where aliens destroy barriers when no open route is available from start points to end points.
+- [x] A meter tracks the percentage of aliens that have passed through — red progress bar + label at top-centre HUD, triggers `LevelState::Failed` when full.
+- [x] Implement a revive mechanic where dead players can be revived by other players — hold E near a downed player; 3-second fill with a blue WorldFollower progress bar; removes `PlayerDead`, restores 50% health.
+- [x] Implement a game-over condition that triggers when all players die simultaneously — `level_state_system` checks all player health each frame; transitions after a 2 s delay.
+- [x] Implement alien behavior where aliens destroy barriers when no open route is available from start points to end points — `DestroyTheMap` AI behavior already in place.
 - [ ] Add a file explorer–style interface in the asset browser that lets users browse folders and view their contents without recursively scanning all folders.
 - [ ] Implement an import function in the asset browser that creates a Ron file with settings such as named nodes in the model and the names of the animations. Also contains path to actual model file.
 - [ ] This Ron file is used as a resource for using the model in the game.
@@ -47,11 +47,11 @@ This section describes the architecture and sequencing for each action item abov
 
 ---
 
-### 1. Alien flow: left → right
+### 1. Alien flow: left → right ✅
 
 **Current state:** The map generator places alien spawn points (`tile value 5`) and the goal (`tile value 9`) at arbitrary positions. The `MoveTowardsGoal` AI behavior and A* pathfinding grid already work end-to-end.
 
-**Change:** Fix the map generator so spawn points always appear along the **left column** (or first 1–2 columns) and the goal always on the **right column** (or last column). Player spawn moves to the **middle-left** area. This is a pure change to `src/map/map_generator.rs` — no engine change needed.
+**Done:** Map generator (`src/map/map_generator.rs`) rewritten so spawn points are fixed to column 0 (west edge) spread across 2–3 evenly-spaced rows, goal is fixed to column `w-1` (east edge) vertically centred, and player spawns a few columns in from the left at mid-height. House placement still randomised but connectivity-checked.
 
 **Map convention:**
 ```
@@ -64,64 +64,36 @@ For the hand-crafted `level_01.ron`, switch from `generated: true` to an explici
 
 ---
 
-### 2. Pass-through meter
+### 2. Pass-through meter ✅
 
-**Current state:** `LevelTracker` (in `src/game_state/score_keeper.rs`) already tracks `aliens_reached_goal` and `aliens_win_cut_off`. The `AlienGoal` collision layer and events fire when an alien reaches the goal. What's missing is a HUD element showing the ratio.
-
-**Change:** Add a progress bar to the in-game HUD (`src/ui/spawn_ui.rs`) bound to `LevelTracker.aliens_reached_goal / aliens_win_cut_off`. When the ratio hits 1.0, trigger `LevelState::Failed`. This reuses the existing `ProgressBar` widget from `lava_ui_builder`.
-
-The bar reads as "aliens escaped" — it fills as bad things happen, so the player wants to keep it empty.
+**Done:** Red progress bar + "Aliens escaped: X / Y" label added to top-centre HUD (`src/ui/spawn_ui.rs`). `update_alien_meter` system updates it reactively on `Changed<LevelTracker>`. Default cutoff lowered from 600 → 10 for a playable game. Bar fills red; hitting 100% triggers `LevelState::Failed`.
 
 ---
 
-### 3. Wave system
+### 3. Wave system ✅
 
-**Current state:** `AlienSpawnPoint` has a `spawn_rate_per_minute` and `LevelTracker` has `aliens_to_spawn` / `aliens_left_to_spawn`. Spawning runs but isn't wave-gated.
-
-**Change:** Add a `WaveDefinition` to the map/level file:
-```ron
-waves: [
-    (alien_count: 10, spawn_rate: 5.0, delay_before: 10.0),
-    (alien_count: 20, spawn_rate: 8.0, delay_before: 30.0),
-]
-```
-
-A `wave_system` in `src/alien/` reads the current wave, counts down `delay_before`, then enables spawning at `spawn_rate` until `alien_count` are spawned. Once all waves are done and no aliens remain, `LevelState::Completed`.
-
-`LevelTracker` gains `current_wave: usize` and `wave_timer: f32`.
+**Done:** `WaveManager` resource (`src/alien/wave_manager.rs`) with 3 hardcoded waves (10, 15, 20 aliens at increasing rates). `wave_system` counts down between waves, sets `AlienSpawnPoint.spawn_rate_per_minute` at wave start. `alien_spawner_system` gates on `WaveManager.spawning`. HUD shows "Wave X / Y in Ns" or "Wave X / Y" when active. Win condition requires all waves done AND all aliens killed.
 
 ---
 
-### 4. Game-over & win conditions
+### 4. Game-over & win conditions ✅
 
-**Current state:** `LevelState` has `NotStarted / InProgress / Completed / Failed` variants and `LevelTracker` is a resource. The health system fires events when entities die. What's missing is the system that reads player deaths and alien counts to transition state.
-
-**Changes:**
-- `level_monitor_system`: runs each frame, checks `LevelState`; when `Failed` or `Completed`, fires a `GameOver` message and transitions to a result screen.
+**Done:** `level_state_system` (`src/game_state/score_keeper.rs`) rewritten:
+- **Win:** all aliens spawned and killed → `Completed`.
 - **Lose 1:** `aliens_reached_goal >= aliens_win_cut_off` → `Failed`.
-- **Lose 2:** all `Player` entities have `Health <= 0` simultaneously → `Failed` (distinct from revive window, see below).
-- **Win:** all waves spawned + no aliens alive + goal not breached → `Completed`.
+- **Lose 2:** all `Player` entities have `health <= 0` simultaneously → `Failed`.
+- Fixed every-frame `GotoState` spam — now fires once after a 2-second `end_delay`.
 
 ---
 
-### 5. Player death & revive mechanic
+### 5. Player death & revive mechanic ✅
 
-**Current state:** The `Health` component and `health_monitor_system` exist. There is currently no distinction between "dead" and "eliminated."
-
-**Architecture:**
-
-Add a `PlayerDead` component (marker). When a player's health reaches 0:
-- Mark with `PlayerDead`, freeze their physics, play death animation.
-- Start a `revive_timer: f32` counting down (e.g. 30 s). If it reaches 0 with no revive, the player is permanently eliminated this wave.
-
-Add a `revive_system`:
-- Queries living players near (`< 1.5 units`) a `PlayerDead` entity.
-- While the reviving player holds the interact key (`E`/gamepad south), a `revive_progress: f32` fills up (takes ~3 s).
-- On completion: remove `PlayerDead`, restore partial health, clear timer.
-
-**Game-over trigger:** count living (non-`PlayerDead`) players. If zero, `LevelState::Failed`.
-
-A small radial progress indicator (using `WorldFollower` from `lava_ui_builder`) shows revive progress above the downed player.
+**Done:**
+- `health_monitor_system` now excludes `Player` entities — players are never despawned automatically.
+- `detect_player_death` (`src/player/systems/death_revive.rs`): on `Changed<Health>` with `health <= 0`, inserts `PlayerDead`, zeroes velocity, sends `AnimationKey::Death`, spawns a blue WorldFollower bar above the player.
+- `player_revive_system`: living player within 1.8 units + hold `E` fills `revive_progress` over 3 s; on completion restores 50% health, removes `PlayerDead`, despawns bar.
+- Keyboard input (`keyboard_input.rs`) gains `Without<PlayerDead>` so downed players can't move.
+- Win/lose already correct — health check in `level_state_system` catches the all-dead case.
 
 ---
 
@@ -217,12 +189,12 @@ This makes `WEAPON_NODES` and the per-field `AnimMapping` struct obsolete once m
 ### Implementation sequence
 
 | Priority | Item | Status |
-|---|---|---|
-| 1 | Map left→right spawn/goal placement | in progress |
-| 2 | Pass-through meter HUD | not started |
-| 3 | Game-over / win condition monitor | skeleton exists |
-| 4 | Player death & revive | not started |
-| 5 | Wave definitions in map file | not started |
+|----------|------|--------|
+| 1 | Map left→right spawn/goal placement | ✅ done |
+| 2 | Pass-through meter HUD | ✅ done |
+| 3 | Game-over / win condition monitor | ✅ done |
+| 4 | Player death & revive | ✅ done |
+| 5 | Wave definitions in map file | ✅ done |
 | 6 | Multiple tower types (slow + area) | not started |
 | 7 | Asset browser: folder explorer | not started |
 | 8 | AssetDefinition Ron file + import | not started |

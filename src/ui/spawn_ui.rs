@@ -1,4 +1,5 @@
 use crate::alien::components::general::AlienCounter;
+use crate::alien::wave_manager::WaveManager;
 use crate::game_state::score_keeper::LevelTracker;
 use crate::animation::animation_plugin::{AnimationKey, ANIM_KEYS};
 use crate::game_state::GameState;
@@ -165,6 +166,10 @@ pub struct HudProjection;
 #[derive(Component)]
 pub struct HudAlienMeter;
 
+/// Marker on the wave info label.
+#[derive(Component)]
+pub struct HudWaveInfo;
+
 pub fn spawn_ui(mut commands: Commands, theme: Res<LavaTheme>) {
     let text_theme = theme.text.clone();
 
@@ -181,6 +186,17 @@ pub fn spawn_ui(mut commands: Commands, theme: Res<LavaTheme>) {
         ui.with_child(|c| {
             c.insert_bundle(lava_ui_builder::label("Aliens: 0", &text_theme))
                 .insert(HudAlienCount);
+        });
+        ui.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label(
+                "Wave 1 / 3 in 5s",
+                &TextTheme {
+                    label_size: 13.0,
+                    label_color: Color::srgb(0.5, 0.8, 1.0),
+                    ..text_theme.clone()
+                },
+            ))
+            .insert(HudWaveInfo);
         });
 
         ui.with_child(|c| {
@@ -731,6 +747,17 @@ pub fn sync_health_bars(
         if let Ok(health) = health_query.get(follower.target) {
             bar.value = (health.health as f32 / health.max_health as f32).clamp(0.0, 1.0);
         }
+    }
+}
+
+pub fn update_wave_hud(
+    wave_manager: Option<Res<WaveManager>>,
+    mut label: Query<&mut Text, With<HudWaveInfo>>,
+) {
+    let Some(wm) = wave_manager else { return };
+    if !wm.is_changed() { return; }
+    if let Ok(mut t) = label.single_mut() {
+        **t = wm.label();
     }
 }
 
