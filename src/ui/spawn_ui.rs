@@ -1,4 +1,5 @@
 use crate::alien::components::general::AlienCounter;
+use crate::game_state::score_keeper::LevelTracker;
 use crate::animation::animation_plugin::{AnimationKey, ANIM_KEYS};
 use crate::game_state::GameState;
 use crate::general::components::Health;
@@ -160,6 +161,10 @@ pub struct HudBuildMode;
 #[derive(Component)]
 pub struct HudProjection;
 
+/// Marker on the pass-through meter progress bar.
+#[derive(Component)]
+pub struct HudAlienMeter;
+
 pub fn spawn_ui(mut commands: Commands, theme: Res<LavaTheme>) {
     let text_theme = theme.text.clone();
 
@@ -201,6 +206,42 @@ pub fn spawn_ui(mut commands: Commands, theme: Res<LavaTheme>) {
             .insert(HudProjection);
         });
 
+        ui.build();
+    }
+
+    // Pass-through meter — fixed at top-centre.
+    {
+        let mut ui = UIBuilder::new(commands.reborrow(), Some(theme.clone()));
+        ui.insert(StateMarker).modify_node(|mut n| {
+            n.position_type = PositionType::Absolute;
+            n.top = Val::Px(8.0);
+            n.left = Val::Percent(50.0);
+            n.margin.left = Val::Px(-90.0);
+            n.flex_direction = FlexDirection::Column;
+            n.align_items = AlignItems::Center;
+            n.row_gap = Val::Px(2.0);
+        });
+        ui.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label(
+                "Aliens escaped: 0 / 10",
+                &TextTheme {
+                    label_size: 13.0,
+                    label_color: Color::srgb(1.0, 0.35, 0.2),
+                    ..text_theme.clone()
+                },
+            ))
+            .insert(HudAlienMeter);
+        });
+        ui.with_child(|c| {
+            c.insert_bundle(progress_bar(
+                0.0,
+                180.0,
+                10.0,
+                Color::srgb(1.0, 0.25, 0.1),
+                Color::srgba(0.0, 0.0, 0.0, 0.5),
+            ))
+            .insert(HudAlienMeter);
+        });
         ui.build();
     }
 
@@ -690,5 +731,25 @@ pub fn sync_health_bars(
         if let Ok(health) = health_query.get(follower.target) {
             bar.value = (health.health as f32 / health.max_health as f32).clamp(0.0, 1.0);
         }
+    }
+}
+
+pub fn update_alien_meter(
+    tracker: Option<Res<LevelTracker>>,
+    mut meter_text: Query<&mut Text, With<HudAlienMeter>>,
+    mut meter_bar: Query<&mut ProgressBar, With<HudAlienMeter>>,
+) {
+    let Some(tracker) = tracker else { return };
+    if !tracker.is_changed() { return; }
+
+    let escaped = tracker.aliens_reached_goal;
+    let cutoff = tracker.aliens_win_cut_off.max(1);
+    let fraction = (escaped as f32 / cutoff as f32).clamp(0.0, 1.0);
+
+    if let Ok(mut text) = meter_text.single_mut() {
+        **text = format!("Aliens escaped: {} / {}", escaped, cutoff);
+    }
+    if let Ok(mut bar) = meter_bar.single_mut() {
+        bar.value = fraction;
     }
 }

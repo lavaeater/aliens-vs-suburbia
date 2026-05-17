@@ -321,37 +321,39 @@ fn try_place_house(
 
 // ── Public entry point ───────────────────────────────────────────────────────
 
+/// Generate a suburb map where aliens enter from the **left** columns and march
+/// toward the **right** column.  The player spawns in the left-centre area.
+///
+/// Column 0 = west (alien entry), column w-1 = east (alien goal).
 pub fn generate_suburb_map(seed: u64, width: usize, height: usize) -> MapFile {
     let w = width.max(8);
     let h = height.max(12);
     let mut rng = Rng::new(seed);
     let mut grid: Vec<Vec<u8>> = vec![vec![1u8; w]; h];
 
-    // Anchor points
-    let player = (0usize, 0usize);
-    grid[player.0][player.1] = 17;
-
-    // 1–3 alien spawn points spread across the far end of row 0
-    let spawn_candidates: Vec<(usize, usize)> = vec![
-        (0, w - 1),
-        (0, w.saturating_sub(3)),
-        (2, w - 1),
-        (0, w.saturating_sub(5)),
-        (4.min(h - 1), w - 1),
-    ];
-    let spawn_count = rng.range(1, 4);
-    let alien_spawns: Vec<(usize, usize)> = spawn_candidates[..spawn_count].to_vec();
+    // Alien spawns: left column (col 0), spread across multiple rows.
+    let spawn_rows: Vec<usize> = {
+        let count = rng.range(2, 4);
+        let step = h / (count + 1);
+        (1..=count).map(|i| (i * step).min(h - 1)).collect()
+    };
+    let alien_spawns: Vec<(usize, usize)> = spawn_rows.iter().map(|&r| (r, 0)).collect();
     for &(r, c) in &alien_spawns {
         grid[r][c] = 5;
     }
 
-    // Alien goal deep in the map, slightly off-center for asymmetry
-    let goal_col = w / 2 + rng.range(0, 3).wrapping_sub(1);
-    let goal = (h - 5, goal_col.min(w - 2).max(1));
+    // Alien goal: right column, vertically centred.
+    let goal_row = h / 2 + rng.range(0, 3).wrapping_sub(1);
+    let goal = (goal_row.min(h - 2).max(1), w - 1);
     grid[goal.0][goal.1] = 9;
 
-    // Place houses — 3–5 attempts, each verified against pathfinding
-    let num_houses = rng.range(3, 6);
+    // Player spawn: left-centre, a few columns in from the alien entry.
+    let player_col = rng.range(2, (w / 4).max(3));
+    let player = (h / 2, player_col);
+    grid[player.0][player.1] = 17;
+
+    // Place houses in the middle area — verified against pathfinding.
+    let num_houses = rng.range(3, 7);
     for _ in 0..num_houses {
         try_place_house(&mut grid, &mut rng, player, &alien_spawns, goal);
     }

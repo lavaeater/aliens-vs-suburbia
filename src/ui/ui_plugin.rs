@@ -5,7 +5,7 @@ use lava_ui_builder::LavaUiPlugin;
 use crate::game_state::GameState;
 use crate::ui::spawn_ui::{
     add_health_bar, cleanup_state, game_theme, goto_state_system, GotoState,
-    spawn_menu, spawn_showcase_ui, spawn_ui, sync_health_bars,
+    spawn_menu, spawn_showcase_ui, spawn_ui, sync_health_bars, update_alien_meter,
     toggle_settings_panel, toggle_model_panel,
     update_camera_panel, update_model_labels, update_anim_mapping_labels,
     update_hud,
@@ -34,6 +34,7 @@ impl Plugin for UiPlugin {
                     add_health_bar,
                     sync_health_bars,
                     update_hud,
+                    update_alien_meter,
                     toggle_settings_panel,
                     toggle_model_panel,
                     update_camera_panel,
