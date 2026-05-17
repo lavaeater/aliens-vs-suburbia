@@ -1,5 +1,6 @@
 use crate::game_state::GameState;
 use crate::general::components::map_components::Floor;
+use crate::model_settings::plugin::PlayerAssetDef;
 use crate::player::components::{WeaponsHidden, WEAPON_NODES};
 use crate::player::systems::auto_aim::{auto_aim, debug_gizmos};
 use crate::player::systems::death_revive::{detect_player_death, player_revive_system};
@@ -81,20 +82,33 @@ fn sync_outline_with_visibility(
     }
 }
 
-/// After the player scene loads, hide all named mesh nodes whose name does not
-/// start with "Character_" — those are weapons and other optional accessories.
+/// After the player scene loads, hide all nodes listed in the AssetDefinition
+/// for this model (falling back to the hardcoded WEAPON_NODES if no def exists).
 fn hide_player_weapon_nodes(
     mut commands: Commands,
     player_query: Query<(Entity, &SceneInstance), (With<crate::player::components::Player>, Without<WeaponsHidden>)>,
     scene_spawner: Res<SceneSpawner>,
     named_query: Query<(Entity, &Name)>,
+    player_asset_def: Option<Res<PlayerAssetDef>>,
 ) {
+    // Build the effective hide list: prefer AssetDefinition, fall back to WEAPON_NODES.
+    let def_nodes: Vec<&str>;
+    let hidden: &[&str] = if let Some(def_res) = &player_asset_def
+        && let Some(def) = &def_res.0
+        && !def.hidden_nodes.is_empty()
+    {
+        def_nodes = def.hidden_nodes.iter().map(|s| s.as_str()).collect();
+        &def_nodes
+    } else {
+        WEAPON_NODES
+    };
+
     for (player_entity, scene_instance) in player_query.iter() {
         if !scene_spawner.instance_is_ready(**scene_instance) { continue; }
         commands.entity(player_entity).insert(WeaponsHidden);
         for entity in scene_spawner.iter_instance_entities(**scene_instance) {
             if let Ok((_, name)) = named_query.get(entity) {
-                if WEAPON_NODES.contains(&name.as_str()) {
+                if hidden.contains(&name.as_str()) {
                     commands.entity(entity).insert(Visibility::Hidden);
                 }
             }

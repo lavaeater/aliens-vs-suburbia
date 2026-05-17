@@ -1,52 +1,14 @@
 use bevy::animation::graph::AnimationNodeIndex;
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
-use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+
+// Re-export from shared location so asset browser code keeps using the same name.
+pub use crate::assets::asset_definition::AssetDefinition;
 
 const WINDOW_SIZE: usize = 36;
 pub const CHARACTER_NODE_PREFIX: &str = "Character_";
 const ROOT: &str = "assets";
-
-// ── Serializable asset definition ────────────────────────────────────────────
-
-/// Persisted definition for one imported asset. Written to `assets/defs/*.ron`.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct AssetDefinition {
-    pub model_path: String,
-    /// Node names that should be hidden when this model is used in-game.
-    #[serde(default)]
-    pub hidden_nodes: Vec<String>,
-    /// Maps game-state keys (e.g. "idle", "walk") to clip name fragments.
-    #[serde(default)]
-    pub animation_mapping: HashMap<String, String>,
-}
-
-impl AssetDefinition {
-    pub fn def_path(model_path: &str) -> std::path::PathBuf {
-        let stem = std::path::Path::new(model_path)
-            .file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap_or("model");
-        std::path::PathBuf::from(ROOT).join("defs").join(format!("{stem}.ron"))
-    }
-
-    pub fn load(model_path: &str) -> Option<Self> {
-        let path = Self::def_path(model_path);
-        let text = std::fs::read_to_string(&path).ok()?;
-        ron::from_str(&text).ok()
-    }
-
-    pub fn save(&self) {
-        let path = Self::def_path(&self.model_path);
-        if let Some(dir) = path.parent() {
-            let _ = std::fs::create_dir_all(dir);
-        }
-        if let Ok(text) = ron::ser::to_string_pretty(self, ron::ser::PrettyConfig::default()) {
-            let _ = std::fs::write(path, text);
-        }
-    }
-}
 
 // ── Game-state animation key names (order matches display) ────────────────────
 

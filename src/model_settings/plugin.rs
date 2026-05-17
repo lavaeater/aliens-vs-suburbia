@@ -7,6 +7,7 @@ use crate::animation::animation_plugin::{
     AnimationStore, ANIM_KEYS, clip_matches,
     get_child_with_component_recursive,
 };
+use crate::assets::asset_definition::AssetDefinition;
 use crate::assets::assets_plugin::GameAssets;
 use crate::game_state::GameState;
 use crate::model_settings::resources::{
@@ -19,16 +20,27 @@ use crate::player::systems::spawn_players::{
     FixSceneTransform, WeaponsHidden, apply_model_settings_live,
 };
 
+/// Holds the `AssetDefinition` loaded for the current player model, if one
+/// exists.  `None` means no `.ron` def was found; code falls back to defaults.
+#[derive(Resource, Default)]
+pub struct PlayerAssetDef(pub Option<AssetDefinition>);
+
 pub struct ModelSettingsPlugin;
 
 impl Plugin for ModelSettingsPlugin {
     fn build(&self, app: &mut App) {
         let settings = ModelSettings::load();
         let files = scan_character_folder(&settings.character_folder);
+        // Load AssetDefinition for the default player model at startup.
+        let char_folder = CharacterFolder { files };
+        let default_def = settings.current_model_path(&char_folder)
+            .and_then(|p| AssetDefinition::load(&p));
+
         app
             .insert_resource(settings)
-            .insert_resource(CharacterFolder { files })
+            .insert_resource(char_folder)
             .insert_resource(PlayerAnimClips::default())
+            .insert_resource(PlayerAssetDef(default_def))
             .insert_resource(FileWatchTimer {
                 last_mtime: mtime_of_settings(),
                 timer: 0.0,
@@ -101,6 +113,7 @@ fn reload_player_model(
     asset_server: Res<AssetServer>,
     char_folder: Res<CharacterFolder>,
     mut game_assets: ResMut<GameAssets>,
+    mut player_asset_def: ResMut<PlayerAssetDef>,
     player_query: Query<Entity, With<Player>>,
     mut commands: Commands,
     mut last_path: Local<Option<String>>,
@@ -109,6 +122,9 @@ fn reload_player_model(
     let Some(path) = model_settings.current_model_path(&char_folder) else { return };
     if *last_path == Some(path.clone()) { return; }
     *last_path = Some(path.clone());
+
+    // Reload the AssetDefinition whenever the model changes.
+    player_asset_def.0 = AssetDefinition::load(&path);
 
     let scene: Handle<Scene> =
         asset_server.load(GltfAssetLabel::Scene(0).from_asset(path.clone()));
@@ -150,8 +166,8 @@ fn sync_player_anim_clips(
 
 // ── Player animation graph builder ───────────────────────────────────────────
 
-/// Rebuilds the "players" entry in AnimationStore from the loaded GLTF and the
-/// configured AnimMapping. Runs whenever the GLTF or mapping changes.
+/// Rebuilds the "players" entry in AnimationStore from the loaded GLTF.
+/// Priority for each key: AssetDefinition mapping → ModelSettings.anim_mapping → default_search.
 fn build_player_anim_graph(
     model_settings: Res<ModelSettings>,
     game_assets: Res<GameAssets>,
@@ -162,16 +178,18 @@ fn build_player_anim_graph(
     child_query: Query<&Children>,
     mut anim_player_query: Query<&mut AnimationPlayer>,
     mut commands: Commands,
+    player_asset_def: Option<Res<PlayerAssetDef>>,
     mut last_sig: Local<String>,
 ) {
     let Some(gltf) = gltf_assets.get(&game_assets.player_gltf) else { return };
     let Some(mut store) = anim_store else { return };
 
-    let sig = format!(
-        "{}|{:?}",
-        game_assets.player_gltf.id(),
-        model_settings.anim_mapping,
-    );
+    let def_sig = player_asset_def.as_ref()
+        .and_then(|r| r.0.as_ref())
+        .map(|d| format!("{:?}", d.animation_mapping))
+        .unwrap_or_default();
+
+    let sig = format!("{}|{:?}|{}", game_assets.player_gltf.id(), model_settings.anim_mapping, def_sig);
     if *last_sig == sig { return; }
     *last_sig = sig;
 
@@ -179,8 +197,20 @@ fn build_player_anim_graph(
     let mut anims = std::collections::HashMap::new();
 
     for &key in ANIM_KEYS {
-        let mapped = model_settings.anim_mapping.get(key);
-        let search = if mapped.is_empty() { key.default_search() } else { mapped };
+        // Look up the search string: AssetDefinition first, then ModelSettings, then default.
+        let def_mapped = player_asset_def.as_ref()
+            .and_then(|r| r.0.as_ref())
+            .and_then(|d| d.animation_mapping.get(key.default_search()))
+            .map(|s| s.as_str())
+            .unwrap_or("");
+        let settings_mapped = model_settings.anim_mapping.get(key);
+        let search = if !def_mapped.is_empty() {
+            def_mapped
+        } else if !settings_mapped.is_empty() {
+            settings_mapped
+        } else {
+            key.default_search()
+        };
         // Two-pass: prefer exact anim-part / suffix match, then substring.
         let handle = gltf.named_animations.iter()
             .find(|(name, _)| {

@@ -17,7 +17,7 @@ Speaker 1 outlines a game concept called "Aliens vs Suburbia," which is a reimag
 - [x] Implement alien behavior where aliens destroy barriers when no open route is available from start points to end points — `DestroyTheMap` AI behavior already in place.
 - [x] Add a file explorer–style interface in the asset browser — folder chips navigate into subfolders, Backspace goes up, only files in the current folder are shown (non-recursive).
 - [x] Implement an import function in the asset browser — press `I` or click "Import definition" to write `assets/defs/<model>.ron` with hidden_nodes + animation_mapping.
-- [ ] This Ron file is used as a resource for using the model in the game — `AssetDefinition` struct defined and save/load implemented; in-game consumption (replacing WEAPON_NODES) not yet wired.
+- [x] This Ron file is used as a resource for using the model in the game — `PlayerAssetDef` resource loaded at startup and on model change; `hide_player_weapon_nodes` uses `hidden_nodes` from the def (falls back to `WEAPON_NODES`); `build_player_anim_graph` uses `animation_mapping` from the def (falls back to `ModelSettings.anim_mapping` then defaults).
 - [x] Add editing capabilities in the asset browser — hidden node toggles, animation mapping editor with ◀/▶ per game-state key. Existing definition auto-loaded when model is opened.
 - [ ] Plan for future support in the asset browser to allow editing of colors, materials, and special shaders on imported assets.
 
