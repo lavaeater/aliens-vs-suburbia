@@ -1,37 +1,112 @@
 use bevy::animation::graph::AnimationNodeIndex;
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
-use std::collections::HashSet;
+use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 
-const WINDOW_SIZE: usize = 40;
+const WINDOW_SIZE: usize = 36;
 pub const CHARACTER_NODE_PREFIX: &str = "Character_";
+const ROOT: &str = "assets";
+
+// ── Serializable asset definition ────────────────────────────────────────────
+
+/// Persisted definition for one imported asset. Written to `assets/defs/*.ron`.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct AssetDefinition {
+    pub model_path: String,
+    /// Node names that should be hidden when this model is used in-game.
+    #[serde(default)]
+    pub hidden_nodes: Vec<String>,
+    /// Maps game-state keys (e.g. "idle", "walk") to clip name fragments.
+    #[serde(default)]
+    pub animation_mapping: HashMap<String, String>,
+}
+
+impl AssetDefinition {
+    pub fn def_path(model_path: &str) -> std::path::PathBuf {
+        let stem = std::path::Path::new(model_path)
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("model");
+        std::path::PathBuf::from(ROOT).join("defs").join(format!("{stem}.ron"))
+    }
+
+    pub fn load(model_path: &str) -> Option<Self> {
+        let path = Self::def_path(model_path);
+        let text = std::fs::read_to_string(&path).ok()?;
+        ron::from_str(&text).ok()
+    }
+
+    pub fn save(&self) {
+        let path = Self::def_path(&self.model_path);
+        if let Some(dir) = path.parent() {
+            let _ = std::fs::create_dir_all(dir);
+        }
+        if let Ok(text) = ron::ser::to_string_pretty(self, ron::ser::PrettyConfig::default()) {
+            let _ = std::fs::write(path, text);
+        }
+    }
+}
+
+// ── Game-state animation key names (order matches display) ────────────────────
+
+pub const ANIM_KEY_NAMES: &[&str] = &[
+    "idle", "idle_shoot", "walk", "walk_shoot", "run", "run_gun",
+    "jump", "jump_idle", "jump_land",
+    "punch", "wave", "yes", "no",
+    "death", "hitreact", "throwing", "building",
+];
+
+// ── Browser state ─────────────────────────────────────────────────────────────
 
 #[derive(Resource)]
 pub struct AssetBrowserState {
+    // ── Folder navigation ──────────────────────────────────────────────────────
+    pub current_folder: String,
+    pub folders: Vec<String>,
+    pub folder_list_dirty: bool,
+    pub folder_scroll: usize,
+    pub selected_folder: usize,
+
+    // ── File list ──────────────────────────────────────────────────────────────
     pub files: Vec<String>,
     pub selected: usize,
     pub scroll_offset: usize,
     pub viewer_entity: Option<Entity>,
     pub load_requested: bool,
     pub list_dirty: bool,
+
+    // ── GLTF / animation ──────────────────────────────────────────────────────
     pub gltf_handle: Option<Handle<Gltf>>,
     pub anim_index: usize,
     pub anim_count: usize,
     pub anim_dirty: bool,
     pub anim_node_indices: Vec<AnimationNodeIndex>,
     pub anim_names: Vec<String>,
+    pub anim_player_entity: Option<Entity>,
+
+    // ── Node visibility ────────────────────────────────────────────────────────
     pub mesh_nodes: Vec<String>,
     pub hidden_nodes: HashSet<String>,
     pub nodes_dirty: bool,
-    /// The AnimationPlayer entity inside the current viewer model, cached to
-    /// avoid querying all players each frame and to scope playback correctly.
-    pub anim_player_entity: Option<Entity>,
+
+    // ── Animation mapping (for import) ─────────────────────────────────────────
+    /// Maps ANIM_KEY_NAMES strings → GLB clip name fragment.
+    pub anim_mapping: HashMap<String, String>,
+    pub mapping_dirty: bool,
 }
 
 impl Default for AssetBrowserState {
     fn default() -> Self {
+        let current_folder = "packs".to_string();
+        let (folders, files) = scan_folder(&current_folder);
         Self {
-            files: scan_assets(),
+            current_folder,
+            folders,
+            folder_list_dirty: true,
+            folder_scroll: 0,
+            selected_folder: 0,
+            files,
             selected: 0,
             scroll_offset: 0,
             viewer_entity: None,
@@ -43,10 +118,12 @@ impl Default for AssetBrowserState {
             anim_dirty: false,
             anim_node_indices: Vec::new(),
             anim_names: Vec::new(),
+            anim_player_entity: None,
             mesh_nodes: Vec::new(),
             hidden_nodes: HashSet::new(),
             nodes_dirty: false,
-            anim_player_entity: None,
+            anim_mapping: HashMap::new(),
+            mapping_dirty: false,
         }
     }
 }
@@ -56,6 +133,7 @@ impl AssetBrowserState {
         self.viewer_entity = None;
         self.load_requested = false;
         self.list_dirty = true;
+        self.folder_list_dirty = true;
     }
 
     pub fn reset_anim(&mut self) {
@@ -70,6 +148,36 @@ impl AssetBrowserState {
         self.anim_player_entity = None;
     }
 
+    /// Navigate into a sub-folder by name.
+    pub fn enter_folder(&mut self, name: &str) {
+        self.current_folder = format!("{}/{}", self.current_folder, name);
+        let (folders, files) = scan_folder(&self.current_folder);
+        self.folders = folders;
+        self.files = files;
+        self.selected = 0;
+        self.scroll_offset = 0;
+        self.folder_scroll = 0;
+        self.folder_list_dirty = true;
+        self.list_dirty = true;
+    }
+
+    /// Navigate up one level.
+    pub fn leave_folder(&mut self) {
+        if let Some(parent) = std::path::Path::new(&self.current_folder).parent()
+            .and_then(|p| p.to_str())
+        {
+            self.current_folder = parent.to_string();
+        }
+        let (folders, files) = scan_folder(&self.current_folder);
+        self.folders = folders;
+        self.files = files;
+        self.selected = 0;
+        self.scroll_offset = 0;
+        self.folder_scroll = 0;
+        self.folder_list_dirty = true;
+        self.list_dirty = true;
+    }
+
     pub fn toggle_node(&mut self, name: &str) {
         if self.hidden_nodes.contains(name) {
             self.hidden_nodes.remove(name);
@@ -77,6 +185,47 @@ impl AssetBrowserState {
             self.hidden_nodes.insert(name.to_string());
         }
         self.nodes_dirty = true;
+    }
+
+    pub fn cycle_mapping_next(&mut self, key: &str) {
+        let current = self.anim_mapping.get(key).cloned().unwrap_or_default();
+        let next = next_clip(&self.anim_names, &current, 1);
+        self.anim_mapping.insert(key.to_string(), next);
+        self.mapping_dirty = true;
+    }
+
+    pub fn cycle_mapping_prev(&mut self, key: &str) {
+        let current = self.anim_mapping.get(key).cloned().unwrap_or_default();
+        let next = next_clip(&self.anim_names, &current, -1);
+        self.anim_mapping.insert(key.to_string(), next);
+        self.mapping_dirty = true;
+    }
+
+    /// Write the current viewer state to `assets/defs/<model>.ron`.
+    pub fn export_definition(&self) {
+        let Some(path) = self.selected_path() else { return };
+        let def = AssetDefinition {
+            model_path: path.to_string(),
+            hidden_nodes: self.hidden_nodes.iter().cloned().collect(),
+            animation_mapping: self.anim_mapping.clone(),
+        };
+        def.save();
+    }
+
+    /// Load an existing definition (if any) for the selected model.
+    pub fn load_definition(&mut self) {
+        let Some(path) = self.selected_path() else { return };
+        if let Some(def) = AssetDefinition::load(path) {
+            self.hidden_nodes = def.hidden_nodes.into_iter().collect();
+            self.anim_mapping = def.animation_mapping;
+            self.nodes_dirty = true;
+            self.mapping_dirty = true;
+        } else {
+            self.hidden_nodes.clear();
+            self.anim_mapping.clear();
+            self.nodes_dirty = true;
+            self.mapping_dirty = true;
+        }
     }
 
     pub fn anim_next(&mut self) {
@@ -145,28 +294,46 @@ impl AssetBrowserState {
     }
 }
 
-fn scan_assets() -> Vec<String> {
-    let base = std::path::PathBuf::from("assets");
-    let scan_dir_path = base.join("packs/monsters");
-    let mut files = Vec::new();
-    scan_dir(&base, &scan_dir_path, &mut files);
-    files.sort();
-    files
-}
+// ── Scanning helpers ──────────────────────────────────────────────────────────
 
-fn scan_dir(base: &std::path::Path, dir: &std::path::Path, files: &mut Vec<String>) {
-    let Ok(entries) = std::fs::read_dir(dir) else { return };
+/// Returns (subdirs, glb/gltf files) directly inside `folder` (non-recursive).
+/// Paths are relative to `assets/`.
+pub fn scan_folder(folder: &str) -> (Vec<String>, Vec<String>) {
+    let base = std::path::Path::new(ROOT);
+    let dir = base.join(folder);
+    let Ok(entries) = std::fs::read_dir(&dir) else {
+        return (vec![], vec![]);
+    };
+
+    let mut folders = Vec::new();
+    let mut files = Vec::new();
+
     for entry in entries.flatten() {
         let path = entry.path();
         if path.is_dir() {
-            scan_dir(base, &path, files);
+            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                folders.push(name.to_string());
+            }
         } else {
             let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
-            if (ext == "gltf" || ext == "glb")
-                && let Ok(rel) = path.strip_prefix(base)
-                    && let Some(s) = rel.to_str() {
+            if ext == "glb" || ext == "gltf" {
+                if let Ok(rel) = path.strip_prefix(base) {
+                    if let Some(s) = rel.to_str() {
                         files.push(s.replace('\\', "/"));
                     }
+                }
+            }
         }
     }
+
+    folders.sort();
+    files.sort();
+    (folders, files)
+}
+
+fn next_clip(clips: &[String], current: &str, delta: i32) -> String {
+    if clips.is_empty() { return current.to_string(); }
+    let idx = clips.iter().position(|c| c == current).map(|i| i as i32).unwrap_or(-1);
+    let next = ((idx + delta).rem_euclid(clips.len() as i32)) as usize;
+    clips[next].clone()
 }

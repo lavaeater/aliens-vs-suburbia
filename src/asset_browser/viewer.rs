@@ -63,6 +63,8 @@ pub fn handle_model_load(
     }
 
     if let Some(path) = state.selected_path().map(|s| s.to_string()) {
+        // Pre-populate hidden_nodes and anim_mapping from existing definition.
+        state.load_definition();
         let handle: Handle<Scene> = asset_server.load(
             GltfAssetLabel::Scene(0).from_asset(path.clone()),
         );
@@ -174,6 +176,7 @@ pub fn setup_viewer_animation(
     state.anim_node_indices = nodes;
     state.anim_names = names_by_index;
     state.anim_dirty = true;
+    state.mapping_dirty = true;
     state.gltf_handle = None;
 }
 

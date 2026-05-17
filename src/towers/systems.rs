@@ -1,15 +1,75 @@
 use bevy::prelude::Name;
 use bevy::math::Vec3;
-use bevy::prelude::{Commands, Query, Res, Transform, With};
+use bevy::prelude::{Commands, Entity, Query, Res, Transform, With, Without};
 use bevy::scene::SceneRoot;
 use bevy::time::Time;
 use avian3d::prelude::{Collider, CollidingEntities, CollisionLayers, LinearVelocity, Position, RigidBody};
 use bevy_wind_waker_shader::WindWakerShaderBuilder;
 use crate::alien::components::general::Alien;
-use crate::general::components::{Ball, CollisionLayer};
+use crate::general::components::{Ball, CollisionLayer, Health};
 use crate::general::components::map_components::CoolDown;
-use crate::towers::components::{TowerSensor, TowerShooter};
+use crate::towers::components::{Slowed, TowerArea, TowerSensor, TowerShooter, TowerSlow};
 use crate::assets::assets_plugin::GameAssets;
+
+/// Applies a velocity penalty to aliens in a slow tower's sensor range.
+/// The `Slowed` component acts as a TTL: refreshed every frame the alien is in
+/// range, removed when it expires (alien left range and TTL decayed to zero).
+pub fn slow_alien_system(
+    mut commands: Commands,
+    time: Res<Time>,
+    sensor_query: Query<(&CollidingEntities, &TowerSlow), With<TowerSensor>>,
+    mut alien_query: Query<(Entity, &mut LinearVelocity, Option<&mut Slowed>), With<Alien>>,
+) {
+    let dt = time.delta_secs();
+
+    // Build a set of aliens currently in any slow zone.
+    let mut in_range: std::collections::HashSet<Entity> = std::collections::HashSet::new();
+    let mut best_factor: std::collections::HashMap<Entity, f32> = std::collections::HashMap::new();
+    for (colliding, slow) in sensor_query.iter() {
+        for &e in colliding.iter() {
+            if alien_query.contains(e) {
+                in_range.insert(e);
+                let entry = best_factor.entry(e).or_insert(1.0);
+                *entry = entry.min(slow.factor);
+            }
+        }
+    }
+
+    for (entity, mut vel, slowed) in alien_query.iter_mut() {
+        if let Some(factor) = best_factor.get(&entity) {
+            // Scale velocity each frame the alien is in range.
+            vel.0 *= *factor;
+            if let Some(mut s) = slowed {
+                s.factor = *factor;
+                s.ttl = 0.15;
+            } else {
+                commands.entity(entity).insert(Slowed { factor: *factor, ttl: 0.15 });
+            }
+        } else if let Some(mut s) = slowed {
+            s.ttl -= dt;
+            if s.ttl <= 0.0 {
+                commands.entity(entity).remove::<Slowed>();
+            }
+        }
+    }
+}
+
+/// Deals flat damage per second to all aliens inside an area tower's sensor.
+pub fn area_damage_system(
+    mut sensor_query: Query<(&CollidingEntities, &mut TowerArea), With<TowerSensor>>,
+    mut alien_query: Query<&mut Health, With<Alien>>,
+    time: Res<Time>,
+) {
+    for (colliding, mut area) in sensor_query.iter_mut() {
+        if !area.cool_down(time.delta_secs()) { continue; }
+        let dmg = (area.damage_per_second * area.tick_interval) as i32;
+        for &e in colliding.iter() {
+            if let Ok(mut health) = alien_query.get_mut(e) {
+                health.health -= dmg;
+            }
+        }
+    }
+}
 
 pub fn shoot_alien_system(
     mut commands: Commands,

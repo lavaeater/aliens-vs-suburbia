@@ -4,25 +4,25 @@ use bevy::prelude::*;
 use bevy::ui::ScrollPosition;
 use bevy::ui_widgets::Activate;
 use lava_ui_builder::{InteractionPalette, LavaTheme, TextTheme, UIBuilder};
-use crate::asset_browser::state::{AssetBrowserState, CHARACTER_NODE_PREFIX};
+use crate::asset_browser::state::{ANIM_KEY_NAMES, AssetBrowserState, CHARACTER_NODE_PREFIX};
 use crate::asset_browser::viewer::AssetBrowserViewerPanel;
 use crate::game_state::GameState;
 use crate::ui::spawn_ui::StateMarker;
 
-#[derive(Component)]
-pub struct AssetListContainer;
+// ── Marker components ─────────────────────────────────────────────────────────
 
-#[derive(Component)]
-pub struct AssetPathLabel;
+#[derive(Component)] pub struct AssetListContainer;
+#[derive(Component)] pub struct AssetPathLabel;
+#[derive(Component)] pub struct AssetAnimLabel;
+#[derive(Component)] pub struct NodeListContainer;
+#[derive(Component)] pub struct MappingContainer;
+#[derive(Component)] pub struct FolderContainer;
+#[derive(Component)] pub struct FolderPathLabel;
 
-#[derive(Component)]
-pub struct AssetAnimLabel;
+#[derive(Component)] pub struct ListItem(pub usize);
+#[derive(Component)] pub struct MappingRow(pub String); // game-state key
 
-#[derive(Component)]
-pub struct NodeListContainer;
-
-#[derive(Component)]
-pub struct ListItem(pub usize);
+// ── Spawn ─────────────────────────────────────────────────────────────────────
 
 pub fn spawn_asset_browser_ui(
     commands: Commands,
@@ -31,7 +31,6 @@ pub fn spawn_asset_browser_ui(
 ) {
     state.reset_for_enter();
 
-    let file_count = state.files.len();
     let mut ui = UIBuilder::new(commands, Some(theme.clone()));
 
     ui.component::<StateMarker>()
@@ -39,118 +38,93 @@ pub fn spawn_asset_browser_ui(
         .display_flex()
         .flex_row();
 
-    let text_theme = theme.text.clone();
+    let t = theme.text.clone();
+    let hint = TextTheme { label_size: 11.0, label_color: Color::srgb(0.4, 0.55, 0.4), ..t.clone() };
 
     ui.with_child(|left| {
         left.modify_node(|mut n| {
-                n.width = Val::Percent(22.0);
-                n.min_width = Val::Px(220.0);
-                n.max_width = Val::Px(480.0);
-                n.height = Val::Percent(100.0);
-            })
-            .display_flex()
-            .flex_column()
-            .gap_px(4.0)
-            .padding_all_px(8.0)
-            .bg_color(Color::srgba(0.04, 0.07, 0.10, 0.97));
+            n.width = Val::Percent(24.0);
+            n.min_width = Val::Px(240.0);
+            n.max_width = Val::Px(500.0);
+            n.height = Val::Percent(100.0);
+        })
+        .display_flex().flex_column().gap_px(4.0).padding_all_px(8.0)
+        .bg_color(Color::srgba(0.04, 0.07, 0.10, 0.97));
 
-        left.with_child(|t| {
-            t.insert_bundle(lava_ui_builder::header("Asset Browser", &text_theme));
+        left.with_child(|c| { c.insert_bundle(lava_ui_builder::header("Asset Browser", &t)); });
+        left.with_child(|c| { c.insert_bundle(lava_ui_builder::label("[↑↓] navigate  [Enter] load  [I] import", &hint)); });
+        left.with_child(|c| { c.insert_bundle(lava_ui_builder::label("[⌫] up folder  [/] anim  node=click", &hint)); });
+
+        // Current folder path
+        left.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label("", &TextTheme {
+                label_size: 10.0, label_color: Color::srgb(0.5, 0.7, 0.9), ..t.clone()
+            })).insert(FolderPathLabel)
+            .modify_node(|mut n| n.overflow = Overflow::clip());
         });
 
-        left.with_child(|lbl| {
-            lbl.insert_bundle(lava_ui_builder::label(
-                &format!("{file_count} models  [↑↓] navigate  [Enter] load"),
-                &TextTheme {
-                    label_size: 11.0,
-                    label_color: Color::srgb(0.5, 0.7, 0.5),
-                    ..text_theme.clone()
-                },
-            ));
+        // Folder chips
+        left.with_child(|c| {
+            c.display_flex().flex_wrap().gap_px(3.0)
+             .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
+             .insert(FolderContainer);
         });
 
-        left.with_child(|lbl| {
-            lbl.insert_bundle(lava_ui_builder::label(
-                "[PgUp/PgDn] jump  [Esc] back",
-                &TextTheme {
-                    label_size: 11.0,
-                    label_color: Color::srgb(0.4, 0.55, 0.4),
-                    ..text_theme.clone()
-                },
-            ));
+        // Anim label + path label
+        left.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label("", &TextTheme {
+                label_size: 10.0, label_color: Color::srgb(0.55, 0.75, 1.0), ..t.clone()
+            })).insert(AssetPathLabel)
+            .modify_node(|mut n| n.overflow = Overflow::clip());
+        });
+        left.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label("", &TextTheme {
+                label_size: 11.0, label_color: Color::srgb(0.8, 0.65, 1.0), ..t.clone()
+            })).insert(AssetAnimLabel);
         });
 
-        left.with_child(|lbl| {
-            lbl.insert_bundle(lava_ui_builder::label(
-                "[[/]] prev/next anim",
-                &TextTheme {
-                    label_size: 11.0,
-                    label_color: Color::srgb(0.4, 0.55, 0.4),
-                    ..text_theme.clone()
-                },
-            ));
+        // Hidden-node chips
+        left.with_child(|c| {
+            c.display_flex().flex_wrap().gap_px(3.0)
+             .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
+             .insert(NodeListContainer);
         });
 
-        left.with_child(|lbl| {
-            lbl.insert_bundle(lava_ui_builder::label("", &TextTheme {
-                label_size: 10.0,
-                label_color: Color::srgb(0.55, 0.75, 1.0),
-                ..text_theme.clone()
-            }))
-            .insert(AssetPathLabel)
-            .modify_node(|mut n| {
-                n.overflow = Overflow::clip();
-            });
+        // Animation mapping section
+        left.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label("— Anim Mapping —", &TextTheme {
+                label_size: 11.0, label_color: Color::srgb(0.5, 0.8, 0.6), ..t.clone()
+            }));
+        });
+        left.with_child(|c| {
+            c.display_flex().flex_column().gap_px(2.0)
+             .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
+             .insert(MappingContainer);
         });
 
-        left.with_child(|lbl| {
-            lbl.insert_bundle(lava_ui_builder::label("", &TextTheme {
-                label_size: 11.0,
-                label_color: Color::srgb(0.8, 0.65, 1.0),
-                ..text_theme.clone()
-            }))
-            .insert(AssetAnimLabel);
+        // File list
+        left.with_child(|c| {
+            c.with_flex_grow(1.0).width_percent(100.0)
+             .overflow_scroll_y().display_flex().flex_column().gap_px(1.0)
+             .insert(AssetListContainer).insert(ScrollPosition::default());
         });
 
-        left.with_child(|node_list| {
-            node_list
-                .display_flex()
-                .flex_wrap()
-                .gap_px(3.0)
-                .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
-                .insert(NodeListContainer);
-        });
+        // Import + back buttons
+        left.add_button_observe("⬇ Import definition", |b| { b.width(percent(100.0)).height(px(30.0)).font_size(13.0); },
+            |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.export_definition(); });
 
-        left.with_child(|list_wrap| {
-            list_wrap.with_flex_grow(1.0)
-                .width_percent(100.0)
-                .overflow_scroll_y()
-                .display_flex()
-                .flex_column()
-                .gap_px(1.0)
-                .insert(AssetListContainer)
-                .insert(ScrollPosition::default());
-        });
-
-        left.add_button_observe(
-            "← Back to Menu",
-            |b| {
-                b.width(percent(100.0)).height(px(36.0)).font_size(14.0);
-            },
-            |_: On<Activate>, mut next: ResMut<NextState<GameState>>| {
-                next.set(GameState::Menu);
-            },
-        );
+        left.add_button_observe("← Back to Menu", |b| { b.width(percent(100.0)).height(px(36.0)).font_size(14.0); },
+            |_: On<Activate>, mut next: ResMut<NextState<GameState>>| { next.set(GameState::Menu); });
     });
 
     ui.with_child(|viewer| {
-        viewer.with_flex_grow(1.0)
-            .height_percent(100.0)
-            .insert(AssetBrowserViewerPanel);
+        viewer.with_flex_grow(1.0).height_percent(100.0).insert(AssetBrowserViewerPanel);
     });
 
     ui.build();
 }
+
+// ── Key input ─────────────────────────────────────────────────────────────────
 
 pub fn handle_key_input(
     mut state: ResMut<AssetBrowserState>,
@@ -160,23 +134,69 @@ pub fn handle_key_input(
     for event in keyboard_reader.read() {
         if event.state != ButtonState::Pressed { continue; }
         match &event.logical_key {
-            Key::ArrowUp => state.move_up(),
-            Key::ArrowDown => state.move_down(),
-            Key::PageUp => state.page_up(),
-            Key::PageDown => state.page_down(),
-            Key::Enter => state.load_requested = true,
-            Key::Escape => next_state.set(GameState::Menu),
+            Key::ArrowUp        => state.move_up(),
+            Key::ArrowDown      => state.move_down(),
+            Key::PageUp         => state.page_up(),
+            Key::PageDown       => state.page_down(),
+            Key::Enter          => state.load_requested = true,
+            Key::Escape         => next_state.set(GameState::Menu),
+            Key::Backspace      => state.leave_folder(),
             Key::Character(c) if c == "]" => state.anim_next(),
             Key::Character(c) if c == "[" => state.anim_prev(),
+            Key::Character(c) if c == "i" || c == "I" => state.export_definition(),
             _ => {}
         }
     }
 }
 
+// ── Rebuild systems ───────────────────────────────────────────────────────────
+
+pub fn rebuild_folder_list(
+    mut state: ResMut<AssetBrowserState>,
+    mut commands: Commands,
+    container_q: Query<Entity, With<FolderContainer>>,
+    mut path_label_q: Query<&mut Text, With<FolderPathLabel>>,
+) {
+    if !state.folder_list_dirty { return; }
+    state.folder_list_dirty = false;
+
+    if let Ok(mut t) = path_label_q.single_mut() {
+        **t = format!("📁 {}", state.current_folder);
+    }
+
+    let Ok(container) = container_q.single() else { return };
+    commands.entity(container).despawn_related::<Children>();
+
+    let folders: Vec<String> = state.folders.clone();
+    if folders.is_empty() { return; }
+
+    commands.entity(container).with_children(|parent| {
+        for name in folders {
+            let name_clone = name.clone();
+            let bg = Color::srgba(0.10, 0.22, 0.35, 0.90);
+            parent.spawn((
+                Node { padding: UiRect::axes(Val::Px(8.0), Val::Px(4.0)), border_radius: BorderRadius::all(Val::Px(4.0)), ..Default::default() },
+                BackgroundColor(bg),
+                InteractionPalette { none: bg, hovered: Color::srgba(0.18, 0.35, 0.55, 0.95), pressed: Color::srgba(0.10, 0.22, 0.40, 1.0) },
+                bevy::picking::hover::Hovered::default(),
+                bevy::ui_widgets::Button,
+            ))
+            .with_child((
+                Text::new(format!("📁 {name}")),
+                TextFont::default().with_font_size(11.0),
+                TextColor(Color::srgb(0.75, 0.88, 1.0)),
+            ))
+            .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                s.enter_folder(&name_clone);
+            });
+        }
+    });
+}
+
 pub fn rebuild_list(
     mut state: ResMut<AssetBrowserState>,
     mut commands: Commands,
-    container_query: Query<Entity, With<AssetListContainer>>,
+    container_q: Query<Entity, With<AssetListContainer>>,
     mut path_label: Query<&mut Text, With<AssetPathLabel>>,
 ) {
     if !state.list_dirty { return; }
@@ -186,14 +206,12 @@ pub fn rebuild_list(
         **t = state.selected_path().unwrap_or("").to_string();
     }
 
-    let Ok(container) = container_query.single() else { return; };
+    let Ok(container) = container_q.single() else { return };
     commands.entity(container).despawn_related::<Children>();
 
     let selected = state.selected;
-    let files_window: Vec<(usize, String)> = state
-        .visible_files()
-        .map(|(i, s)| (i, s.to_string()))
-        .collect();
+    let files_window: Vec<(usize, String)> = state.visible_files()
+        .map(|(i, s)| (i, s.to_string())).collect();
     let total = state.files.len();
     let scroll_offset = state.scroll_offset;
 
@@ -203,67 +221,24 @@ pub fn rebuild_list(
             Text::new(format!("{}-{} / {total}", scroll_offset + 1, window_end)),
             TextFont::default().with_font_size(10.0),
             TextColor(Color::srgba(0.5, 0.55, 0.6, 0.6)),
-            Node {
-                padding: UiRect::axes(Val::Px(4.0), Val::Px(2.0)),
-                ..Default::default()
-            },
+            Node { padding: UiRect::axes(Val::Px(4.0), Val::Px(2.0)), ..Default::default() },
         ));
 
         for (idx, path) in files_window {
             let is_selected = idx == selected;
-            let bg = if is_selected {
-                Color::srgba(0.15, 0.35, 0.55, 0.95)
-            } else {
-                Color::srgba(0.06, 0.08, 0.12, 0.80)
-            };
-            let name_color = if is_selected {
-                Color::srgb(1.0, 1.0, 1.0)
-            } else {
-                Color::srgb(0.72, 0.80, 0.88)
-            };
-
+            let bg = if is_selected { Color::srgba(0.15, 0.35, 0.55, 0.95) } else { Color::srgba(0.06, 0.08, 0.12, 0.80) };
+            let name_color = if is_selected { Color::srgb(1.0, 1.0, 1.0) } else { Color::srgb(0.72, 0.80, 0.88) };
             let filename = path.split('/').next_back().unwrap_or(&path).to_string();
-            let dir_hint = {
-                let parts: Vec<&str> = path.split('/').collect();
-                if parts.len() > 1 {
-                    parts[..parts.len() - 1].join("/")
-                } else {
-                    String::new()
-                }
-            };
 
             parent.spawn((
-                Node {
-                    width: Val::Percent(100.0),
-                    padding: UiRect::axes(Val::Px(8.0), Val::Px(3.0)),
-                    flex_direction: FlexDirection::Column,
-                    border_radius: BorderRadius::all(Val::Px(3.0)),
-                    ..Default::default()
-                },
+                Node { width: Val::Percent(100.0), padding: UiRect::axes(Val::Px(8.0), Val::Px(3.0)), border_radius: BorderRadius::all(Val::Px(3.0)), ..Default::default() },
                 BackgroundColor(bg),
-                InteractionPalette {
-                    none: bg,
-                    hovered: Color::srgba(0.15, 0.28, 0.45, 0.95),
-                    pressed: Color::srgba(0.10, 0.20, 0.36, 1.0),
-                },
+                InteractionPalette { none: bg, hovered: Color::srgba(0.15, 0.28, 0.45, 0.95), pressed: Color::srgba(0.10, 0.20, 0.36, 1.0) },
                 bevy::picking::hover::Hovered::default(),
                 bevy::ui_widgets::Button,
                 ListItem(idx),
             ))
-            .with_children(|row| {
-                row.spawn((
-                    Text::new(filename),
-                    TextFont::default().with_font_size(13.0),
-                    TextColor(name_color),
-                ));
-                if !dir_hint.is_empty() {
-                    row.spawn((
-                        Text::new(dir_hint),
-                        TextFont::default().with_font_size(10.0),
-                        TextColor(Color::srgba(0.50, 0.58, 0.68, 0.65)),
-                    ));
-                }
-            })
+            .with_child((Text::new(filename), TextFont::default().with_font_size(13.0), TextColor(name_color)))
             .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
                 s.selected = idx;
                 s.load_requested = true;
@@ -281,22 +256,17 @@ pub fn scroll_to_selection(
 ) {
     let Ok((container_entity, container_node, mut scroll)) = container_q.single_mut() else { return };
     let Ok(children) = children_q.get(container_entity) else { return };
-
     let container_height = container_node.size().y;
     if container_height == 0.0 { return; }
-
     let mut y = 0.0f32;
     for child in children.iter() {
         let Ok((opt_item, child_node)) = child_q.get(child) else { continue };
-        let h = child_node.size().y + 1.0; // +1 matches the gap
+        let h = child_node.size().y + 1.0;
         if let Some(item) = opt_item {
             if item.0 == state.selected {
                 let cur = scroll.0.y;
-                if y < cur {
-                    scroll.0.y = y;
-                } else if y + h > cur + container_height {
-                    scroll.0.y = y + h - container_height;
-                }
+                if y < cur { scroll.0.y = y; }
+                else if y + h > cur + container_height { scroll.0.y = y + h - container_height; }
                 return;
             }
         }
@@ -309,8 +279,6 @@ pub fn rebuild_node_list(
     mut commands: Commands,
     container_q: Query<Entity, With<NodeListContainer>>,
 ) {
-    // Rebuild whenever the mesh node list changes (model just loaded) or nodes_dirty triggered by toggle.
-    // We track this via a separate flag so we don't rebuild every frame.
     if !state.nodes_dirty { return; }
 
     let Ok(container) = container_q.single() else { return };
@@ -325,39 +293,90 @@ pub fn rebuild_node_list(
 
     commands.entity(container).with_children(|parent| {
         for (name, hidden) in nodes {
-            let bg = if hidden {
-                Color::srgba(0.12, 0.10, 0.18, 0.85)
-            } else {
-                Color::srgba(0.25, 0.18, 0.40, 0.90)
-            };
-            let text_color = if hidden {
-                Color::srgba(0.45, 0.40, 0.55, 0.70)
-            } else {
-                Color::srgb(0.88, 0.75, 1.0)
-            };
+            let bg = if hidden { Color::srgba(0.12, 0.10, 0.18, 0.85) } else { Color::srgba(0.25, 0.18, 0.40, 0.90) };
+            let tc = if hidden { Color::srgba(0.45, 0.40, 0.55, 0.70) } else { Color::srgb(0.88, 0.75, 1.0) };
             let name_clone = name.clone();
             parent.spawn((
-                Node {
-                    padding: UiRect::axes(Val::Px(6.0), Val::Px(3.0)),
-                    border_radius: BorderRadius::all(Val::Px(4.0)),
-                    ..Default::default()
-                },
+                Node { padding: UiRect::axes(Val::Px(6.0), Val::Px(3.0)), border_radius: BorderRadius::all(Val::Px(4.0)), ..Default::default() },
                 BackgroundColor(bg),
-                InteractionPalette {
-                    none: bg,
-                    hovered: Color::srgba(0.35, 0.25, 0.55, 0.95),
-                    pressed: Color::srgba(0.20, 0.14, 0.35, 1.0),
-                },
+                InteractionPalette { none: bg, hovered: Color::srgba(0.35, 0.25, 0.55, 0.95), pressed: Color::srgba(0.20, 0.14, 0.35, 1.0) },
                 bevy::picking::hover::Hovered::default(),
                 bevy::ui_widgets::Button,
             ))
-            .with_child((
-                Text::new(name.clone()),
-                TextFont::default().with_font_size(10.0),
-                TextColor(text_color),
+            .with_child((Text::new(name.clone()), TextFont::default().with_font_size(10.0), TextColor(tc)))
+            .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.toggle_node(&name_clone); });
+        }
+    });
+}
+
+pub fn rebuild_mapping_list(
+    mut state: ResMut<AssetBrowserState>,
+    mut commands: Commands,
+    container_q: Query<Entity, With<MappingContainer>>,
+) {
+    if !state.mapping_dirty { return; }
+    state.mapping_dirty = false;
+
+    let Ok(container) = container_q.single() else { return };
+    commands.entity(container).despawn_related::<Children>();
+
+    let rows: Vec<(String, String)> = ANIM_KEY_NAMES.iter()
+        .map(|&k| (k.to_string(), state.anim_mapping.get(k).cloned().unwrap_or_default()))
+        .collect();
+
+    commands.entity(container).with_children(|parent| {
+        for (key, clip) in rows {
+            let key_clone = key.clone();
+            let key_clone2 = key.clone();
+            let clip_display = if clip.is_empty() { "—".to_string() } else {
+                // Show just the part after | if present.
+                clip.rsplit('|').next().unwrap_or(&clip).to_string()
+            };
+            parent.spawn((
+                Node {
+                    width: Val::Percent(100.0),
+                    flex_direction: FlexDirection::Row,
+                    justify_content: JustifyContent::SpaceBetween,
+                    align_items: AlignItems::Center,
+                    padding: UiRect::axes(Val::Px(4.0), Val::Px(2.0)),
+                    ..Default::default()
+                },
+                BackgroundColor(Color::srgba(0.07, 0.10, 0.14, 0.70)),
+                MappingRow(key.clone()),
             ))
-            .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
-                s.toggle_node(&name_clone);
+            .with_children(|row| {
+                row.spawn((
+                    Text::new(key.clone()),
+                    TextFont::default().with_font_size(10.0),
+                    TextColor(Color::srgb(0.6, 0.75, 0.6)),
+                ));
+                // "←" button
+                let kc = key_clone.clone();
+                row.spawn((
+                    Node { width: Val::Px(14.0), ..Default::default() },
+                    BackgroundColor(Color::srgba(0.15, 0.15, 0.15, 0.6)),
+                    bevy::picking::hover::Hovered::default(),
+                    bevy::ui_widgets::Button,
+                ))
+                .with_child((Text::new("◀"), TextFont::default().with_font_size(9.0), TextColor(Color::srgb(0.8, 0.8, 0.8))))
+                .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.cycle_mapping_prev(&kc); });
+
+                row.spawn((
+                    Text::new(clip_display),
+                    TextFont::default().with_font_size(10.0),
+                    TextColor(Color::srgb(0.9, 0.85, 0.65)),
+                    Node { flex_grow: 1.0, overflow: Overflow::clip(), ..Default::default() },
+                ));
+
+                // "→" button
+                row.spawn((
+                    Node { width: Val::Px(14.0), ..Default::default() },
+                    BackgroundColor(Color::srgba(0.15, 0.15, 0.15, 0.6)),
+                    bevy::picking::hover::Hovered::default(),
+                    bevy::ui_widgets::Button,
+                ))
+                .with_child((Text::new("▶"), TextFont::default().with_font_size(9.0), TextColor(Color::srgb(0.8, 0.8, 0.8))))
+                .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.cycle_mapping_next(&key_clone2); });
             });
         }
     });

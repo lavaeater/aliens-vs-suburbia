@@ -22,7 +22,7 @@ use crate::map::map_plugins::StatefulMapPlugin;
 use crate::player::player_plugin::PlayerPlugin;
 use crate::settings::plugin::SettingsPlugin;
 use crate::model_settings::plugin::ModelSettingsPlugin;
-use crate::towers::systems::shoot_alien_system;
+use crate::towers::systems::{area_damage_system, shoot_alien_system, slow_alien_system};
 use crate::ui::ui_plugin::UiPlugin;
 use crate::poly_pizza::plugin::PolyPizzaPlugin;
 use crate::character_creator::plugin::CharacterCreatorPlugin;
@@ -69,6 +69,8 @@ impl Plugin for GamePlugin {
                     throwing,
                     collision_handling_system,
                     shoot_alien_system,
+                    slow_alien_system,
+                    area_damage_system,
                     spawn_death_effects.before(health_monitor_system),
                     health_monitor_system,
                     tick_death_effects,

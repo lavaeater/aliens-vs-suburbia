@@ -10,15 +10,15 @@ Speaker 1 outlines a game concept called "Aliens vs Suburbia," which is a reimag
 
 - [x] Implement the first basic map where aliens move from start points to end points — aliens spawn on the left edge and path to the right edge; map generator enforces this layout.
 - [ ] Players build barriers that aliens cannot pass but players can.
-- [ ] Players can build towers of different whacky kinds that shoot at aliens, slow them down, etc.
+- [x] Players can build towers of different whacky kinds that shoot at aliens, slow them down, etc. — Shooter (projectiles), Slow Tower (35% velocity), Area Tower (15 DPS). Cycle build types with arrow keys.
 - [x] A meter tracks the percentage of aliens that have passed through — red progress bar + label at top-centre HUD, triggers `LevelState::Failed` when full.
 - [x] Implement a revive mechanic where dead players can be revived by other players — hold E near a downed player; 3-second fill with a blue WorldFollower progress bar; removes `PlayerDead`, restores 50% health.
 - [x] Implement a game-over condition that triggers when all players die simultaneously — `level_state_system` checks all player health each frame; transitions after a 2 s delay.
 - [x] Implement alien behavior where aliens destroy barriers when no open route is available from start points to end points — `DestroyTheMap` AI behavior already in place.
-- [ ] Add a file explorer–style interface in the asset browser that lets users browse folders and view their contents without recursively scanning all folders.
-- [ ] Implement an import function in the asset browser that creates a Ron file with settings such as named nodes in the model and the names of the animations. Also contains path to actual model file.
-- [ ] This Ron file is used as a resource for using the model in the game.
-- [ ] Add editing capabilities in the asset browser so imported assets can be modified, including hiding named nodes (for example, guns in the Toon Shooter case) and mapping animation keys or animation names to game states.
+- [x] Add a file explorer–style interface in the asset browser — folder chips navigate into subfolders, Backspace goes up, only files in the current folder are shown (non-recursive).
+- [x] Implement an import function in the asset browser — press `I` or click "Import definition" to write `assets/defs/<model>.ron` with hidden_nodes + animation_mapping.
+- [ ] This Ron file is used as a resource for using the model in the game — `AssetDefinition` struct defined and save/load implemented; in-game consumption (replacing WEAPON_NODES) not yet wired.
+- [x] Add editing capabilities in the asset browser — hidden node toggles, animation mapping editor with ◀/▶ per game-state key. Existing definition auto-loaded when model is opened.
 - [ ] Plan for future support in the asset browser to allow editing of colors, materials, and special shaders on imported assets.
 
 ## Outline
@@ -195,7 +195,7 @@ This makes `WEAPON_NODES` and the per-field `AnimMapping` struct obsolete once m
 | 3 | Game-over / win condition monitor | ✅ done |
 | 4 | Player death & revive | ✅ done |
 | 5 | Wave definitions in map file | ✅ done |
-| 6 | Multiple tower types (slow + area) | not started |
-| 7 | Asset browser: folder explorer | not started |
-| 8 | AssetDefinition Ron file + import | not started |
-| 9 | Animation mapping editor in browser | not started |
+| 6 | Multiple tower types (slow + area) | ✅ done |
+| 7 | Asset browser: folder explorer | ✅ done |
+| 8 | AssetDefinition Ron file + import | ✅ done |
+| 9 | Animation mapping editor in browser | ✅ done |

@@ -65,8 +65,28 @@ impl Plugin for NonStateMapStuff {
                                 group: LayerMask::from([CollisionLayer::Impassable]),
                                 mask: LayerMask::from([CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
                             }),
+                            ("tower_slow", ModelDefinition {
+                                name: "Slow Tower",
+                                file: "packs/toon-shooter/map/Water Tank.glb#Scene0",
+                                width: 16.0,
+                                height: 8.0,
+                                depth: 16.0,
+                                rigid_body: RigidBody::Kinematic,
+                                group: LayerMask::from([CollisionLayer::Impassable]),
+                                mask: LayerMask::from([CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
+                            }),
+                            ("tower_area", ModelDefinition {
+                                name: "Area Tower",
+                                file: "packs/toon-shooter/map/Shipping Container.glb#Scene0",
+                                width: 16.0,
+                                height: 8.0,
+                                depth: 16.0,
+                                rigid_body: RigidBody::Kinematic,
+                                group: LayerMask::from([CollisionLayer::Impassable]),
+                                mask: LayerMask::from([CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
+                            }),
                         ]),
-                    build_indicators: vec!["obstacle", "tower"],
+                    build_indicators: vec!["obstacle", "tower", "tower_slow", "tower_area"],
 
                 }
             ).insert_resource(
