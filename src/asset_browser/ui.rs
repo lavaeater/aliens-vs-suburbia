@@ -18,6 +18,7 @@ use crate::ui::spawn_ui::StateMarker;
 #[derive(Component)] pub struct MappingContainer;
 #[derive(Component)] pub struct FolderContainer;
 #[derive(Component)] pub struct FolderPathLabel;
+#[derive(Component)] pub struct HeightDisplay;
 
 #[derive(Component)] pub struct ListItem(pub usize);
 #[derive(Component)] pub struct MappingRow(pub String); // game-state key
@@ -53,7 +54,7 @@ pub fn spawn_asset_browser_ui(
 
         left.with_child(|c| { c.insert_bundle(lava_ui_builder::header("Asset Browser", &t)); });
         left.with_child(|c| { c.insert_bundle(lava_ui_builder::label("[↑↓] navigate  [Enter] load  [I] import", &hint)); });
-        left.with_child(|c| { c.insert_bundle(lava_ui_builder::label("[⌫] up folder  [/] anim  node=click", &hint)); });
+        left.with_child(|c| { c.insert_bundle(lava_ui_builder::label("[⌫] up folder  [/] anim  [=/-] height", &hint)); });
 
         // Current folder path
         left.with_child(|c| {
@@ -102,6 +103,30 @@ pub fn spawn_asset_browser_ui(
              .insert(MappingContainer);
         });
 
+        // Height section
+        left.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label("— Height —", &TextTheme {
+                label_size: 11.0, label_color: Color::srgb(0.5, 0.8, 0.6), ..t.clone()
+            }));
+        });
+        left.with_child(|row| {
+            row.display_flex().flex_row().gap_px(4.0)
+               .modify_node(|mut n| { n.align_items = AlignItems::Center; n.align_self = AlignSelf::Stretch; });
+
+            row.add_button_observe("−", |b| { b.width(px(20.0)).height(px(20.0)).font_size(14.0); },
+                |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.height_down(); });
+
+            row.with_child(|c| {
+                c.insert_bundle(lava_ui_builder::label("— m  (×1.0000)", &TextTheme {
+                    label_size: 11.0, label_color: Color::srgb(0.9, 0.85, 0.65), ..t.clone()
+                })).insert(HeightDisplay)
+                .modify_node(|mut n| { n.flex_grow = 1.0; });
+            });
+
+            row.add_button_observe("+", |b| { b.width(px(20.0)).height(px(20.0)).font_size(14.0); },
+                |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.height_up(); });
+        });
+
         // File list
         left.with_child(|c| {
             c.with_flex_grow(1.0).width_percent(100.0)
@@ -143,6 +168,8 @@ pub fn handle_key_input(
             Key::Backspace      => state.leave_folder(),
             Key::Character(c) if c == "]" => state.anim_next(),
             Key::Character(c) if c == "[" => state.anim_prev(),
+            Key::Character(c) if c == "=" || c == "+" => state.height_up(),
+            Key::Character(c) if c == "-" => state.height_down(),
             Key::Character(c) if c == "i" || c == "I" => state.export_definition(),
             _ => {}
         }

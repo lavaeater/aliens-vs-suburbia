@@ -1,8 +1,9 @@
 use bevy::gltf::{Gltf, GltfNode};
 use bevy::prelude::*;
+use bevy::camera::primitives::Aabb;
 use crate::animation::animation_plugin::get_child_with_component_recursive;
 use crate::asset_browser::state::{AssetBrowserState, CHARACTER_NODE_PREFIX};
-use crate::asset_browser::ui::AssetAnimLabel;
+use crate::asset_browser::ui::{AssetAnimLabel, HeightDisplay};
 use crate::ui::spawn_ui::StateMarker;
 
 #[derive(Component)]
@@ -178,6 +179,68 @@ pub fn setup_viewer_animation(
     state.anim_dirty = true;
     state.mapping_dirty = true;
     state.gltf_handle = None;
+}
+
+/// Walk the viewer model hierarchy and accumulate world-space Y extents from all Aabb components.
+pub fn compute_model_height(
+    mut state: ResMut<AssetBrowserState>,
+    aabb_q: Query<(&Aabb, &GlobalTransform)>,
+    children_q: Query<&Children>,
+) {
+    if state.model_raw_height > 0.0 { return; }
+    let Some(viewer_entity) = state.viewer_entity else { return };
+
+    let mut min_y = f32::MAX;
+    let mut max_y = f32::MIN;
+    let mut found = false;
+    collect_aabbs(viewer_entity, &children_q, &aabb_q, &mut min_y, &mut max_y, &mut found);
+
+    if !found || max_y <= min_y { return; }
+
+    state.model_raw_height = max_y - min_y;
+    if let Some(stored_scale) = state.pending_scale.take() {
+        state.target_height_m = stored_scale * state.model_raw_height;
+    }
+    state.height_dirty = true;
+}
+
+fn collect_aabbs(
+    entity: Entity,
+    children_q: &Query<&Children>,
+    aabb_q: &Query<(&Aabb, &GlobalTransform)>,
+    min_y: &mut f32,
+    max_y: &mut f32,
+    found: &mut bool,
+) {
+    if let Ok((aabb, gt)) = aabb_q.get(entity) {
+        let center_y = gt.translation().y + aabb.center.y;
+        *min_y = min_y.min(center_y - aabb.half_extents.y);
+        *max_y = max_y.max(center_y + aabb.half_extents.y);
+        *found = true;
+    }
+    if let Ok(children) = children_q.get(entity) {
+        for child in children.iter() {
+            collect_aabbs(child, children_q, aabb_q, min_y, max_y, found);
+        }
+    }
+}
+
+/// Apply computed_scale() to the viewer model Transform and update the height label.
+pub fn apply_viewer_scale(
+    mut state: ResMut<AssetBrowserState>,
+    mut model_q: Query<&mut Transform, With<AssetBrowserViewerModel>>,
+    mut label_q: Query<&mut Text, With<HeightDisplay>>,
+) {
+    if !state.height_dirty || state.model_raw_height <= 0.0 { return; }
+    state.height_dirty = false;
+
+    let scale = state.computed_scale();
+    if let Ok(mut t) = model_q.single_mut() {
+        t.scale = Vec3::splat(scale);
+    }
+    if let Ok(mut t) = label_q.single_mut() {
+        **t = format!("{:.2} m  (×{:.4})", state.target_height_m, scale);
+    }
 }
 
 pub fn apply_node_visibility(

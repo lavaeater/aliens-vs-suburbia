@@ -1,12 +1,18 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+fn default_scale() -> f32 { 1.0 }
+
 /// Persisted definition for one imported asset. Written to `assets/defs/*.ron`
 /// by the asset browser and read at runtime to drive hidden-node lists and
 /// animation mappings without hard-coding them in source.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AssetDefinition {
     pub model_path: String,
+    /// Uniform scale factor applied to the model so it has a meaningful real-world size.
+    /// Computed as `target_height_m / mesh_aabb_height` in the asset browser.
+    #[serde(default = "default_scale")]
+    pub scale: f32,
     /// Node names that should be hidden when this model is used in-game.
     #[serde(default)]
     pub hidden_nodes: Vec<String>,
@@ -14,6 +20,17 @@ pub struct AssetDefinition {
     /// name fragments.  Matched the same way as `AnimMapping` in ModelSettings.
     #[serde(default)]
     pub animation_mapping: HashMap<String, String>,
+}
+
+impl Default for AssetDefinition {
+    fn default() -> Self {
+        Self {
+            model_path: String::new(),
+            scale: 1.0,
+            hidden_nodes: Vec::new(),
+            animation_mapping: HashMap::new(),
+        }
+    }
 }
 
 impl AssetDefinition {

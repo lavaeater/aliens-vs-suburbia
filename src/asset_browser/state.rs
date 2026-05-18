@@ -56,6 +56,15 @@ pub struct AssetBrowserState {
     /// Maps ANIM_KEY_NAMES strings → GLB clip name fragment.
     pub anim_mapping: HashMap<String, String>,
     pub mapping_dirty: bool,
+
+    // ── Height / scale ─────────────────────────────────────────────────────────
+    /// Raw AABB height (max_y − min_y) of the loaded mesh, in mesh units. 0 = not yet measured.
+    pub model_raw_height: f32,
+    /// Desired real-world height in metres. Default 2.0.
+    pub target_height_m: f32,
+    /// When a def is loaded before the mesh AABB is known, stash the stored scale here.
+    pub pending_scale: Option<f32>,
+    pub height_dirty: bool,
 }
 
 impl Default for AssetBrowserState {
@@ -86,6 +95,10 @@ impl Default for AssetBrowserState {
             nodes_dirty: false,
             anim_mapping: HashMap::new(),
             mapping_dirty: false,
+            model_raw_height: 0.0,
+            target_height_m: 2.0,
+            pending_scale: None,
+            height_dirty: false,
         }
     }
 }
@@ -108,6 +121,28 @@ impl AssetBrowserState {
         self.mesh_nodes.clear();
         self.nodes_dirty = false;
         self.anim_player_entity = None;
+        self.model_raw_height = 0.0;
+        self.target_height_m = 2.0;
+        self.pending_scale = None;
+        self.height_dirty = false;
+    }
+
+    pub fn computed_scale(&self) -> f32 {
+        if self.model_raw_height > 0.0 {
+            self.target_height_m / self.model_raw_height
+        } else {
+            1.0
+        }
+    }
+
+    pub fn height_up(&mut self) {
+        self.target_height_m = (self.target_height_m + 0.1).min(50.0);
+        self.height_dirty = true;
+    }
+
+    pub fn height_down(&mut self) {
+        self.target_height_m = (self.target_height_m - 0.1).max(0.1);
+        self.height_dirty = true;
     }
 
     /// Navigate into a sub-folder by name.
@@ -168,6 +203,7 @@ impl AssetBrowserState {
         let Some(path) = self.selected_path() else { return };
         let def = AssetDefinition {
             model_path: path.to_string(),
+            scale: self.computed_scale(),
             hidden_nodes: self.hidden_nodes.iter().cloned().collect(),
             animation_mapping: self.anim_mapping.clone(),
         };
@@ -180,6 +216,8 @@ impl AssetBrowserState {
         if let Some(def) = AssetDefinition::load(path) {
             self.hidden_nodes = def.hidden_nodes.into_iter().collect();
             self.anim_mapping = def.animation_mapping;
+            // Stash the stored scale; target_height_m is resolved once the mesh AABB is measured.
+            self.pending_scale = Some(def.scale);
             self.nodes_dirty = true;
             self.mapping_dirty = true;
         } else {
