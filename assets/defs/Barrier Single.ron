@@ -1,0 +1,12 @@
+(
+    model_path: "packs/toon-shooter/map/Barrier Single.glb",
+    scale: 111.04605,
+    model_type: Terrain((
+        blocks_enemies: true,
+        blocks_players: false,
+        health: None,
+    )),
+    hidden_nodes: [],
+    animation_mapping: {},
+    animation_sources: [],
+)
