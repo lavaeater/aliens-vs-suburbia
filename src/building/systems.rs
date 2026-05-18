@@ -9,6 +9,7 @@ use crate::control::components::{ControlCommand, CharacterControl};
 use crate::general::components::{CollisionLayer, Health};
 use crate::general::components::map_components::{CurrentTile, MapModelDefinitions};
 use crate::general::resources::map_resources::MapGraph;
+use crate::general::systems::coin_system::TeamWallet;
 use crate::general::systems::map_systems::TileDefinitions;
 use crate::player::components::{BuildingIndicator, IsBuildIndicator, IsBuilding, IsObstacle};
 use crate::player::events::building_events::{ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode, RemoveTile};
@@ -147,6 +148,16 @@ pub fn exit_build_mode(
     }
 }
 
+/// Tower costs by build indicator key.
+fn tower_cost(key: &str) -> u32 {
+    match key {
+        "tower"      => 50,
+        "tower_slow" => 75,
+        "tower_area" => 100,
+        _            => 0,
+    }
+}
+
 pub fn execute_build(
     mut execute_evr: MessageReader<ExecuteBuild>,
     mut remove_tile_mw: MessageWriter<RemoveTile>,
@@ -155,6 +166,7 @@ pub fn execute_build(
     map_graph: Res<MapGraph>,
     model_defs: Res<MapModelDefinitions>,
     mut build_tower_mw: MessageWriter<BuildTower>,
+    mut wallet: Option<ResMut<TeamWallet>>,
 ) {
     for execute_event in execute_evr.read() {
         if let Ok(build_indicator) = player_build_indicator_query.get(execute_event.0)
@@ -163,6 +175,14 @@ pub fn execute_build(
 
                     let current_index = build_indicator.1;
                     let current_key = model_defs.build_indicators[current_index as usize];
+                    let cost = tower_cost(current_key);
+
+                    // Block build if insufficient funds.
+                    if let Some(ref mut w) = wallet {
+                        if w.coins < cost { continue; }
+                        w.coins -= cost;
+                    }
+
                     build_tower_mw.write(BuildTower {
                         position: position.0,
                         model_definition_key: current_key,

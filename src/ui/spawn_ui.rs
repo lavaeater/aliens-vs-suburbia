@@ -75,7 +75,7 @@ pub fn spawn_menu(commands: Commands, theme: Res<LavaTheme>) {
         "Start Game",
         |btn| { btn.size_px(220.0, 52.0).font_size(20.0); },
         |_: On<Activate>, mut next_state: ResMut<NextState<GameState>>| {
-            next_state.set(GameState::InGame);
+            next_state.set(GameState::PlayerSetup);
         },
     );
 
@@ -170,6 +170,10 @@ pub struct HudAlienMeter;
 #[derive(Component)]
 pub struct HudWaveInfo;
 
+/// Marker on the coin counter label.
+#[derive(Component)]
+pub struct HudCoins;
+
 pub fn spawn_ui(mut commands: Commands, theme: Res<LavaTheme>) {
     let text_theme = theme.text.clone();
 
@@ -186,6 +190,17 @@ pub fn spawn_ui(mut commands: Commands, theme: Res<LavaTheme>) {
         ui.with_child(|c| {
             c.insert_bundle(lava_ui_builder::label("Aliens: 0", &text_theme))
                 .insert(HudAlienCount);
+        });
+        ui.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label(
+                "💰 0",
+                &TextTheme {
+                    label_size: 14.0,
+                    label_color: Color::srgb(1.0, 0.85, 0.1),
+                    ..text_theme.clone()
+                },
+            ))
+            .insert(HudCoins);
         });
         ui.with_child(|c| {
             c.insert_bundle(lava_ui_builder::label(
@@ -747,6 +762,17 @@ pub fn sync_health_bars(
         if let Ok(health) = health_query.get(follower.target) {
             bar.value = (health.health as f32 / health.max_health as f32).clamp(0.0, 1.0);
         }
+    }
+}
+
+pub fn update_coin_hud(
+    wallet: Option<Res<crate::general::systems::coin_system::TeamWallet>>,
+    mut label: Query<&mut Text, With<HudCoins>>,
+) {
+    let Some(wallet) = wallet else { return };
+    if !wallet.is_changed() { return; }
+    if let Ok(mut t) = label.single_mut() {
+        **t = format!("💰 {}", wallet.coins);
     }
 }
 

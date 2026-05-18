@@ -9,6 +9,10 @@ pub struct TouchDamage {
     pub dps: f32,
 }
 
+/// Marker: this entity cannot be targeted or damaged by alien DestroyTheMap behaviour.
+#[derive(Component, Clone, Copy, Default)]
+pub struct Indestructible;
+
 #[derive(Component)]
 pub struct Ball {
     pub entity: Entity,

@@ -1,6 +1,8 @@
 use bevy::math::{Quat, Vec3};
 use bevy::prelude::{Children, Commands, Component, DetectChanges, Entity, Local, MessageReader, MessageWriter,
                     Assets, Query, Res, ResMut, Transform, Visibility, With};
+use bevy::asset::AssetServer;
+use bevy::gltf::GltfAssetLabel;
 use bevy::scene::SceneRoot;
 use avian3d::prelude::Collider;
 use crate::assets::assets_plugin::GameAssets;
@@ -38,6 +40,9 @@ pub fn spawn_players(
     mut commands: Commands,
     game_assets: Res<GameAssets>,
     model_settings: Res<ModelSettings>,
+    asset_server: Res<AssetServer>,
+    roster: Option<Res<crate::player_setup::state::PlayerRoster>>,
+    existing_players: Query<(), With<crate::player::components::Player>>,
     config: Option<Res<CharacterConfig>>,
     sheet: Option<Res<ComposedSpriteSheet>>,
     billboard_mesh: Option<Res<BillboardMeshHandle>>,
@@ -45,6 +50,8 @@ pub fn spawn_players(
     mut add_health_bar_mw: MessageWriter<AddHealthBar>,
     mut player_added_mw: MessageWriter<GameTrackingEvent>,
 ) {
+    let mut slot = existing_players.iter().count();
+
     for spawn_player in spawn_player_event_reader.read() {
         let pos = Transform::from_xyz(
             spawn_player.position.x,
@@ -99,15 +106,29 @@ pub fn spawn_players(
             });
             parent_id
         } else {
-            // 3D model path (original behaviour).
+            // 3D model path — use roster def if available for this slot, else default.
             let s = &*model_settings;
+            let scene = if let Some(ref r) = roster {
+                r.def_paths.get(slot)
+                    .and_then(|def_path| {
+                        let text = std::fs::read_to_string(def_path).ok()?;
+                        let def: crate::assets::asset_definition::AssetDefinition = ron::from_str(&text).ok()?;
+                        let handle = asset_server.load(
+                            GltfAssetLabel::Scene(0).from_asset(def.model_path)
+                        );
+                        Some(handle)
+                    })
+                    .unwrap_or_else(|| game_assets.player_scene.clone())
+            } else {
+                game_assets.player_scene.clone()
+            };
             commands.spawn((
                 FixSceneTransform::new(
                     Vec3::new(s.translation_x, s.translation_y, s.translation_z),
                     Quat::from_rotation_y(s.rotation_y_degrees.to_radians()),
                     Vec3::splat(s.scale),
                 ),
-                SceneRoot(game_assets.player_scene.clone()),
+                SceneRoot(scene),
                 pos,
                 Collider::cuboid(0.5, 0.5, 0.45),
                 PlayerBundle::new(
@@ -128,6 +149,7 @@ pub fn spawn_players(
 
         add_health_bar_mw.write(AddHealthBar { entity: player, name: "PLAYER" });
         player_added_mw.write(GameTrackingEvent::PlayerAdded(player));
+        slot += 1;
     }
 }
 

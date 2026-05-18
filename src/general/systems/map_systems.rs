@@ -496,6 +496,26 @@ pub fn map_loader(
             }
         }
 
+        // Background plane so the void never shows around the map.
+        let map_center_x = cols as f32 * tile_defs.tile_width * 0.5;
+        let map_center_z = rows as f32 * tile_defs.tile_width * 0.5;
+        let bg_size = (cols.max(rows) as f32 * tile_defs.tile_width * 4.0).max(200.0);
+        let bg_y = tile_defs.floor_level - 0.05;
+        let bg_mesh = meshes.add(bevy::math::primitives::Rectangle::new(bg_size, bg_size));
+        let bg_mat = materials.add(StandardMaterial {
+            base_color: Color::srgb(0.18, 0.22, 0.18),
+            perceptual_roughness: 0.95,
+            metallic: 0.0,
+            ..Default::default()
+        });
+        commands.spawn((
+            Name::from("BackgroundFloor"),
+            Mesh3d(bg_mesh),
+            MeshMaterial3d(bg_mat),
+            Transform::from_xyz(map_center_x, bg_y, map_center_z)
+                .with_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2)),
+        ));
+
         for dec in &map_file.decorations {
             let pos = Vec3::new(
                 tile_defs.tile_width * dec.x as f32,

@@ -11,7 +11,7 @@ use crate::general::systems::map_systems::TileDefinitions;
 use itertools::Itertools;
 use crate::building::systems::ToWorldCoordinates;
 use crate::control::components::{ControlDirection, CharacterControl, ControlRotation};
-use crate::general::components::Health;
+use crate::general::components::{Health, Indestructible};
 
 /// When a tile is re-opened (tower destroyed or removed), check if a normal path now exists.
 /// If so, clear MustDestroyTheMap from all aliens so they resume normal pathing.
@@ -59,7 +59,7 @@ pub fn destroy_the_map_action_system(
     mut commands: Commands,
     mut map_graph: ResMut<MapGraph>,
     mut alien_query: Query<(Entity, &mut MustDestroyTheMap, &mut CharacterControl, &Position, &Rotation, &CurrentTile), With<Alien>>,
-    mut obstacle_query: Query<(&IsObstacle, &CurrentTile, &mut Health)>,
+    mut obstacle_query: Query<(&IsObstacle, &CurrentTile, &mut Health), Without<Indestructible>>,
     tile_definitions: Res<TileDefinitions>,
 ) {
     for (entity,

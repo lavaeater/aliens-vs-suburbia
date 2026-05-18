@@ -5,7 +5,8 @@ use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
 use crate::control::components::{CharacterControl, DynamicMovement, InputKeyboard};
 use crate::control::components::CharacterState;
 use crate::game_state::score_keeper::Score;
-use crate::general::components::{Health};
+use crate::general::components::Health;
+use crate::general::systems::coin_system::PickupRange;
 use crate::general::components::map_components::CurrentTile;
 use crate::player::components::{AutoAim, Player};
 
@@ -28,6 +29,7 @@ pub struct PlayerBundle {
     character_state: CharacterState,
     score: Score,
     auto_aim: AutoAim,
+    pickup_range: PickupRange,
 }
 
 impl PlayerBundle {
@@ -59,6 +61,7 @@ impl PlayerBundle {
             character_state: CharacterState::default(),
             score: Score::new(),
             auto_aim: AutoAim(Vec3::Z),
+            pickup_range: PickupRange::default(),
         }
     }
 }
