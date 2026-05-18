@@ -142,34 +142,32 @@ pub fn setup_viewer_animation(
     state.mesh_nodes = mesh_nodes;
     state.nodes_dirty = true;
 
-    if gltf.animations.is_empty() {
-        state.gltf_handle = None;
-        return;
-    }
-
-    // Find the AnimationPlayer inside the viewer model's hierarchy specifically.
     let Some(viewer_entity) = state.viewer_entity else { return };
-    let Some(player_entity) = get_child_with_component_recursive(viewer_entity, &child_query, &anim_players)
-        else { return };
 
-    // Stop whatever was playing on the old or new player before rebuilding.
-    if let Ok(mut player) = anim_players.get_mut(player_entity) {
-        player.stop_all();
-    }
-
+    // Build graph with whatever clips the model itself has (may be empty).
     let mut names_by_index = vec![String::new(); gltf.animations.len()];
     for (name, handle) in &gltf.named_animations {
         if let Some(idx) = gltf.animations.iter().position(|h| h == handle) {
             names_by_index[idx] = name.to_string();
         }
     }
-
     let mut graph = AnimationGraph::new();
     let nodes: Vec<AnimationNodeIndex> = gltf.animations.iter()
         .map(|clip| graph.add_clip(clip.clone(), 1.0, graph.root))
         .collect();
-
     let graph_handle = animation_graphs.add(graph);
+
+    // Find the AnimationPlayer in the hierarchy, or insert one on the viewer root
+    // (needed for models that have no embedded animations so external clips can play).
+    let player_entity = get_child_with_component_recursive(viewer_entity, &child_query, &anim_players)
+        .unwrap_or_else(|| {
+            commands.entity(viewer_entity).insert(AnimationPlayer::default());
+            viewer_entity
+        });
+
+    if let Ok(mut player) = anim_players.get_mut(player_entity) {
+        player.stop_all();
+    }
     commands.entity(player_entity).insert(AnimationGraphHandle(graph_handle.clone()));
 
     state.anim_player_entity = Some(player_entity);
@@ -177,7 +175,7 @@ pub fn setup_viewer_animation(
     state.anim_count = nodes.len();
     state.anim_node_indices = nodes;
     state.anim_names = names_by_index;
-    state.anim_dirty = true;
+    state.anim_dirty = !gltf.animations.is_empty(); // only auto-play if model has clips
     state.mapping_dirty = true;
     state.gltf_handle = None;
 }

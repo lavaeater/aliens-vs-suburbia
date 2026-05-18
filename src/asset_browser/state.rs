@@ -263,7 +263,10 @@ impl AssetBrowserState {
         if let Some(def) = AssetDefinition::load(path) {
             self.hidden_nodes = def.hidden_nodes.into_iter().collect();
             self.anim_mapping = def.animation_mapping;
-            self.animation_sources = def.animation_sources;
+            // Normalize paths: strip leading "assets/" if present (legacy wrong prefix).
+            self.animation_sources = def.animation_sources.into_iter()
+                .map(|p| p.strip_prefix("assets/").unwrap_or(&p).to_string())
+                .collect();
             self.sources_dirty = true;
             self.model_type = def.model_type;
             self.type_dirty = true;

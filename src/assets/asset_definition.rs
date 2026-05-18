@@ -125,8 +125,9 @@ pub struct AssetDefinition {
     /// or "SourceStem|ClipFragment" to pull from an external file listed in animation_sources.
     #[serde(default)]
     pub animation_mapping: HashMap<String, String>,
-    /// Paths (relative to project root) of external GLB/GLTF files that supply
-    /// additional animation clips for this model.  e.g. "assets/packs/AnimPack.glb"
+    /// Paths of external GLB/GLTF files that supply additional animation clips.
+    /// Same convention as model_path: relative to the assets/ folder, no "assets/" prefix.
+    /// e.g. "packs/AnimPack.glb"
     #[serde(default)]
     pub animation_sources: Vec<String>,
 }

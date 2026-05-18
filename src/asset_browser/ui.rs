@@ -161,7 +161,7 @@ pub fn spawn_asset_browser_ui(
         left.add_button_observe("+ Add selected as source", |b| { b.width(percent(100.0)).height(px(22.0)).font_size(11.0); },
             |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
                 if let Some(path) = s.selected_path().map(|p| p.to_string()) {
-                    s.add_animation_source(format!("assets/{path}"));
+                    s.add_animation_source(path);
                 }
             });
 

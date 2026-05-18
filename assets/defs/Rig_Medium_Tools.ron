@@ -1,0 +1,24 @@
+(
+    model_path: "packs/kay/dungeon/animations/Rig_Medium_Tools.glb",
+    scale: 0.7603826,
+    model_type: Enemy((
+        health: 100.0,
+        speed: 2.0,
+        coin_drop: 5,
+    )),
+    hidden_nodes: [],
+    animation_mapping: {
+        "idle": "",
+        "idle_shoot": "",
+        "throwing": "",
+    },
+    animation_sources: [
+        "packs/kay/dungeon/animations/Rig_Medium_Special.glb",
+        "packs/kay/dungeon/animations/Rig_Medium_Simulation.glb",
+        "packs/kay/dungeon/animations/Rig_Medium_MovementBasic.glb",
+        "packs/kay/dungeon/animations/Rig_Medium_MovementAdvanced.glb",
+        "packs/kay/dungeon/animations/Rig_Medium_General.glb",
+        "packs/kay/dungeon/animations/Rig_Medium_CombatRanged.glb",
+        "packs/kay/dungeon/animations/Rig_Medium_CombatMelee.glb",
+    ],
+)
