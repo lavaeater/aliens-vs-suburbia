@@ -3,6 +3,12 @@ pub (crate) mod map_components;
 use bevy::prelude::{Component, Entity, Reflect};
 use avian3d::prelude::PhysicsLayer;
 
+/// Entities with this component deal damage per second to any Player they collide with.
+#[derive(Component, Clone, Copy)]
+pub struct TouchDamage {
+    pub dps: f32,
+}
+
 #[derive(Component)]
 pub struct Ball {
     pub entity: Entity,

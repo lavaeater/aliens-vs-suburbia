@@ -3,6 +3,91 @@ use std::collections::HashMap;
 
 fn default_scale() -> f32 { 1.0 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EnemyProps {
+    pub health: f32,
+    pub speed: f32,
+    pub coin_drop: u32,
+}
+
+impl Default for EnemyProps {
+    fn default() -> Self { Self { health: 100.0, speed: 2.0, coin_drop: 5 } }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TowerProps {
+    pub health: f32,
+    pub cost: u32,
+    pub range: f32,
+    pub damage: f32,
+    pub fire_rate_per_minute: f32,
+}
+
+impl Default for TowerProps {
+    fn default() -> Self { Self { health: 200.0, cost: 50, range: 4.0, damage: 20.0, fire_rate_per_minute: 30.0 } }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TerrainProps {
+    pub blocks_enemies: bool,
+    pub blocks_players: bool,
+    /// None = indestructible.
+    pub health: Option<f32>,
+}
+
+impl Default for TerrainProps {
+    fn default() -> Self { Self { blocks_enemies: true, blocks_players: false, health: None } }
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+pub enum ItemKind {
+    #[default]
+    Decorative,
+    HealthPickup { amount: f32 },
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct ItemProps {
+    pub kind: ItemKind,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+pub enum ModelType {
+    #[default]
+    Player,
+    Tower(TowerProps),
+    Terrain(TerrainProps),
+    Item(ItemProps),
+    Enemy(EnemyProps),
+}
+
+impl ModelType {
+    pub fn label(&self) -> &'static str {
+        match self {
+            ModelType::Player      => "Player",
+            ModelType::Tower(_)    => "Tower",
+            ModelType::Terrain(_)  => "Terrain",
+            ModelType::Item(_)     => "Item",
+            ModelType::Enemy(_)    => "Enemy",
+        }
+    }
+
+    pub fn all_labels() -> &'static [&'static str] {
+        &["Player", "Tower", "Terrain", "Item", "Enemy"]
+    }
+
+    /// Return a default instance for each label.
+    pub fn from_label(label: &str) -> Self {
+        match label {
+            "Tower"   => ModelType::Tower(TowerProps::default()),
+            "Terrain" => ModelType::Terrain(TerrainProps::default()),
+            "Item"    => ModelType::Item(ItemProps::default()),
+            "Enemy"   => ModelType::Enemy(EnemyProps::default()),
+            _         => ModelType::Player,
+        }
+    }
+}
+
 /// Persisted definition for one imported asset. Written to `assets/defs/*.ron`
 /// by the asset browser and read at runtime to drive hidden-node lists and
 /// animation mappings without hard-coding them in source.
@@ -10,14 +95,14 @@ fn default_scale() -> f32 { 1.0 }
 pub struct AssetDefinition {
     pub model_path: String,
     /// Uniform scale factor applied to the model so it has a meaningful real-world size.
-    /// Computed as `target_height_m / mesh_aabb_height` in the asset browser.
     #[serde(default = "default_scale")]
     pub scale: f32,
+    #[serde(default)]
+    pub model_type: ModelType,
     /// Node names that should be hidden when this model is used in-game.
     #[serde(default)]
     pub hidden_nodes: Vec<String>,
-    /// Maps game-state keys (e.g. "idle", "walk", "throwing") to GLB clip
-    /// name fragments.  Matched the same way as `AnimMapping` in ModelSettings.
+    /// Maps game-state keys (e.g. "idle", "walk", "throwing") to GLB clip name fragments.
     #[serde(default)]
     pub animation_mapping: HashMap<String, String>,
 }
@@ -27,6 +112,7 @@ impl Default for AssetDefinition {
         Self {
             model_path: String::new(),
             scale: 1.0,
+            model_type: ModelType::default(),
             hidden_nodes: Vec::new(),
             animation_mapping: HashMap::new(),
         }

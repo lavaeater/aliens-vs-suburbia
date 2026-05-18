@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use std::collections::{HashMap, HashSet};
 
 // Re-export from shared location so asset browser code keeps using the same name.
-pub use crate::assets::asset_definition::AssetDefinition;
+pub use crate::assets::asset_definition::{AssetDefinition, EnemyProps, ItemProps, ModelType, TerrainProps, TowerProps};
 
 const WINDOW_SIZE: usize = 36;
 pub const CHARACTER_NODE_PREFIX: &str = "Character_";
@@ -52,6 +52,10 @@ pub struct AssetBrowserState {
     pub hidden_nodes: HashSet<String>,
     pub nodes_dirty: bool,
 
+    // ── Model type ────────────────────────────────────────────────────────────
+    pub model_type: ModelType,
+    pub type_dirty: bool,
+
     // ── Animation mapping (for import) ─────────────────────────────────────────
     /// Maps ANIM_KEY_NAMES strings → GLB clip name fragment.
     pub anim_mapping: HashMap<String, String>,
@@ -95,6 +99,8 @@ impl Default for AssetBrowserState {
             nodes_dirty: false,
             anim_mapping: HashMap::new(),
             mapping_dirty: false,
+            model_type: ModelType::default(),
+            type_dirty: false,
             model_raw_height: 0.0,
             target_height_m: 2.0,
             pending_scale: None,
@@ -121,6 +127,8 @@ impl AssetBrowserState {
         self.mesh_nodes.clear();
         self.nodes_dirty = false;
         self.anim_player_entity = None;
+        self.model_type = ModelType::default();
+        self.type_dirty = true;
         self.model_raw_height = 0.0;
         self.target_height_m = 2.0;
         self.pending_scale = None;
@@ -133,6 +141,11 @@ impl AssetBrowserState {
         } else {
             1.0
         }
+    }
+
+    pub fn set_model_type(&mut self, label: &str) {
+        self.model_type = ModelType::from_label(label);
+        self.type_dirty = true;
     }
 
     pub fn height_up(&mut self) {
@@ -204,6 +217,7 @@ impl AssetBrowserState {
         let def = AssetDefinition {
             model_path: path.to_string(),
             scale: self.computed_scale(),
+            model_type: self.model_type.clone(),
             hidden_nodes: self.hidden_nodes.iter().cloned().collect(),
             animation_mapping: self.anim_mapping.clone(),
         };
@@ -216,6 +230,8 @@ impl AssetBrowserState {
         if let Some(def) = AssetDefinition::load(path) {
             self.hidden_nodes = def.hidden_nodes.into_iter().collect();
             self.anim_mapping = def.animation_mapping;
+            self.model_type = def.model_type;
+            self.type_dirty = true;
             // Stash the stored scale; target_height_m is resolved once the mesh AABB is measured.
             self.pending_scale = Some(def.scale);
             self.nodes_dirty = true;

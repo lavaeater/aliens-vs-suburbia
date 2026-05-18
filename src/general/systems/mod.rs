@@ -6,3 +6,4 @@ pub(crate) mod throwing_system;
 pub(crate) mod collision_handling_system;
 pub(crate) mod health_monitor_system;
 pub(crate) mod death_effect_system;
+pub(crate) mod touch_damage_system;

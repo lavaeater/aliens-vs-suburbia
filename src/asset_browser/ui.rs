@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy::ui::ScrollPosition;
 use bevy::ui_widgets::Activate;
 use lava_ui_builder::{InteractionPalette, LavaTheme, TextTheme, UIBuilder};
-use crate::asset_browser::state::{ANIM_KEY_NAMES, AssetBrowserState, CHARACTER_NODE_PREFIX};
+use crate::asset_browser::state::{ANIM_KEY_NAMES, AssetBrowserState, CHARACTER_NODE_PREFIX, ModelType};
 use crate::asset_browser::viewer::AssetBrowserViewerPanel;
 use crate::game_state::GameState;
 use crate::ui::spawn_ui::StateMarker;
@@ -19,6 +19,8 @@ use crate::ui::spawn_ui::StateMarker;
 #[derive(Component)] pub struct FolderContainer;
 #[derive(Component)] pub struct FolderPathLabel;
 #[derive(Component)] pub struct HeightDisplay;
+#[derive(Component)] pub struct TypeContainer;
+#[derive(Component)] pub struct TypePropsContainer;
 
 #[derive(Component)] pub struct ListItem(pub usize);
 #[derive(Component)] pub struct MappingRow(pub String); // game-state key
@@ -125,6 +127,23 @@ pub fn spawn_asset_browser_ui(
 
             row.add_button_observe("+", |b| { b.width(px(20.0)).height(px(20.0)).font_size(14.0); },
                 |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.height_up(); });
+        });
+
+        // Model type section
+        left.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label("— Model Type —", &TextTheme {
+                label_size: 11.0, label_color: Color::srgb(0.5, 0.8, 0.6), ..t.clone()
+            }));
+        });
+        left.with_child(|c| {
+            c.display_flex().flex_wrap().gap_px(3.0)
+             .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
+             .insert(TypeContainer);
+        });
+        left.with_child(|c| {
+            c.display_flex().flex_column().gap_px(2.0)
+             .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
+             .insert(TypePropsContainer);
         });
 
         // File list
@@ -407,4 +426,92 @@ pub fn rebuild_mapping_list(
             });
         }
     });
+}
+
+pub fn rebuild_type_picker(
+    mut state: ResMut<AssetBrowserState>,
+    mut commands: Commands,
+    container_q: Query<Entity, With<TypeContainer>>,
+    props_q: Query<Entity, With<TypePropsContainer>>,
+    theme: Res<lava_ui_builder::LavaTheme>,
+) {
+    if !state.type_dirty { return; }
+    state.type_dirty = false;
+
+    let current_label = state.model_type.label();
+
+    if let Ok(container) = container_q.single() {
+        commands.entity(container).despawn_related::<Children>();
+        commands.entity(container).with_children(|parent| {
+            for &label in ModelType::all_labels() {
+                let is_active = label == current_label;
+                let bg = if is_active { Color::srgba(0.20, 0.45, 0.25, 0.95) } else { Color::srgba(0.10, 0.16, 0.12, 0.85) };
+                let tc = if is_active { Color::srgb(0.8, 1.0, 0.8) } else { Color::srgb(0.55, 0.70, 0.55) };
+                parent.spawn((
+                    Node { padding: UiRect::axes(Val::Px(7.0), Val::Px(3.0)), border_radius: BorderRadius::all(Val::Px(4.0)), ..Default::default() },
+                    BackgroundColor(bg),
+                    InteractionPalette { none: bg, hovered: Color::srgba(0.25, 0.55, 0.30, 0.95), pressed: Color::srgba(0.15, 0.38, 0.20, 1.0) },
+                    bevy::picking::hover::Hovered::default(),
+                    bevy::ui_widgets::Button,
+                ))
+                .with_child((Text::new(label), TextFont::default().with_font_size(10.0), TextColor(tc)))
+                .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.set_model_type(label); });
+            }
+        });
+    }
+
+    if let Ok(props_container) = props_q.single() {
+        commands.entity(props_container).despawn_related::<Children>();
+        let t = theme.text.clone();
+        let prop_theme = lava_ui_builder::TextTheme { label_size: 10.0, label_color: Color::srgb(0.75, 0.82, 0.75), ..t };
+        commands.entity(props_container).with_children(|parent| {
+            match &state.model_type {
+                ModelType::Enemy(p) => {
+                    parent.spawn(prop_row("HP", p.health, &prop_theme));
+                    parent.spawn(prop_row("Speed", p.speed, &prop_theme));
+                    parent.spawn(prop_row("Coins", p.coin_drop as f32, &prop_theme));
+                }
+                ModelType::Tower(p) => {
+                    parent.spawn(prop_row("HP", p.health, &prop_theme));
+                    parent.spawn(prop_row("Cost", p.cost as f32, &prop_theme));
+                    parent.spawn(prop_row("Range", p.range, &prop_theme));
+                    parent.spawn(prop_row("Damage", p.damage, &prop_theme));
+                    parent.spawn(prop_row("Fire/min", p.fire_rate_per_minute, &prop_theme));
+                }
+                ModelType::Terrain(p) => {
+                    let blocks_e = if p.blocks_enemies { "yes" } else { "no" };
+                    let blocks_p = if p.blocks_players { "yes" } else { "no" };
+                    let hp_str = p.health.map(|h| format!("{h}")).unwrap_or_else(|| "∞".to_string());
+                    parent.spawn((
+                        Text::new(format!("blocks enemies: {blocks_e}  players: {blocks_p}  HP: {hp_str}")),
+                        TextFont::default().with_font_size(10.0),
+                        TextColor(Color::srgb(0.75, 0.82, 0.75)),
+                        Node { padding: UiRect::axes(Val::Px(4.0), Val::Px(1.0)), ..Default::default() },
+                    ));
+                }
+                ModelType::Item(p) => {
+                    let kind = match &p.kind {
+                        crate::assets::asset_definition::ItemKind::Decorative => "Decorative".to_string(),
+                        crate::assets::asset_definition::ItemKind::HealthPickup { amount } => format!("HealthPickup ({amount} HP)"),
+                    };
+                    parent.spawn((
+                        Text::new(format!("kind: {kind}")),
+                        TextFont::default().with_font_size(10.0),
+                        TextColor(Color::srgb(0.75, 0.82, 0.75)),
+                        Node { padding: UiRect::axes(Val::Px(4.0), Val::Px(1.0)), ..Default::default() },
+                    ));
+                }
+                ModelType::Player => {}
+            }
+        });
+    }
+}
+
+fn prop_row(label: &str, value: f32, theme: &lava_ui_builder::TextTheme) -> impl Bundle {
+    (
+        Text::new(format!("{label}: {value}")),
+        TextFont::default().with_font_size(10.0),
+        TextColor(theme.label_color),
+        Node { padding: UiRect::axes(Val::Px(4.0), Val::Px(1.0)), ..Default::default() },
+    )
 }

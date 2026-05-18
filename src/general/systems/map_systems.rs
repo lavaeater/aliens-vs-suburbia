@@ -544,5 +544,6 @@ pub fn add_tile_to_map(
 ) {
     for add_tile_event in add_tile_evr.read() {
         map_graph.path_finding_grid.add_vertex(add_tile_event.0);
+        map_graph.path_reopened = true;
     }
 }

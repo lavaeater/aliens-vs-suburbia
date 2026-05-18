@@ -99,6 +99,7 @@ impl Plugin for NonStateMapStuff {
                 path_finding_grid: Grid::new(0, 0),
                 occupied_tiles: HashSet::new(),
                 goal: (0, 0),
+                path_reopened: false,
             });
     }
 }

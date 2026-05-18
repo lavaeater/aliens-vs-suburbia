@@ -12,7 +12,7 @@ use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
 use crate::assets::assets_plugin::GameAssets;
 use crate::control::components::{CharacterControl, DynamicMovement};
 use crate::game_state::score_keeper::GameTrackingEvent;
-use crate::general::components::{Attack, CollisionLayer, Health, HittableTarget};
+use crate::general::components::{Attack, CollisionLayer, Health, HittableTarget, TouchDamage};
 use crate::general::components::map_components::{AlienSpawnPoint, CoolDown, CurrentTile};
 use crate::general::events::map_events::SpawnAlien;
 use crate::player::systems::spawn_players::FixSceneTransform;
@@ -102,6 +102,7 @@ pub fn spawn_aliens(
                 AlienSightShape::default(),
                 Attack::default(),
                 Health::default(),
+                TouchDamage { dps: 10.0 },
                 WindWakerShaderBuilder::default().build(),
             )
         )).id();
