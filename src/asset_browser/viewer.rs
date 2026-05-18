@@ -141,6 +141,7 @@ pub fn setup_viewer_animation(
     mesh_nodes.sort();
     state.mesh_nodes = mesh_nodes;
     state.nodes_dirty = true;
+    state.nodes_ui_dirty = true;
 
     let Some(viewer_entity) = state.viewer_entity else { return };
 

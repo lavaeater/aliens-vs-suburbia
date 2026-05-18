@@ -51,7 +51,8 @@ pub struct AssetBrowserState {
     // ── Node visibility ────────────────────────────────────────────────────────
     pub mesh_nodes: Vec<String>,
     pub hidden_nodes: HashSet<String>,
-    pub nodes_dirty: bool,
+    pub nodes_dirty: bool,     // consumed by apply_node_visibility
+    pub nodes_ui_dirty: bool,  // consumed by rebuild_node_list
 
     // ── Model type ────────────────────────────────────────────────────────────
     pub model_type: ModelType,
@@ -106,6 +107,7 @@ impl Default for AssetBrowserState {
             mesh_nodes: Vec::new(),
             hidden_nodes: HashSet::new(),
             nodes_dirty: false,
+            nodes_ui_dirty: false,
             anim_mapping: HashMap::new(),
             mapping_dirty: false,
             animation_sources: Vec::new(),
@@ -139,6 +141,7 @@ impl AssetBrowserState {
         self.anim_names.clear();
         self.mesh_nodes.clear();
         self.nodes_dirty = false;
+        self.nodes_ui_dirty = false;
         self.anim_player_entity = None;
         self.viewer_graph_handle = None;
         self.animation_sources.clear();
@@ -227,6 +230,7 @@ impl AssetBrowserState {
             self.hidden_nodes.insert(name.to_string());
         }
         self.nodes_dirty = true;
+        self.nodes_ui_dirty = true;
     }
 
     pub fn cycle_mapping_next(&mut self, key: &str) {
@@ -272,14 +276,27 @@ impl AssetBrowserState {
             self.type_dirty = true;
             // Stash the stored scale; target_height_m is resolved once the mesh AABB is measured.
             self.pending_scale = Some(def.scale);
-            self.nodes_dirty = true;
-            self.mapping_dirty = true;
         } else {
+            // No def for this model. Clear node visibility but KEEP existing anim_mapping —
+            // same-pack models share clip names so the user's work carries over.
             self.hidden_nodes.clear();
-            self.anim_mapping.clear();
-            self.nodes_dirty = true;
-            self.mapping_dirty = true;
+            self.animation_sources.clear();
+            self.sources_dirty = true;
         }
+        self.nodes_dirty = true;
+        self.nodes_ui_dirty = true;
+        self.mapping_dirty = true;
+    }
+
+    /// Reset mapping and hidden nodes back to a clean state.
+    pub fn clear_all(&mut self) {
+        self.anim_mapping.clear();
+        self.hidden_nodes.clear();
+        self.animation_sources.clear();
+        self.sources_dirty = true;
+        self.nodes_dirty = true;
+        self.nodes_ui_dirty = true;
+        self.mapping_dirty = true;
     }
 
     pub fn anim_next(&mut self) {

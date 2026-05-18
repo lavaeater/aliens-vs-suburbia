@@ -173,7 +173,10 @@ pub fn spawn_asset_browser_ui(
         });
 
         // Import + back buttons
-        left.add_button_observe("⬇ Import definition", |b| { b.width(percent(100.0)).height(px(30.0)).font_size(13.0); },
+        left.add_button_observe("Clear mapping + nodes", |b| { b.width(percent(100.0)).height(px(26.0)).font_size(12.0); },
+            |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.clear_all(); });
+
+        left.add_button_observe("Import definition", |b| { b.width(percent(100.0)).height(px(30.0)).font_size(13.0); },
             |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.export_definition(); });
 
         left.add_button_observe("<- Back to Menu", |b| { b.width(percent(100.0)).height(px(36.0)).font_size(14.0); },
@@ -340,11 +343,12 @@ pub fn scroll_to_selection(
 }
 
 pub fn rebuild_node_list(
-    state: ResMut<AssetBrowserState>,
+    mut state: ResMut<AssetBrowserState>,
     mut commands: Commands,
     container_q: Query<Entity, With<NodeListContainer>>,
 ) {
-    if !state.nodes_dirty { return; }
+    if !state.nodes_ui_dirty { return; }
+    state.nodes_ui_dirty = false;
 
     let Ok(container) = container_q.single() else { return };
     commands.entity(container).despawn_related::<Children>();
