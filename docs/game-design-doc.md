@@ -199,3 +199,44 @@ This makes `WEAPON_NODES` and the per-field `AnimMapping` struct obsolete once m
 | 7 | Asset browser: folder explorer | ✅ done |
 | 8 | AssetDefinition Ron file + import | ✅ done |
 | 9 | Animation mapping editor in browser | ✅ done |
+
+----
+
+## Next features for complete game!
+
+### 10. Map Editor Prototype
+
+A potential map editor prototype would ideally be a very simple modal editor to draw some kind of terrain, add terrain features such that either are or are not blocked for alien movement. Ability to add start areas, exit areas, potentially drawing tracks for aliens to follow. For any square we should be able to add items, rotate them (in 45-degree increments, mostly to align features to proper cardinal directions). The items in questions should be any models that have .ron files associated with them. 
+It would also be nice to have a wave editor - nothing complex, just the ability to add waves where the definition is simply what type of alien a certain wave contains, the number of them and so on. So we could have anything from 1-n number of waves. This then influences the progress indicator - not of course that we have a total number of waves and number of enemies per the current wave.
+
+### 11. Enemy Types
+
+The asset browser - some models might actually be monster models. We should  in the .ron file store some kind of "type of model", being player, terrain/map, item and of course the lovely "enemy" type - thus making models available for usage as enemies in game. Enemies in turn - if something is marked as an enemy, we should be able to set some properties for them such as Health and Speed (to start with for the easiest early implementations). These properties should perhaps be stored in the normal .ron-file for models, we should perhaps have some kind of enum with variants for this, like Player, Terrain, Item and then Enemy(EnemyProps) which could define which Components and their values should be added to any spawned entities when we add them to the game.
+
+A nice way to make the game not have a dark void in  the background is for us to extend the floor out to infinity. I have realized that the floor geometry isn't that important right now, it is the obstacles that matter. So the map will have some kind of bounds yes, that CAN be walls, but could also just be invisible collider geometry.
+
+So the map size should be definable in X * Y squares  (squares that are used today to define the floor).
+
+### 12. Player Setup Screen / Multiplayer Support
+
+Ability to select different players / models. Basic stuff like, "Press Enter or X to join game" - doing so gives the player the ability to then select between available player models. When in this model selection state, pressing enter / x (gamepad support) starts the game. 
+
+### 13. Terrain and Items
+
+When defining different types of models in the asset browser, if they are of type Terrain/Map (you can choose name) one should be able to assign a value for the model indicating that they are blocking or not, as in "are they traversible". Traversible is fine-grained by the way, Terrain features could be traversible by players, enemies or both. Terrain features that are not traversible by enemies should probably also have a Health value. This could be put in the ModelType Enum variant Terrain(TerrainProps) or something. If they don't have a Health value, they should be indestructible - this could probably be a marker component as well, right? Items should have Item(ItemProps), they could be of different types as well, such as simply Decorative or Pickups, off the top of my head. Pickups would be things like Health and Crates with loot (weapons and other stuff, not implemented now, but health could be).
+
+### 14. Loot drops
+
+Aah. Players must of course use some kind of currency to build towers in-game. Currency is in the form of Coins and different enemy types drop different amounts of Coins when dying. Players pick them up by moving near enough -  property different players can have is PickupRange.
+
+### 15. Player special abilities
+
+Apart from Players having different stats such as Throw Range (all weapons are thrown balls at start of game), Throw Damage and Throw Rate, Movement Speed and Health, they must all have a Special Ability. The four basic ones that we need at start of game is: Bombardment, the entire visible area of the screen being hit with a bombardment dealing heavy damage to enemies. Heave Damage being defined as 100% lethal to enemies that have 75 in max health, i.e. doing 75 damage. Another is Healing - healing all players and towers in some range of the player. Third being Whirlwind, enabling the Player to run around at ten times normal speed while spinning simply killing everything they touch - lasting for a fairly short amount of time. A fourth being Gold Digger - the player automatically sucks up all loose Coins on the map.
+
+### 16. Damage to players
+
+Enemies have, at the start, no offensive weapons - they are transitioning through the map and it is the job of the players to stop them - they do however deal damage by touch - different enemies deal different amounts of damage. If a player dies, they lie where they lie. If another player stands by them for 1-2 seconds they are revived, are immortal for five seconds and can move away from danger. 
+
+### 17. Enemy Wrecking the Labyrinth
+
+I think we have A* path finding. Every time we add stuff to the map that are blocking to enemies, we have to recalculate enemy paths. If an enemy cannot find a path to an exit, we recalculate a new, shortest possible route, disregarding blocking, destructible, terrain features. Then they get to work, moving along that most direct path and attacking terrain features in their path. If a player removes some kind of blocking terrain to free up a regular path, we recalculate paths again. 
