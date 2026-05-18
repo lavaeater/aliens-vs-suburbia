@@ -1,4 +1,5 @@
 use bevy::input::ButtonState;
+use bevy::input::gamepad::Gamepad;
 use bevy::input::keyboard::{Key, KeyboardInput};
 use bevy::prelude::*;
 use lava_ui_builder::{LavaTheme, TextTheme, UIBuilder};
@@ -75,8 +76,12 @@ pub fn handle_setup_input(
     mut roster: ResMut<PlayerRoster>,
     mut next_state: ResMut<NextState<GameState>>,
     mut keyboard: MessageReader<KeyboardInput>,
+    gamepads: Query<(Entity, &Gamepad)>,
+    mut prev_gamepad_south: Local<[bool; MAX_PLAYERS]>,
+    mut prev_gamepad_left: Local<[bool; MAX_PLAYERS]>,
+    mut prev_gamepad_right: Local<[bool; MAX_PLAYERS]>,
 ) {
-    // Slot 0 = keyboard player, only slot handled via keyboard for now.
+    // ── Keyboard: slot 0 ────────────────────────────────────────────────────
     for event in keyboard.read() {
         if event.state != ButtonState::Pressed { continue; }
         match &event.logical_key {
@@ -85,7 +90,6 @@ pub fn handle_setup_input(
                     SlotState::Empty => state.join(0),
                     SlotState::Selecting { .. } => state.confirm(0),
                     SlotState::Confirmed { .. } => {
-                        // If confirmed, Enter starts the game (if at least one confirmed).
                         if state.any_confirmed() {
                             roster.def_paths = state.confirmed_paths();
                             next_state.set(GameState::InGame);
@@ -98,5 +102,35 @@ pub fn handle_setup_input(
             Key::Escape => next_state.set(GameState::Menu),
             _ => {}
         }
+    }
+
+    // ── Gamepads: slots 1..MAX_PLAYERS ──────────────────────────────────────
+    for (gp_idx, (_, gamepad)) in gamepads.iter().enumerate() {
+        let slot = gp_idx + 1;
+        if slot >= MAX_PLAYERS { break; }
+
+        let south = gamepad.pressed(GamepadButton::South);
+        let left  = gamepad.left_stick().x < -0.5 || gamepad.pressed(GamepadButton::DPadLeft);
+        let right = gamepad.left_stick().x >  0.5 || gamepad.pressed(GamepadButton::DPadRight);
+
+        // South: join / confirm / start (rising edge only)
+        if south && !prev_gamepad_south[slot] {
+            match state.slots[slot] {
+                SlotState::Empty => state.join(slot),
+                SlotState::Selecting { .. } => state.confirm(slot),
+                SlotState::Confirmed { .. } => {
+                    if state.any_confirmed() {
+                        roster.def_paths = state.confirmed_paths();
+                        next_state.set(GameState::InGame);
+                    }
+                }
+            }
+        }
+        if left  && !prev_gamepad_left[slot]  { state.cycle_prev(slot); }
+        if right && !prev_gamepad_right[slot] { state.cycle_next(slot); }
+
+        prev_gamepad_south[slot] = south;
+        prev_gamepad_left[slot]  = left;
+        prev_gamepad_right[slot] = right;
     }
 }

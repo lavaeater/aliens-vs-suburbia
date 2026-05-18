@@ -106,7 +106,7 @@ fn scan_player_defs() -> Vec<String> {
             if p.extension()?.to_str()? != "ron" { return None; }
             let text = std::fs::read_to_string(&p).ok()?;
             let def: AssetDefinition = ron::from_str(&text).ok()?;
-            if def.model_type == ModelType::Player { Some(p.to_string_lossy().replace('\\', "/")) } else { None }
+            if matches!(def.model_type, ModelType::Player(_)) { Some(p.to_string_lossy().replace('\\', "/")) } else { None }
         })
         .collect();
     paths.sort();

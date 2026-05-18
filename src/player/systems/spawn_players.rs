@@ -59,6 +59,25 @@ pub fn spawn_players(
             spawn_player.position.z,
         );
 
+        // Resolve ability for this slot (from def or slot default).
+        let roster_ability = roster.as_ref()
+            .and_then(|r| r.def_paths.get(slot))
+            .and_then(|def_path| {
+                let text = std::fs::read_to_string(def_path).ok()?;
+                let def: crate::assets::asset_definition::AssetDefinition = ron::from_str(&text).ok()?;
+                if let crate::assets::asset_definition::ModelType::Player(props) = def.model_type {
+                    use crate::assets::asset_definition::PlayerAbility::*;
+                    use crate::player::systems::abilities::SpecialAbility;
+                    Some(match props.ability {
+                        Bombardment => SpecialAbility::Bombardment,
+                        Healing     => SpecialAbility::Healing,
+                        Whirlwind   => SpecialAbility::Whirlwind,
+                        GoldDigger  => SpecialAbility::GoldDigger,
+                    })
+                } else { None }
+            })
+            .unwrap_or_else(|| ability_for_slot(slot));
+
         // Decide: use sprite billboard or 3D model?
         let use_billboard = config.as_ref()
             .map(|c| !c.body_type.is_empty())
@@ -108,15 +127,13 @@ pub fn spawn_players(
         } else {
             // 3D model path — use roster def if available for this slot, else default.
             let s = &*model_settings;
+            // Load scene from roster def if available.
             let scene = if let Some(ref r) = roster {
                 r.def_paths.get(slot)
                     .and_then(|def_path| {
                         let text = std::fs::read_to_string(def_path).ok()?;
                         let def: crate::assets::asset_definition::AssetDefinition = ron::from_str(&text).ok()?;
-                        let handle = asset_server.load(
-                            GltfAssetLabel::Scene(0).from_asset(def.model_path)
-                        );
-                        Some(handle)
+                        Some(asset_server.load(GltfAssetLabel::Scene(0).from_asset(def.model_path)))
                     })
                     .unwrap_or_else(|| game_assets.player_scene.clone())
             } else {
@@ -147,9 +164,22 @@ pub fn spawn_players(
                 )).id()
         };
 
+        // Override ability from def / slot default.
+        commands.entity(player).insert(roster_ability);
         add_health_bar_mw.write(AddHealthBar { entity: player, name: "PLAYER" });
         player_added_mw.write(GameTrackingEvent::PlayerAdded(player));
         slot += 1;
+    }
+}
+
+/// Cycles through abilities by slot so each player starts with a different one.
+fn ability_for_slot(slot: usize) -> crate::player::systems::abilities::SpecialAbility {
+    use crate::player::systems::abilities::SpecialAbility::*;
+    match slot % 4 {
+        0 => Bombardment,
+        1 => Healing,
+        2 => Whirlwind,
+        _ => GoldDigger,
     }
 }
 

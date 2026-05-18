@@ -31,7 +31,12 @@ use bevy::math::EulerRot;
 use bevy_wind_waker_shader::WindWakerShaderBuilder;
 use crate::assets::assets_plugin::GameAssets;
 use crate::building::systems::ToWorldCoordinates;
-use crate::player::components::IsBuildIndicator;
+use crate::player::components::{IsBuildIndicator, IsObstacle};
+use crate::general::components::{Health, Indestructible};
+use crate::assets::asset_definition::{AssetDefinition, ModelType};
+use crate::towers::components::{TowerSensor, TowerShooter};
+use crate::ui::spawn_ui::AddHealthBar;
+use avian3d::prelude::Sensor;
 use crate::player::events::building_events::{AddTile, RemoveTile};
 
 flags! {
@@ -193,6 +198,8 @@ pub fn map_loader(
     tile_defs: Res<TileDefinitions>,
     model_defs: Res<MapModelDefinitions>,
     game_settings: Res<GameSettings>,
+    mut add_health_bar_mw: MessageWriter<AddHealthBar>,
+    mut wave_manager: Option<ResMut<crate::alien::wave_manager::WaveManager>>,
 ) {
     for load_map in load_map_event_reader.read() {
         let map_file = &load_map.map;
@@ -516,6 +523,90 @@ pub fn map_loader(
                 .with_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2)),
         ));
 
+        // Spawn editor-placed model defs.
+        for placement in &map_file.placements {
+            let Ok(text) = std::fs::read_to_string(&placement.def_path) else { continue };
+            let Ok(def) = ron::from_str::<AssetDefinition>(&text) else { continue };
+
+            let pos = Vec3::new(
+                tile_defs.tile_width * placement.x as f32,
+                tile_defs.floor_level + tile_defs.tile_depth,
+                tile_defs.tile_width * placement.y as f32,
+            );
+            let rot = Quat::from_rotation_y(placement.rotation_steps as f32 * std::f32::consts::FRAC_PI_4);
+            let scale = Vec3::splat(def.scale);
+
+            let scene_handle = asset_server.load(
+                bevy::gltf::GltfAssetLabel::Scene(0).from_asset(def.model_path.clone())
+            );
+
+            let tile_coord = (placement.x as usize, placement.y as usize);
+
+            match &def.model_type {
+                ModelType::Terrain(props) => {
+                    let mut ec = commands.spawn((
+                        Name::from(format!("Placement {}:{}", placement.x, placement.y)),
+                        SceneRoot(scene_handle),
+                        Transform::from_translation(pos).with_rotation(rot).with_scale(scale),
+                        CurrentTile { tile: tile_coord },
+                        RigidBody::Static,
+                    ));
+                    if props.blocks_enemies {
+                        ec.insert((
+                            IsObstacle,
+                            tile_defs.create_collider(16.0, 8.0, 16.0),
+                            CollisionLayers::new([CollisionLayer::Impassable], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
+                        ));
+                        map_graph.path_finding_grid.remove_vertex(tile_coord);
+                    }
+                    match props.health {
+                        Some(hp) => {
+                            let hp_i = hp as i32;
+                            ec.insert(Health { health: hp_i, max_health: hp_i });
+                        }
+                        None => { ec.insert(Indestructible); }
+                    }
+                }
+                ModelType::Tower(props) => {
+                    let hp = props.health as i32;
+                    let range = props.range;
+                    let fire_rate = props.fire_rate_per_minute;
+                    let mut ec = commands.spawn((
+                        Name::from(format!("Tower {}:{}", placement.x, placement.y)),
+                        IsObstacle,
+                        SceneRoot(scene_handle),
+                        Transform::from_translation(pos).with_rotation(rot).with_scale(scale),
+                        tile_defs.create_collider(16.0, 8.0, 16.0),
+                        CollisionLayers::new([CollisionLayer::Impassable], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
+                        RigidBody::Static,
+                        CurrentTile { tile: tile_coord },
+                        Health { health: hp, max_health: hp },
+                    ));
+                    ec.with_children(|parent| {
+                        parent.spawn((
+                            Name::from("Sensor"),
+                            Collider::cylinder(0.5, range),
+                            CollisionLayers::new([CollisionLayer::Sensor], [CollisionLayer::Alien]),
+                            Position::from(pos),
+                            TowerSensor {},
+                            TowerShooter::new(fire_rate),
+                            Sensor,
+                        ));
+                    });
+                    map_graph.path_finding_grid.remove_vertex(tile_coord);
+                    add_health_bar_mw.write(AddHealthBar { entity: ec.id(), name: "TOWER" });
+                }
+                ModelType::Item(_) | ModelType::Player(_) | ModelType::Enemy(_) => {
+                    // Items and decorative enemies just spawn as scenes.
+                    commands.spawn((
+                        Name::from(format!("Item {}:{}", placement.x, placement.y)),
+                        SceneRoot(scene_handle),
+                        Transform::from_translation(pos).with_rotation(rot).with_scale(scale),
+                    ));
+                }
+            }
+        }
+
         for dec in &map_file.decorations {
             let pos = Vec3::new(
                 tile_defs.tile_width * dec.x as f32,
@@ -531,6 +622,22 @@ pub fn map_loader(
                     .with_rotation(Quat::from_rotation_y(dec.rotation_y.to_radians()))
                     .with_scale(bevy::math::Vec3::splat(world_scale)),
             ));
+        }
+
+        // Override WaveManager with map-defined waves if any are present.
+        if !map_file.waves.is_empty() {
+            if let Some(ref mut wm) = wave_manager {
+                use crate::alien::wave_manager::WaveDef as WmWave;
+                wm.waves = map_file.waves.iter().enumerate().map(|(i, w)| WmWave {
+                    alien_count: w.count as i32,
+                    spawn_rate_per_minute: w.spawn_rate_per_minute,
+                    delay_before: if i == 0 { 5.0 } else { 15.0 },
+                }).collect();
+                wm.current_wave = 0;
+                wm.wave_timer = 5.0;
+                wm.spawning = false;
+                wm.spawned_this_wave = 0;
+            }
         }
     }
 }

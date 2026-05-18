@@ -51,20 +51,38 @@ pub struct ItemProps {
     pub kind: ItemKind,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
-pub enum ModelType {
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub enum PlayerAbility {
     #[default]
-    Player,
+    Bombardment,
+    Healing,
+    Whirlwind,
+    GoldDigger,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct PlayerProps {
+    #[serde(default)]
+    pub ability: PlayerAbility,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum ModelType {
+    Player(PlayerProps),
     Tower(TowerProps),
     Terrain(TerrainProps),
     Item(ItemProps),
     Enemy(EnemyProps),
 }
 
+impl Default for ModelType {
+    fn default() -> Self { ModelType::Player(PlayerProps::default()) }
+}
+
 impl ModelType {
     pub fn label(&self) -> &'static str {
         match self {
-            ModelType::Player      => "Player",
+            ModelType::Player(_)   => "Player",
             ModelType::Tower(_)    => "Tower",
             ModelType::Terrain(_)  => "Terrain",
             ModelType::Item(_)     => "Item",
@@ -83,7 +101,7 @@ impl ModelType {
             "Terrain" => ModelType::Terrain(TerrainProps::default()),
             "Item"    => ModelType::Item(ItemProps::default()),
             "Enemy"   => ModelType::Enemy(EnemyProps::default()),
-            _         => ModelType::Player,
+            _         => ModelType::Player(PlayerProps::default()),
         }
     }
 }

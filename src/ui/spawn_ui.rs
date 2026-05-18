@@ -186,6 +186,10 @@ pub struct HudCoins;
 #[derive(Component)]
 pub struct HudAbility;
 
+/// Marker on the build cost label.
+#[derive(Component)]
+pub struct HudBuildCost;
+
 pub fn spawn_ui(mut commands: Commands, theme: Res<LavaTheme>) {
     let text_theme = theme.text.clone();
 
@@ -246,6 +250,13 @@ pub fn spawn_ui(mut commands: Commands, theme: Res<LavaTheme>) {
                 },
             ))
             .insert(HudBuildMode);
+        });
+        ui.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label(
+                "",
+                &TextTheme { label_size: 13.0, label_color: Color::srgb(0.8, 0.8, 0.2), ..text_theme.clone() },
+            ))
+            .insert(HudBuildCost);
         });
 
         ui.with_child(|c| {
@@ -786,6 +797,38 @@ pub fn sync_health_bars(
             bar.value = (health.health as f32 / health.max_health as f32).clamp(0.0, 1.0);
         }
     }
+}
+
+pub fn update_build_cost_hud(
+    building: Query<&crate::player::components::BuildingIndicator, With<crate::player::components::IsBuilding>>,
+    wallet: Option<Res<crate::general::systems::coin_system::TeamWallet>>,
+    model_defs: Option<Res<crate::general::components::map_components::MapModelDefinitions>>,
+    mut label: Query<(&mut Text, &mut TextColor), With<HudBuildCost>>,
+) {
+    let Ok((mut text, mut color)) = label.single_mut() else { return };
+    let Ok(indicator) = building.single() else {
+        **text = String::new();
+        return;
+    };
+
+    let cost = if let Some(ref defs) = model_defs {
+        let key = defs.build_indicators.get(indicator.1 as usize).copied().unwrap_or("");
+        match key {
+            "tower"      => 50u32,
+            "tower_slow" => 75,
+            "tower_area" => 100,
+            _            => 0,
+        }
+    } else { 0 };
+
+    let coins = wallet.as_ref().map(|w| w.coins).unwrap_or(0);
+    let can_afford = coins >= cost;
+    **text = format!("Cost: {} coins  (have {})", cost, coins);
+    *color = TextColor(if can_afford {
+        Color::srgb(0.8, 0.8, 0.2)
+    } else {
+        Color::srgb(1.0, 0.2, 0.2)
+    });
 }
 
 pub fn update_ability_hud(

@@ -501,7 +501,7 @@ pub fn rebuild_type_picker(
                         Node { padding: UiRect::axes(Val::Px(4.0), Val::Px(1.0)), ..Default::default() },
                     ));
                 }
-                ModelType::Player => {}
+                ModelType::Player(_) => {}
             }
         });
     }
