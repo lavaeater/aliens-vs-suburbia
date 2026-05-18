@@ -30,6 +30,7 @@ use crate::poly_pizza::plugin::PolyPizzaPlugin;
 use crate::character_creator::plugin::CharacterCreatorPlugin;
 use crate::asset_browser::plugin::AssetBrowserPlugin;
 use crate::player_setup::plugin::PlayerSetupPlugin;
+use crate::map_editor::plugin::MapEditorPlugin;
 use crate::sprite_billboard::plugin::SpriteBillboardPlugin;
 
 pub struct GamePlugin;
@@ -63,6 +64,7 @@ impl Plugin for GamePlugin {
                 SpriteBillboardPlugin,
                 AssetBrowserPlugin,
                 PlayerSetupPlugin,
+                MapEditorPlugin,
             ))
             .add_systems(
                 OnEnter(GameState::InGame),

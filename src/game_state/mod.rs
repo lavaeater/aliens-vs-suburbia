@@ -14,4 +14,5 @@ pub enum GameState {
     CharacterCreator,
     PolyPizza,
     AssetBrowser,
+    MapEditor,
 }

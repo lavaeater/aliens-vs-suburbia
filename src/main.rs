@@ -33,6 +33,7 @@ pub(crate) mod character_creator;
 pub(crate) mod sprite_billboard;
 pub(crate) mod asset_browser;
 pub(crate) mod player_setup;
+pub(crate) mod map_editor;
 
 
 fn main() {

@@ -111,6 +111,14 @@ pub fn spawn_menu(commands: Commands, theme: Res<LavaTheme>) {
         },
     );
 
+    ui.add_button_observe(
+        "Map Editor",
+        |btn| { btn.size_px(220.0, 52.0).font_size(20.0); },
+        |_: On<Activate>, mut next_state: ResMut<NextState<GameState>>| {
+            next_state.set(GameState::MapEditor);
+        },
+    );
+
     ui.build();
 }
 
@@ -174,6 +182,10 @@ pub struct HudWaveInfo;
 #[derive(Component)]
 pub struct HudCoins;
 
+/// Marker on the ability cooldown label.
+#[derive(Component)]
+pub struct HudAbility;
+
 pub fn spawn_ui(mut commands: Commands, theme: Res<LavaTheme>) {
     let text_theme = theme.text.clone();
 
@@ -201,6 +213,17 @@ pub fn spawn_ui(mut commands: Commands, theme: Res<LavaTheme>) {
                 },
             ))
             .insert(HudCoins);
+        });
+        ui.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label(
+                "[Q] Ability — ready",
+                &TextTheme {
+                    label_size: 13.0,
+                    label_color: Color::srgb(0.5, 0.9, 1.0),
+                    ..text_theme.clone()
+                },
+            ))
+            .insert(HudAbility);
         });
         ui.with_child(|c| {
             c.insert_bundle(lava_ui_builder::label(
@@ -762,6 +785,19 @@ pub fn sync_health_bars(
         if let Ok(health) = health_query.get(follower.target) {
             bar.value = (health.health as f32 / health.max_health as f32).clamp(0.0, 1.0);
         }
+    }
+}
+
+pub fn update_ability_hud(
+    players: Query<(&crate::player::systems::abilities::SpecialAbility, &crate::player::systems::abilities::AbilityCooldown), With<crate::player::components::Player>>,
+    mut label: Query<&mut Text, With<HudAbility>>,
+) {
+    let Ok(mut t) = label.single_mut() else { return };
+    let Ok((ability, cooldown)) = players.single() else { return };
+    if cooldown.ready() {
+        **t = format!("[Q] {} — ready", ability.label());
+    } else {
+        **t = format!("[Q] {} — {:.1}s", ability.label(), cooldown.remaining);
     }
 }
 

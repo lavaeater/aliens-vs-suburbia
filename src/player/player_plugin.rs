@@ -5,6 +5,7 @@ use crate::player::components::{WeaponsHidden, WEAPON_NODES};
 use crate::player::systems::auto_aim::{auto_aim, debug_gizmos};
 use crate::player::systems::death_revive::{detect_player_death, player_revive_system};
 use crate::player::systems::spawn_players::{fix_scene_transform, spawn_players};
+use crate::player::systems::abilities::{AbilityInput, activate_ability, tick_ability_flash, tick_cooldowns, tick_whirlwind};
 use bevy::prelude::*;
 use bevy::scene::{SceneInstance, SceneRoot};
 use bevy_mod_outline::{AsyncSceneInheritOutline, AutoGenerateOutlineNormalsPlugin, InheritOutline, OutlinePlugin, OutlineVolume};
@@ -19,7 +20,8 @@ impl Plugin for PlayerPlugin {
         if self.with_debug {
             app.add_systems(Update, debug_gizmos.run_if(in_state(GameState::InGame)));
         }
-        app.add_plugins((OutlinePlugin, AutoGenerateOutlineNormalsPlugin::default()))
+        app.init_resource::<AbilityInput>()
+            .add_plugins((OutlinePlugin, AutoGenerateOutlineNormalsPlugin::default()))
             .add_systems(Update, (auto_outline_scenes, sync_outline_with_visibility))
             .add_systems(
                 Update,
@@ -30,10 +32,19 @@ impl Plugin for PlayerPlugin {
                     hide_player_weapon_nodes,
                     detect_player_death,
                     player_revive_system,
+                    tick_cooldowns,
+                    activate_ability,
+                    tick_whirlwind,
+                    tick_ability_flash,
+                    reset_ability_input,
                 )
                 .run_if(in_state(GameState::InGame)),
             );
     }
+}
+
+fn reset_ability_input(mut input: ResMut<AbilityInput>) {
+    input.pressed = false;
 }
 
 fn auto_outline_scenes(

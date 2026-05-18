@@ -1,11 +1,12 @@
 use bevy::input::ButtonState;
 use bevy::input::keyboard::KeyboardInput;
 use bevy::math::Vec3;
-use bevy::prelude::{Entity, MessageReader, MessageWriter, KeyCode, Query, With, Without};
+use bevy::prelude::{Entity, MessageReader, MessageWriter, KeyCode, Query, ResMut, With, Without};
 use crate::animation::animation_plugin::{AnimationEvent, AnimationEventType, AnimationKey};
 use crate::control::components::{CharacterControl, ControlCommand, ControlDirection, ControlRotation, InputKeyboard};
 use crate::player::components::PlayerDead;
 use crate::player::events::building_events::{ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode};
+use crate::player::systems::abilities::AbilityInput;
 
 pub fn keyboard_input(
     mut key_evr: MessageReader<KeyboardInput>,
@@ -15,6 +16,7 @@ pub fn keyboard_input(
     mut exit_build: MessageWriter<ExitBuildMode>,
     mut change_build_indicator: MessageWriter<ChangeBuildIndicator>,
     mut animation_ew: MessageWriter<AnimationEvent>,
+    mut ability_input: Option<ResMut<AbilityInput>>,
 ) {
     if let Ok((entity, mut controller)) = query.single_mut() {
         for ev in key_evr.read() {
@@ -60,6 +62,11 @@ pub fn keyboard_input(
                         } else {
                             animation_ew.write(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Throwing));
                             controller.triggers.insert(ControlCommand::Throw);
+                        }
+                    }
+                    KeyCode::KeyQ => {
+                        if let Some(ref mut ai) = ability_input {
+                            ai.pressed = true;
                         }
                     }
                     _ => {}

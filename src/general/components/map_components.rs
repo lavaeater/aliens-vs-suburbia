@@ -2,9 +2,36 @@ use bevy::prelude::{Component, Resource};
 use bevy::reflect::Reflect;
 use std::collections::HashMap;
 use avian3d::prelude::{CollisionLayers, LayerMask, RigidBody};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Clone, Debug)]
+/// A user-placed model (from an AssetDefinition) on a specific grid tile.
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct TilePlacement {
+    pub x: i32,
+    pub y: i32,
+    /// Path to the `.ron` def file, relative to project root.
+    pub def_path: String,
+    /// Rotation in 45° steps (0–7).
+    #[serde(default)]
+    pub rotation_steps: u8,
+}
+
+/// One wave definition: what enemy, how many, at what rate.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct WaveDef {
+    /// Path to an Enemy-typed def file.
+    pub enemy_def: String,
+    pub count: u32,
+    pub spawn_rate_per_minute: f32,
+}
+
+impl Default for WaveDef {
+    fn default() -> Self {
+        Self { enemy_def: String::new(), count: 10, spawn_rate_per_minute: 20.0 }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct DecorationItem {
     pub x: i32,
     pub y: i32,
@@ -20,7 +47,7 @@ fn default_scale() -> f32 { 1.0 }
 fn default_map_width() -> usize { 14 }
 fn default_map_height() -> usize { 24 }
 
-#[derive(Deserialize, Clone, Debug, Default)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct MapFile {
     /// When true, `tiles` and `decorations` are ignored and the map is procedurally generated from `seed`.
     #[serde(default)]
@@ -37,6 +64,12 @@ pub struct MapFile {
     pub tiles: Vec<Vec<u8>>,
     #[serde(default)]
     pub decorations: Vec<DecorationItem>,
+    /// Items placed by the map editor (def-driven models on specific tiles).
+    #[serde(default)]
+    pub placements: Vec<TilePlacement>,
+    /// Wave definitions for the level.
+    #[serde(default)]
+    pub waves: Vec<WaveDef>,
 }
 
 #[derive(Component)]

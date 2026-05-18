@@ -365,6 +365,7 @@ pub fn generate_suburb_map(seed: u64, width: usize, height: usize) -> MapFile {
         map_height: h,
         tiles: grid,
         decorations: vec![],
+        ..Default::default()
     }
 }
 
@@ -400,5 +401,6 @@ pub fn generate_showcase_map(seed: u64) -> MapFile {
         map_height: h,
         tiles: grid,
         decorations,
+        ..Default::default()
     }
 }

@@ -7,6 +7,7 @@ use crate::control::components::CharacterState;
 use crate::game_state::score_keeper::Score;
 use crate::general::components::Health;
 use crate::general::systems::coin_system::PickupRange;
+use crate::player::systems::abilities::{AbilityCooldown, SpecialAbility};
 use crate::general::components::map_components::CurrentTile;
 use crate::player::components::{AutoAim, Player};
 
@@ -30,6 +31,8 @@ pub struct PlayerBundle {
     score: Score,
     auto_aim: AutoAim,
     pickup_range: PickupRange,
+    special_ability: SpecialAbility,
+    ability_cooldown: AbilityCooldown,
 }
 
 impl PlayerBundle {
@@ -62,6 +65,8 @@ impl PlayerBundle {
             score: Score::new(),
             auto_aim: AutoAim(Vec3::Z),
             pickup_range: PickupRange::default(),
+            special_ability: SpecialAbility::Bombardment,
+            ability_cooldown: AbilityCooldown::new(0.0), // starts ready
         }
     }
 }

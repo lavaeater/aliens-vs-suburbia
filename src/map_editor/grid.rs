@@ -1,0 +1,141 @@
+use bevy::prelude::*;
+use bevy::input::mouse::MouseButton;
+use bevy::window::PrimaryWindow;
+use crate::map_editor::state::{MapEditorState, TILE_ALIEN_GOAL, TILE_ALIEN_SPAWN, TILE_PLAYER_SPAWN};
+use crate::ui::spawn_ui::StateMarker;
+
+pub const CELL_SIZE: f32 = 24.0; // pixels per tile in the grid view
+
+#[derive(Component)]
+pub struct GridCamera;
+
+#[derive(Component)]
+pub struct GridCellMarker { pub x: usize, pub y: usize }
+
+pub fn spawn_grid_camera(mut commands: Commands) {
+    commands.spawn((
+        Camera2d,
+        Camera { order: 0, ..Default::default() },
+        GridCamera,
+        StateMarker,
+        Transform::default(),
+    ));
+}
+
+/// Rebuild the visual tile grid whenever grid_dirty is set.
+pub fn rebuild_grid(
+    mut state: ResMut<MapEditorState>,
+    mut commands: Commands,
+    cells: Query<Entity, With<GridCellMarker>>,
+) {
+    if !state.grid_dirty { return; }
+    state.grid_dirty = false;
+
+    // Despawn old cells.
+    for e in cells.iter() { commands.entity(e).despawn(); }
+
+    let w = state.width;
+    let h = state.height;
+
+    // Center the grid in the viewport.
+    let offset_x = -(w as f32 * CELL_SIZE * 0.5);
+    let offset_y =  (h as f32 * CELL_SIZE * 0.5);
+
+    for row in 0..h {
+        for col in 0..w {
+            let tile = state.tiles[row][col];
+            let color = tile_color(tile);
+
+            let cx = offset_x + col as f32 * CELL_SIZE + CELL_SIZE * 0.5;
+            let cy = offset_y - row as f32 * CELL_SIZE - CELL_SIZE * 0.5;
+
+            // Base tile quad.
+            commands.spawn((
+                GridCellMarker { x: col, y: row },
+                StateMarker,
+                Node {
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(cx - CELL_SIZE * 0.5),
+                    // Shift down from top of screen.
+                    top: Val::Px(cy - CELL_SIZE * 0.5 + 300.0),
+                    width: Val::Px(CELL_SIZE - 1.0),
+                    height: Val::Px(CELL_SIZE - 1.0),
+                    ..Default::default()
+                },
+                BackgroundColor(color),
+            ));
+        }
+    }
+
+    // Overlay placement labels.
+    for p in &state.placements {
+        if p.x < 0 || p.y < 0 || p.x >= w as i32 || p.y >= h as i32 { continue; }
+        let col = p.x as f32;
+        let row = p.y as f32;
+        let cx = offset_x + col * CELL_SIZE + CELL_SIZE * 0.5;
+        let cy = offset_y - row * CELL_SIZE - CELL_SIZE * 0.5;
+        let label = std::path::Path::new(&p.def_path)
+            .file_stem().and_then(|s| s.to_str()).unwrap_or("?");
+        let initial = label.chars().next().unwrap_or('?').to_uppercase().next().unwrap_or('?');
+
+        commands.spawn((
+            StateMarker,
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(cx - CELL_SIZE * 0.5),
+                top: Val::Px(cy - CELL_SIZE * 0.5 + 300.0),
+                width: Val::Px(CELL_SIZE - 1.0),
+                height: Val::Px(CELL_SIZE - 1.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..Default::default()
+            },
+            BackgroundColor(Color::NONE),
+        )).with_child((
+            Text::new(initial.to_string()),
+            TextFont::default().with_font_size(10.0),
+            TextColor(Color::srgb(1.0, 1.0, 1.0)),
+        ));
+    }
+}
+
+fn tile_color(tile: u8) -> Color {
+    match tile {
+        0                   => Color::srgb(0.08, 0.08, 0.08),
+        1                   => Color::srgb(0.28, 0.38, 0.28),
+        TILE_ALIEN_SPAWN    => Color::srgb(0.8, 0.2, 0.2),
+        TILE_ALIEN_GOAL     => Color::srgb(0.8, 0.6, 0.1),
+        TILE_PLAYER_SPAWN   => Color::srgb(0.2, 0.5, 0.9),
+        _                   => Color::srgb(0.4, 0.4, 0.5),
+    }
+}
+
+/// Convert screen mouse position to tile coordinates.
+pub fn handle_grid_click(
+    mut state: ResMut<MapEditorState>,
+    mouse: Res<ButtonInput<MouseButton>>,
+    windows: Query<&Window, With<PrimaryWindow>>,
+) {
+    let (left, right) = (mouse.just_pressed(MouseButton::Left), mouse.just_pressed(MouseButton::Right));
+    if !left && !right { return; }
+
+    let Ok(window) = windows.single() else { return };
+    let Some(cursor) = window.cursor_position() else { return };
+
+    let w = state.width;
+    let h = state.height;
+
+    let offset_x = window.width()  * 0.5 - w as f32 * CELL_SIZE * 0.5;
+    let offset_y = window.height() * 0.5 - h as f32 * CELL_SIZE * 0.5 + 300.0 - h as f32 * CELL_SIZE * 0.5;
+
+    let col = ((cursor.x - offset_x) / CELL_SIZE) as i32;
+    let row = ((cursor.y - (window.height() * 0.5 - h as f32 * CELL_SIZE * 0.5)) / CELL_SIZE) as i32;
+
+    if col < 0 || row < 0 || col >= w as i32 || row >= h as i32 { return; }
+
+    if left {
+        state.place_at(col, row);
+    } else {
+        state.erase_placement_at(col, row);
+    }
+}
