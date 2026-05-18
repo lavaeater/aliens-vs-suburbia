@@ -209,7 +209,7 @@ pub fn spawn_ui(mut commands: Commands, theme: Res<LavaTheme>) {
         });
         ui.with_child(|c| {
             c.insert_bundle(lava_ui_builder::label(
-                "💰 0",
+                "Coins: 0",
                 &TextTheme {
                     label_size: 14.0,
                     label_color: Color::srgb(1.0, 0.85, 0.1),
@@ -851,7 +851,7 @@ pub fn update_coin_hud(
     let Some(wallet) = wallet else { return };
     if !wallet.is_changed() { return; }
     if let Ok(mut t) = label.single_mut() {
-        **t = format!("💰 {}", wallet.coins);
+        **t = format!("Coins: {}", wallet.coins);
     }
 }
 

@@ -239,7 +239,7 @@ pub fn apply_viewer_scale(
         t.scale = Vec3::splat(scale);
     }
     if let Ok(mut t) = label_q.single_mut() {
-        **t = format!("{:.2} m  (×{:.4})", state.target_height_m, scale);
+        **t = format!("{:.2} m  (x{:.4})", state.target_height_m, scale);
     }
 }
 

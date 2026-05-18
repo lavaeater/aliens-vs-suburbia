@@ -115,6 +115,7 @@ impl AssetBrowserState {
         self.load_requested = false;
         self.list_dirty = true;
         self.folder_list_dirty = true;
+        self.type_dirty = true;
     }
 
     pub fn reset_anim(&mut self) {

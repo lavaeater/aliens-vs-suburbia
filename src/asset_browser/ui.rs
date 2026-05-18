@@ -55,8 +55,8 @@ pub fn spawn_asset_browser_ui(
         .bg_color(Color::srgba(0.04, 0.07, 0.10, 0.97));
 
         left.with_child(|c| { c.insert_bundle(lava_ui_builder::header("Asset Browser", &t)); });
-        left.with_child(|c| { c.insert_bundle(lava_ui_builder::label("[↑↓] navigate  [Enter] load  [I] import", &hint)); });
-        left.with_child(|c| { c.insert_bundle(lava_ui_builder::label("[⌫] up folder  [/] anim  [=/-] height", &hint)); });
+        left.with_child(|c| { c.insert_bundle(lava_ui_builder::label("[Up/Dn] navigate  [Enter] load  [I] import", &hint)); });
+        left.with_child(|c| { c.insert_bundle(lava_ui_builder::label("[Bksp] up folder  [[ ]] anim  [= / -] height", &hint)); });
 
         // Current folder path
         left.with_child(|c| {
@@ -95,7 +95,7 @@ pub fn spawn_asset_browser_ui(
 
         // Animation mapping section
         left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label("— Anim Mapping —", &TextTheme {
+            c.insert_bundle(lava_ui_builder::label("-- Anim Mapping --", &TextTheme {
                 label_size: 11.0, label_color: Color::srgb(0.5, 0.8, 0.6), ..t.clone()
             }));
         });
@@ -107,7 +107,7 @@ pub fn spawn_asset_browser_ui(
 
         // Height section
         left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label("— Height —", &TextTheme {
+            c.insert_bundle(lava_ui_builder::label("-- Height --", &TextTheme {
                 label_size: 11.0, label_color: Color::srgb(0.5, 0.8, 0.6), ..t.clone()
             }));
         });
@@ -115,11 +115,11 @@ pub fn spawn_asset_browser_ui(
             row.display_flex().flex_row().gap_px(4.0)
                .modify_node(|mut n| { n.align_items = AlignItems::Center; n.align_self = AlignSelf::Stretch; });
 
-            row.add_button_observe("−", |b| { b.width(px(20.0)).height(px(20.0)).font_size(14.0); },
+            row.add_button_observe("-", |b| { b.width(px(20.0)).height(px(20.0)).font_size(14.0); },
                 |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.height_down(); });
 
             row.with_child(|c| {
-                c.insert_bundle(lava_ui_builder::label("— m  (×1.0000)", &TextTheme {
+                c.insert_bundle(lava_ui_builder::label("-- m  (x1.0000)", &TextTheme {
                     label_size: 11.0, label_color: Color::srgb(0.9, 0.85, 0.65), ..t.clone()
                 })).insert(HeightDisplay)
                 .modify_node(|mut n| { n.flex_grow = 1.0; });
@@ -131,7 +131,7 @@ pub fn spawn_asset_browser_ui(
 
         // Model type section
         left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label("— Model Type —", &TextTheme {
+            c.insert_bundle(lava_ui_builder::label("-- Model Type --", &TextTheme {
                 label_size: 11.0, label_color: Color::srgb(0.5, 0.8, 0.6), ..t.clone()
             }));
         });
@@ -157,7 +157,7 @@ pub fn spawn_asset_browser_ui(
         left.add_button_observe("⬇ Import definition", |b| { b.width(percent(100.0)).height(px(30.0)).font_size(13.0); },
             |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.export_definition(); });
 
-        left.add_button_observe("← Back to Menu", |b| { b.width(percent(100.0)).height(px(36.0)).font_size(14.0); },
+        left.add_button_observe("<- Back to Menu", |b| { b.width(percent(100.0)).height(px(36.0)).font_size(14.0); },
             |_: On<Activate>, mut next: ResMut<NextState<GameState>>| { next.set(GameState::Menu); });
     });
 
@@ -374,7 +374,7 @@ pub fn rebuild_mapping_list(
         for (key, clip) in rows {
             let key_clone = key.clone();
             let key_clone2 = key.clone();
-            let clip_display = if clip.is_empty() { "—".to_string() } else {
+            let clip_display = if clip.is_empty() { "--".to_string() } else {
                 // Show just the part after | if present.
                 clip.rsplit('|').next().unwrap_or(&clip).to_string()
             };
@@ -404,7 +404,7 @@ pub fn rebuild_mapping_list(
                     bevy::picking::hover::Hovered::default(),
                     bevy::ui_widgets::Button,
                 ))
-                .with_child((Text::new("◀"), TextFont::default().with_font_size(9.0), TextColor(Color::srgb(0.8, 0.8, 0.8))))
+                .with_child((Text::new("<"), TextFont::default().with_font_size(9.0), TextColor(Color::srgb(0.8, 0.8, 0.8))))
                 .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.cycle_mapping_prev(&kc); });
 
                 row.spawn((
@@ -421,7 +421,7 @@ pub fn rebuild_mapping_list(
                     bevy::picking::hover::Hovered::default(),
                     bevy::ui_widgets::Button,
                 ))
-                .with_child((Text::new("▶"), TextFont::default().with_font_size(9.0), TextColor(Color::srgb(0.8, 0.8, 0.8))))
+                .with_child((Text::new(">"), TextFont::default().with_font_size(9.0), TextColor(Color::srgb(0.8, 0.8, 0.8))))
                 .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.cycle_mapping_next(&key_clone2); });
             });
         }
@@ -481,7 +481,7 @@ pub fn rebuild_type_picker(
                 ModelType::Terrain(p) => {
                     let blocks_e = if p.blocks_enemies { "yes" } else { "no" };
                     let blocks_p = if p.blocks_players { "yes" } else { "no" };
-                    let hp_str = p.health.map(|h| format!("{h}")).unwrap_or_else(|| "∞".to_string());
+                    let hp_str = p.health.map(|h| format!("{h}")).unwrap_or_else(|| "inf".to_string());
                     parent.spawn((
                         Text::new(format!("blocks enemies: {blocks_e}  players: {blocks_p}  HP: {hp_str}")),
                         TextFont::default().with_font_size(10.0),

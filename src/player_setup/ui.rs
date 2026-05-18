@@ -33,7 +33,7 @@ pub fn spawn_player_setup_ui(
         .bg_color(Color::srgba(0.04, 0.08, 0.05, 0.97));
 
     ui.with_child(|h| { h.insert_bundle(lava_ui_builder::header("Select Players", &t)); });
-    ui.with_child(|c| { c.insert_bundle(lava_ui_builder::label("Arrow keys ◀▶ to pick model  |  Enter to join/confirm", &dim)); });
+    ui.with_child(|c| { c.insert_bundle(lava_ui_builder::label("Arrow keys <> to pick model  |  Enter to join/confirm", &dim)); });
 
     for slot in 0..MAX_PLAYERS {
         ui.with_child(|row| {

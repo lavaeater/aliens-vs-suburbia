@@ -50,7 +50,7 @@ pub fn spawn_map_editor_ui(
 
         // Map name / info
         left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label("new_map  20×24", &small)).insert(MapInfoLabel);
+            c.insert_bundle(lava_ui_builder::label("new_map  20x24", &small)).insert(MapInfoLabel);
         });
 
         // Tab chips
@@ -81,10 +81,10 @@ pub fn spawn_map_editor_ui(
         });
 
         // Save button
-        left.add_button_observe("💾 Save Map", |b| { b.width(percent(100.0)).height(px(28.0)).font_size(13.0); },
+        left.add_button_observe("Save Map", |b| { b.width(percent(100.0)).height(px(28.0)).font_size(13.0); },
             |_: On<Activate>, s: Res<MapEditorState>| { s.save(); });
 
-        left.add_button_observe("← Back to Menu", |b| { b.width(percent(100.0)).height(px(28.0)).font_size(13.0); },
+        left.add_button_observe("<- Back to Menu", |b| { b.width(percent(100.0)).height(px(28.0)).font_size(13.0); },
             |_: On<Activate>, mut next: ResMut<NextState<GameState>>| { next.set(GameState::Menu); });
     });
 
@@ -101,7 +101,7 @@ pub fn spawn_map_editor_ui(
             n.row_gap = Val::Px(3.0);
         }).bg_color(Color::srgba(0.04, 0.08, 0.05, 0.95));
 
-        right.with_child(|c| { c.insert_bundle(lava_ui_builder::label("— Waves —", &TextTheme {
+        right.with_child(|c| { c.insert_bundle(lava_ui_builder::label("-- Waves --", &TextTheme {
             label_size: 13.0, label_color: Color::srgb(0.5, 0.8, 0.6), ..t.clone()
         })); });
 
@@ -205,7 +205,7 @@ pub fn rebuild_wave_list(
                 BackgroundColor(bg),
             )).with_children(|row| {
                 row.spawn((
-                    Text::new(format!("W{}: {} ×{} @{:.0}/m", i + 1, name, count, rate)),
+                    Text::new(format!("W{}: {} x{} @{:.0}/m", i + 1, name, count, rate)),
                     TextFont::default().with_font_size(10.0),
                     TextColor(Color::srgb(0.75, 0.90, 0.75)),
                     Node { flex_grow: 1.0, overflow: Overflow::clip(), ..Default::default() },
@@ -217,7 +217,7 @@ pub fn rebuild_wave_list(
                     bevy::ui_widgets::Button,
                     InteractionPalette { none: Color::srgba(0.4, 0.1, 0.1, 0.8), hovered: Color::srgba(0.6, 0.15, 0.15, 0.9), pressed: Color::srgba(0.3, 0.08, 0.08, 1.0) },
                 ))
-                .with_child((Text::new("×"), TextFont::default().with_font_size(10.0), TextColor(Color::srgb(1.0, 0.7, 0.7))))
+                .with_child((Text::new("x"), TextFont::default().with_font_size(10.0), TextColor(Color::srgb(1.0, 0.7, 0.7))))
                 .observe(move |_: On<Activate>, mut s: ResMut<MapEditorState>| { s.remove_wave(i); });
             });
         }

@@ -75,7 +75,7 @@ impl PlayerSetupState {
 
     pub fn display_name(&self, slot: usize) -> String {
         match &self.slots[slot] {
-            SlotState::Empty => format!("Player {}  —  press Enter to join", slot + 1),
+            SlotState::Empty => format!("Player {}  --  press Enter to join", slot + 1),
             SlotState::Selecting { def_index } => {
                 let name = self.player_defs.get(*def_index)
                     .map(|p| def_stem(p))
@@ -83,7 +83,7 @@ impl PlayerSetupState {
                 format!("Player {}  ◀  {}  ▶  [Enter] confirm", slot + 1, name)
             }
             SlotState::Confirmed { def_path } => {
-                format!("Player {}  ✓  {}", slot + 1, def_stem(def_path))
+                format!("Player {}  [OK]  {}", slot + 1, def_stem(def_path))
             }
         }
     }
