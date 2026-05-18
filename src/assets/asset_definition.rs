@@ -120,9 +120,15 @@ pub struct AssetDefinition {
     /// Node names that should be hidden when this model is used in-game.
     #[serde(default)]
     pub hidden_nodes: Vec<String>,
-    /// Maps game-state keys (e.g. "idle", "walk", "throwing") to GLB clip name fragments.
+    /// Maps game-state keys (e.g. "idle", "walk", "throwing") to clip name fragments.
+    /// Values may be plain fragments ("idle") searched within the model's own GLTF,
+    /// or "SourceStem|ClipFragment" to pull from an external file listed in animation_sources.
     #[serde(default)]
     pub animation_mapping: HashMap<String, String>,
+    /// Paths (relative to project root) of external GLB/GLTF files that supply
+    /// additional animation clips for this model.  e.g. "assets/packs/AnimPack.glb"
+    #[serde(default)]
+    pub animation_sources: Vec<String>,
 }
 
 impl Default for AssetDefinition {
@@ -133,6 +139,7 @@ impl Default for AssetDefinition {
             model_type: ModelType::default(),
             hidden_nodes: Vec::new(),
             animation_mapping: HashMap::new(),
+            animation_sources: Vec::new(),
         }
     }
 }

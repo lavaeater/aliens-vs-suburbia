@@ -170,15 +170,79 @@ pub fn setup_viewer_animation(
         .collect();
 
     let graph_handle = animation_graphs.add(graph);
-    commands.entity(player_entity).insert(AnimationGraphHandle(graph_handle));
+    commands.entity(player_entity).insert(AnimationGraphHandle(graph_handle.clone()));
 
     state.anim_player_entity = Some(player_entity);
+    state.viewer_graph_handle = Some(graph_handle);
     state.anim_count = nodes.len();
     state.anim_node_indices = nodes;
     state.anim_names = names_by_index;
     state.anim_dirty = true;
     state.mapping_dirty = true;
     state.gltf_handle = None;
+}
+
+/// Load extra animation GltFs when animation_sources changes.
+pub fn load_extra_animation_sources(
+    mut state: ResMut<AssetBrowserState>,
+    asset_server: Res<AssetServer>,
+) {
+    if !state.sources_dirty { return; }
+    state.sources_dirty = false;
+
+    // Reload all handles from scratch to keep them in sync with the source list.
+    state.extra_gltf_handles = state.animation_sources.iter()
+        .map(|path| asset_server.load(path.clone()))
+        .collect();
+}
+
+/// When extra GltFs finish loading, append their clips to the viewer's animation graph.
+pub fn merge_extra_anim_clips(
+    mut state: ResMut<AssetBrowserState>,
+    gltf_assets: Res<Assets<Gltf>>,
+    mut animation_graphs: ResMut<Assets<AnimationGraph>>,
+    mut commands: Commands,
+    mut last_merged_count: Local<usize>,
+) {
+    // Only run after the main model graph has been built.
+    let Some(graph_handle) = state.viewer_graph_handle.clone() else { return };
+    let Some(graph) = animation_graphs.get_mut(&graph_handle) else { return };
+
+    let mut any_new = false;
+
+    for (idx, handle) in state.extra_gltf_handles.iter().enumerate() {
+        let Some(gltf) = gltf_assets.get(handle) else { continue };
+
+        let stem = state.animation_sources.get(idx)
+            .map(|p| std::path::Path::new(p)
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("ext")
+                .to_string())
+            .unwrap_or_else(|| format!("ext{idx}"));
+
+        // Append clips that haven't been added yet (identified by "stem|name" prefix in anim_names).
+        for (name, clip_handle) in &gltf.named_animations {
+            let prefixed = format!("{stem}|{name}");
+            if state.anim_names.contains(&prefixed) { continue; }
+
+            let node_idx = graph.add_clip(clip_handle.clone(), 1.0, graph.root);
+            state.anim_names.push(prefixed);
+            state.anim_node_indices.push(node_idx);
+            state.anim_count += 1;
+            any_new = true;
+        }
+    }
+
+    if any_new {
+        // Reinstall the updated graph on the player entity.
+        if let Some(player_entity) = state.anim_player_entity {
+            commands.entity(player_entity).insert(AnimationGraphHandle(graph_handle));
+        }
+        state.mapping_dirty = true;
+    }
+
+    let _ = last_merged_count; // suppress unused warning
 }
 
 /// Walk the viewer model hierarchy and accumulate world-space Y extents from all Aabb components.

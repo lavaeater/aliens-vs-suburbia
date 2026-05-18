@@ -172,6 +172,7 @@ fn build_player_anim_graph(
     model_settings: Res<ModelSettings>,
     game_assets: Res<GameAssets>,
     gltf_assets: Res<Assets<Gltf>>,
+    asset_server: Res<AssetServer>,
     anim_store: Option<ResMut<AnimationStore>>,
     mut animation_graphs: ResMut<Assets<AnimationGraph>>,
     player_query: Query<(Entity, &crate::animation::animation_plugin::CurrentAnimationKey), With<Player>>,
@@ -184,22 +185,39 @@ fn build_player_anim_graph(
     let Some(gltf) = gltf_assets.get(&game_assets.player_gltf) else { return };
     let Some(mut store) = anim_store else { return };
 
-    let def_sig = player_asset_def.as_ref()
-        .and_then(|r| r.0.as_ref())
-        .map(|d| format!("{:?}", d.animation_mapping))
+    let def = player_asset_def.as_ref().and_then(|r| r.0.as_ref());
+
+    let def_sig = def
+        .map(|d| format!("{:?}|{:?}", d.animation_mapping, d.animation_sources))
         .unwrap_or_default();
 
     let sig = format!("{}|{:?}|{}", game_assets.player_gltf.id(), model_settings.anim_mapping, def_sig);
     if *last_sig == sig { return; }
+
+    // If any extra-source GltFs haven't loaded yet, wait before committing.
+    let extra_gltfs: Vec<(&String, &Gltf)> = if let Some(d) = def {
+        let mut loaded = Vec::new();
+        for source_path in &d.animation_sources {
+            let handle: Handle<Gltf> = asset_server.load(source_path.clone());
+            if let Some(ext) = gltf_assets.get(&handle) {
+                loaded.push((source_path, ext));
+            } else {
+                return; // wait for all sources to load
+            }
+        }
+        loaded
+    } else {
+        Vec::new()
+    };
+
     *last_sig = sig;
 
     let mut graph = AnimationGraph::new();
     let mut anims = std::collections::HashMap::new();
 
     for &key in ANIM_KEYS {
-        // Look up the search string: AssetDefinition first, then ModelSettings, then default.
-        let def_mapped = player_asset_def.as_ref()
-            .and_then(|r| r.0.as_ref())
+        // Determine the search value: AssetDefinition first, then ModelSettings, then default.
+        let def_mapped = def
             .and_then(|d| d.animation_mapping.get(key.default_search()))
             .map(|s| s.as_str())
             .unwrap_or("");
@@ -211,17 +229,43 @@ fn build_player_anim_graph(
         } else {
             key.default_search()
         };
-        // Two-pass: prefer exact anim-part / suffix match, then substring.
-        let handle = gltf.named_animations.iter()
-            .find(|(name, _)| {
-                let lower = name.to_lowercase();
-                let s = search.to_lowercase();
-                let anim_part = lower.rsplit('|').next().unwrap_or(&lower);
-                anim_part == s || lower.ends_with(&s)
-            })
-            .or_else(|| gltf.named_animations.iter()
-                .find(|(name, _)| clip_matches(name, search)))
-            .map(|(_, h)| h.clone());
+
+        // If the value contains '|', the part before it is a source file stem.
+        let handle = if let Some(pipe) = search.find('|') {
+            let stem = &search[..pipe];
+            let clip_fragment = &search[pipe + 1..];
+            // Find the matching extra GLTF by stem.
+            extra_gltfs.iter()
+                .find(|(path, _)| {
+                    std::path::Path::new(path)
+                        .file_stem().and_then(|s| s.to_str()) == Some(stem)
+                })
+                .and_then(|(_, ext_gltf)| {
+                    ext_gltf.named_animations.iter()
+                        .find(|(name, _)| {
+                            let lower = name.to_lowercase();
+                            let s = clip_fragment.to_lowercase();
+                            let anim_part = lower.rsplit('|').next().unwrap_or(&lower);
+                            anim_part == s || lower.ends_with(&s)
+                        })
+                        .or_else(|| ext_gltf.named_animations.iter()
+                            .find(|(name, _)| clip_matches(name, clip_fragment)))
+                        .map(|(_, h)| h.clone())
+                })
+        } else {
+            // No pipe — search in the model's own GLTF as before.
+            gltf.named_animations.iter()
+                .find(|(name, _)| {
+                    let lower = name.to_lowercase();
+                    let s = search.to_lowercase();
+                    let anim_part = lower.rsplit('|').next().unwrap_or(&lower);
+                    anim_part == s || lower.ends_with(&s)
+                })
+                .or_else(|| gltf.named_animations.iter()
+                    .find(|(name, _)| clip_matches(name, search)))
+                .map(|(_, h)| h.clone())
+        };
+
         if let Some(h) = handle {
             anims.insert(key, graph.add_clip(h, 1.0, graph.root));
         }

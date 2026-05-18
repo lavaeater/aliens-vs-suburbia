@@ -21,6 +21,7 @@ use crate::ui::spawn_ui::StateMarker;
 #[derive(Component)] pub struct HeightDisplay;
 #[derive(Component)] pub struct TypeContainer;
 #[derive(Component)] pub struct TypePropsContainer;
+#[derive(Component)] pub struct SourcesContainer;
 
 #[derive(Component)] pub struct ListItem(pub usize);
 #[derive(Component)] pub struct MappingRow(pub String); // game-state key
@@ -145,6 +146,24 @@ pub fn spawn_asset_browser_ui(
              .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
              .insert(TypePropsContainer);
         });
+
+        // Animation sources section
+        left.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label("-- Anim Sources --", &TextTheme {
+                label_size: 11.0, label_color: Color::srgb(0.5, 0.8, 0.6), ..t.clone()
+            }));
+        });
+        left.with_child(|c| {
+            c.display_flex().flex_wrap().gap_px(3.0)
+             .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
+             .insert(SourcesContainer);
+        });
+        left.add_button_observe("+ Add selected as source", |b| { b.width(percent(100.0)).height(px(22.0)).font_size(11.0); },
+            |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                if let Some(path) = s.selected_path().map(|p| p.to_string()) {
+                    s.add_animation_source(format!("assets/{path}"));
+                }
+            });
 
         // File list
         left.with_child(|c| {
@@ -505,6 +524,70 @@ pub fn rebuild_type_picker(
             }
         });
     }
+}
+
+pub fn rebuild_sources_list(
+    mut state: ResMut<AssetBrowserState>,
+    mut commands: Commands,
+    container_q: Query<Entity, With<SourcesContainer>>,
+) {
+    if !state.sources_dirty { return; }
+    // Don't clear sources_dirty here — load_extra_animation_sources also reads it.
+    // It will be cleared there. We just rebuild the UI whenever it's set.
+
+    let Ok(container) = container_q.single() else { return };
+    commands.entity(container).despawn_related::<Children>();
+
+    let sources: Vec<String> = state.animation_sources.clone();
+
+    if sources.is_empty() {
+        commands.entity(container).with_children(|parent| {
+            parent.spawn((
+                Text::new("none"),
+                TextFont::default().with_font_size(10.0),
+                TextColor(Color::srgba(0.4, 0.5, 0.4, 0.6)),
+            ));
+        });
+        return;
+    }
+
+    commands.entity(container).with_children(|parent| {
+        for (idx, path) in sources.iter().enumerate() {
+            let stem = std::path::Path::new(path)
+                .file_stem().and_then(|s| s.to_str())
+                .unwrap_or(path).to_string();
+            let bg = Color::srgba(0.10, 0.22, 0.35, 0.90);
+            parent.spawn((
+                Node {
+                    flex_direction: FlexDirection::Row,
+                    align_items: AlignItems::Center,
+                    padding: UiRect::axes(Val::Px(6.0), Val::Px(3.0)),
+                    border_radius: BorderRadius::all(Val::Px(4.0)),
+                    column_gap: Val::Px(4.0),
+                    ..Default::default()
+                },
+                BackgroundColor(bg),
+            ))
+            .with_children(|chip| {
+                chip.spawn((
+                    Text::new(stem),
+                    TextFont::default().with_font_size(10.0),
+                    TextColor(Color::srgb(0.75, 0.88, 1.0)),
+                ));
+                chip.spawn((
+                    Node { width: Val::Px(14.0), height: Val::Px(14.0), justify_content: JustifyContent::Center, align_items: AlignItems::Center, ..Default::default() },
+                    BackgroundColor(Color::srgba(0.4, 0.1, 0.1, 0.7)),
+                    bevy::picking::hover::Hovered::default(),
+                    bevy::ui_widgets::Button,
+                    InteractionPalette { none: Color::srgba(0.4, 0.1, 0.1, 0.7), hovered: Color::srgba(0.6, 0.15, 0.15, 0.9), pressed: Color::srgba(0.3, 0.08, 0.08, 1.0) },
+                ))
+                .with_child((Text::new("x"), TextFont::default().with_font_size(9.0), TextColor(Color::srgb(1.0, 0.7, 0.7))))
+                .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                    s.remove_animation_source(idx);
+                });
+            });
+        }
+    });
 }
 
 fn prop_row(label: &str, value: f32, theme: &lava_ui_builder::TextTheme) -> impl Bundle {

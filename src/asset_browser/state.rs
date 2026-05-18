@@ -46,6 +46,7 @@ pub struct AssetBrowserState {
     pub anim_node_indices: Vec<AnimationNodeIndex>,
     pub anim_names: Vec<String>,
     pub anim_player_entity: Option<Entity>,
+    pub viewer_graph_handle: Option<Handle<AnimationGraph>>,
 
     // ── Node visibility ────────────────────────────────────────────────────────
     pub mesh_nodes: Vec<String>,
@@ -57,9 +58,16 @@ pub struct AssetBrowserState {
     pub type_dirty: bool,
 
     // ── Animation mapping (for import) ─────────────────────────────────────────
-    /// Maps ANIM_KEY_NAMES strings → GLB clip name fragment.
+    /// Maps ANIM_KEY_NAMES strings → clip fragment (plain) or "SourceStem|ClipFragment".
     pub anim_mapping: HashMap<String, String>,
     pub mapping_dirty: bool,
+
+    // ── External animation sources ─────────────────────────────────────────────
+    /// Paths of extra GLB/GLTF files whose clips supplement the model's own clips.
+    pub animation_sources: Vec<String>,
+    /// Loaded GLTF handles for each entry in animation_sources (same order).
+    pub extra_gltf_handles: Vec<Handle<Gltf>>,
+    pub sources_dirty: bool,
 
     // ── Height / scale ─────────────────────────────────────────────────────────
     /// Raw AABB height (max_y − min_y) of the loaded mesh, in mesh units. 0 = not yet measured.
@@ -94,11 +102,15 @@ impl Default for AssetBrowserState {
             anim_node_indices: Vec::new(),
             anim_names: Vec::new(),
             anim_player_entity: None,
+            viewer_graph_handle: None,
             mesh_nodes: Vec::new(),
             hidden_nodes: HashSet::new(),
             nodes_dirty: false,
             anim_mapping: HashMap::new(),
             mapping_dirty: false,
+            animation_sources: Vec::new(),
+            extra_gltf_handles: Vec::new(),
+            sources_dirty: false,
             model_type: ModelType::default(),
             type_dirty: false,
             model_raw_height: 0.0,
@@ -128,6 +140,10 @@ impl AssetBrowserState {
         self.mesh_nodes.clear();
         self.nodes_dirty = false;
         self.anim_player_entity = None;
+        self.viewer_graph_handle = None;
+        self.animation_sources.clear();
+        self.extra_gltf_handles.clear();
+        self.sources_dirty = false;
         self.model_type = ModelType::default();
         self.type_dirty = true;
         self.model_raw_height = 0.0;
@@ -141,6 +157,21 @@ impl AssetBrowserState {
             self.target_height_m / self.model_raw_height
         } else {
             1.0
+        }
+    }
+
+    pub fn add_animation_source(&mut self, path: String) {
+        if !self.animation_sources.contains(&path) {
+            self.animation_sources.push(path);
+            self.sources_dirty = true;
+        }
+    }
+
+    pub fn remove_animation_source(&mut self, idx: usize) {
+        if idx < self.animation_sources.len() {
+            self.animation_sources.remove(idx);
+            self.extra_gltf_handles.truncate(self.animation_sources.len());
+            self.sources_dirty = true;
         }
     }
 
@@ -221,6 +252,7 @@ impl AssetBrowserState {
             model_type: self.model_type.clone(),
             hidden_nodes: self.hidden_nodes.iter().cloned().collect(),
             animation_mapping: self.anim_mapping.clone(),
+            animation_sources: self.animation_sources.clone(),
         };
         def.save();
     }
@@ -231,6 +263,8 @@ impl AssetBrowserState {
         if let Some(def) = AssetDefinition::load(path) {
             self.hidden_nodes = def.hidden_nodes.into_iter().collect();
             self.anim_mapping = def.animation_mapping;
+            self.animation_sources = def.animation_sources;
+            self.sources_dirty = true;
             self.model_type = def.model_type;
             self.type_dirty = true;
             // Stash the stored scale; target_height_m is resolved once the mesh AABB is measured.
