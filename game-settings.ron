@@ -8,7 +8,7 @@
     ortho_near: -1050.0,
     ortho_far: 1000.0,
     ortho_viewport_height: 2.0,
-    persp_fov: 10.0,
+    persp_fov: 30.0,
     persp_near: 1.9999993,
     persp_far: 201.1,
 )
