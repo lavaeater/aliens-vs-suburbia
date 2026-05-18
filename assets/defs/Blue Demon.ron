@@ -1,0 +1,26 @@
+(
+    model_path: "packs/monsters/Blue Demon.glb",
+    scale: 25.040104,
+    model_type: Enemy((
+        health: 100.0,
+        speed: 2.0,
+        coin_drop: 5,
+    )),
+    hidden_nodes: [],
+    animation_mapping: {
+        "jump_land": "CharacterArmature|Jump_Land",
+        "no": "CharacterArmature|No",
+        "walk": "CharacterArmature|Walk",
+        "death": "CharacterArmature|Death",
+        "idle": "CharacterArmature|Idle",
+        "hitreact": "CharacterArmature|HitReact",
+        "jump": "CharacterArmature|Jump",
+        "jump_idle": "CharacterArmature|Jump_Idle",
+        "punch": "CharacterArmature|Punch",
+        "wave": "CharacterArmature|Wave",
+        "yes": "CharacterArmature|Yes",
+        "throwing": "CharacterArmature|Death",
+        "run": "CharacterArmature|Run",
+    },
+    animation_sources: [],
+)

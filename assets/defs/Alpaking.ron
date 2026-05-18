@@ -1,0 +1,20 @@
+(
+    model_path: "packs/monsters/Alpaking.glb",
+    scale: 61.818398,
+    model_type: Enemy((
+        health: 100.0,
+        speed: 2.0,
+        coin_drop: 5,
+    )),
+    hidden_nodes: [],
+    animation_mapping: {
+        "no": "CharacterArmature|No",
+        "yes": "CharacterArmature|Yes",
+        "punch": "CharacterArmature|Bite_Front",
+        "idle": "CharacterArmature|Idle",
+        "walk": "CharacterArmature|Walk",
+        "death": "CharacterArmature|Death",
+        "jump": "CharacterArmature|Jump",
+    },
+    animation_sources: [],
+)
