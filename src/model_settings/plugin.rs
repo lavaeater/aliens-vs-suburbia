@@ -34,7 +34,8 @@ impl Plugin for ModelSettingsPlugin {
         // Load AssetDefinition for the default player model at startup.
         let char_folder = CharacterFolder { files };
         let default_def = settings.current_model_path(&char_folder)
-            .and_then(|p| AssetDefinition::load(&p));
+            .and_then(|p| AssetDefinition::load(&p))
+            .filter(|d| matches!(d.model_type, crate::assets::asset_definition::ModelType::Player(_)));
 
         app
             .insert_resource(settings)
@@ -124,7 +125,11 @@ fn reload_player_model(
     *last_path = Some(path.clone());
 
     // Reload the AssetDefinition whenever the model changes.
-    player_asset_def.0 = AssetDefinition::load(&path);
+    // Only use it if the def's model_type is Player; otherwise clear so
+    // the game falls back to WEAPON_NODES / default animation search.
+    player_asset_def.0 = AssetDefinition::load(&path).filter(|d| {
+        matches!(d.model_type, crate::assets::asset_definition::ModelType::Player(_))
+    });
 
     let scene: Handle<Scene> =
         asset_server.load(GltfAssetLabel::Scene(0).from_asset(path.clone()));

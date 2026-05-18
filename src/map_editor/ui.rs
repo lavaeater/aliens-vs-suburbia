@@ -12,6 +12,7 @@ use crate::ui::spawn_ui::StateMarker;
 #[derive(Component)] pub struct PaletteContainer;
 #[derive(Component)] pub struct WaveContainer;
 #[derive(Component)] pub struct MapInfoLabel;
+#[derive(Component)] pub struct ActiveBrushLabel;
 
 // ── Spawn ─────────────────────────────────────────────────────────────────────
 
@@ -72,6 +73,15 @@ pub fn spawn_map_editor_ui(
             }
         });
 
+        // Active brush indicator
+        left.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label("Brush: —", &TextTheme {
+                label_size: 11.0,
+                label_color: Color::srgb(0.9, 1.0, 0.6),
+                ..t.clone()
+            })).insert(ActiveBrushLabel);
+        });
+
         // Palette item list
         left.with_child(|c| {
             c.display_flex().flex_column().gap_px(2.0)
@@ -125,9 +135,21 @@ pub fn rebuild_palette(
     mut state: ResMut<MapEditorState>,
     mut commands: Commands,
     container_q: Query<Entity, With<PaletteContainer>>,
+    mut brush_label_q: Query<&mut Text, With<ActiveBrushLabel>>,
 ) {
     if !state.palette_dirty { return; }
     state.palette_dirty = false;
+
+    // Update the active brush label.
+    if let Ok(mut t) = brush_label_q.single_mut() {
+        let name = state.selected_item().map(|i| i.display_name()).unwrap_or("—");
+        let rot = state.rotation_steps;
+        **t = if rot == 0 {
+            format!("Brush: {name}")
+        } else {
+            format!("Brush: {name}  ↻{}°", rot * 45)
+        };
+    }
 
     let Ok(container) = container_q.single() else { return };
     commands.entity(container).despawn_related::<Children>();

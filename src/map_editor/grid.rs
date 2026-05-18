@@ -23,42 +23,42 @@ pub fn spawn_grid_camera(mut commands: Commands) {
 }
 
 /// Rebuild the visual tile grid whenever grid_dirty is set.
+/// Tiles are absolute-positioned in screen space, centered in the area between
+/// the two 200-px side panels (i.e. centred on the window).
 pub fn rebuild_grid(
     mut state: ResMut<MapEditorState>,
     mut commands: Commands,
     cells: Query<Entity, With<GridCellMarker>>,
+    windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
 ) {
     if !state.grid_dirty { return; }
     state.grid_dirty = false;
 
-    // Despawn old cells.
     for e in cells.iter() { commands.entity(e).despawn(); }
+
+    let Ok(window) = windows.single() else { return };
+    let win_w = window.width();
+    let win_h = window.height();
 
     let w = state.width;
     let h = state.height;
 
-    // Center the grid in the viewport.
-    let offset_x = -(w as f32 * CELL_SIZE * 0.5);
-    let offset_y =  (h as f32 * CELL_SIZE * 0.5);
+    // Top-left corner of the grid in screen space, centred on the window.
+    let grid_left = (win_w * 0.5 - w as f32 * CELL_SIZE * 0.5).round();
+    let grid_top  = (win_h * 0.5 - h as f32 * CELL_SIZE * 0.5).round();
 
     for row in 0..h {
         for col in 0..w {
             let tile = state.tiles[row][col];
             let color = tile_color(tile);
-
-            let cx = offset_x + col as f32 * CELL_SIZE + CELL_SIZE * 0.5;
-            let cy = offset_y - row as f32 * CELL_SIZE - CELL_SIZE * 0.5;
-
-            // Base tile quad.
             commands.spawn((
                 GridCellMarker { x: col, y: row },
                 StateMarker,
                 Node {
                     position_type: PositionType::Absolute,
-                    left: Val::Px(cx - CELL_SIZE * 0.5),
-                    // Shift down from top of screen.
-                    top: Val::Px(cy - CELL_SIZE * 0.5 + 300.0),
-                    width: Val::Px(CELL_SIZE - 1.0),
+                    left: Val::Px(grid_left + col as f32 * CELL_SIZE),
+                    top:  Val::Px(grid_top  + row as f32 * CELL_SIZE),
+                    width:  Val::Px(CELL_SIZE - 1.0),
                     height: Val::Px(CELL_SIZE - 1.0),
                     ..Default::default()
                 },
@@ -67,24 +67,19 @@ pub fn rebuild_grid(
         }
     }
 
-    // Overlay placement labels.
+    // Overlay: first-letter of each placement's def name.
     for p in &state.placements {
         if p.x < 0 || p.y < 0 || p.x >= w as i32 || p.y >= h as i32 { continue; }
-        let col = p.x as f32;
-        let row = p.y as f32;
-        let cx = offset_x + col * CELL_SIZE + CELL_SIZE * 0.5;
-        let cy = offset_y - row * CELL_SIZE - CELL_SIZE * 0.5;
         let label = std::path::Path::new(&p.def_path)
             .file_stem().and_then(|s| s.to_str()).unwrap_or("?");
-        let initial = label.chars().next().unwrap_or('?').to_uppercase().next().unwrap_or('?');
-
+        let initial = label.chars().next().unwrap_or('?').to_uppercase().to_string();
         commands.spawn((
             StateMarker,
             Node {
                 position_type: PositionType::Absolute,
-                left: Val::Px(cx - CELL_SIZE * 0.5),
-                top: Val::Px(cy - CELL_SIZE * 0.5 + 300.0),
-                width: Val::Px(CELL_SIZE - 1.0),
+                left: Val::Px(grid_left + p.x as f32 * CELL_SIZE),
+                top:  Val::Px(grid_top  + p.y as f32 * CELL_SIZE),
+                width:  Val::Px(CELL_SIZE - 1.0),
                 height: Val::Px(CELL_SIZE - 1.0),
                 justify_content: JustifyContent::Center,
                 align_items: AlignItems::Center,
@@ -92,9 +87,9 @@ pub fn rebuild_grid(
             },
             BackgroundColor(Color::NONE),
         )).with_child((
-            Text::new(initial.to_string()),
+            Text::new(initial),
             TextFont::default().with_font_size(10.0),
-            TextColor(Color::srgb(1.0, 1.0, 1.0)),
+            TextColor(Color::WHITE),
         ));
     }
 }
@@ -110,7 +105,7 @@ fn tile_color(tile: u8) -> Color {
     }
 }
 
-/// Convert screen mouse position to tile coordinates.
+/// Map screen cursor position → tile (col, row) using the same formula as rebuild_grid.
 pub fn handle_grid_click(
     mut state: ResMut<MapEditorState>,
     mouse: Res<ButtonInput<MouseButton>>,
@@ -125,11 +120,11 @@ pub fn handle_grid_click(
     let w = state.width;
     let h = state.height;
 
-    let offset_x = window.width()  * 0.5 - w as f32 * CELL_SIZE * 0.5;
-    let offset_y = window.height() * 0.5 - h as f32 * CELL_SIZE * 0.5 + 300.0 - h as f32 * CELL_SIZE * 0.5;
+    let grid_left = (window.width()  * 0.5 - w as f32 * CELL_SIZE * 0.5).round();
+    let grid_top  = (window.height() * 0.5 - h as f32 * CELL_SIZE * 0.5).round();
 
-    let col = ((cursor.x - offset_x) / CELL_SIZE) as i32;
-    let row = ((cursor.y - (window.height() * 0.5 - h as f32 * CELL_SIZE * 0.5)) / CELL_SIZE) as i32;
+    let col = ((cursor.x - grid_left) / CELL_SIZE) as i32;
+    let row = ((cursor.y - grid_top)  / CELL_SIZE) as i32;
 
     if col < 0 || row < 0 || col >= w as i32 || row >= h as i32 { return; }
 

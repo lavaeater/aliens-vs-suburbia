@@ -162,6 +162,7 @@ impl MapEditorState {
 
     pub fn rotate_brush(&mut self) {
         self.rotation_steps = (self.rotation_steps + 1) % 8;
+        self.palette_dirty = true; // refresh label with new rotation angle
     }
 
     pub fn to_map_file(&self) -> MapFile {
