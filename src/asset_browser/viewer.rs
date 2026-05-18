@@ -210,28 +210,31 @@ pub fn merge_extra_anim_clips(
 
     let mut any_new = false;
 
+    // Collect new clips outside of state borrow.
+    struct NewClip { stem: String, name: String, handle: Handle<AnimationClip> }
+    let mut new_clips: Vec<NewClip> = Vec::new();
+
     for (idx, handle) in state.extra_gltf_handles.iter().enumerate() {
         let Some(gltf) = gltf_assets.get(handle) else { continue };
-
         let stem = state.animation_sources.get(idx)
             .map(|p| std::path::Path::new(p)
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or("ext")
-                .to_string())
+                .file_stem().and_then(|s| s.to_str()).unwrap_or("ext").to_string())
             .unwrap_or_else(|| format!("ext{idx}"));
-
-        // Append clips that haven't been added yet (identified by "stem|name" prefix in anim_names).
         for (name, clip_handle) in &gltf.named_animations {
             let prefixed = format!("{stem}|{name}");
-            if state.anim_names.contains(&prefixed) { continue; }
-
-            let node_idx = graph.add_clip(clip_handle.clone(), 1.0, graph.root);
-            state.anim_names.push(prefixed);
-            state.anim_node_indices.push(node_idx);
-            state.anim_count += 1;
-            any_new = true;
+            if !state.anim_names.contains(&prefixed) {
+                new_clips.push(NewClip { stem: stem.clone(), name: name.to_string(), handle: clip_handle.clone() });
+            }
         }
+    }
+
+    for clip in new_clips {
+        let prefixed = format!("{}|{}", clip.stem, clip.name);
+        let node_idx = graph.add_clip(clip.handle, 1.0, graph.root);
+        state.anim_names.push(prefixed);
+        state.anim_node_indices.push(node_idx);
+        state.anim_count += 1;
+        any_new = true;
     }
 
     if any_new {
