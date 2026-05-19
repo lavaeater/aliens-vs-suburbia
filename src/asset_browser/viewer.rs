@@ -248,13 +248,20 @@ pub fn merge_extra_anim_clips(
 }
 
 /// Walk the viewer model hierarchy and accumulate world-space Y extents from all Aabb components.
+/// Waits several frames after load so Bevy has time to attach Aabb to all mesh children, then
+/// measures once at scale=1.0 and locks the result.
 pub fn compute_model_height(
     mut state: ResMut<AssetBrowserState>,
     aabb_q: Query<(&Aabb, &GlobalTransform)>,
     children_q: Query<&Children>,
 ) {
-    if state.model_raw_height > 0.0 { return; }
+    if state.model_raw_height > 0.0 { return; } // already measured
     let Some(viewer_entity) = state.viewer_entity else { return };
+
+    // Count frames to let Bevy populate Aabb on all spawned mesh children.
+    const SETTLE_FRAMES: u32 = 8;
+    state.aabb_settle_frames += 1;
+    if state.aabb_settle_frames < SETTLE_FRAMES { return; }
 
     let mut min_y = f32::MAX;
     let mut max_y = f32::MIN;
@@ -263,6 +270,7 @@ pub fn compute_model_height(
 
     if !found || max_y <= min_y { return; }
 
+    // Model is always at scale=1.0 here (apply_viewer_scale hasn't run yet).
     state.model_raw_height = max_y - min_y;
     if let Some(stored_scale) = state.pending_scale.take() {
         state.target_height_m = stored_scale * state.model_raw_height;
@@ -279,9 +287,20 @@ fn collect_aabbs(
     found: &mut bool,
 ) {
     if let Ok((aabb, gt)) = aabb_q.get(entity) {
-        let center_y = gt.translation().y + aabb.center.y;
-        *min_y = min_y.min(center_y - aabb.half_extents.y);
-        *max_y = max_y.max(center_y + aabb.half_extents.y);
+        // Transform all 8 AABB corners through the full GlobalTransform matrix so that
+        // any scale/rotation baked into GLTF node hierarchies is correctly accounted for.
+        let matrix = gt.to_matrix();
+        let c = Vec3::from(aabb.center);
+        let h = Vec3::from(aabb.half_extents);
+        for sx in [-1.0f32, 1.0] {
+            for sy in [-1.0f32, 1.0] {
+                for sz in [-1.0f32, 1.0] {
+                    let corner = matrix.transform_point3(c + h * Vec3::new(sx, sy, sz));
+                    *min_y = min_y.min(corner.y);
+                    *max_y = max_y.max(corner.y);
+                }
+            }
+        }
         *found = true;
     }
     if let Ok(children) = children_q.get(entity) {
@@ -292,9 +311,11 @@ fn collect_aabbs(
 }
 
 /// Apply computed_scale() to the viewer model Transform and update the height label.
+/// Also repositions the camera so the model fills the viewport at a comfortable distance.
 pub fn apply_viewer_scale(
     mut state: ResMut<AssetBrowserState>,
     mut model_q: Query<&mut Transform, With<AssetBrowserViewerModel>>,
+    mut camera_q: Query<&mut Transform, (With<AssetBrowserViewerCamera>, Without<AssetBrowserViewerModel>)>,
     mut label_q: Query<&mut Text, With<HeightDisplay>>,
 ) {
     if !state.height_dirty || state.model_raw_height <= 0.0 { return; }
@@ -306,6 +327,17 @@ pub fn apply_viewer_scale(
     }
     if let Ok(mut t) = label_q.single_mut() {
         **t = format!("{:.2} m  (x{:.4})", state.target_height_m, scale);
+    }
+
+    // Fit camera to the model. Runs on load (once AABB is measured) and on user height changes.
+    // Uses vertical FOV of 60 degrees (Bevy default perspective).
+    let displayed_height = state.model_raw_height * scale;
+    let center_y = displayed_height * 0.5;
+    let half_fov = std::f32::consts::PI / 6.0; // 30 degrees
+    let distance = (displayed_height * 0.5) / half_fov.tan() * 1.4;
+    if let Ok(mut cam) = camera_q.single_mut() {
+        cam.translation = Vec3::new(0.0, center_y, distance);
+        *cam = cam.looking_at(Vec3::new(0.0, center_y, 0.0), Vec3::Y);
     }
 }
 
