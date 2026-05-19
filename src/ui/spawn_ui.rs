@@ -10,7 +10,7 @@ use crate::model_settings::resources::{CharacterFolder, ModelSettings, PlayerAni
 use bevy::prelude::*;
 use bevy::ui_widgets::Activate;
 use lava_ui_builder::{
-    ButtonTheme, LavaTheme, ProgressBar, TextTheme, UIBuilder, WorldFollower, progress_bar,
+    ButtonTheme, LavaTheme, ProgressBar, TextStyle, TextTheme, UIBuilder, WorldFollower, progress_bar,
 };
 
 // ── Theme ────────────────────────────────────────────────────────────────────
@@ -66,10 +66,7 @@ pub fn spawn_menu(commands: Commands, theme: Res<LavaTheme>) {
         .justify_center()
         .gap_px(24.0);
 
-    let text_theme = ui.theme().text.clone();
-    ui.with_child(|h| {
-        h.insert_bundle(lava_ui_builder::header("Aliens vs Suburbia", &text_theme));
-    });
+    ui.themed_header("Aliens vs Suburbia");
 
     ui.add_button_observe(
         "Start Game",
@@ -191,121 +188,38 @@ pub struct HudAbility;
 pub struct HudBuildCost;
 
 pub fn spawn_ui(mut commands: Commands, theme: Res<LavaTheme>) {
-    let text_theme = theme.text.clone();
-
+    // ── Top-left HUD labels ──────────────────────────────────────────────────
     {
         let mut ui = UIBuilder::new(commands.reborrow(), Some(theme.clone()));
-        ui.insert(StateMarker).modify_node(|mut n| {
-            n.position_type = PositionType::Absolute;
-            n.top = Val::Px(8.0);
-            n.left = Val::Px(8.0);
-            n.flex_direction = FlexDirection::Column;
-            n.row_gap = Val::Px(4.0);
-        });
+        ui.insert(StateMarker)
+          .absolute_position().top(px(8.0)).left(px(8.0))
+          .flex_column().row_gap_px(4.0);
 
-        ui.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label("Aliens: 0", &text_theme))
-                .insert(HudAlienCount);
-        });
-        ui.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label(
-                "Coins: 0",
-                &TextTheme {
-                    label_size: 14.0,
-                    label_color: Color::srgb(1.0, 0.85, 0.1),
-                    ..text_theme.clone()
-                },
-            ))
-            .insert(HudCoins);
-        });
-        ui.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label(
-                "[Q] Ability — ready",
-                &TextTheme {
-                    label_size: 13.0,
-                    label_color: Color::srgb(0.5, 0.9, 1.0),
-                    ..text_theme.clone()
-                },
-            ))
-            .insert(HudAbility);
-        });
-        ui.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label(
-                "Wave 1 / 3 in 5s",
-                &TextTheme {
-                    label_size: 13.0,
-                    label_color: Color::srgb(0.5, 0.8, 1.0),
-                    ..text_theme.clone()
-                },
-            ))
-            .insert(HudWaveInfo);
-        });
-
-        ui.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label(
-                "",
-                &TextTheme {
-                    label_color: Color::srgb(1.0, 0.8, 0.2),
-                    ..text_theme.clone()
-                },
-            ))
-            .insert(HudBuildMode);
-        });
-        ui.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label(
-                "",
-                &TextTheme { label_size: 13.0, label_color: Color::srgb(0.8, 0.8, 0.2), ..text_theme.clone() },
-            ))
-            .insert(HudBuildCost);
-        });
-
-        ui.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label(
-                "",
-                &TextTheme {
-                    label_size: 14.0,
-                    label_color: Color::srgb(0.6, 0.6, 0.6),
-                    ..text_theme.clone()
-                },
-            ))
-            .insert(HudProjection);
-        });
+        ui.label("Aliens: 0", theme.text.label_size, theme.text.label_color).insert(HudAlienCount);
+        ui.label("Coins: 0",  14.0, Color::srgb(1.0, 0.85, 0.1)).insert(HudCoins);
+        ui.label("[Q] Ability — ready", 13.0, Color::srgb(0.5, 0.9, 1.0)).insert(HudAbility);
+        ui.label("Wave 1 / 3 in 5s",    13.0, Color::srgb(0.5, 0.8, 1.0)).insert(HudWaveInfo);
+        ui.label("", theme.text.label_size, Color::srgb(1.0, 0.8, 0.2)).insert(HudBuildMode);
+        ui.label("", 13.0, Color::srgb(0.8, 0.8, 0.2)).insert(HudBuildCost);
+        ui.label("", 14.0, Color::srgb(0.6, 0.6, 0.6)).insert(HudProjection);
 
         ui.build();
     }
 
-    // Pass-through meter — fixed at top-centre.
+    // ── Pass-through meter — fixed at top-centre ─────────────────────────────
     {
         let mut ui = UIBuilder::new(commands.reborrow(), Some(theme.clone()));
-        ui.insert(StateMarker).modify_node(|mut n| {
-            n.position_type = PositionType::Absolute;
-            n.top = Val::Px(8.0);
-            n.left = Val::Percent(50.0);
-            n.margin.left = Val::Px(-90.0);
-            n.flex_direction = FlexDirection::Column;
-            n.align_items = AlignItems::Center;
-            n.row_gap = Val::Px(2.0);
-        });
+        ui.insert(StateMarker)
+          .absolute_position().top(px(8.0)).left(percent(50.0))
+          .modify_node(|mut n| n.margin.left = Val::Px(-90.0))
+          .flex_column().align_items_center().row_gap_px(2.0);
+
+        ui.label("Aliens escaped: 0 / 10", 13.0, Color::srgb(1.0, 0.35, 0.2)).insert(HudAlienMeter);
         ui.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label(
-                "Aliens escaped: 0 / 10",
-                &TextTheme {
-                    label_size: 13.0,
-                    label_color: Color::srgb(1.0, 0.35, 0.2),
-                    ..text_theme.clone()
-                },
-            ))
-            .insert(HudAlienMeter);
-        });
-        ui.with_child(|c| {
-            c.insert_bundle(progress_bar(
-                0.0,
-                180.0,
-                10.0,
+            c.insert_bundle(progress_bar(0.0, 180.0, 10.0,
                 Color::srgb(1.0, 0.25, 0.1),
                 Color::srgba(0.0, 0.0, 0.0, 0.5),
-            ))
-            .insert(HudAlienMeter);
+            )).insert(HudAlienMeter);
         });
         ui.build();
     }
@@ -318,20 +232,14 @@ pub fn spawn_camera_panel(commands: Commands, theme: &LavaTheme) {
     let mut ui = UIBuilder::new(commands, Some(theme.clone()));
     ui.component::<SettingsPanel>()
         .display_none()
-        .modify_node(|mut n| {
-            n.position_type = PositionType::Absolute;
-            n.top = Val::Px(8.0);
-            n.right = Val::Px(8.0);
-            n.flex_direction = FlexDirection::Column;
-            n.row_gap = Val::Px(6.0);
-            n.padding = UiRect::all(Val::Px(12.0));
-            n.min_width = Val::Px(350.0);
-        })
+        .absolute_position().top(px(8.0)).right(px(8.0))
+        .flex_column().row_gap_px(6.0).padding_all_px(12.0)
+        .min_width_px(350.0)
         .bg_color(Color::srgba(0.05, 0.12, 0.07, 0.92))
         .insert(StateMarker);
 
     let t = ui.theme().text.clone();
-    ui.with_child(|c| { c.insert_bundle(lava_ui_builder::header("Camera  [F1]", &t)); });
+    ui.themed_header("Camera  [F1]");
 
     setting_row(&mut ui, "Projection", &t, |row| {
         row.add_button_observe("Ortho", |b| { b.size_px(70.0, 32.0); },
@@ -360,8 +268,7 @@ pub fn spawn_camera_panel(commands: Commands, theme: &LavaTheme) {
         |s| s.player_speed_multiplier = (s.player_speed_multiplier + 0.05).min(5.0),
         |s| s.player_speed_multiplier = (s.player_speed_multiplier + 0.25).min(5.0));
 
-    let sep = TextTheme { label_size: 12.0, label_color: Color::srgb(0.4, 0.65, 0.5), ..t.clone() };
-    ui.with_child(|c| { c.insert_bundle(lava_ui_builder::label("— Ortho —", &sep)); });
+    ui.label("— Ortho —", 12.0, Color::srgb(0.4, 0.65, 0.5));
     cam_row(&mut ui, "V.Height", &t, CameraSetting::OrthoVH,
         |s| s.ortho_viewport_height = (s.ortho_viewport_height - 0.25).max(0.25),
         |s| s.ortho_viewport_height = (s.ortho_viewport_height - 0.05).max(0.05),
@@ -378,7 +285,7 @@ pub fn spawn_camera_panel(commands: Commands, theme: &LavaTheme) {
         |s| s.ortho_far += 1.0,
         |s| s.ortho_far += 100.0);
 
-    ui.with_child(|c| { c.insert_bundle(lava_ui_builder::label("— Persp —", &sep)); });
+    ui.label("— Persp —", 12.0, Color::srgb(0.4, 0.65, 0.5));
     cam_row(&mut ui, "FOV", &t, CameraSetting::PerspFOV,
         |s| s.persp_fov = (s.persp_fov - 5.0).max(10.0),
         |s| s.persp_fov = (s.persp_fov - 1.0).max(10.0),
@@ -402,20 +309,14 @@ pub fn spawn_model_panel(commands: Commands, theme: &LavaTheme) {
     let mut ui = UIBuilder::new(commands, Some(theme.clone()));
     ui.component::<ModelPanel>()
         .display_none()
-        .modify_node(|mut n| {
-            n.position_type = PositionType::Absolute;
-            n.top = Val::Px(8.0);
-            n.right = Val::Px(366.0);
-            n.flex_direction = FlexDirection::Column;
-            n.row_gap = Val::Px(6.0);
-            n.padding = UiRect::all(Val::Px(12.0));
-            n.min_width = Val::Px(350.0);
-        })
+        .absolute_position().top(px(8.0)).right(px(366.0))
+        .flex_column().row_gap_px(6.0).padding_all_px(12.0)
+        .min_width_px(350.0)
         .bg_color(Color::srgba(0.05, 0.08, 0.15, 0.92))
         .insert(StateMarker);
 
     let t = ui.theme().text.clone();
-    ui.with_child(|c| { c.insert_bundle(lava_ui_builder::header("Model  [F2]", &t)); });
+    ui.themed_header("Model  [F2]");
 
     // Character selector
     setting_row(&mut ui, "Character", &t, |row| {
@@ -427,9 +328,7 @@ pub fn spawn_model_panel(commands: Commands, theme: &LavaTheme) {
                 if n > 0 { s.character_index = (s.character_index + n - 1) % n; s.save(); }
             });
         row.with_child(|v| {
-            v.insert_bundle(lava_ui_builder::label("", &TextTheme {
-                label_size: 12.0, ..t.clone()
-            })).insert(ModelSetting::CharacterName);
+            v.with_text("", Some(TextStyle::size(12.0))).insert(ModelSetting::CharacterName);
         });
         row.add_button_observe(">", |b| { b.size_px(32.0, 32.0); },
             |_: On<Activate>, mut s: ResMut<ModelSettings>, folder: Res<CharacterFolder>,
@@ -441,8 +340,7 @@ pub fn spawn_model_panel(commands: Commands, theme: &LavaTheme) {
     });
 
     // Transform
-    let sep = TextTheme { label_size: 12.0, label_color: Color::srgb(0.4, 0.65, 0.5), ..t.clone() };
-    ui.with_child(|c| { c.insert_bundle(lava_ui_builder::label("— Transform —", &sep)); });
+    ui.label("— Transform —", 12.0, Color::srgb(0.4, 0.65, 0.5));
     mdl_row(&mut ui, "Scale",    &t, ModelSetting::Scale,
         |s| s.scale = (s.scale - 0.1).max(0.01),
         |s| s.scale = (s.scale - 0.01).max(0.01),
@@ -460,7 +358,7 @@ pub fn spawn_model_panel(commands: Commands, theme: &LavaTheme) {
         |s| s.rotation_y_degrees = (s.rotation_y_degrees + 15.0).rem_euclid(360.0));
 
     // Animation mapping
-    ui.with_child(|c| { c.insert_bundle(lava_ui_builder::label("— Animation Mapping —", &sep)); });
+    ui.label("— Animation Mapping —", 12.0, Color::srgb(0.4, 0.65, 0.5));
     for key in ANIM_KEYS {
         anim_mapping_row(&mut ui, key_label(*key), &t, *key);
     }
@@ -506,8 +404,7 @@ fn anim_mapping_row(ui: &mut UIBuilder, label: &str, t: &TextTheme, key: Animati
                 s.save();
             });
         row.with_child(|v| {
-            v.insert_bundle(lava_ui_builder::label("—", &TextTheme { label_size: 11.0, ..t.clone() }))
-             .insert(AnimMappingLabel(key));
+            v.with_text("—", Some(TextStyle::size(11.0))).insert(AnimMappingLabel(key));
         });
         row.add_button_observe(">", |b| { b.size_px(28.0, 28.0); },
             move |_: On<Activate>, mut s: ResMut<ModelSettings>, clips: Res<PlayerAnimClips>| {
@@ -541,9 +438,7 @@ fn cam_row(
         row.add_button_observe("<",  |b| { b.size_px(24.0, 28.0); },
             move |_: On<Activate>, mut s: ResMut<GameSettings>| { fine_dec(&mut s); s.save(); });
         row.with_child(|v| {
-            v.insert_bundle(lava_ui_builder::label("", &TextTheme::default()))
-             .insert(setting)
-             .modify_node(|mut n| n.min_width = Val::Px(44.0));
+            v.default_text("").insert(setting).min_width_px(44.0);
         });
         row.add_button_observe(">",  |b| { b.size_px(24.0, 28.0); },
             move |_: On<Activate>, mut s: ResMut<GameSettings>| { fine_inc(&mut s); s.save(); });
@@ -569,9 +464,7 @@ fn mdl_row(
         row.add_button_observe("<",  |b| { b.size_px(24.0, 28.0); },
             move |_: On<Activate>, mut s: ResMut<ModelSettings>| { fine_dec(&mut s); s.save(); });
         row.with_child(|v| {
-            v.insert_bundle(lava_ui_builder::label("", &TextTheme::default()))
-             .insert(setting)
-             .modify_node(|mut n| n.min_width = Val::Px(44.0));
+            v.default_text("").insert(setting).min_width_px(44.0);
         });
         row.add_button_observe(">",  |b| { b.size_px(24.0, 28.0); },
             move |_: On<Activate>, mut s: ResMut<ModelSettings>| { fine_inc(&mut s); s.save(); });
@@ -586,12 +479,11 @@ fn setting_row<F: FnOnce(&mut UIBuilder)>(
     text_theme: &TextTheme,
     f: F,
 ) {
-    let label_theme = TextTheme { label_size: 16.0, ..text_theme.clone() };
+    let color = text_theme.label_color;
     ui.add_row(|row| {
         row.gap_px(4.0).align_items_center().width_px(310.0);
         row.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label(label, &label_theme));
-            c.modify_node(|mut n| n.width = Val::Px(70.0));
+            c.with_text(label, Some(TextStyle::size_color(16.0, color))).width_px(70.0);
         });
         f(row);
     });
