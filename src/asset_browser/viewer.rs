@@ -287,9 +287,20 @@ fn collect_aabbs(
     found: &mut bool,
 ) {
     if let Ok((aabb, gt)) = aabb_q.get(entity) {
-        let center_y = gt.translation().y + aabb.center.y;
-        *min_y = min_y.min(center_y - aabb.half_extents.y);
-        *max_y = max_y.max(center_y + aabb.half_extents.y);
+        // Transform all 8 AABB corners through the full GlobalTransform matrix so that
+        // any scale/rotation baked into GLTF node hierarchies is correctly accounted for.
+        let matrix = gt.compute_matrix();
+        let c = Vec3::from(aabb.center);
+        let h = Vec3::from(aabb.half_extents);
+        for sx in [-1.0f32, 1.0] {
+            for sy in [-1.0f32, 1.0] {
+                for sz in [-1.0f32, 1.0] {
+                    let corner = matrix.transform_point3(c + h * Vec3::new(sx, sy, sz));
+                    *min_y = min_y.min(corner.y);
+                    *max_y = max_y.max(corner.y);
+                }
+            }
+        }
         *found = true;
     }
     if let Ok(children) = children_q.get(entity) {
