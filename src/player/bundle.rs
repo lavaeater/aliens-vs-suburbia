@@ -35,6 +35,7 @@ pub struct PlayerBundle {
     ability_cooldown: AbilityCooldown,
 }
 
+#[allow(dead_code)]
 impl PlayerBundle {
     pub fn new(
         name: &str,

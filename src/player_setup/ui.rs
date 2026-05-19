@@ -11,7 +11,7 @@ use crate::ui::spawn_ui::StateMarker;
 pub struct SlotLabel(pub usize);
 
 pub fn spawn_player_setup_ui(
-    mut commands: Commands,
+    commands: Commands,
     theme: Res<LavaTheme>,
     mut state: ResMut<PlayerSetupState>,
 ) {

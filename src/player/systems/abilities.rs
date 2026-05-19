@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use avian3d::prelude::Position;
 use crate::alien::components::general::Alien;
 use crate::general::components::{Health, TouchDamage};
 use crate::general::systems::coin_system::{Coin, TeamWallet};

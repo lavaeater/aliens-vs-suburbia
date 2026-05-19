@@ -103,7 +103,7 @@ pub fn wave_system(
     }
 }
 
-/// Called by alien_spawner_system to record that a spawn happened this wave.
+#[allow(dead_code)]
 pub fn count_wave_spawn(
     mut manager: ResMut<WaveManager>,
     tracker: Res<LevelTracker>,

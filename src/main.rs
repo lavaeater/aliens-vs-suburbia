@@ -2,7 +2,6 @@ use bevy::app::{App, PluginGroup};
 use bevy::{DefaultPlugins, log};
 use bevy::log::LogPlugin;
 use avian3d::prelude::PhysicsPlugins;
-use bevy_mod_outline::OutlinePlugin;
 use bevy_wind_waker_shader::flat::FlatShaderPlugin;
 use crate::ai::components::approach_and_attack_player_components::ApproachAndAttackPlayerData;
 use crate::ai::components::avoid_wall_components::AvoidWallsData;

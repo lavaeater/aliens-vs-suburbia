@@ -123,6 +123,7 @@ pub struct TileDefinitions {
     pub floor_level: f32
 }
 
+#[allow(dead_code)]
 impl TileDefinitions {
     pub fn new(tile_size: f32,
                tile_basis: f32,

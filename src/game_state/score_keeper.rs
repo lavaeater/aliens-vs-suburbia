@@ -39,6 +39,7 @@ pub enum LevelState {
 }
 
 #[derive(Debug, Resource)]
+#[allow(dead_code)]
 pub struct LevelTracker {
     pub level_name: String,
     pub aliens_to_spawn: i32,

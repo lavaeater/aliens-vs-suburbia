@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use std::collections::{HashMap, HashSet};
 
 // Re-export from shared location so asset browser code keeps using the same name.
-pub use crate::assets::asset_definition::{AssetDefinition, EnemyProps, ItemProps, ModelType, TerrainProps, TowerProps};
+pub use crate::assets::asset_definition::{AssetDefinition, ModelType};
 
 const WINDOW_SIZE: usize = 36;
 pub const CHARACTER_NODE_PREFIX: &str = "Character_";

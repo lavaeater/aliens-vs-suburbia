@@ -1,6 +1,6 @@
 use bevy::prelude::Name;
 use bevy::math::Vec3;
-use bevy::prelude::{Commands, Entity, Query, Res, Transform, With, Without};
+use bevy::prelude::{Commands, Entity, Query, Res, Transform, With};
 use bevy::scene::SceneRoot;
 use bevy::time::Time;
 use avian3d::prelude::{Collider, CollidingEntities, CollisionLayers, LinearVelocity, Position, RigidBody};

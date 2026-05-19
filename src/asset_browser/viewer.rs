@@ -201,7 +201,7 @@ pub fn merge_extra_anim_clips(
     gltf_assets: Res<Assets<Gltf>>,
     mut animation_graphs: ResMut<Assets<AnimationGraph>>,
     mut commands: Commands,
-    mut last_merged_count: Local<usize>,
+    last_merged_count: Local<usize>,
 ) {
     // Only run after the main model graph has been built.
     let Some(graph_handle) = state.viewer_graph_handle.clone() else { return };
