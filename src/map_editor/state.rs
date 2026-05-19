@@ -70,6 +70,9 @@ pub struct MapEditorState {
     pub palette_dirty: bool,
     pub waves_dirty: bool,
     pub grid_dirty: bool,
+    /// Last seed used by "Generate Map".
+    pub gen_seed: u64,
+    pub seed_label_dirty: bool,
 }
 
 impl Default for MapEditorState {
@@ -90,6 +93,8 @@ impl Default for MapEditorState {
             palette_dirty: true,
             waves_dirty: true,
             grid_dirty: true,
+            gen_seed: 0,
+            seed_label_dirty: false,
         };
         state.refresh_palette();
         state
@@ -199,15 +204,19 @@ impl MapEditorState {
     pub fn load_from_file(&mut self, path: &str) {
         if let Ok(text) = std::fs::read_to_string(path) {
             if let Ok(map) = ron::from_str::<MapFile>(&text) {
-                self.width = map.map_width;
-                self.height = map.map_height;
-                self.tiles = map.tiles;
-                self.placements = map.placements;
-                self.waves = map.waves;
-                self.grid_dirty = true;
-                self.waves_dirty = true;
+                self.load_from_map_file(map);
             }
         }
+    }
+
+    pub fn load_from_map_file(&mut self, map: MapFile) {
+        self.width = map.map_width;
+        self.height = map.map_height;
+        self.tiles = map.tiles;
+        self.placements = map.placements;
+        self.waves = map.waves;
+        self.grid_dirty = true;
+        self.waves_dirty = true;
     }
 }
 

@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use bevy::ui_widgets::Activate;
 use lava_ui_builder::{InteractionPalette, LavaTheme, TextTheme, UIBuilder};
 use crate::game_state::GameState;
+use crate::map::map_generator::generate_suburb_map;
 use crate::map_editor::state::{MapEditorState, PaletteTab};
 use crate::ui::spawn_ui::StateMarker;
 
@@ -13,6 +14,7 @@ use crate::ui::spawn_ui::StateMarker;
 #[derive(Component)] pub struct WaveContainer;
 #[derive(Component)] pub struct MapInfoLabel;
 #[derive(Component)] pub struct ActiveBrushLabel;
+#[derive(Component)] pub struct GenSeedLabel;
 
 // ── Spawn ─────────────────────────────────────────────────────────────────────
 
@@ -53,6 +55,20 @@ pub fn spawn_map_editor_ui(
         left.with_child(|c| {
             c.insert_bundle(lava_ui_builder::label("new_map  20x24", &small)).insert(MapInfoLabel);
         });
+
+        // Generate section
+        left.with_child(|c| { c.insert_bundle(lava_ui_builder::label("seed: —", &dim)).insert(GenSeedLabel); });
+        left.add_button_observe("Generate Map", |b| { b.width(percent(100.0)).height(px(24.0)).font_size(12.0); },
+            |_: On<Activate>, mut s: ResMut<MapEditorState>| {
+                let seed = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_nanos() as u64)
+                    .unwrap_or(42);
+                let map = generate_suburb_map(seed, s.width, s.height);
+                s.load_from_map_file(map);
+                s.gen_seed = seed;
+                s.seed_label_dirty = true;
+            });
 
         // Tab chips
         left.with_child(|tabs| {
@@ -244,6 +260,17 @@ pub fn rebuild_wave_list(
             });
         }
     });
+}
+
+pub fn rebuild_seed_label(
+    mut state: ResMut<MapEditorState>,
+    mut label_q: Query<&mut Text, With<GenSeedLabel>>,
+) {
+    if !state.seed_label_dirty { return; }
+    state.seed_label_dirty = false;
+    if let Ok(mut t) = label_q.single_mut() {
+        **t = format!("seed: {}", state.gen_seed);
+    }
 }
 
 // ── Key input ─────────────────────────────────────────────────────────────────
