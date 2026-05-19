@@ -292,9 +292,11 @@ fn collect_aabbs(
 }
 
 /// Apply computed_scale() to the viewer model Transform and update the height label.
+/// Also repositions the camera so the model fills the viewport at a comfortable distance.
 pub fn apply_viewer_scale(
     mut state: ResMut<AssetBrowserState>,
     mut model_q: Query<&mut Transform, With<AssetBrowserViewerModel>>,
+    mut camera_q: Query<&mut Transform, (With<AssetBrowserViewerCamera>, Without<AssetBrowserViewerModel>)>,
     mut label_q: Query<&mut Text, With<HeightDisplay>>,
 ) {
     if !state.height_dirty || state.model_raw_height <= 0.0 { return; }
@@ -306,6 +308,17 @@ pub fn apply_viewer_scale(
     }
     if let Ok(mut t) = label_q.single_mut() {
         **t = format!("{:.2} m  (x{:.4})", state.target_height_m, scale);
+    }
+
+    // Fit camera: position it so the model fills ~70% of the viewport height.
+    // Uses vertical FOV of 60 degrees (Bevy default perspective).
+    let displayed_height = state.model_raw_height * scale;
+    let center_y = displayed_height * 0.5;
+    let half_fov = std::f32::consts::PI / 6.0; // 30 degrees
+    let distance = (displayed_height * 0.5) / half_fov.tan() * 1.4;
+    if let Ok(mut cam) = camera_q.single_mut() {
+        cam.translation = Vec3::new(0.0, center_y, distance);
+        *cam = cam.looking_at(Vec3::new(0.0, center_y, 0.0), Vec3::Y);
     }
 }
 
