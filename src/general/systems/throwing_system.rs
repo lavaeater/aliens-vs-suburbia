@@ -1,29 +1,33 @@
 use bevy::math::Vec3;
-use bevy::prelude::{Commands, Entity, MessageWriter, Query, Res, Transform};
+use bevy::prelude::{Commands, Entity, MessageWriter, Query, Res, Transform, Without};
 use bevy::scene::SceneRoot;
 use bevy::time::Time;
 use avian3d::prelude::{Collider, CollisionLayers, LinearVelocity, Position, RigidBody};
 use bevy_wind_waker_shader::WindWakerShaderBuilder;
+use crate::animation::animation_plugin::{AnimationEvent, AnimationEventType, AnimationKey};
 use crate::assets::assets_plugin::GameAssets;
 use crate::control::components::{ControlCommand, CharacterControl};
-use crate::game_state::score_keeper::{GameTrackingEvent};
+use crate::game_state::score_keeper::GameTrackingEvent;
 use crate::general::components::{Ball, CollisionLayer};
 use crate::general::components::map_components::CoolDown;
-use crate::player::components::{AutoAim, Player};
+use crate::player::components::{AutoAim, Player, PlayerDead};
+use crate::player::systems::abilities::AbilityCooldown;
 
 pub fn throwing(
     time_res: Res<Time>,
-    mut query: Query<(Entity, &Player, &Position, &AutoAim, &mut CharacterControl)>,
+    mut query: Query<(Entity, &Player, &Position, &AutoAim, &mut CharacterControl, &mut AbilityCooldown), Without<PlayerDead>>,
     mut commands: Commands,
     game_assets: Res<GameAssets>,
     mut game_mw: MessageWriter<GameTrackingEvent>,
+    mut anim_ew: MessageWriter<AnimationEvent>,
 ) {
-    for (entity, _player, position, auto_aim, mut controller) in query.iter_mut() {
+    for (entity, _player, position, auto_aim, mut controller, mut meter) in query.iter_mut() {
         if controller.triggers.contains(&ControlCommand::Throw) {
             if controller.cool_down(time_res.delta_secs()) {
                 let launch_p = position.0 + auto_aim.0 * 0.5 + Vec3::new(0.0, 0.25, 0.0);
                 game_mw.write(GameTrackingEvent::ShotFired(entity));
                 controller.has_thrown = true;
+                meter.add_throw();
                 commands.spawn((
                     Ball::new(entity),
                     SceneRoot(game_assets.ball_scene.clone()),
@@ -43,8 +47,14 @@ pub fn throwing(
                             CollisionLayer::AlienGoal
                         ]),
                 ));
+                anim_ew.write(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Throwing));
             }
         } else {
+            if controller.has_thrown {
+                // Ball just left throw mode — clear throwing animation.
+                anim_ew.write(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Throwing));
+                controller.has_thrown = false;
+            }
             controller.fire_cool_down = 0.0;
         }
     }

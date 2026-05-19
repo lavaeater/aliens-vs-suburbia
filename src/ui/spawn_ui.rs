@@ -195,13 +195,13 @@ pub fn spawn_ui(mut commands: Commands, theme: Res<LavaTheme>) {
           .absolute_position().top(px(8.0)).left(px(8.0))
           .flex_column().row_gap_px(4.0);
 
-        ui.label("Aliens: 0", theme.text.label_size, theme.text.label_color).insert(HudAlienCount);
-        ui.label("Coins: 0",  14.0, Color::srgb(1.0, 0.85, 0.1)).insert(HudCoins);
-        ui.label("[Q] Ability — ready", 13.0, Color::srgb(0.5, 0.9, 1.0)).insert(HudAbility);
-        ui.label("Wave 1 / 3 in 5s",    13.0, Color::srgb(0.5, 0.8, 1.0)).insert(HudWaveInfo);
-        ui.label("", theme.text.label_size, Color::srgb(1.0, 0.8, 0.2)).insert(HudBuildMode);
-        ui.label("", 13.0, Color::srgb(0.8, 0.8, 0.2)).insert(HudBuildCost);
-        ui.label("", 14.0, Color::srgb(0.6, 0.6, 0.6)).insert(HudProjection);
+        ui.with_child(|c| { c.with_text("Aliens: 0", Some(TextStyle::size_color(theme.text.label_size, theme.text.label_color))).insert(HudAlienCount); });
+        ui.with_child(|c| { c.with_text("Coins: 0",  Some(TextStyle::size_color(14.0, Color::srgb(1.0, 0.85, 0.1)))).insert(HudCoins); });
+        ui.with_child(|c| { c.with_text("[Q] Ability — ready", Some(TextStyle::size_color(13.0, Color::srgb(0.5, 0.9, 1.0)))).insert(HudAbility); });
+        ui.with_child(|c| { c.with_text("Wave 1 / 3 in 5s",   Some(TextStyle::size_color(13.0, Color::srgb(0.5, 0.8, 1.0)))).insert(HudWaveInfo); });
+        ui.with_child(|c| { c.with_text("", Some(TextStyle::size_color(theme.text.label_size, Color::srgb(1.0, 0.8, 0.2)))).insert(HudBuildMode); });
+        ui.with_child(|c| { c.with_text("", Some(TextStyle::size_color(13.0, Color::srgb(0.8, 0.8, 0.2)))).insert(HudBuildCost); });
+        ui.with_child(|c| { c.with_text("", Some(TextStyle::size_color(14.0, Color::srgb(0.6, 0.6, 0.6)))).insert(HudProjection); });
 
         ui.build();
     }
@@ -214,7 +214,7 @@ pub fn spawn_ui(mut commands: Commands, theme: Res<LavaTheme>) {
           .modify_node(|mut n| n.margin.left = Val::Px(-90.0))
           .flex_column().align_items_center().row_gap_px(2.0);
 
-        ui.label("Aliens escaped: 0 / 10", 13.0, Color::srgb(1.0, 0.35, 0.2)).insert(HudAlienMeter);
+        ui.with_child(|c| { c.with_text("Aliens escaped: 0 / 10", Some(TextStyle::size_color(13.0, Color::srgb(1.0, 0.35, 0.2)))).insert(HudAlienMeter); });
         ui.with_child(|c| {
             c.insert_bundle(progress_bar(0.0, 180.0, 10.0,
                 Color::srgb(1.0, 0.25, 0.1),
@@ -728,11 +728,12 @@ pub fn update_ability_hud(
     mut label: Query<&mut Text, With<HudAbility>>,
 ) {
     let Ok(mut t) = label.single_mut() else { return };
-    let Ok((ability, cooldown)) = players.single() else { return };
-    if cooldown.ready() {
-        **t = format!("[Q] {} — ready", ability.label());
+    let Ok((ability, meter)) = players.single() else { return };
+    if meter.ready() {
+        **t = format!("[Q] {} — READY", ability.label());
     } else {
-        **t = format!("[Q] {} — {:.1}s", ability.label(), cooldown.remaining);
+        let pct = (meter.charge * 100.0) as u32;
+        **t = format!("[Q] {} — {}%", ability.label(), pct);
     }
 }
 

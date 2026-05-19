@@ -17,12 +17,12 @@ pub enum SpecialAbility {
 }
 
 impl SpecialAbility {
-    pub fn cooldown_secs(&self) -> f32 {
+    pub fn throws_to_charge(&self) -> u32 {
         match self {
-            SpecialAbility::Bombardment => 20.0,
-            SpecialAbility::Healing     => 12.0,
-            SpecialAbility::Whirlwind   => 20.0,
-            SpecialAbility::GoldDigger  => 15.0,
+            SpecialAbility::Bombardment => 10,
+            SpecialAbility::Healing     =>  6,
+            SpecialAbility::Whirlwind   => 10,
+            SpecialAbility::GoldDigger  =>  8,
         }
     }
 
@@ -36,16 +36,36 @@ impl SpecialAbility {
     }
 }
 
+/// Fills by throwing balls; ability fires when full (1.0).
 #[derive(Component)]
 pub struct AbilityCooldown {
-    pub remaining: f32,
-    pub total: f32,
+    /// 0.0 = empty, 1.0 = ready to fire.
+    pub charge: f32,
+    /// How many throws it takes to fully charge.
+    pub throws_needed: u32,
+    /// Throw count since last activation (fractional accumulator).
+    pub throws_banked: f32,
 }
 
 impl AbilityCooldown {
-    pub fn new(secs: f32) -> Self { Self { remaining: secs, total: secs } }
-    pub fn ready(&self) -> bool { self.remaining <= 0.0 }
-    pub fn fraction(&self) -> f32 { (self.remaining / self.total).clamp(0.0, 1.0) }
+    pub fn new(throws_needed: u32) -> Self {
+        Self { charge: 0.0, throws_banked: 0.0, throws_needed }
+    }
+
+    pub fn ready(&self) -> bool { self.charge >= 1.0 }
+
+    /// Call once per thrown ball. Returns true when the meter just hit full.
+    pub fn add_throw(&mut self) -> bool {
+        if self.charge >= 1.0 { return false; }
+        self.throws_banked += 1.0;
+        self.charge = (self.throws_banked / self.throws_needed as f32).min(1.0);
+        self.charge >= 1.0
+    }
+
+    pub fn reset(&mut self) {
+        self.charge = 0.0;
+        self.throws_banked = 0.0;
+    }
 }
 
 /// Marker inserted while Whirlwind is active.
@@ -54,17 +74,10 @@ pub struct WhirlwindActive {
     pub timer: Timer,
 }
 
-// ── Tick cooldowns ──────────────────────────────────────────────────────────
+// ── tick_cooldowns is a no-op now (meter fills on throws) ───────────────────
 
-pub fn tick_cooldowns(
-    time: Res<Time>,
-    mut query: Query<&mut AbilityCooldown>,
-) {
-    for mut cd in query.iter_mut() {
-        if cd.remaining > 0.0 {
-            cd.remaining = (cd.remaining - time.delta_secs()).max(0.0);
-        }
-    }
+pub fn tick_cooldowns(_time: Res<Time>, _query: Query<&mut AbilityCooldown>) {
+    // Meter fills via add_throw() in the throwing system; nothing to tick.
 }
 
 // ── Activate ────────────────────────────────────────────────────────────────
@@ -84,7 +97,7 @@ pub fn activate_ability(
 
     for (entity, player_transform, ability, mut cooldown) in players.iter_mut() {
         if !cooldown.ready() { continue; }
-        cooldown.remaining = cooldown.total;
+        cooldown.reset();
 
         match ability {
             SpecialAbility::Bombardment => {

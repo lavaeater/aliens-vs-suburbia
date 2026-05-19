@@ -66,7 +66,7 @@ impl PlayerBundle {
             auto_aim: AutoAim(Vec3::Z),
             pickup_range: PickupRange::default(),
             special_ability: SpecialAbility::Bombardment,
-            ability_cooldown: AbilityCooldown::new(0.0), // starts ready
+            ability_cooldown: AbilityCooldown::new(SpecialAbility::Bombardment.throws_to_charge()),
         }
     }
 }
