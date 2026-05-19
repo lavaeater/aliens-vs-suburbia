@@ -248,13 +248,20 @@ pub fn merge_extra_anim_clips(
 }
 
 /// Walk the viewer model hierarchy and accumulate world-space Y extents from all Aabb components.
+/// Waits several frames after load so Bevy has time to attach Aabb to all mesh children, then
+/// measures once at scale=1.0 and locks the result.
 pub fn compute_model_height(
     mut state: ResMut<AssetBrowserState>,
     aabb_q: Query<(&Aabb, &GlobalTransform)>,
     children_q: Query<&Children>,
 ) {
-    if state.model_raw_height > 0.0 { return; }
+    if state.model_raw_height > 0.0 { return; } // already measured
     let Some(viewer_entity) = state.viewer_entity else { return };
+
+    // Count frames to let Bevy populate Aabb on all spawned mesh children.
+    const SETTLE_FRAMES: u32 = 8;
+    state.aabb_settle_frames += 1;
+    if state.aabb_settle_frames < SETTLE_FRAMES { return; }
 
     let mut min_y = f32::MAX;
     let mut max_y = f32::MIN;
@@ -263,6 +270,7 @@ pub fn compute_model_height(
 
     if !found || max_y <= min_y { return; }
 
+    // Model is always at scale=1.0 here (apply_viewer_scale hasn't run yet).
     state.model_raw_height = max_y - min_y;
     if let Some(stored_scale) = state.pending_scale.take() {
         state.target_height_m = stored_scale * state.model_raw_height;
@@ -310,7 +318,7 @@ pub fn apply_viewer_scale(
         **t = format!("{:.2} m  (x{:.4})", state.target_height_m, scale);
     }
 
-    // Fit camera: position it so the model fills ~70% of the viewport height.
+    // Fit camera to the model. Runs on load (once AABB is measured) and on user height changes.
     // Uses vertical FOV of 60 degrees (Bevy default perspective).
     let displayed_height = state.model_raw_height * scale;
     let center_y = displayed_height * 0.5;

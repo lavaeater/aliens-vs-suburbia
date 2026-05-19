@@ -78,6 +78,8 @@ pub struct AssetBrowserState {
     /// When a def is loaded before the mesh AABB is known, stash the stored scale here.
     pub pending_scale: Option<f32>,
     pub height_dirty: bool,
+    /// Counts up each frame after a model loads; AABB is measured once this reaches a threshold.
+    pub aabb_settle_frames: u32,
 }
 
 impl Default for AssetBrowserState {
@@ -119,6 +121,7 @@ impl Default for AssetBrowserState {
             target_height_m: 2.0,
             pending_scale: None,
             height_dirty: false,
+            aabb_settle_frames: 0,
         }
     }
 }
@@ -153,6 +156,7 @@ impl AssetBrowserState {
         self.target_height_m = 2.0;
         self.pending_scale = None;
         self.height_dirty = false;
+        self.aabb_settle_frames = 0;
     }
 
     pub fn computed_scale(&self) -> f32 {
