@@ -148,6 +148,14 @@ impl MapEditorState {
         self.grid_dirty = true;
     }
 
+    /// Erase both tile value and any placement at (x, y).
+    pub fn erase_at(&mut self, x: i32, y: i32) {
+        if x < 0 || y < 0 || x >= self.width as i32 || y >= self.height as i32 { return; }
+        self.tiles[y as usize][x as usize] = 0;
+        self.placements.retain(|p| !(p.x == x && p.y == y));
+        self.grid_dirty = true;
+    }
+
     pub fn add_wave(&mut self) {
         self.waves.push(WaveDef::default());
         self.waves_dirty = true;

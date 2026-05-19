@@ -147,7 +147,7 @@ pub fn rebuild_palette(
         **t = if rot == 0 {
             format!("Brush: {name}")
         } else {
-            format!("Brush: {name}  ↻{}°", rot * 45)
+            format!("Brush: {name}  r{}deg", rot * 45)
         };
     }
 

@@ -12,6 +12,9 @@ pub struct GridCamera;
 #[derive(Component)]
 pub struct GridCellMarker { pub x: usize, pub y: usize }
 
+#[derive(Component)]
+pub struct HoverHighlight;
+
 pub fn spawn_grid_camera(mut commands: Commands) {
     commands.spawn((
         Camera2d,
@@ -19,6 +22,20 @@ pub fn spawn_grid_camera(mut commands: Commands) {
         GridCamera,
         StateMarker,
         Transform::default(),
+    ));
+
+    // Hover highlight — a semi-transparent overlay that follows the cursor cell.
+    commands.spawn((
+        HoverHighlight,
+        StateMarker,
+        Node {
+            position_type: PositionType::Absolute,
+            width: Val::Px(CELL_SIZE - 1.0),
+            height: Val::Px(CELL_SIZE - 1.0),
+            ..Default::default()
+        },
+        BackgroundColor(Color::srgba(1.0, 1.0, 1.0, 0.25)),
+        Visibility::Hidden,
     ));
 }
 
@@ -105,32 +122,54 @@ fn tile_color(tile: u8) -> Color {
     }
 }
 
-/// Map screen cursor position → tile (col, row) using the same formula as rebuild_grid.
+fn cursor_to_tile(window: &Window, w: usize, h: usize) -> Option<(i32, i32)> {
+    let cursor = window.cursor_position()?;
+    let grid_left = (window.width()  * 0.5 - w as f32 * CELL_SIZE * 0.5).round();
+    let grid_top  = (window.height() * 0.5 - h as f32 * CELL_SIZE * 0.5).round();
+    let col = ((cursor.x - grid_left) / CELL_SIZE).floor() as i32;
+    let row = ((cursor.y - grid_top)  / CELL_SIZE).floor() as i32;
+    if col < 0 || row < 0 || col >= w as i32 || row >= h as i32 { return None; }
+    Some((col, row))
+}
+
+/// Update the hover highlight position each frame.
+pub fn update_hover_highlight(
+    state: Res<MapEditorState>,
+    windows: Query<&Window, With<PrimaryWindow>>,
+    mut highlight_q: Query<(&mut Node, &mut Visibility), With<HoverHighlight>>,
+) {
+    let Ok((mut node, mut vis)) = highlight_q.single_mut() else { return };
+    let Ok(window) = windows.single() else { return };
+
+    match cursor_to_tile(window, state.width, state.height) {
+        Some((col, row)) => {
+            let grid_left = (window.width()  * 0.5 - state.width  as f32 * CELL_SIZE * 0.5).round();
+            let grid_top  = (window.height() * 0.5 - state.height as f32 * CELL_SIZE * 0.5).round();
+            node.left = Val::Px(grid_left + col as f32 * CELL_SIZE);
+            node.top  = Val::Px(grid_top  + row  as f32 * CELL_SIZE);
+            *vis = Visibility::Visible;
+        }
+        None => { *vis = Visibility::Hidden; }
+    }
+}
+
+/// Map screen cursor position -> tile (col, row) using the same formula as rebuild_grid.
+/// Uses `pressed` so drag-painting works.
 pub fn handle_grid_click(
     mut state: ResMut<MapEditorState>,
     mouse: Res<ButtonInput<MouseButton>>,
     windows: Query<&Window, With<PrimaryWindow>>,
 ) {
-    let (left, right) = (mouse.just_pressed(MouseButton::Left), mouse.just_pressed(MouseButton::Right));
+    let (left, right) = (mouse.pressed(MouseButton::Left), mouse.pressed(MouseButton::Right));
     if !left && !right { return; }
 
     let Ok(window) = windows.single() else { return };
-    let Some(cursor) = window.cursor_position() else { return };
-
-    let w = state.width;
-    let h = state.height;
-
-    let grid_left = (window.width()  * 0.5 - w as f32 * CELL_SIZE * 0.5).round();
-    let grid_top  = (window.height() * 0.5 - h as f32 * CELL_SIZE * 0.5).round();
-
-    let col = ((cursor.x - grid_left) / CELL_SIZE) as i32;
-    let row = ((cursor.y - grid_top)  / CELL_SIZE) as i32;
-
-    if col < 0 || row < 0 || col >= w as i32 || row >= h as i32 { return; }
+    let Some((col, row)) = cursor_to_tile(window, state.width, state.height) else { return };
 
     if left {
         state.place_at(col, row);
     } else {
-        state.erase_placement_at(col, row);
+        // Erase: remove any placement and reset tile to floor.
+        state.erase_at(col, row);
     }
 }

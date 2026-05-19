@@ -1,7 +1,7 @@
 use bevy::app::{App, Plugin, Update};
 use bevy::prelude::{in_state, IntoScheduleConfigs, OnEnter, OnExit};
 use crate::game_state::GameState;
-use crate::map_editor::grid::{handle_grid_click, rebuild_grid, spawn_grid_camera};
+use crate::map_editor::grid::{handle_grid_click, rebuild_grid, spawn_grid_camera, update_hover_highlight};
 use crate::map_editor::state::MapEditorState;
 use crate::map_editor::ui::{handle_editor_keys, rebuild_palette, rebuild_wave_list, spawn_map_editor_ui};
 use crate::ui::spawn_ui::cleanup_state;
@@ -19,6 +19,7 @@ impl Plugin for MapEditorPlugin {
                 (
                     handle_editor_keys,
                     handle_grid_click,
+                    update_hover_highlight,
                     rebuild_grid,
                     rebuild_palette,
                     rebuild_wave_list,
