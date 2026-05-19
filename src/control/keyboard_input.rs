@@ -56,11 +56,7 @@ pub fn keyboard_input(
                     KeyCode::Space => {
                         if controller.triggers.contains(&ControlCommand::Build) {
                             execute_build.write(ExecuteBuild(entity));
-                        } else if controller.triggers.contains(&ControlCommand::Throw) {
-                            animation_ew.write(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Throwing));
-                            controller.triggers.remove(&ControlCommand::Throw);
                         } else {
-                            animation_ew.write(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Throwing));
                             controller.triggers.insert(ControlCommand::Throw);
                         }
                     }
@@ -83,6 +79,9 @@ pub fn keyboard_input(
                     }
                     KeyCode::KeyS => {
                         controller.directions.remove(&ControlDirection::Backward);
+                    }
+                    KeyCode::Space => {
+                        controller.triggers.remove(&ControlCommand::Throw);
                     }
                     KeyCode::ArrowLeft => {
                         change_build_indicator.write(ChangeBuildIndicator(entity, -1));

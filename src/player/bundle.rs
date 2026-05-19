@@ -41,11 +41,20 @@ impl PlayerBundle {
         groups: impl Into<LayerMask>,
         masks: impl Into<LayerMask>,
     ) -> Self {
+        Self::with_throw_rate(name, groups, masks, 60.0)
+    }
+
+    pub fn with_throw_rate(
+        name: &str,
+        groups: impl Into<LayerMask>,
+        masks: impl Into<LayerMask>,
+        throw_rate_per_minute: f32,
+    ) -> Self {
         Self {
             name: Name::new(name.to_string()),
             player: Player {},
             input: InputKeyboard,
-            character_controller: CharacterControl::new(3.0, 3.0, 60.0),
+            character_controller: CharacterControl::new(3.0, 3.0, throw_rate_per_minute),
             dynamic_movement: DynamicMovement,
             friction: Friction::new(0.0),
             angular_damping: AngularDamping(0.0),

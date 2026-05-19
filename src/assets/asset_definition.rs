@@ -60,10 +60,21 @@ pub enum PlayerAbility {
     GoldDigger,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+fn default_throw_rate() -> f32 { 60.0 }
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PlayerProps {
     #[serde(default)]
     pub ability: PlayerAbility,
+    /// Balls thrown per minute. Defaults to 60 (one per second).
+    #[serde(default = "default_throw_rate")]
+    pub throw_rate_per_minute: f32,
+}
+
+impl Default for PlayerProps {
+    fn default() -> Self {
+        Self { ability: PlayerAbility::default(), throw_rate_per_minute: default_throw_rate() }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

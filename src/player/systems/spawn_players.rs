@@ -59,8 +59,8 @@ pub fn spawn_players(
             spawn_player.position.z,
         );
 
-        // Resolve ability for this slot (from def or slot default).
-        let roster_ability = roster.as_ref()
+        // Resolve per-player props from the roster def for this slot.
+        let (roster_ability, roster_throw_rate) = roster.as_ref()
             .and_then(|r| r.def_paths.get(slot))
             .and_then(|def_path| {
                 let text = std::fs::read_to_string(def_path).ok()?;
@@ -68,15 +68,16 @@ pub fn spawn_players(
                 if let crate::assets::asset_definition::ModelType::Player(props) = def.model_type {
                     use crate::assets::asset_definition::PlayerAbility::*;
                     use crate::player::systems::abilities::SpecialAbility;
-                    Some(match props.ability {
+                    let ability = match props.ability {
                         Bombardment => SpecialAbility::Bombardment,
                         Healing     => SpecialAbility::Healing,
                         Whirlwind   => SpecialAbility::Whirlwind,
                         GoldDigger  => SpecialAbility::GoldDigger,
-                    })
+                    };
+                    Some((ability, props.throw_rate_per_minute))
                 } else { None }
             })
-            .unwrap_or_else(|| ability_for_slot(slot));
+            .unwrap_or_else(|| (ability_for_slot(slot), 60.0));
 
         // Decide: use sprite billboard or 3D model?
         let use_billboard = config.as_ref()
@@ -99,7 +100,7 @@ pub fn spawn_players(
                 pos,
                 Visibility::default(),
                 Collider::cuboid(0.5, 0.5, 0.45),
-                PlayerBundle::new(
+                PlayerBundle::with_throw_rate(
                     "player",
                     [CollisionLayer::Player],
                     [
@@ -111,6 +112,7 @@ pub fn spawn_players(
                         CollisionLayer::AlienSpawnPoint,
                         CollisionLayer::AlienGoal,
                     ],
+                    roster_throw_rate,
                 ),
             ));
             // Spawn billboard as a child.
@@ -148,7 +150,7 @@ pub fn spawn_players(
                 SceneRoot(scene),
                 pos,
                 Collider::cuboid(0.5, 0.5, 0.45),
-                PlayerBundle::new(
+                PlayerBundle::with_throw_rate(
                     "player",
                     [CollisionLayer::Player],
                     [
@@ -160,6 +162,7 @@ pub fn spawn_players(
                         CollisionLayer::AlienSpawnPoint,
                         CollisionLayer::AlienGoal,
                     ],
+                    roster_throw_rate,
                 ),
                 )).id()
         };
