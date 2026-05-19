@@ -289,7 +289,7 @@ fn collect_aabbs(
     if let Ok((aabb, gt)) = aabb_q.get(entity) {
         // Transform all 8 AABB corners through the full GlobalTransform matrix so that
         // any scale/rotation baked into GLTF node hierarchies is correctly accounted for.
-        let matrix = gt.compute_matrix();
+        let matrix = gt.to_matrix();
         let c = Vec3::from(aabb.center);
         let h = Vec3::from(aabb.half_extents);
         for sx in [-1.0f32, 1.0] {
