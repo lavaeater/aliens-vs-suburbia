@@ -12,6 +12,7 @@ use crate::ui::spawn_ui::StateMarker;
 
 #[derive(Component)] pub struct PaletteContainer;
 #[derive(Component)] pub struct WaveContainer;
+#[derive(Component)] pub struct EnemyPickerContainer;
 #[derive(Component)] pub struct MapInfoLabel;
 #[derive(Component)] pub struct ActiveBrushLabel;
 #[derive(Component)] pub struct GenSeedLabel;
@@ -127,6 +128,19 @@ pub fn spawn_map_editor_ui(
             n.row_gap = Val::Px(3.0);
         }).bg_color(Color::srgba(0.04, 0.08, 0.05, 0.95));
 
+        right.with_child(|c| { c.insert_bundle(lava_ui_builder::label("-- Enemy --", &TextTheme {
+            label_size: 13.0, label_color: Color::srgb(0.5, 0.8, 0.6), ..t.clone()
+        })); });
+
+        // Enemy picker list
+        right.with_child(|c| {
+            c.display_flex().flex_column().gap_px(2.0)
+             .modify_node(|mut n| { n.max_height = Val::Px(120.0); })
+             .width_percent(100.0)
+             .overflow_scroll_y()
+             .insert(EnemyPickerContainer);
+        });
+
         right.with_child(|c| { c.insert_bundle(lava_ui_builder::label("-- Waves --", &TextTheme {
             label_size: 13.0, label_color: Color::srgb(0.5, 0.8, 0.6), ..t.clone()
         })); });
@@ -139,7 +153,7 @@ pub fn spawn_map_editor_ui(
         });
 
         right.add_button_observe("+ Add Wave", |b| { b.width(percent(100.0)).height(px(28.0)).font_size(13.0); },
-            |_: On<Activate>, mut s: ResMut<MapEditorState>| { s.add_wave(); s.waves_dirty = true; });
+            |_: On<Activate>, mut s: ResMut<MapEditorState>| { s.add_wave(); });
     });
 
     ui.build();
@@ -257,6 +271,58 @@ pub fn rebuild_wave_list(
                 ))
                 .with_child((Text::new("x"), TextFont::default().with_font_size(10.0), TextColor(Color::srgb(1.0, 0.7, 0.7))))
                 .observe(move |_: On<Activate>, mut s: ResMut<MapEditorState>| { s.remove_wave(i); });
+            });
+        }
+    });
+}
+
+pub fn rebuild_enemy_picker(
+    mut state: ResMut<MapEditorState>,
+    mut commands: Commands,
+    container_q: Query<Entity, With<EnemyPickerContainer>>,
+) {
+    if !state.enemy_picker_dirty { return; }
+    state.enemy_picker_dirty = false;
+
+    let Ok(container) = container_q.single() else { return };
+    commands.entity(container).despawn_related::<Children>();
+
+    let items: Vec<(usize, String, bool)> = state.enemy_defs.iter().enumerate()
+        .map(|(i, (_, name))| (i, name.clone(), i == state.selected_enemy))
+        .collect();
+
+    if items.is_empty() {
+        commands.entity(container).with_children(|p| {
+            p.spawn((
+                Text::new("No enemy defs found."),
+                TextFont::default().with_font_size(10.0),
+                TextColor(Color::srgba(0.5, 0.6, 0.5, 0.6)),
+                Node { padding: UiRect::all(Val::Px(4.0)), ..Default::default() },
+            ));
+        });
+        return;
+    }
+
+    commands.entity(container).with_children(|parent| {
+        for (idx, name, selected) in items {
+            let bg = if selected { Color::srgba(0.15, 0.40, 0.20, 0.95) } else { Color::srgba(0.07, 0.12, 0.09, 0.85) };
+            let tc = if selected { Color::srgb(0.9, 1.0, 0.9) } else { Color::srgb(0.65, 0.80, 0.65) };
+            parent.spawn((
+                Node {
+                    width: Val::Percent(100.0),
+                    padding: UiRect::axes(Val::Px(6.0), Val::Px(4.0)),
+                    border_radius: BorderRadius::all(Val::Px(3.0)),
+                    ..Default::default()
+                },
+                BackgroundColor(bg),
+                InteractionPalette { none: bg, hovered: Color::srgba(0.20, 0.50, 0.28, 0.95), pressed: Color::srgba(0.12, 0.32, 0.18, 1.0) },
+                bevy::picking::hover::Hovered::default(),
+                bevy::ui_widgets::Button,
+            ))
+            .with_child((Text::new(name), TextFont::default().with_font_size(11.0), TextColor(tc)))
+            .observe(move |_: On<Activate>, mut s: ResMut<MapEditorState>| {
+                s.selected_enemy = idx;
+                s.enemy_picker_dirty = true;
             });
         }
     });

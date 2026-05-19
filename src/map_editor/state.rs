@@ -73,6 +73,10 @@ pub struct MapEditorState {
     /// Last seed used by "Generate Map".
     pub gen_seed: u64,
     pub seed_label_dirty: bool,
+    /// Enemy defs available for wave assignment: (def_path, display_name).
+    pub enemy_defs: Vec<(String, String)>,
+    pub selected_enemy: usize,
+    pub enemy_picker_dirty: bool,
 }
 
 impl Default for MapEditorState {
@@ -95,6 +99,9 @@ impl Default for MapEditorState {
             grid_dirty: true,
             gen_seed: 0,
             seed_label_dirty: false,
+            enemy_defs: scan_enemy_defs(),
+            selected_enemy: 0,
+            enemy_picker_dirty: true,
         };
         state.refresh_palette();
         state
@@ -162,7 +169,11 @@ impl MapEditorState {
     }
 
     pub fn add_wave(&mut self) {
-        self.waves.push(WaveDef::default());
+        let enemy_def = self.enemy_defs
+            .get(self.selected_enemy)
+            .map(|(path, _)| path.clone())
+            .unwrap_or_default();
+        self.waves.push(WaveDef { enemy_def, ..WaveDef::default() });
         self.waves_dirty = true;
     }
 
@@ -218,6 +229,23 @@ impl MapEditorState {
         self.grid_dirty = true;
         self.waves_dirty = true;
     }
+}
+
+pub fn scan_enemy_defs() -> Vec<(String, String)> {
+    let dir = std::path::Path::new("assets/defs");
+    let Ok(entries) = std::fs::read_dir(dir) else { return vec![] };
+    let mut items: Vec<(String, String)> = entries.flatten().filter_map(|e| {
+        let p = e.path();
+        if p.extension()?.to_str()? != "ron" { return None; }
+        let text = std::fs::read_to_string(&p).ok()?;
+        let def: AssetDefinition = ron::from_str(&text).ok()?;
+        if !matches!(def.model_type, ModelType::Enemy(_)) { return None; }
+        let name = p.file_stem()?.to_str()?.to_string();
+        let path = p.to_string_lossy().replace('\\', "/");
+        Some((path, name))
+    }).collect();
+    items.sort_by(|a, b| a.1.cmp(&b.1));
+    items
 }
 
 fn scan_defs_for_tab(tab: &PaletteTab) -> Vec<PaletteItem> {
