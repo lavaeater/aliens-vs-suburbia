@@ -10,6 +10,7 @@ use crate::control::components::{ControlDirection, CharacterControl, ControlRota
 use crate::game_state::score_keeper::GameTrackingEvent;
 use crate::general::systems::map_systems::TileDefinitions;
 
+#[allow(clippy::type_complexity)]
 pub fn move_towards_goal_system(
     map_graph: Res<MapGraph>,
     mut alien_query: Query<(Entity, &mut MoveTowardsGoalData, &mut CharacterControl, &Position, &Rotation, &CurrentTile, &LinearVelocity), With<Alien>>,

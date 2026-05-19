@@ -50,9 +50,7 @@ pub fn spawn_players(
     mut add_health_bar_mw: MessageWriter<AddHealthBar>,
     mut player_added_mw: MessageWriter<GameTrackingEvent>,
 ) {
-    let mut slot = existing_players.iter().count();
-
-    for spawn_player in spawn_player_event_reader.read() {
+    for (slot, spawn_player) in (existing_players.iter().count()..).zip(spawn_player_event_reader.read()) {
         let pos = Transform::from_xyz(
             spawn_player.position.x,
             spawn_player.position.y,
@@ -171,7 +169,6 @@ pub fn spawn_players(
         commands.entity(player).insert(roster_ability);
         add_health_bar_mw.write(AddHealthBar { entity: player, name: "PLAYER" });
         player_added_mw.write(GameTrackingEvent::PlayerAdded(player));
-        slot += 1;
     }
 }
 

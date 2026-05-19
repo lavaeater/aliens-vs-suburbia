@@ -47,6 +47,7 @@ fn reset_ability_input(mut input: ResMut<AbilityInput>) {
     input.pressed = false;
 }
 
+#[allow(clippy::type_complexity)]
 fn auto_outline_scenes(
     mut commands: Commands,
     query: Query<Entity, (With<SceneRoot>, Without<AsyncSceneInheritOutline>, Without<Floor>)>,
@@ -70,6 +71,7 @@ fn auto_outline_scenes(
 /// 2. InheritOutline already present, Visibility::Hidden set later.
 ///
 /// When a weapon is later made visible again, re-insert InheritOutline alongside Visibility::Visible.
+#[allow(clippy::type_complexity)]
 fn sync_outline_with_visibility(
     mut commands: Commands,
     mut volume_query: Query<
@@ -82,8 +84,9 @@ fn sync_outline_with_visibility(
     changed_query: Query<(Entity, &Visibility), (With<InheritOutline>, Changed<Visibility>)>,
 ) {
     for (vis, mut outline) in volume_query.iter_mut() {
-        if outline.visible != !matches!(vis, Visibility::Hidden) {
-            outline.visible = !matches!(vis, Visibility::Hidden);
+        let should_be_visible = !matches!(vis, Visibility::Hidden);
+        if outline.visible != should_be_visible {
+            outline.visible = should_be_visible;
         }
     }
     for (entity, vis) in added_query.iter().chain(changed_query.iter()) {
@@ -95,6 +98,7 @@ fn sync_outline_with_visibility(
 
 /// After the player scene loads, hide all nodes listed in the AssetDefinition
 /// for this model (falling back to the hardcoded WEAPON_NODES if no def exists).
+#[allow(clippy::type_complexity)]
 fn hide_player_weapon_nodes(
     mut commands: Commands,
     player_query: Query<(Entity, &SceneInstance), (With<crate::player::components::Player>, Without<WeaponsHidden>)>,
@@ -118,10 +122,10 @@ fn hide_player_weapon_nodes(
         if !scene_spawner.instance_is_ready(**scene_instance) { continue; }
         commands.entity(player_entity).insert(WeaponsHidden);
         for entity in scene_spawner.iter_instance_entities(**scene_instance) {
-            if let Ok((_, name)) = named_query.get(entity) {
-                if hidden.contains(&name.as_str()) {
-                    commands.entity(entity).insert(Visibility::Hidden);
-                }
+            if let Ok((_, name)) = named_query.get(entity)
+                && hidden.contains(&name.as_str())
+            {
+                commands.entity(entity).insert(Visibility::Hidden);
             }
         }
     }

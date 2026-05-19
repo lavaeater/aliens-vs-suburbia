@@ -10,7 +10,7 @@ pub const CELL_SIZE: f32 = 24.0; // pixels per tile in the grid view
 pub struct GridCamera;
 
 #[derive(Component)]
-pub struct GridCellMarker { pub x: usize, pub y: usize }
+pub struct GridCellMarker { #[allow(dead_code)] pub x: usize, #[allow(dead_code)] pub y: usize }
 
 #[derive(Component)]
 pub struct HoverHighlight;

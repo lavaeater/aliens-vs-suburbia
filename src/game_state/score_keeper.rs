@@ -164,7 +164,7 @@ pub fn level_state_system(
 
     if matches!(level_tracker.level_state, LevelState::InProgress) {
         // Win: all waves done and all spawned aliens killed.
-        let all_waves_done = wave_manager.as_ref().map_or(true, |wm| !wm.waves_remaining());
+        let all_waves_done = wave_manager.as_ref().is_none_or(|wm| !wm.waves_remaining());
         let all_killed = level_tracker.aliens_killed >= level_tracker.aliens_to_spawn
             && level_tracker.aliens_to_spawn > 0;
         if all_waves_done && all_killed {

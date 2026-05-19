@@ -55,6 +55,7 @@ pub fn agent_cant_find_path(
     }
 }
 
+#[allow(clippy::type_complexity)]
 pub fn destroy_the_map_action_system(
     mut commands: Commands,
     mut map_graph: ResMut<MapGraph>,

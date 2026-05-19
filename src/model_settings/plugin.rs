@@ -109,6 +109,7 @@ fn scan_folder_on_change(
 
 // ── Live model reload ─────────────────────────────────────────────────────────
 
+#[allow(clippy::too_many_arguments)]
 fn reload_player_model(
     model_settings: Res<ModelSettings>,
     asset_server: Res<AssetServer>,
@@ -173,6 +174,7 @@ fn sync_player_anim_clips(
 
 /// Rebuilds the "players" entry in AnimationStore from the loaded GLTF.
 /// Priority for each key: AssetDefinition mapping → ModelSettings.anim_mapping → default_search.
+#[allow(clippy::too_many_arguments)]
 fn build_player_anim_graph(
     model_settings: Res<ModelSettings>,
     game_assets: Res<GameAssets>,

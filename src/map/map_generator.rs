@@ -273,7 +273,7 @@ fn is_connected(grid: &[Vec<u8>], from: (usize, usize), to: (usize, usize)) -> b
 // ── House placement ──────────────────────────────────────────────────────────
 
 fn try_place_house(
-    grid: &mut Vec<Vec<u8>>,
+    grid: &mut [Vec<u8>],
     rng: &mut Rng,
     player: (usize, usize),
     aliens: &[(usize, usize)],
@@ -295,9 +295,9 @@ fn try_place_house(
         if !clear { continue; }
 
         // Tentatively place
-        for r in row..row + hh {
-            for c in col..col + hw {
-                grid[r][c] = 0;
+        for row_data in grid[row..row + hh].iter_mut() {
+            for cell in row_data[col..col + hw].iter_mut() {
+                *cell = 0;
             }
         }
 
@@ -310,9 +310,9 @@ fn try_place_house(
         }
 
         // Roll back
-        for r in row..row + hh {
-            for c in col..col + hw {
-                grid[r][c] = 1;
+        for row_data in grid[row..row + hh].iter_mut() {
+            for cell in row_data[col..col + hw].iter_mut() {
+                *cell = 1;
             }
         }
     }

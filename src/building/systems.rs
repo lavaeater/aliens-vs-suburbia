@@ -158,6 +158,7 @@ fn tower_cost(key: &str) -> u32 {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn execute_build(
     mut execute_evr: MessageReader<ExecuteBuild>,
     mut remove_tile_mw: MessageWriter<RemoveTile>,

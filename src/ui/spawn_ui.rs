@@ -422,6 +422,7 @@ fn anim_mapping_row(ui: &mut UIBuilder, label: &str, t: &TextTheme, key: Animati
 
 /// Camera setting row: `[ << ][ < ]  value  [ > ][ >> ]`
 /// Outer buttons are the coarse step, inner are the fine step.
+#[allow(clippy::too_many_arguments)]
 fn cam_row(
     ui: &mut UIBuilder,
     label: &str,
@@ -448,6 +449,7 @@ fn cam_row(
 }
 
 /// Model setting row: `[ << ][ < ]  value  [ > ][ >> ]`
+#[allow(clippy::too_many_arguments)]
 fn mdl_row(
     ui: &mut UIBuilder,
     label: &str,
@@ -592,6 +594,7 @@ pub fn update_anim_mapping_labels(
 }
 
 
+#[allow(clippy::type_complexity)]
 pub fn update_hud(
     alien_counter: Option<Res<AlienCounter>>,
     building_query: Query<(), With<IsBuilding>>,

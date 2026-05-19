@@ -13,6 +13,7 @@ use crate::general::components::map_components::CoolDown;
 use crate::player::components::{AutoAim, Player, PlayerDead};
 use crate::player::systems::abilities::AbilityCooldown;
 
+#[allow(clippy::type_complexity)]
 pub fn throwing(
     time_res: Res<Time>,
     mut query: Query<(Entity, &Player, &Position, &AutoAim, &mut CharacterControl, &mut AbilityCooldown), Without<PlayerDead>>,

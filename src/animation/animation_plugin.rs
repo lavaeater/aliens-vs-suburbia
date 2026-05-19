@@ -240,10 +240,10 @@ fn anim_thingie(
     player: &mut Mut<AnimationPlayer>,
     old_key: Option<AnimationKey>,
 ) {
-    if let Some(old) = old_key {
-        if let Some(idx) = anim_store.anims.get(group).and_then(|m| m.get(&old)) {
-            player.stop(*idx);
-        }
+    if let Some(old) = old_key
+        && let Some(idx) = anim_store.anims.get(group).and_then(|m| m.get(&old))
+    {
+        player.stop(*idx);
     }
     if let Some(idx) = anim_store.anims.get(group).and_then(|m| m.get(&key)) {
         let active = player.play(*idx);

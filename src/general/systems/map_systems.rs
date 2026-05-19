@@ -306,6 +306,7 @@ pub fn map_loader(
                     let mut max_row = row;
                     'extend_down: loop {
                         if max_row + 1 >= rows { break; }
+                        #[allow(clippy::needless_range_loop)]
                         for c in col..=max_col {
                             if !floor_set.contains(&(c as i32, (max_row + 1) as i32))
                                 || covered[max_row + 1][c]
@@ -315,9 +316,9 @@ pub fn map_loader(
                         }
                         max_row += 1;
                     }
-                    for r in row..=max_row {
-                        for c in col..=max_col {
-                            covered[r][c] = true;
+                    for row_data in covered[row..=max_row].iter_mut() {
+                        for cell in row_data[col..=max_col].iter_mut() {
+                            *cell = true;
                         }
                     }
                     let w = (max_col - col + 1) as f32;
@@ -626,19 +627,19 @@ pub fn map_loader(
         }
 
         // Override WaveManager with map-defined waves if any are present.
-        if !map_file.waves.is_empty() {
-            if let Some(ref mut wm) = wave_manager {
-                use crate::alien::wave_manager::WaveDef as WmWave;
-                wm.waves = map_file.waves.iter().enumerate().map(|(i, w)| WmWave {
-                    alien_count: w.count as i32,
-                    spawn_rate_per_minute: w.spawn_rate_per_minute,
-                    delay_before: if i == 0 { 5.0 } else { 15.0 },
-                }).collect();
-                wm.current_wave = 0;
-                wm.wave_timer = 5.0;
-                wm.spawning = false;
-                wm.spawned_this_wave = 0;
-            }
+        if !map_file.waves.is_empty()
+            && let Some(ref mut wm) = wave_manager
+        {
+            use crate::alien::wave_manager::WaveDef as WmWave;
+            wm.waves = map_file.waves.iter().enumerate().map(|(i, w)| WmWave {
+                alien_count: w.count as i32,
+                spawn_rate_per_minute: w.spawn_rate_per_minute,
+                delay_before: if i == 0 { 5.0 } else { 15.0 },
+            }).collect();
+            wm.current_wave = 0;
+            wm.wave_timer = 5.0;
+            wm.spawning = false;
+            wm.spawned_this_wave = 0;
         }
     }
 }

@@ -71,6 +71,7 @@ pub fn rebuild_slot_labels(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn handle_setup_input(
     mut state: ResMut<PlayerSetupState>,
     mut roster: ResMut<PlayerRoster>,

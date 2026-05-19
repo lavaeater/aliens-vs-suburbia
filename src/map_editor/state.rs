@@ -155,11 +155,6 @@ impl MapEditorState {
         }
     }
 
-    pub fn erase_placement_at(&mut self, x: i32, y: i32) {
-        self.placements.retain(|p| !(p.x == x && p.y == y));
-        self.grid_dirty = true;
-    }
-
     /// Erase both tile value and any placement at (x, y).
     pub fn erase_at(&mut self, x: i32, y: i32) {
         if x < 0 || y < 0 || x >= self.width as i32 || y >= self.height as i32 { return; }
@@ -209,14 +204,6 @@ impl MapEditorState {
             let _ = std::fs::create_dir_all("assets/maps");
             let _ = std::fs::write(&path, text);
             bevy::log::info!("Map saved to {path}");
-        }
-    }
-
-    pub fn load_from_file(&mut self, path: &str) {
-        if let Ok(text) = std::fs::read_to_string(path) {
-            if let Ok(map) = ron::from_str::<MapFile>(&text) {
-                self.load_from_map_file(map);
-            }
         }
     }
 

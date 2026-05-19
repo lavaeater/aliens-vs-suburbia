@@ -8,6 +8,7 @@ use crate::player::components::PlayerDead;
 use crate::player::events::building_events::{ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode};
 use crate::player::systems::abilities::AbilityInput;
 
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn keyboard_input(
     mut key_evr: MessageReader<KeyboardInput>,
     mut query: Query<(Entity, &mut CharacterControl), (With<InputKeyboard>, Without<PlayerDead>)>,

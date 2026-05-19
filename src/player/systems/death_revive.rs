@@ -11,6 +11,7 @@ const REVIVE_DURATION: f32 = 3.0;
 
 /// When a player's health reaches 0, mark them as downed instead of letting
 /// them be despawned. Zeros their velocity and spawns a revive progress bar.
+#[allow(clippy::type_complexity)]
 pub fn detect_player_death(
     mut commands: Commands,
     mut query: Query<
@@ -63,10 +64,10 @@ pub fn player_revive_system(
         }
 
         // Sync progress bar.
-        if let Some(bar_entity) = dead.revive_bar {
-            if let Ok(mut bar) = bar_query.get_mut(bar_entity) {
-                bar.value = dead.revive_progress.clamp(0.0, 1.0);
-            }
+        if let Some(bar_entity) = dead.revive_bar
+            && let Ok(mut bar) = bar_query.get_mut(bar_entity)
+        {
+            bar.value = dead.revive_progress.clamp(0.0, 1.0);
         }
 
         if dead.revive_progress >= 1.0 {

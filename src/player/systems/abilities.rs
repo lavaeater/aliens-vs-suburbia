@@ -81,6 +81,7 @@ pub fn tick_cooldowns(_time: Res<Time>, _query: Query<&mut AbilityCooldown>) {
 
 // ── Activate ────────────────────────────────────────────────────────────────
 
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn activate_ability(
     mut commands: Commands,
     mut players: Query<(Entity, &Transform, &SpecialAbility, &mut AbilityCooldown), (With<Player>, Without<PlayerDead>)>,

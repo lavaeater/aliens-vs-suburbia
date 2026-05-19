@@ -1,3 +1,4 @@
+#![allow(clippy::type_complexity)]
 use bevy::math::{EulerRot, Quat};
 use bevy::prelude::{Query, Transform, With};
 use avian3d::prelude::{AngularVelocity, LinearVelocity};

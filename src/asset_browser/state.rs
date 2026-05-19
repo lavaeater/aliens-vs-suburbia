@@ -28,6 +28,7 @@ pub struct AssetBrowserState {
     pub folders: Vec<String>,
     pub folder_list_dirty: bool,
     pub folder_scroll: usize,
+    #[allow(dead_code)]
     pub selected_folder: usize,
 
     // ── File list ──────────────────────────────────────────────────────────────
@@ -391,12 +392,11 @@ pub fn scan_folder(folder: &str) -> (Vec<String>, Vec<String>) {
             }
         } else {
             let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
-            if ext == "glb" || ext == "gltf" {
-                if let Ok(rel) = path.strip_prefix(base) {
-                    if let Some(s) = rel.to_str() {
-                        files.push(s.replace('\\', "/"));
-                    }
-                }
+            if (ext == "glb" || ext == "gltf")
+                && let Ok(rel) = path.strip_prefix(base)
+                && let Some(s) = rel.to_str()
+            {
+                files.push(s.replace('\\', "/"));
             }
         }
     }
@@ -409,6 +409,6 @@ pub fn scan_folder(folder: &str) -> (Vec<String>, Vec<String>) {
 fn next_clip(clips: &[String], current: &str, delta: i32) -> String {
     if clips.is_empty() { return current.to_string(); }
     let idx = clips.iter().position(|c| c == current).map(|i| i as i32).unwrap_or(-1);
-    let next = ((idx + delta).rem_euclid(clips.len() as i32)) as usize;
+    let next = (idx + delta).rem_euclid(clips.len() as i32) as usize;
     clips[next].clone()
 }

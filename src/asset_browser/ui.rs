@@ -24,7 +24,7 @@ use crate::ui::spawn_ui::StateMarker;
 #[derive(Component)] pub struct SourcesContainer;
 
 #[derive(Component)] pub struct ListItem(pub usize);
-#[derive(Component)] pub struct MappingRow(pub String); // game-state key
+#[derive(Component)] pub struct MappingRow(#[allow(dead_code)] pub String); // game-state key
 
 // ── Spawn ─────────────────────────────────────────────────────────────────────
 
@@ -330,13 +330,13 @@ pub fn scroll_to_selection(
     for child in children.iter() {
         let Ok((opt_item, child_node)) = child_q.get(child) else { continue };
         let h = child_node.size().y + 1.0;
-        if let Some(item) = opt_item {
-            if item.0 == state.selected {
-                let cur = scroll.0.y;
-                if y < cur { scroll.0.y = y; }
-                else if y + h > cur + container_height { scroll.0.y = y + h - container_height; }
-                return;
-            }
+        if let Some(item) = opt_item
+            && item.0 == state.selected
+        {
+            let cur = scroll.0.y;
+            if y < cur { scroll.0.y = y; }
+            else if y + h > cur + container_height { scroll.0.y = y + h - container_height; }
+            return;
         }
         y += h;
     }
