@@ -182,6 +182,7 @@ pub fn init_wall_materials(
 
 /// Fade walls that lie between the camera and the player to semi-transparent.
 /// Walls not on the camera→player line are restored to full opacity.
+#[allow(clippy::type_complexity)]
 pub fn wall_occlusion_system(
     camera_q: Query<&Transform, With<GameCamera>>,
     player_q: Query<&Position, With<Player>>,

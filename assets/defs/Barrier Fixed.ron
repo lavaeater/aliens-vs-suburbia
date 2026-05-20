@@ -1,0 +1,12 @@
+(
+    model_path: "packs/toon-shooter/map/Barrier Fixed.glb",
+    scale: 62.828186,
+    model_type: Terrain((
+        blocks_enemies: true,
+        blocks_players: false,
+        health: None,
+    )),
+    hidden_nodes: [],
+    animation_mapping: {},
+    animation_sources: [],
+)

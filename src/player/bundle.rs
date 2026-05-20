@@ -5,7 +5,9 @@ use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
 use crate::control::components::{CharacterControl, DynamicMovement, InputKeyboard};
 use crate::control::components::CharacterState;
 use crate::game_state::score_keeper::Score;
-use crate::general::components::{Health};
+use crate::general::components::Health;
+use crate::general::systems::coin_system::PickupRange;
+use crate::player::systems::abilities::{AbilityCooldown, SpecialAbility};
 use crate::general::components::map_components::CurrentTile;
 use crate::player::components::{AutoAim, Player};
 
@@ -28,19 +30,32 @@ pub struct PlayerBundle {
     character_state: CharacterState,
     score: Score,
     auto_aim: AutoAim,
+    pickup_range: PickupRange,
+    special_ability: SpecialAbility,
+    ability_cooldown: AbilityCooldown,
 }
 
+#[allow(dead_code)]
 impl PlayerBundle {
     pub fn new(
         name: &str,
         groups: impl Into<LayerMask>,
         masks: impl Into<LayerMask>,
     ) -> Self {
+        Self::with_throw_rate(name, groups, masks, 60.0)
+    }
+
+    pub fn with_throw_rate(
+        name: &str,
+        groups: impl Into<LayerMask>,
+        masks: impl Into<LayerMask>,
+        throw_rate_per_minute: f32,
+    ) -> Self {
         Self {
             name: Name::new(name.to_string()),
             player: Player {},
             input: InputKeyboard,
-            character_controller: CharacterControl::new(3.0, 3.0, 60.0),
+            character_controller: CharacterControl::new(3.0, 3.0, throw_rate_per_minute),
             dynamic_movement: DynamicMovement,
             friction: Friction::new(0.0),
             angular_damping: AngularDamping(0.0),
@@ -59,6 +74,9 @@ impl PlayerBundle {
             character_state: CharacterState::default(),
             score: Score::new(),
             auto_aim: AutoAim(Vec3::Z),
+            pickup_range: PickupRange::default(),
+            special_ability: SpecialAbility::Bombardment,
+            ability_cooldown: AbilityCooldown::new(SpecialAbility::Bombardment.throws_to_charge()),
         }
     }
 }

@@ -4,11 +4,7 @@ use bevy::animation::AnimationClip;
 use bevy::app::{App, Plugin, Update};
 use bevy::asset::{AssetServer, Handle};
 use bevy::ecs::component::Mutable;
-use bevy::prelude::{
-    Added, AnimationGraph, AnimationGraphHandle, AnimationNodeIndex, AnimationPlayer, Assets,
-    ChildOf, Children, Commands, Component, Entity, IntoScheduleConfigs, Message, MessageReader,
-    Mut, OnEnter, Query, Reflect, Res, ResMut, Resource, in_state,
-};
+use bevy::prelude::*;
 use std::collections::HashMap;
 
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -20,7 +16,9 @@ pub enum AnimationEventType {
 #[derive(Message, Clone)]
 pub struct AnimationEvent(pub AnimationEventType, pub Entity, pub AnimationKey);
 
-#[derive(Component, Debug, Reflect)]
+#[derive(Component, Debug, Reflect, Default)]
+#[reflect(Component, Default)]
+#[type_path = "avs"]
 pub struct CurrentAnimationKey {
     pub group: String,
     pub key: AnimationKey,
@@ -59,9 +57,12 @@ pub struct AnimationStore {
 /// Animation keys.  Keys without a direct clip (e.g. `Throwing`) are
 /// intent-only: they are pushed onto `CharacterState`'s stack and resolved
 /// by `CharacterState::resolve()` into a concrete clip key at runtime.
-#[derive(Eq, Hash, PartialEq, Copy, Clone, Debug, Reflect)]
+#[derive(Eq, Hash, PartialEq, Copy, Clone, Debug, Reflect, Default)]
+#[reflect(Default)]
+#[type_path = "avs"]
 pub enum AnimationKey {
     // ── Locomotion ─────────────────────────────────────────────────────────
+    #[default]
     Idle,
     IdleShoot,
     Walk,
@@ -240,10 +241,10 @@ fn anim_thingie(
     player: &mut Mut<AnimationPlayer>,
     old_key: Option<AnimationKey>,
 ) {
-    if let Some(old) = old_key {
-        if let Some(idx) = anim_store.anims.get(group).and_then(|m| m.get(&old)) {
-            player.stop(*idx);
-        }
+    if let Some(old) = old_key
+        && let Some(idx) = anim_store.anims.get(group).and_then(|m| m.get(&old))
+    {
+        player.stop(*idx);
     }
     if let Some(idx) = anim_store.anims.get(group).and_then(|m| m.get(&key)) {
         let active = player.play(*idx);

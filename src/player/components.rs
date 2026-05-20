@@ -1,8 +1,9 @@
 use bevy::math::Vec3;
-use bevy::prelude::{Component, Entity};
-use bevy::reflect::Reflect;
+use bevy::prelude::*;
 
-#[derive(Component)]
+#[derive(Component, Default, Reflect)]
+#[reflect(Component, Default)]
+#[type_path = "avs"]
 pub struct Player;
 
 #[derive(Hash, PartialEq, Eq, Clone, Reflect, Component)]
@@ -14,18 +15,39 @@ pub struct BuildingIndicator(pub Entity, pub i32);
 #[derive(Hash, PartialEq, Eq, Clone, Reflect, Component)]
 pub struct IsBuildIndicator;
 
-#[derive(Hash, PartialEq, Eq, Clone, Reflect, Component)]
+#[derive(Hash, PartialEq, Eq, Clone, Component, Default, Reflect)]
+#[reflect(Component, Default)]
+ #[type_path = "avs"]
 pub struct IsObstacle;
 
-#[derive(Hash, PartialEq, Eq, Clone, Reflect, Component)]
+#[derive(Hash, PartialEq, Eq, Clone, Component, Default, Reflect)]
+#[reflect(Component, Default)]
+ #[type_path = "avs"]
 pub struct ShootingTower;
 
-#[derive(Component)]
+#[derive(Component, Default, Reflect)]
+#[reflect(Component, Default)]
+ #[type_path = "avs"]
 pub struct AutoAim(pub Vec3);
 
 /// Marks a player entity whose weapon nodes have been hidden.
-#[derive(Component)]
+#[derive(Component, Default, Reflect)]
+#[reflect(Component, Default)]
+ #[type_path = "avs"]
 pub struct WeaponsHidden;
+
+/// Marks a player who is downed (health ≤ 0) and waiting for a revive.
+/// While this component is present the player cannot move or act.
+/// Removed when a teammate completes a revive.
+#[derive(Component, Default, Reflect)]
+#[reflect(Component, Default)]
+ #[type_path = "avs"]
+pub struct PlayerDead {
+    /// Accumulated revive progress from 0.0 (none) to 1.0 (complete).
+    pub revive_progress: f32,
+    /// Entity of the WorldFollower revive-progress bar, spawned on death.
+    pub revive_bar: Option<Entity>,
+}
 
 /// Weapon mesh-node names present in the toon-shooter character models.
 /// Nodes matching any of these names are hidden on spawn and can be revealed

@@ -8,9 +8,11 @@ use bevy::prelude::States;
 pub enum GameState {
     #[default]
     Menu,
+    PlayerSetup,
     InGame,
     ModelShowcase,
     CharacterCreator,
     PolyPizza,
     AssetBrowser,
+    MapEditor,
 }

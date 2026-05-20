@@ -2,8 +2,8 @@ use bevy::app::{App, Plugin, Update};
 use bevy::prelude::{in_state, IntoScheduleConfigs, OnEnter, Time};
 use bevy::state::app::AppExtStates;
 use bevy::time::Fixed;
-use crate::ai::ai_plugin::StatefulAiPlugin;
-use crate::alien::alien_plugin::StatefulAlienPlugin;
+use crate::ai::stateful_ai_plugin::StatefulAiPlugin;
+use crate::alien::stateful_alien_plugin::StatefulAlienPlugin;
 use crate::animation::animation_plugin::AnimationPlugin;
 use crate::assets::assets_plugin::AssetsPlugin;
 use crate::building::build_mode_plugin::StatefulBuildModePlugin;
@@ -15,6 +15,8 @@ use crate::game_state::GameState;
 use crate::game_state::score_keeper::ScoreKeeperPlugin;
 use crate::general::systems::collision_handling_system::collision_handling_system;
 use crate::general::systems::health_monitor_system::health_monitor_system;
+use crate::general::systems::touch_damage_system::touch_damage_system;
+use crate::general::systems::coin_system::{coin_pickup_system, spawn_coins_on_alien_death, TeamWallet};
 use crate::general::systems::death_effect_system::{spawn_death_effects, tick_death_effects};
 use crate::general::systems::lights_systems::spawn_lights;
 use crate::general::systems::throwing_system::throwing;
@@ -22,11 +24,13 @@ use crate::map::map_plugins::StatefulMapPlugin;
 use crate::player::player_plugin::PlayerPlugin;
 use crate::settings::plugin::SettingsPlugin;
 use crate::model_settings::plugin::ModelSettingsPlugin;
-use crate::towers::systems::shoot_alien_system;
+use crate::towers::systems::{area_damage_system, shoot_alien_system, slow_alien_system};
 use crate::ui::ui_plugin::UiPlugin;
 use crate::poly_pizza::plugin::PolyPizzaPlugin;
 use crate::character_creator::plugin::CharacterCreatorPlugin;
 use crate::asset_browser::plugin::AssetBrowserPlugin;
+use crate::player_setup::plugin::PlayerSetupPlugin;
+use crate::map_editor::plugin::MapEditorPlugin;
 use crate::sprite_billboard::plugin::SpriteBillboardPlugin;
 
 pub struct GamePlugin;
@@ -35,6 +39,7 @@ impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app
             .insert_resource(Time::<Fixed>::from_seconds(0.05))
+            .init_resource::<TeamWallet>()
             .init_state::<GameState>()
             .add_plugins((
                 AssetsPlugin,
@@ -58,6 +63,8 @@ impl Plugin for GamePlugin {
                 CharacterCreatorPlugin,
                 SpriteBillboardPlugin,
                 AssetBrowserPlugin,
+                PlayerSetupPlugin,
+                MapEditorPlugin,
             ))
             .add_systems(
                 OnEnter(GameState::InGame),
@@ -69,6 +76,11 @@ impl Plugin for GamePlugin {
                     throwing,
                     collision_handling_system,
                     shoot_alien_system,
+                    slow_alien_system,
+                    area_damage_system,
+                    touch_damage_system,
+                    spawn_coins_on_alien_death.before(health_monitor_system),
+                    coin_pickup_system,
                     spawn_death_effects.before(health_monitor_system),
                     health_monitor_system,
                     tick_death_effects,

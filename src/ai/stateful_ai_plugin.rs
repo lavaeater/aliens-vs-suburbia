@@ -1,0 +1,45 @@
+use bevy::app::{App, FixedUpdate, Plugin, Update};
+use bevy::prelude::{in_state, IntoScheduleConfigs};
+use crate::ai::components::move_towards_goal_components::{AgentReachedGoal, AgentCannotFindPath};
+use crate::ai::systems::approach_and_attack_player_systems::{approach_player_system, attack_player_system, can_agent_see_player_system};
+use crate::ai::systems::avoid_walls_systems::{avoid_walls_action_system, avoid_walls_data_system};
+use crate::ai::systems::destroy_the_map_systems::{agent_cant_find_path, destroy_the_map_action_system, recheck_path_after_tile_opened};
+use crate::ai::systems::move_forward_systems::move_forward_system;
+use crate::ai::systems::move_towards_goal_systems::{agent_reached_goal_handler, move_towards_goal_system};
+use crate::game_state::GameState;
+
+pub struct StatefulAiPlugin;
+
+impl Plugin for StatefulAiPlugin {
+    fn build(&self, app: &mut App) {
+        app
+            .add_message::<AgentReachedGoal>()
+            .add_message::<AgentCannotFindPath>()
+            .add_systems(
+                Update,
+                (
+                    agent_reached_goal_handler,
+                    agent_cant_find_path,
+                ).run_if(in_state(GameState::InGame)),
+            )
+            .add_systems(
+                FixedUpdate,
+                (
+                    avoid_walls_data_system,
+                    // can_agent_see_player_system,
+                ).run_if(in_state(GameState::InGame)),
+            )
+            .add_systems(
+                Update,
+                (
+                    avoid_walls_action_system,
+                    // approach_player_system,
+                    // attack_player_system,
+                    move_towards_goal_system,
+                    // move_forward_system,
+                    destroy_the_map_action_system,
+                    recheck_path_after_tile_opened,
+                ).run_if(in_state(GameState::InGame)),
+            );
+    }
+}

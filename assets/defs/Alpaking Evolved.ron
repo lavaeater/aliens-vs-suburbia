@@ -1,0 +1,12 @@
+(
+    model_path: "packs/monsters/Alpaking Evolved.glb",
+    scale: 67.27158,
+    model_type: Enemy((
+        health: 100.0,
+        speed: 2.0,
+        coin_drop: 5,
+    )),
+    hidden_nodes: [],
+    animation_mapping: {},
+    animation_sources: [],
+)

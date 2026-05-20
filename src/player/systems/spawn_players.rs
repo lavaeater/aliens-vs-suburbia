@@ -1,6 +1,7 @@
 use bevy::math::{Quat, Vec3};
-use bevy::prelude::{Children, Commands, Component, DetectChanges, Entity, Local, MessageReader, MessageWriter,
-                    Assets, Query, Res, ResMut, Transform, Visibility, With};
+use bevy::prelude::*;
+use bevy::asset::AssetServer;
+use bevy::gltf::GltfAssetLabel;
 use bevy::scene::SceneRoot;
 use avian3d::prelude::Collider;
 use crate::assets::assets_plugin::GameAssets;
@@ -9,6 +10,7 @@ use crate::character_creator::config::{CharacterConfig, ComposedSpriteSheet};
 use crate::game_state::score_keeper::GameTrackingEvent;
 use crate::general::components::CollisionLayer;
 use crate::general::events::map_events::SpawnPlayer;
+use crate::model_settings::plugin::PlayerAssetDef;
 use crate::model_settings::resources::ModelSettings;
 use crate::player::bundle::PlayerBundle;
 use crate::sprite_billboard::components::{BillboardMeshHandle, SpriteBillboard};
@@ -36,8 +38,12 @@ impl FixSceneTransform {
 pub fn spawn_players(
     mut spawn_player_event_reader: MessageReader<SpawnPlayer>,
     mut commands: Commands,
-    game_assets: Res<GameAssets>,
+    mut game_assets: ResMut<GameAssets>,
+    mut player_asset_def: ResMut<PlayerAssetDef>,
     model_settings: Res<ModelSettings>,
+    asset_server: Res<AssetServer>,
+    roster: Option<Res<crate::player_setup::state::PlayerRoster>>,
+    existing_players: Query<(), With<crate::player::components::Player>>,
     config: Option<Res<CharacterConfig>>,
     sheet: Option<Res<ComposedSpriteSheet>>,
     billboard_mesh: Option<Res<BillboardMeshHandle>>,
@@ -45,12 +51,32 @@ pub fn spawn_players(
     mut add_health_bar_mw: MessageWriter<AddHealthBar>,
     mut player_added_mw: MessageWriter<GameTrackingEvent>,
 ) {
-    for spawn_player in spawn_player_event_reader.read() {
+    for (slot, spawn_player) in (existing_players.iter().count()..).zip(spawn_player_event_reader.read()) {
         let pos = Transform::from_xyz(
             spawn_player.position.x,
             spawn_player.position.y,
             spawn_player.position.z,
         );
+
+        // Resolve per-player props from the roster def for this slot.
+        let (roster_ability, roster_throw_rate) = roster.as_ref()
+            .and_then(|r| r.def_paths.get(slot))
+            .and_then(|def_path| {
+                let text = std::fs::read_to_string(def_path).ok()?;
+                let def: crate::assets::asset_definition::AssetDefinition = ron::from_str(&text).ok()?;
+                if let crate::assets::asset_definition::ModelType::Player(props) = def.model_type {
+                    use crate::assets::asset_definition::PlayerAbility::*;
+                    use crate::player::systems::abilities::SpecialAbility;
+                    let ability = match props.ability {
+                        Bombardment => SpecialAbility::Bombardment,
+                        Healing     => SpecialAbility::Healing,
+                        Whirlwind   => SpecialAbility::Whirlwind,
+                        GoldDigger  => SpecialAbility::GoldDigger,
+                    };
+                    Some((ability, props.throw_rate_per_minute))
+                } else { None }
+            })
+            .unwrap_or_else(|| (ability_for_slot(slot), 60.0));
 
         // Decide: use sprite billboard or 3D model?
         let use_billboard = config.as_ref()
@@ -73,7 +99,7 @@ pub fn spawn_players(
                 pos,
                 Visibility::default(),
                 Collider::cuboid(0.5, 0.5, 0.45),
-                PlayerBundle::new(
+                PlayerBundle::with_throw_rate(
                     "player",
                     [CollisionLayer::Player],
                     [
@@ -85,6 +111,7 @@ pub fn spawn_players(
                         CollisionLayer::AlienSpawnPoint,
                         CollisionLayer::AlienGoal,
                     ],
+                    roster_throw_rate,
                 ),
             ));
             // Spawn billboard as a child.
@@ -99,18 +126,40 @@ pub fn spawn_players(
             });
             parent_id
         } else {
-            // 3D model path (original behaviour).
+            // 3D model path — use roster def if available for this slot, else default.
             let s = &*model_settings;
+            // Load scene from roster def if available; also sync game_assets and
+            // player_asset_def so build_player_anim_graph uses the right GLTF.
+            let scene = if let Some(ref r) = roster {
+                r.def_paths.get(slot)
+                    .and_then(|def_path| {
+                        let text = std::fs::read_to_string(def_path).ok()?;
+                        let def: crate::assets::asset_definition::AssetDefinition = ron::from_str(&text).ok()?;
+                        let scene = asset_server.load(GltfAssetLabel::Scene(0).from_asset(def.model_path.clone()));
+                        // Slot 0 drives the shared animation graph — keep game_assets in sync.
+                        if slot == 0 {
+                            game_assets.player_scene = scene.clone();
+                            game_assets.player_gltf = asset_server.load(def.model_path.clone());
+                            if matches!(def.model_type, crate::assets::asset_definition::ModelType::Player(_)) {
+                                player_asset_def.0 = Some(def);
+                            }
+                        }
+                        Some(scene)
+                    })
+                    .unwrap_or_else(|| game_assets.player_scene.clone())
+            } else {
+                game_assets.player_scene.clone()
+            };
             commands.spawn((
                 FixSceneTransform::new(
                     Vec3::new(s.translation_x, s.translation_y, s.translation_z),
                     Quat::from_rotation_y(s.rotation_y_degrees.to_radians()),
                     Vec3::splat(s.scale),
                 ),
-                SceneRoot(game_assets.player_scene.clone()),
+                SceneRoot(scene),
                 pos,
                 Collider::cuboid(0.5, 0.5, 0.45),
-                PlayerBundle::new(
+                PlayerBundle::with_throw_rate(
                     "player",
                     [CollisionLayer::Player],
                     [
@@ -122,17 +171,33 @@ pub fn spawn_players(
                         CollisionLayer::AlienSpawnPoint,
                         CollisionLayer::AlienGoal,
                     ],
+                    roster_throw_rate,
                 ),
                 )).id()
         };
 
+        // Override ability from def / slot default.
+        commands.entity(player).insert(roster_ability);
         add_health_bar_mw.write(AddHealthBar { entity: player, name: "PLAYER" });
         player_added_mw.write(GameTrackingEvent::PlayerAdded(player));
     }
 }
 
+/// Cycles through abilities by slot so each player starts with a different one.
+fn ability_for_slot(slot: usize) -> crate::player::systems::abilities::SpecialAbility {
+    use crate::player::systems::abilities::SpecialAbility::*;
+    match slot % 4 {
+        0 => Bombardment,
+        1 => Healing,
+        2 => Whirlwind,
+        _ => GoldDigger,
+    }
+}
+
 /// Marker placed on the direct scene-root child of the player so we can retarget it later.
-#[derive(Component)]
+#[derive(Component, Default, Reflect)]
+#[reflect(Component, Default)]
+#[type_path = "avs"]
 pub struct PlayerModelRoot;
 
 pub fn fix_scene_transform(
@@ -142,11 +207,11 @@ pub fn fix_scene_transform(
 ) {
     for (parent, fix_scene_transform, children) in scene_instance_query.iter_mut() {
         for child in children.iter() {
-            if let Ok(mut transform) = child_query.get_mut(*child) {
+            if let Ok(mut transform) = child_query.get_mut(child) {
                 transform.translation = fix_scene_transform.translation;
                 transform.rotation = fix_scene_transform.rotation;
                 transform.scale = fix_scene_transform.scale;
-                commands.entity(*child).insert(PlayerModelRoot);
+                commands.entity(child).insert(PlayerModelRoot);
                 commands.entity(parent).remove::<FixSceneTransform>();
             }
         }

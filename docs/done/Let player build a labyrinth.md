@@ -1,2 +1,0 @@
-- [x] No, simply find neighbouring tiles and do something with that. ✅ 2023-11-17
-- [x] Build an obstacle at that place ✅ 2023-11-17

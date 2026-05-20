@@ -15,38 +15,37 @@ pub fn collision_handling_system(
     for collision in collision_event_reader.read() {
         let entity1 = collision.collider1;
         let entity2 = collision.collider2;
-        if ball_query.contains(entity1) || ball_query.contains(entity2) {
-            let mut ball_is_first = true;
-            if let Ok(mut ball) = ball_query.get_mut(entity1) {
-                ball.bounces += 1;
-                if ball.bounces >= ball.max_bounces {
-                    commands.entity(entity1).despawn();
-                }
-            }
+        let (ball_entity, hittable_entity) = if ball_query.contains(entity1) {
+            (entity1, entity2)
+        } else if ball_query.contains(entity2) {
+            (entity2, entity1)
+        } else {
+            continue;
+        };
 
-            if let Ok(mut ball) = ball_query.get_mut(entity2) {
-                ball_is_first = false;
-                ball.bounces += 1;
-                if ball.bounces >= ball.max_bounces {
-                    commands.entity(entity2).despawn();
-                }
+        let (ball_bounces, ball_hit_entity, ball_can_score) = {
+            let Ok(mut ball) = ball_query.get_mut(ball_entity) else { continue };
+            ball.bounces += 1;
+            if ball.bounces >= ball.max_bounces {
+                commands.entity(ball_entity).despawn();
             }
+            (ball.bounces, ball.entity, ball.can_score)
+        };
 
-            let hittable_entity = if ball_is_first { entity2 } else { entity1 };
-            if let Ok((mut target_health, _, is_alien)) = hittable_target_query.get_mut(hittable_entity) {
-                let ball_entity = if ball_is_first { entity1 } else { entity2 };
+        let Some(hit_entity) = ball_hit_entity else { continue };
+
+        if let Ok((mut target_health, _, is_alien)) = hittable_target_query.get_mut(hittable_entity) {
+            if ball_can_score {
                 if let Ok(mut ball) = ball_query.get_mut(ball_entity) {
-                    if ball.can_score {
-                        ball.can_score = false;
-                        game_mw.write(GameTrackingEvent::ShotHit(ball.entity));
-                    }
-                    if ball.bounces <= 2 {
-                        target_health.health -= 10;
-                        if target_health.health <= 0 && is_alien {
-                            game_mw.write(GameTrackingEvent::AlienKilled(ball.entity));
-                            alien_counter.count -= 1;
-                        }
-                    }
+                    ball.can_score = false;
+                }
+                game_mw.write(GameTrackingEvent::ShotHit(hit_entity));
+            }
+            if ball_bounces <= 2 {
+                target_health.health -= 10;
+                if target_health.health <= 0 && is_alien {
+                    game_mw.write(GameTrackingEvent::AlienKilled(hit_entity));
+                    alien_counter.count -= 1;
                 }
             }
         }

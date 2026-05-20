@@ -1,1 +1,0 @@
-There needs to be some kind of ticker, there needs to be victory and failure conditions.

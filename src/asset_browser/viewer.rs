@@ -1,7 +1,9 @@
 use bevy::gltf::{Gltf, GltfNode};
 use bevy::prelude::*;
+use bevy::camera::primitives::Aabb;
+use crate::animation::animation_plugin::get_child_with_component_recursive;
 use crate::asset_browser::state::{AssetBrowserState, CHARACTER_NODE_PREFIX};
-use crate::asset_browser::ui::AssetAnimLabel;
+use crate::asset_browser::ui::{AssetAnimLabel, HeightDisplay};
 use crate::ui::spawn_ui::StateMarker;
 
 #[derive(Component)]
@@ -62,6 +64,8 @@ pub fn handle_model_load(
     }
 
     if let Some(path) = state.selected_path().map(|s| s.to_string()) {
+        // Pre-populate hidden_nodes and anim_mapping from existing definition.
+        state.load_definition();
         let handle: Handle<Scene> = asset_server.load(
             GltfAssetLabel::Scene(0).from_asset(path.clone()),
         );
@@ -117,7 +121,8 @@ pub fn setup_viewer_animation(
     gltf_node_assets: Res<Assets<GltfNode>>,
     mut animation_graphs: ResMut<Assets<AnimationGraph>>,
     mut commands: Commands,
-    mut anim_players: Query<Entity, With<AnimationPlayer>>,
+    child_query: Query<&Children>,
+    mut anim_players: Query<&mut AnimationPlayer>,
 ) {
     let gltf_handle = match state.gltf_handle.clone() {
         Some(h) => h,
@@ -136,34 +141,204 @@ pub fn setup_viewer_animation(
     mesh_nodes.sort();
     state.mesh_nodes = mesh_nodes;
     state.nodes_dirty = true;
+    state.nodes_ui_dirty = true;
 
-    if gltf.animations.is_empty() {
-        state.gltf_handle = None;
-        return;
-    }
+    let Some(viewer_entity) = state.viewer_entity else { return };
 
-    let Some(player_entity) = anim_players.iter_mut().next() else { return };
-
+    // Build graph with whatever clips the model itself has (may be empty).
     let mut names_by_index = vec![String::new(); gltf.animations.len()];
     for (name, handle) in &gltf.named_animations {
         if let Some(idx) = gltf.animations.iter().position(|h| h == handle) {
             names_by_index[idx] = name.to_string();
         }
     }
-
     let mut graph = AnimationGraph::new();
     let nodes: Vec<AnimationNodeIndex> = gltf.animations.iter()
         .map(|clip| graph.add_clip(clip.clone(), 1.0, graph.root))
         .collect();
-
     let graph_handle = animation_graphs.add(graph);
-    commands.entity(player_entity).insert(AnimationGraphHandle(graph_handle));
 
+    // Find the AnimationPlayer in the hierarchy, or insert one on the viewer root
+    // (needed for models that have no embedded animations so external clips can play).
+    let player_entity = get_child_with_component_recursive(viewer_entity, &child_query, &anim_players)
+        .unwrap_or_else(|| {
+            commands.entity(viewer_entity).insert(AnimationPlayer::default());
+            viewer_entity
+        });
+
+    if let Ok(mut player) = anim_players.get_mut(player_entity) {
+        player.stop_all();
+    }
+    commands.entity(player_entity).insert(AnimationGraphHandle(graph_handle.clone()));
+
+    state.anim_player_entity = Some(player_entity);
+    state.viewer_graph_handle = Some(graph_handle);
     state.anim_count = nodes.len();
     state.anim_node_indices = nodes;
     state.anim_names = names_by_index;
-    state.anim_dirty = true;
+    state.anim_dirty = !gltf.animations.is_empty(); // only auto-play if model has clips
+    state.mapping_dirty = true;
     state.gltf_handle = None;
+}
+
+/// Load extra animation GltFs when animation_sources changes.
+pub fn load_extra_animation_sources(
+    mut state: ResMut<AssetBrowserState>,
+    asset_server: Res<AssetServer>,
+) {
+    if !state.sources_dirty { return; }
+    state.sources_dirty = false;
+
+    // Reload all handles from scratch to keep them in sync with the source list.
+    state.extra_gltf_handles = state.animation_sources.iter()
+        .map(|path| asset_server.load(path.clone()))
+        .collect();
+}
+
+/// When extra GltFs finish loading, append their clips to the viewer's animation graph.
+pub fn merge_extra_anim_clips(
+    mut state: ResMut<AssetBrowserState>,
+    gltf_assets: Res<Assets<Gltf>>,
+    mut animation_graphs: ResMut<Assets<AnimationGraph>>,
+    mut commands: Commands,
+    last_merged_count: Local<usize>,
+) {
+    // Only run after the main model graph has been built.
+    let Some(graph_handle) = state.viewer_graph_handle.clone() else { return };
+    let Some(graph) = animation_graphs.get_mut(&graph_handle) else { return };
+
+    let mut any_new = false;
+
+    // Collect new clips outside of state borrow.
+    struct NewClip { stem: String, name: String, handle: Handle<AnimationClip> }
+    let mut new_clips: Vec<NewClip> = Vec::new();
+
+    for (idx, handle) in state.extra_gltf_handles.iter().enumerate() {
+        let Some(gltf) = gltf_assets.get(handle) else { continue };
+        let stem = state.animation_sources.get(idx)
+            .map(|p| std::path::Path::new(p)
+                .file_stem().and_then(|s| s.to_str()).unwrap_or("ext").to_string())
+            .unwrap_or_else(|| format!("ext{idx}"));
+        for (name, clip_handle) in &gltf.named_animations {
+            let prefixed = format!("{stem}|{name}");
+            if !state.anim_names.contains(&prefixed) {
+                new_clips.push(NewClip { stem: stem.clone(), name: name.to_string(), handle: clip_handle.clone() });
+            }
+        }
+    }
+
+    for clip in new_clips {
+        let prefixed = format!("{}|{}", clip.stem, clip.name);
+        let node_idx = graph.add_clip(clip.handle, 1.0, graph.root);
+        state.anim_names.push(prefixed);
+        state.anim_node_indices.push(node_idx);
+        state.anim_count += 1;
+        any_new = true;
+    }
+
+    if any_new {
+        // Reinstall the updated graph on the player entity.
+        if let Some(player_entity) = state.anim_player_entity {
+            commands.entity(player_entity).insert(AnimationGraphHandle(graph_handle));
+        }
+        state.mapping_dirty = true;
+    }
+
+    let _ = last_merged_count; // suppress unused warning
+}
+
+/// Walk the viewer model hierarchy and accumulate world-space Y extents from all Aabb components.
+/// Waits several frames after load so Bevy has time to attach Aabb to all mesh children, then
+/// measures once at scale=1.0 and locks the result.
+pub fn compute_model_height(
+    mut state: ResMut<AssetBrowserState>,
+    aabb_q: Query<(&Aabb, &GlobalTransform)>,
+    children_q: Query<&Children>,
+) {
+    if state.model_raw_height > 0.0 { return; } // already measured
+    let Some(viewer_entity) = state.viewer_entity else { return };
+
+    // Count frames to let Bevy populate Aabb on all spawned mesh children.
+    const SETTLE_FRAMES: u32 = 8;
+    state.aabb_settle_frames += 1;
+    if state.aabb_settle_frames < SETTLE_FRAMES { return; }
+
+    let mut min_y = f32::MAX;
+    let mut max_y = f32::MIN;
+    let mut found = false;
+    collect_aabbs(viewer_entity, &children_q, &aabb_q, &mut min_y, &mut max_y, &mut found);
+
+    if !found || max_y <= min_y { return; }
+
+    // Model is always at scale=1.0 here (apply_viewer_scale hasn't run yet).
+    state.model_raw_height = max_y - min_y;
+    if let Some(stored_scale) = state.pending_scale.take() {
+        state.target_height_m = stored_scale * state.model_raw_height;
+    }
+    state.height_dirty = true;
+}
+
+fn collect_aabbs(
+    entity: Entity,
+    children_q: &Query<&Children>,
+    aabb_q: &Query<(&Aabb, &GlobalTransform)>,
+    min_y: &mut f32,
+    max_y: &mut f32,
+    found: &mut bool,
+) {
+    if let Ok((aabb, gt)) = aabb_q.get(entity) {
+        // Transform all 8 AABB corners through the full GlobalTransform matrix so that
+        // any scale/rotation baked into GLTF node hierarchies is correctly accounted for.
+        let matrix = gt.to_matrix();
+        let c = Vec3::from(aabb.center);
+        let h = Vec3::from(aabb.half_extents);
+        for sx in [-1.0f32, 1.0] {
+            for sy in [-1.0f32, 1.0] {
+                for sz in [-1.0f32, 1.0] {
+                    let corner = matrix.transform_point3(c + h * Vec3::new(sx, sy, sz));
+                    *min_y = min_y.min(corner.y);
+                    *max_y = max_y.max(corner.y);
+                }
+            }
+        }
+        *found = true;
+    }
+    if let Ok(children) = children_q.get(entity) {
+        for child in children.iter() {
+            collect_aabbs(child, children_q, aabb_q, min_y, max_y, found);
+        }
+    }
+}
+
+/// Apply computed_scale() to the viewer model Transform and update the height label.
+/// Also repositions the camera so the model fills the viewport at a comfortable distance.
+pub fn apply_viewer_scale(
+    mut state: ResMut<AssetBrowserState>,
+    mut model_q: Query<&mut Transform, With<AssetBrowserViewerModel>>,
+    mut camera_q: Query<&mut Transform, (With<AssetBrowserViewerCamera>, Without<AssetBrowserViewerModel>)>,
+    mut label_q: Query<&mut Text, With<HeightDisplay>>,
+) {
+    if !state.height_dirty || state.model_raw_height <= 0.0 { return; }
+    state.height_dirty = false;
+
+    let scale = state.computed_scale();
+    if let Ok(mut t) = model_q.single_mut() {
+        t.scale = Vec3::splat(scale);
+    }
+    if let Ok(mut t) = label_q.single_mut() {
+        **t = format!("{:.2} m  (x{:.4})", state.target_height_m, scale);
+    }
+
+    // Fit camera to the model. Runs on load (once AABB is measured) and on user height changes.
+    // Uses vertical FOV of 60 degrees (Bevy default perspective).
+    let displayed_height = state.model_raw_height * scale;
+    let center_y = displayed_height * 0.5;
+    let half_fov = std::f32::consts::PI / 6.0; // 30 degrees
+    let distance = (displayed_height * 0.5) / half_fov.tan() * 1.4;
+    if let Ok(mut cam) = camera_q.single_mut() {
+        cam.translation = Vec3::new(0.0, center_y, distance);
+        *cam = cam.looking_at(Vec3::new(0.0, center_y, 0.0), Vec3::Y);
+    }
 }
 
 pub fn apply_node_visibility(
@@ -187,20 +362,18 @@ pub fn apply_node_visibility(
 
 pub fn apply_viewer_animation(
     mut state: ResMut<AssetBrowserState>,
-    mut anim_players: Query<&mut AnimationPlayer, With<AnimationGraphHandle>>,
+    mut anim_players: Query<&mut AnimationPlayer>,
     mut anim_label: Query<&mut Text, With<AssetAnimLabel>>,
 ) {
     if !state.anim_dirty || state.anim_node_indices.is_empty() { return; }
 
+    let Some(player_entity) = state.anim_player_entity else { return };
+    let Ok(mut player) = anim_players.get_mut(player_entity) else { return };
+
     let idx = state.anim_index;
     let node = state.anim_node_indices[idx];
-
-    let mut played = false;
-    for mut player in anim_players.iter_mut() {
-        player.play(node).repeat();
-        played = true;
-    }
-    if !played { return; } // AnimationGraphHandle not applied yet — retry next frame
+    player.stop_all();
+    player.play(node).repeat();
     state.anim_dirty = false;
 
     let name = state.anim_names.get(idx).filter(|s| !s.is_empty()).map(|s| s.as_str());

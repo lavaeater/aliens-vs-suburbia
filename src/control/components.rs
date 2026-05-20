@@ -1,5 +1,5 @@
 use bevy::math::Vec3;
-use bevy::prelude::{Component, Reflect};
+use bevy::prelude::*;
 use std::collections::HashSet;
 use bevy_inspector_egui::InspectorOptions;
 use crate::animation::animation_plugin::AnimationKey;
@@ -16,14 +16,20 @@ pub enum ControlCommand {
 }
 
 
-#[derive(Hash, PartialEq, Eq, Copy, Clone, Debug, Reflect)]
+#[derive(Hash, PartialEq, Eq, Copy, Clone, Debug, Reflect, Default)]
+#[reflect(Default)]
+#[type_path = "avs"]
 pub enum ControlRotation {
+    #[default]
     Left,
     Right
 }
 
-#[derive(Hash, PartialEq, Eq, Copy, Clone, Debug, Reflect)]
+#[derive(Hash, PartialEq, Eq, Copy, Clone, Debug, Reflect, Default)]
+#[reflect(Default)]
+#[type_path = "avs"]
 pub enum ControlDirection {
+    #[default]
     Forward,
     Backward,
     Left,
@@ -54,7 +60,8 @@ impl Opposite for ControlRotation {
     }
 }
 
-#[derive(Component, Reflect, InspectorOptions)]
+#[derive(Component, Default, Reflect, InspectorOptions)]
+ #[type_path = "avs"]
 pub struct CharacterControl {
     pub triggers: HashSet<ControlCommand>,
     pub rotations: HashSet<ControlRotation>,
@@ -101,14 +108,20 @@ impl CoolDown for CharacterControl {
 }
 
 
-#[derive(Component)]
+#[derive(Component, Default, Reflect)]
+#[reflect(Component, Default)]
+ #[type_path = "avs"]
 pub struct DynamicMovement;
 
 
-#[derive(Component)]
+#[derive(Component, Default, Reflect)]
+#[reflect(Component, Default)]
+ #[type_path = "avs"]
 pub struct KinematicMovement;
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
+#[reflect(Component, Default)]
+ #[type_path = "avs"]
 pub struct CharacterState {
     pub state: Vec<AnimationKey>,
 }

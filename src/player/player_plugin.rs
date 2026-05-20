@@ -1,8 +1,11 @@
 use crate::game_state::GameState;
 use crate::general::components::map_components::Floor;
+use crate::model_settings::plugin::PlayerAssetDef;
 use crate::player::components::{WeaponsHidden, WEAPON_NODES};
 use crate::player::systems::auto_aim::{auto_aim, debug_gizmos};
+use crate::player::systems::death_revive::{detect_player_death, player_revive_system};
 use crate::player::systems::spawn_players::{fix_scene_transform, spawn_players};
+use crate::player::systems::abilities::{AbilityInput, activate_ability, tick_ability_flash, tick_cooldowns, tick_whirlwind};
 use bevy::prelude::*;
 use bevy::scene::{SceneInstance, SceneRoot};
 use bevy_mod_outline::{AsyncSceneInheritOutline, AutoGenerateOutlineNormalsPlugin, InheritOutline, OutlinePlugin, OutlineVolume};
@@ -17,7 +20,8 @@ impl Plugin for PlayerPlugin {
         if self.with_debug {
             app.add_systems(Update, debug_gizmos.run_if(in_state(GameState::InGame)));
         }
-        app.add_plugins((OutlinePlugin, AutoGenerateOutlineNormalsPlugin::default()))
+        app.init_resource::<AbilityInput>()
+            .add_plugins((OutlinePlugin, AutoGenerateOutlineNormalsPlugin::default()))
             .add_systems(Update, (auto_outline_scenes, sync_outline_with_visibility))
             .add_systems(
                 Update,
@@ -26,12 +30,24 @@ impl Plugin for PlayerPlugin {
                     fix_scene_transform,
                     auto_aim,
                     hide_player_weapon_nodes,
+                    detect_player_death,
+                    player_revive_system,
+                    tick_cooldowns,
+                    activate_ability,
+                    tick_whirlwind,
+                    tick_ability_flash,
+                    reset_ability_input,
                 )
                 .run_if(in_state(GameState::InGame)),
             );
     }
 }
 
+fn reset_ability_input(mut input: ResMut<AbilityInput>) {
+    input.pressed = false;
+}
+
+#[allow(clippy::type_complexity)]
 fn auto_outline_scenes(
     mut commands: Commands,
     query: Query<Entity, (With<SceneRoot>, Without<AsyncSceneInheritOutline>, Without<Floor>)>,
@@ -55,6 +71,7 @@ fn auto_outline_scenes(
 /// 2. InheritOutline already present, Visibility::Hidden set later.
 ///
 /// When a weapon is later made visible again, re-insert InheritOutline alongside Visibility::Visible.
+#[allow(clippy::type_complexity)]
 fn sync_outline_with_visibility(
     mut commands: Commands,
     mut volume_query: Query<
@@ -67,8 +84,9 @@ fn sync_outline_with_visibility(
     changed_query: Query<(Entity, &Visibility), (With<InheritOutline>, Changed<Visibility>)>,
 ) {
     for (vis, mut outline) in volume_query.iter_mut() {
-        if outline.visible != !matches!(vis, Visibility::Hidden) {
-            outline.visible = !matches!(vis, Visibility::Hidden);
+        let should_be_visible = !matches!(vis, Visibility::Hidden);
+        if outline.visible != should_be_visible {
+            outline.visible = should_be_visible;
         }
     }
     for (entity, vis) in added_query.iter().chain(changed_query.iter()) {
@@ -78,22 +96,36 @@ fn sync_outline_with_visibility(
     }
 }
 
-/// After the player scene loads, hide all named mesh nodes whose name does not
-/// start with "Character_" — those are weapons and other optional accessories.
+/// After the player scene loads, hide all nodes listed in the AssetDefinition
+/// for this model (falling back to the hardcoded WEAPON_NODES if no def exists).
+#[allow(clippy::type_complexity)]
 fn hide_player_weapon_nodes(
     mut commands: Commands,
     player_query: Query<(Entity, &SceneInstance), (With<crate::player::components::Player>, Without<WeaponsHidden>)>,
     scene_spawner: Res<SceneSpawner>,
     named_query: Query<(Entity, &Name)>,
+    player_asset_def: Option<Res<PlayerAssetDef>>,
 ) {
+    // Build the effective hide list: prefer AssetDefinition, fall back to WEAPON_NODES.
+    let def_nodes: Vec<&str>;
+    let hidden: &[&str] = if let Some(def_res) = &player_asset_def
+        && let Some(def) = &def_res.0
+        && !def.hidden_nodes.is_empty()
+    {
+        def_nodes = def.hidden_nodes.iter().map(|s| s.as_str()).collect();
+        &def_nodes
+    } else {
+        WEAPON_NODES
+    };
+
     for (player_entity, scene_instance) in player_query.iter() {
         if !scene_spawner.instance_is_ready(**scene_instance) { continue; }
         commands.entity(player_entity).insert(WeaponsHidden);
         for entity in scene_spawner.iter_instance_entities(**scene_instance) {
-            if let Ok((_, name)) = named_query.get(entity) {
-                if WEAPON_NODES.contains(&name.as_str()) {
-                    commands.entity(entity).insert(Visibility::Hidden);
-                }
+            if let Ok((_, name)) = named_query.get(entity)
+                && hidden.contains(&name.as_str())
+            {
+                commands.entity(entity).insert(Visibility::Hidden);
             }
         }
     }

@@ -20,6 +20,8 @@ dotenvy = "0.15"
 urlencoding = "2"
 bevy_wind_waker_shader = { path = "bevy_wind_waker_shader" }
 image = { version = "0.25", default-features = false, features = ["png"] }
+bevy_skein = "0.5.0"
+bonsai-bt = "*"
 
 # Enable max optimizations for dependencies, but not for our code:h
 [profile.dev.package."*"]
