@@ -1,4 +1,6 @@
+use enumflags2::BitFlags;
 use crate::general::components::map_components::{DecorationItem, MapFile};
+use crate::map::MapFeatures;
 
 // ── Seeded RNG (xorshift64) ──────────────────────────────────────────────────
 
@@ -325,11 +327,17 @@ fn try_place_house(
 /// toward the **right** column.  The player spawns in the left-centre area.
 ///
 /// Column 0 = west (alien entry), column w-1 = east (alien goal).
+fn f(flags: impl Into<BitFlags<MapFeatures>>) -> u64 {
+    flags.into().bits()
+}
+
 pub fn generate_suburb_map(seed: u64, width: usize, height: usize) -> MapFile {
     let w = width.max(8);
     let h = height.max(12);
     let mut rng = Rng::new(seed);
-    let mut grid: Vec<Vec<u8>> = vec![vec![1u8; w]; h];
+
+    // Build a u8 scratch grid first (same logic as before), then convert to u64 flags.
+    let mut scratch: Vec<Vec<u8>> = vec![vec![1u8; w]; h];
 
     // Alien spawns: left column (col 0), spread across multiple rows.
     let spawn_rows: Vec<usize> = {
@@ -339,24 +347,40 @@ pub fn generate_suburb_map(seed: u64, width: usize, height: usize) -> MapFile {
     };
     let alien_spawns: Vec<(usize, usize)> = spawn_rows.iter().map(|&r| (r, 0)).collect();
     for &(r, c) in &alien_spawns {
-        grid[r][c] = 5;
+        scratch[r][c] = 5;
     }
 
     // Alien goal: right column, vertically centred.
     let goal_row = h / 2 + rng.range(0, 3).wrapping_sub(1);
     let goal = (goal_row.min(h - 2).max(1), w - 1);
-    grid[goal.0][goal.1] = 9;
+    scratch[goal.0][goal.1] = 9;
 
     // Player spawn: left-centre, a few columns in from the alien entry.
     let player_col = rng.range(2, (w / 4).max(3));
     let player = (h / 2, player_col);
-    grid[player.0][player.1] = 17;
+    scratch[player.0][player.1] = 17;
 
     // Place houses in the middle area — verified against pathfinding.
     let num_houses = rng.range(3, 7);
     for _ in 0..num_houses {
-        try_place_house(&mut grid, &mut rng, player, &alien_spawns, goal);
+        try_place_house(&mut scratch, &mut rng, player, &alien_spawns, goal);
     }
+
+    // Convert scratch u8 values to BitFlags<MapFeatures> u64.
+    let border = f(MapFeatures::Floor | MapFeatures::ImpassableForPlayers | MapFeatures::ImpassableForEnemies);
+    let grid: Vec<Vec<u64>> = scratch.iter().enumerate().map(|(row, cols)| {
+        cols.iter().enumerate().map(|(col, &t)| {
+            let is_edge = row == 0 || row == h - 1 || col == 0 || col == w - 1;
+            match t {
+                0 => 0u64, // void
+                5 => f(MapFeatures::Floor | MapFeatures::EnemySpawn),
+                9 => f(MapFeatures::Floor | MapFeatures::EnemyExit),
+                17 => f(MapFeatures::Floor | MapFeatures::PlayerSpawn),
+                _ if is_edge => border,
+                _ => f(MapFeatures::Floor),
+            }
+        }).collect()
+    }).collect();
 
     MapFile {
         generated: false,
@@ -377,7 +401,8 @@ pub fn generate_showcase_map(seed: u64) -> MapFile {
     let w: usize = 20;
     let h: usize = 20;
     let mut rng = Rng::new(seed);
-    let grid: Vec<Vec<u8>> = vec![vec![1u8; w]; h];
+    let floor = f(MapFeatures::Floor);
+    let grid: Vec<Vec<u64>> = vec![vec![floor; w]; h];
     let mut decorations: Vec<DecorationItem> = Vec::new();
 
     for row in 0..h {

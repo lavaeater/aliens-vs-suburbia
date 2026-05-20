@@ -1,7 +1,9 @@
 use bevy::prelude::*;
 use bevy::input::mouse::MouseButton;
 use bevy::window::PrimaryWindow;
-use crate::map_editor::state::{MapEditorState, TILE_ALIEN_GOAL, TILE_ALIEN_SPAWN, TILE_PLAYER_SPAWN};
+use enumflags2::BitFlags;
+use crate::map::MapFeatures;
+use crate::map_editor::state::MapEditorState;
 use crate::ui::spawn_ui::StateMarker;
 
 pub const CELL_SIZE: f32 = 24.0; // pixels per tile in the grid view
@@ -111,15 +113,27 @@ pub fn rebuild_grid(
     }
 }
 
-fn tile_color(tile: u8) -> Color {
-    match tile {
-        0                   => Color::srgb(0.08, 0.08, 0.08),
-        1                   => Color::srgb(0.28, 0.38, 0.28),
-        TILE_ALIEN_SPAWN    => Color::srgb(0.8, 0.2, 0.2),
-        TILE_ALIEN_GOAL     => Color::srgb(0.8, 0.6, 0.1),
-        TILE_PLAYER_SPAWN   => Color::srgb(0.2, 0.5, 0.9),
-        _                   => Color::srgb(0.4, 0.4, 0.5),
+fn tile_color(raw: u64) -> Color {
+    if raw == 0 { return Color::srgb(0.08, 0.08, 0.08); }
+    let flags = BitFlags::<MapFeatures>::from_bits_truncate(raw);
+
+    // Functional addors take display priority over terrain.
+    if flags.contains(MapFeatures::PlayerSpawn)  { return Color::srgb(0.2, 0.5, 0.9); }
+    if flags.contains(MapFeatures::EnemySpawn)   { return Color::srgb(0.8, 0.2, 0.2); }
+    if flags.contains(MapFeatures::EnemyExit)    { return Color::srgb(0.8, 0.6, 0.1); }
+    if flags.contains(MapFeatures::ImpassableForPlayers) && flags.contains(MapFeatures::ImpassableForEnemies) {
+        return Color::srgb(0.25, 0.22, 0.18); // rock/wall — dark brown
     }
+
+    // Terrain type.
+    if flags.contains(MapFeatures::Water)  { return Color::srgb(0.15, 0.35, 0.7); }
+    if flags.contains(MapFeatures::Grass)  { return Color::srgb(0.22, 0.55, 0.22); }
+    if flags.contains(MapFeatures::Floor)  { return Color::srgb(0.28, 0.38, 0.28); }
+    if flags.contains(MapFeatures::Mud)    { return Color::srgb(0.45, 0.32, 0.18); }
+    if flags.contains(MapFeatures::Snow)   { return Color::srgb(0.82, 0.88, 0.92); }
+    if flags.contains(MapFeatures::Rock)   { return Color::srgb(0.38, 0.35, 0.30); }
+
+    Color::srgb(0.4, 0.4, 0.5)
 }
 
 fn cursor_to_tile(window: &Window, w: usize, h: usize) -> Option<(i32, i32)> {

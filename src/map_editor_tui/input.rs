@@ -1,5 +1,7 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use super::app::{App, Mode, Prompt, PromptKind, TILE_FLOOR, TILE_GOAL, TILE_PLAYER, TILE_SPAWN, TILE_VOID};
+use enumflags2::BitFlags;
+use crate::map::{key_to_feature, MapFeatures};
+use super::app::{App, Mode, Prompt, PromptKind, TILE_VOID};
 
 pub enum Action {
     Quit,
@@ -31,26 +33,29 @@ fn handle_normal(app: &mut App, key: KeyEvent, vp: (usize, usize)) -> Action {
         (_, KeyCode::Down)  => app.move_cursor(0,  1, vp.0, vp.1),
         (_, KeyCode::Left)  => app.move_cursor(-1, 0, vp.0, vp.1),
         (_, KeyCode::Right) => app.move_cursor( 1, 0, vp.0, vp.1),
-        (_, KeyCode::Char('f')) => app.paint(TILE_FLOOR),
-        (_, KeyCode::Char('s')) => app.paint(TILE_SPAWN),
-        (_, KeyCode::Char('g')) => app.paint(TILE_GOAL),
-        (_, KeyCode::Char('p')) => app.paint(TILE_PLAYER),
-        (_, KeyCode::Char('.')) | (_, KeyCode::Char(' ')) => app.paint(TILE_VOID),
-        (_, KeyCode::Delete) | (_, KeyCode::Char('x')) => app.paint(TILE_VOID),
-        _ => {}
+        (_, code) => {
+            let current = BitFlags::<MapFeatures>::from_bits_truncate(
+                app.map.tiles.get(app.cursor.1).and_then(|r| r.get(app.cursor.0)).copied().unwrap_or(0)
+            );
+            let next = key_to_feature(&code, current).bits();
+            // Only paint if key_to_feature actually changed something (i.e. it was a recognised key)
+            if next != current.bits() || matches!(code, KeyCode::Delete | KeyCode::Backspace | KeyCode::Char('0')) {
+                app.paint(next);
+            }
+        }
     }
     Action::Continue
 }
 
 fn handle_alt(app: &mut App, key: KeyEvent, _vp: (usize, usize)) -> Action {
-    match key.code {
-        KeyCode::Char('f') => { app.paint_tile = TILE_FLOOR;  app.mode = Mode::Paint; }
-        KeyCode::Char('s') => { app.paint_tile = TILE_SPAWN;  app.mode = Mode::Paint; }
-        KeyCode::Char('g') => { app.paint_tile = TILE_GOAL;   app.mode = Mode::Paint; }
-        KeyCode::Char('p') => { app.paint_tile = TILE_PLAYER; app.mode = Mode::Paint; }
-        KeyCode::Char('.') => { app.paint_tile = TILE_VOID;   app.mode = Mode::Paint; }
-        // releasing Alt (or pressing anything else) returns to Normal
-        _ => { app.mode = Mode::Normal; }
+    // Any key that key_to_feature recognises as a tile key locks that tile in paint mode.
+    let dummy = BitFlags::<MapFeatures>::default();
+    let result = key_to_feature(&key.code, dummy);
+    if result != dummy || matches!(key.code, KeyCode::Delete | KeyCode::Backspace | KeyCode::Char('0')) {
+        app.paint_tile = result.bits();
+        app.mode = Mode::Paint;
+    } else {
+        app.mode = Mode::Normal;
     }
     Action::Continue
 }

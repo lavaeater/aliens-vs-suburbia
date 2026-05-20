@@ -1,4 +1,6 @@
+use enumflags2::BitFlags;
 use crate::general::components::map_components::{MapFile, WaveDef};
+use crate::map::MapFeatures;
 use ron::ser::PrettyConfig;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -37,7 +39,7 @@ pub struct App {
     pub file_path: Option<String>,
     pub cursor: (usize, usize), // (col, row)
     pub mode: Mode,
-    pub paint_tile: u8,
+    pub paint_tile: u64,
     pub dirty: bool,
     pub viewport: (usize, usize), // (col_offset, row_offset)
     pub prompt: Option<Prompt>,
@@ -47,11 +49,11 @@ pub struct App {
     pub new_wave_scratch: (String, String, String),
 }
 
-pub const TILE_VOID: u8 = 0;
-pub const TILE_FLOOR: u8 = 1;
-pub const TILE_SPAWN: u8 = 5;
-pub const TILE_GOAL: u8 = 9;
-pub const TILE_PLAYER: u8 = 17;
+pub const TILE_VOID: u64   = 0;
+pub const TILE_FLOOR: u64  = MapFeatures::Floor as u64;
+pub const TILE_SPAWN: u64  = MapFeatures::Floor as u64 | MapFeatures::EnemySpawn as u64;
+pub const TILE_GOAL: u64   = MapFeatures::Floor as u64 | MapFeatures::EnemyExit as u64;
+pub const TILE_PLAYER: u64 = MapFeatures::Floor as u64 | MapFeatures::PlayerSpawn as u64;
 
 impl App {
     pub fn new(file_path: Option<String>) -> Self {
@@ -86,7 +88,7 @@ impl App {
             seed: 0,
             map_width: width,
             map_height: height,
-            tiles: vec![vec![TILE_VOID; width]; height],
+            tiles: vec![vec![TILE_VOID as u64; width]; height],
             decorations: vec![],
             placements: vec![],
             waves: vec![],
@@ -106,7 +108,7 @@ impl App {
         self.map.tiles.len()
     }
 
-    pub fn paint(&mut self, tile: u8) {
+    pub fn paint(&mut self, tile: u64) {
         let (col, row) = self.cursor;
         if row < self.map_height() && col < self.map_width() {
             self.map.tiles[row][col] = tile;

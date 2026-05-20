@@ -5,28 +5,40 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, Borders, Cell, Paragraph, Row, Table},
 };
-use super::app::{App, Mode, PromptKind, TILE_FLOOR, TILE_GOAL, TILE_PLAYER, TILE_SPAWN, TILE_VOID};
+use enumflags2::BitFlags;
+use crate::map::MapFeatures;
+use super::app::{App, Mode, PromptKind};
 
-fn tile_color(tile: u8) -> Color {
-    match tile {
-        TILE_VOID   => Color::Rgb(20, 20, 20),
-        TILE_FLOOR  => Color::Rgb(80, 80, 80),
-        TILE_SPAWN  => Color::Rgb(180, 40, 40),
-        TILE_GOAL   => Color::Rgb(40, 160, 40),
-        TILE_PLAYER => Color::Rgb(40, 160, 200),
-        _           => Color::Rgb(160, 0, 160),
+fn tile_color(raw: u64) -> Color {
+    if raw == 0 { return Color::Rgb(20, 20, 20); }
+    let f = BitFlags::<MapFeatures>::from_bits_truncate(raw);
+    if f.contains(MapFeatures::PlayerSpawn)  { return Color::Rgb(40, 160, 200); }
+    if f.contains(MapFeatures::EnemySpawn)   { return Color::Rgb(180, 40, 40); }
+    if f.contains(MapFeatures::EnemyExit)    { return Color::Rgb(40, 160, 40); }
+    if f.contains(MapFeatures::ImpassableForPlayers) && f.contains(MapFeatures::ImpassableForEnemies) {
+        return Color::Rgb(60, 55, 45);
     }
+    if f.contains(MapFeatures::Water)  { return Color::Rgb(38, 90, 179); }
+    if f.contains(MapFeatures::Mud)    { return Color::Rgb(115, 82, 46); }
+    if f.contains(MapFeatures::Snow)   { return Color::Rgb(209, 224, 235); }
+    if f.contains(MapFeatures::Rock)   { return Color::Rgb(97, 89, 77); }
+    if f.contains(MapFeatures::Grass)  { return Color::Rgb(56, 140, 56); }
+    Color::Rgb(80, 80, 80) // Floor
 }
 
-fn tile_label(tile: u8) -> &'static str {
-    match tile {
-        TILE_VOID   => "void",
-        TILE_FLOOR  => "floor",
-        TILE_SPAWN  => "spawn",
-        TILE_GOAL   => "goal",
-        TILE_PLAYER => "player",
-        _           => "?",
-    }
+fn tile_label(raw: u64) -> &'static str {
+    if raw == 0 { return "void"; }
+    let f = BitFlags::<MapFeatures>::from_bits_truncate(raw);
+    if f.contains(MapFeatures::PlayerSpawn)  { return "player-spawn"; }
+    if f.contains(MapFeatures::EnemySpawn)   { return "enemy-spawn"; }
+    if f.contains(MapFeatures::EnemyExit)    { return "enemy-exit"; }
+    if f.contains(MapFeatures::ImpassableForPlayers) { return "impassable"; }
+    if f.contains(MapFeatures::Water)  { return "water"; }
+    if f.contains(MapFeatures::Mud)    { return "mud"; }
+    if f.contains(MapFeatures::Snow)   { return "snow"; }
+    if f.contains(MapFeatures::Rock)   { return "rock"; }
+    if f.contains(MapFeatures::Grass)  { return "grass"; }
+    "floor"
 }
 
 pub fn draw(frame: &mut Frame, app: &App) {

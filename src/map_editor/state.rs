@@ -1,11 +1,15 @@
 use bevy::prelude::Resource;
+use enumflags2::BitFlags;
 use crate::assets::asset_definition::{AssetDefinition, ModelType};
 use crate::general::components::map_components::{MapFile, TilePlacement, WaveDef};
+use crate::map::MapFeatures;
 
-pub const TILE_SPECIAL_FLOOR: u8 = 1;
-pub const TILE_ALIEN_SPAWN: u8 = 5;
-pub const TILE_ALIEN_GOAL: u8 = 9;
-pub const TILE_PLAYER_SPAWN: u8 = 17;
+fn flags(f: impl Into<BitFlags<MapFeatures>>) -> u64 { f.into().bits() }
+
+pub const TILE_SPECIAL_FLOOR: u64 = MapFeatures::Floor as u64;
+pub const TILE_ALIEN_SPAWN: u64   = MapFeatures::Floor as u64 | MapFeatures::EnemySpawn as u64;
+pub const TILE_ALIEN_GOAL: u64    = MapFeatures::Floor as u64 | MapFeatures::EnemyExit as u64;
+pub const TILE_PLAYER_SPAWN: u64  = MapFeatures::Floor as u64 | MapFeatures::PlayerSpawn as u64;
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum PaletteTab {
@@ -36,7 +40,7 @@ pub enum PaletteItem {
     /// A model def file.
     Def { path: String, name: String },
     /// A special tile marker (spawn point, goal, player spawn).
-    Special { label: &'static str, tile_value: u8 },
+    Special { label: &'static str, tile_value: u64 },
 }
 
 impl PaletteItem {
@@ -53,8 +57,8 @@ pub struct MapEditorState {
     pub map_name: String,
     pub width: usize,
     pub height: usize,
-    /// Row-major tile grid; same encoding as MapFile.tiles.
-    pub tiles: Vec<Vec<u8>>,
+    /// Row-major tile grid; each cell is a `BitFlags<MapFeatures>` stored as u64.
+    pub tiles: Vec<Vec<u64>>,
     /// Editor placements.
     pub placements: Vec<TilePlacement>,
     /// Wave definitions.
@@ -87,7 +91,7 @@ impl Default for MapEditorState {
             map_name: "new_map".to_string(),
             width,
             height,
-            tiles: vec![vec![1u8; width]; height],
+            tiles: vec![vec![TILE_SPECIAL_FLOOR; width]; height],
             placements: Vec::new(),
             waves: Vec::new(),
             active_tab: PaletteTab::Special,
@@ -140,7 +144,7 @@ impl MapEditorState {
         // Resolve what to place before taking mutable borrows.
         let action = match self.palette_items.get(self.selected_palette) {
             Some(PaletteItem::Special { tile_value, .. }) => Some((*tile_value, None::<String>)),
-            Some(PaletteItem::Def { path, .. }) => Some((1u8, Some(path.clone()))),
+            Some(PaletteItem::Def { path, .. }) => Some((TILE_SPECIAL_FLOOR, Some(path.clone()))),
             None => None,
         };
 
