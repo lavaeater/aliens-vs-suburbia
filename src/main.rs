@@ -35,6 +35,8 @@ pub(crate) mod asset_browser;
 pub(crate) mod player_setup;
 pub(crate) mod map_editor;
 pub mod behavior;
+#[cfg(feature = "map-editor")]
+pub(crate) mod map_editor_tui;
 
 fn create_map(seed: Option<u64>, width: usize, height: usize, output: Option<String>) {
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -92,6 +94,16 @@ fn parse_create_map_args(args: &[String]) -> Option<()> {
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if parse_create_map_args(&args).is_some() {
+        return;
+    }
+
+    #[cfg(feature = "map-editor")]
+    if args.iter().any(|a| a == "--map-editor") {
+        let file = args.iter()
+            .skip_while(|a| *a != "--file")
+            .nth(1)
+            .cloned();
+        map_editor_tui::run(file).unwrap();
         return;
     }
 
