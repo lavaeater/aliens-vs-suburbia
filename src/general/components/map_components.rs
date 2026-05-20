@@ -72,10 +72,12 @@ pub struct MapFile {
     pub waves: Vec<WaveDef>,
 }
 
-#[derive(Component)]
+#[derive(Component, Default, Reflect)]
+ #[type_path = "aliensvssuburbia"]
 pub struct Wall {}
 
-#[derive(Component)]
+#[derive(Component, Default, Reflect)]
+ #[type_path = "aliensvssuburbia"]
 pub struct AlienGoal;
 
 pub struct ModelDefinition {
@@ -89,7 +91,8 @@ pub struct ModelDefinition {
     pub mask: LayerMask,
 }
 
-#[derive(Hash, PartialEq, Eq, Clone, Reflect,Component)]
+#[derive(Hash, PartialEq, Eq, Clone, Reflect,Component, Default)]
+ #[type_path = "aliensvssuburbia"]
 pub struct Tower {}
 
 impl ModelDefinition {
@@ -109,7 +112,8 @@ pub struct CurrentTile {
     pub tile: (usize, usize)
 }
 
-#[derive(Component, Debug, Reflect)]
+#[derive(Component, Debug, Reflect, Default)]
+ #[type_path = "aliensvssuburbia"]
 pub struct AlienSpawnPoint {
     pub spawn_rate_per_minute: f32,
     pub spawn_cool_down: f32
@@ -141,5 +145,6 @@ impl CoolDown for AlienSpawnPoint {
 }
 
 
-#[derive(Component)]
+#[derive(Component, Default, Reflect)]
+ #[type_path = "aliensvssuburbia"]
 pub struct Floor {}

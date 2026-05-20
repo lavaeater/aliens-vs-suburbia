@@ -54,7 +54,8 @@ impl Opposite for ControlRotation {
     }
 }
 
-#[derive(Component, Reflect, InspectorOptions)]
+#[derive(Component, Default, Reflect, InspectorOptions)]
+ #[type_path = "aliensvssuburbia"]
 pub struct CharacterControl {
     pub triggers: HashSet<ControlCommand>,
     pub rotations: HashSet<ControlRotation>,
@@ -101,14 +102,17 @@ impl CoolDown for CharacterControl {
 }
 
 
-#[derive(Component)]
+#[derive(Component, Default, Reflect)]
+ #[type_path = "aliensvssuburbia"]
 pub struct DynamicMovement;
 
 
-#[derive(Component)]
+#[derive(Component, Default, Reflect)]
+ #[type_path = "aliensvssuburbia"]
 pub struct KinematicMovement;
 
-#[derive(Component)]
+#[derive(Component, Default, Reflect)]
+ #[type_path = "aliensvssuburbia"]
 pub struct CharacterState {
     pub state: Vec<AnimationKey>,
 }

@@ -6,7 +6,8 @@ use crate::player::components::{Player, PlayerDead};
 
 // ── Data ────────────────────────────────────────────────────────────────────
 
-#[derive(Component, Clone, Debug, Default)]
+#[derive(Component, Clone, Debug, Default, Reflect)]
+ #[type_path = "aliensvssuburbia"]
 pub enum SpecialAbility {
     #[default]
     Bombardment,
@@ -36,7 +37,8 @@ impl SpecialAbility {
 }
 
 /// Fills by throwing balls; ability fires when full (1.0).
-#[derive(Component)]
+#[derive(Component, Default, Reflect)]
+ #[type_path = "aliensvssuburbia"]
 pub struct AbilityCooldown {
     /// 0.0 = empty, 1.0 = ready to fire.
     pub charge: f32,
@@ -68,7 +70,8 @@ impl AbilityCooldown {
 }
 
 /// Marker inserted while Whirlwind is active.
-#[derive(Component)]
+#[derive(Component, Default, Reflect)]
+ #[type_path = "aliensvssuburbia"]
 pub struct WhirlwindActive {
     pub timer: Timer,
 }
@@ -170,7 +173,8 @@ pub struct AbilityInput {
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 /// Fading shockwave visual for Bombardment.
-#[derive(Component)]
+#[derive(Component, Default, Reflect)]
+ #[type_path = "aliensvssuburbia"]
 pub struct AbilityFlash {
     pub timer: Timer,
 }

@@ -1,12 +1,14 @@
 use bevy::math::{EulerRot, Quat};
 use bevy::prelude::{Component, Resource};
 use avian3d::prelude::Collider;
+use bevy::reflect::Reflect;
 
-
-#[derive(Component, Clone, Copy, Debug, PartialEq)]
+#[derive(Component, Default, Reflect, Clone, Copy, Debug, PartialEq)]
+ #[type_path = "aliensvssuburbia"]
 pub struct Alien;
 
-#[derive(Component, Clone, Debug)]
+#[derive(Component, Clone, Debug, Default, Reflect)]
+ #[type_path = "aliensvssuburbia"]
 pub struct AlienSightShape {
     pub shape: Collider,
     pub rotation: Quat,

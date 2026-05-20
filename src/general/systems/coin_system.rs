@@ -11,13 +11,15 @@ pub struct TeamWallet {
 }
 
 /// Component on coin pickup entities.
-#[derive(Component)]
+#[derive(Component, Default, Reflect)]
+ #[type_path = "aliensvssuburbia"]
 pub struct Coin {
     pub value: u32,
 }
 
 /// How close (world units) a player must be to auto-collect coins.
-#[derive(Component)]
+#[derive(Component, Default, Reflect)]
+ #[type_path = "aliensvssuburbia"]
 pub struct PickupRange(pub f32);
 
 impl Default for PickupRange {
