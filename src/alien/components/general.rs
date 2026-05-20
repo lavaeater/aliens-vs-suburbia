@@ -8,7 +8,7 @@ use crate::control::components::{CharacterControl, KinematicMovement};
 use crate::general::components::{Attack, CollisionLayer, Health, HittableTarget, TouchDamage};
 use crate::player::systems::spawn_players::FixSceneTransform;
 use avian3d::prelude::{
-    AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, Position,
+    AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes,
     RigidBody,
 };
 use crate::CurrentTile;
