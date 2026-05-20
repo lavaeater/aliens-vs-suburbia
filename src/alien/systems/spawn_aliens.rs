@@ -1,27 +1,19 @@
-use crate::ai::components::approach_and_attack_player_components::ApproachAndAttackPlayerData;
-use crate::ai::components::avoid_wall_components::AvoidWallsData;
-use crate::ai::components::move_towards_goal_components::MoveTowardsGoalData;
-use crate::alien::components::general::{Alien, AlienCounter, AlienSightShape};
-use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
+
+use crate::alien::components::general::{Alien, AlienCounter};
 use crate::assets::assets_plugin::GameAssets;
-use crate::control::components::{CharacterControl, KinematicMovement};
 use crate::game_state::score_keeper::GameTrackingEvent;
 use crate::general::components::map_components::{AlienSpawnPoint, CoolDown, CurrentTile};
-use crate::general::components::{Attack, CollisionLayer, Health, HittableTarget, TouchDamage};
 use crate::general::events::map_events::SpawnAlien;
-use crate::player::systems::spawn_players::FixSceneTransform;
 use crate::ui::spawn_ui::AddHealthBar;
-use avian3d::prelude::{
-    AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, Position,
-    RigidBody,
-};
-use bevy::math::{EulerRot, Quat, Vec3};
+
+use bevy::math::{Quat, Vec3};
 use bevy::prelude::{
     Commands, MessageReader, MessageWriter, Name, Query, Res, ResMut, Time, Transform,
 };
 use bevy::scene::SceneRoot;
 use bevy_wind_waker_shader::WindWakerShaderBuilder;
 use std::f32::consts::PI;
+use avian3d::prelude::Position;
 
 pub fn alien_spawner_system(
     time_res: Res<Time>,
@@ -108,7 +100,6 @@ pub fn spawn_aliens(
         */
 
         let id = commands.spawn((
-            Name::from("Alien"),
             Alien::default(),
             alien_transform,
             SceneRoot(game_assets.alien_scene.clone()),

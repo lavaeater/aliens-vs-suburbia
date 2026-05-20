@@ -1,7 +1,21 @@
-use avian3d::prelude::Collider;
 use bevy::math::{EulerRot, Quat};
-use bevy::prelude::{Component, Resource};
+use bevy::prelude::*;
 use bevy::reflect::Reflect;
+use crate::ai::components::avoid_wall_components::AvoidWallsData;
+use crate::ai::components::move_towards_goal_components::MoveTowardsGoalData;
+use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
+use crate::control::components::{CharacterControl, KinematicMovement};
+use crate::general::components::{Attack, CollisionLayer, Health, HittableTarget, TouchDamage};
+use crate::player::systems::spawn_players::FixSceneTransform;
+use avian3d::prelude::{
+    AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, Position,
+    RigidBody,
+};
+use crate::CurrentTile;
+
+fn locked_axes()-> LockedAxes {
+    LockedAxes::new().lock_rotation_x().lock_rotation_z()
+}
 
 #[derive(Component, Default, Reflect, Clone, Copy, Debug, PartialEq)]
 #[type_path = "avs"]
@@ -20,7 +34,7 @@ use bevy::reflect::Reflect;
     LinearDamping(0.9),
     RigidBody::Dynamic,
     Collider::capsule(1.0, 1.0),
-    LockedAxes(|| LockedAxes::new().lock_rotation_x().lock_rotation_z()),
+    LockedAxes = locked_axes(),
     CollisionLayers::new(
        [CollisionLayer::Alien],
        [
@@ -33,8 +47,8 @@ use bevy::reflect::Reflect;
            CollisionLayer::Sensor,
            CollisionLayer::PlayerAimSensor,
        ]),
-        CurrentTile::default(),
-        CurrentAnimationKey::new("aliens".into(), AnimationKey::Walk),
+    CurrentTile::default(),
+    CurrentAnimationKey::new("aliens".into(), AnimationKey::Walk),
     AvoidWallsData::new(0.125, 0.125, 0.125, 5.0),
     MoveTowardsGoalData { path: None },
     AlienSightShape::default(),
