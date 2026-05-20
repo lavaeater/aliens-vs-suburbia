@@ -11,6 +11,7 @@ use crate::character_creator::config::{CharacterConfig, ComposedSpriteSheet};
 use crate::game_state::score_keeper::GameTrackingEvent;
 use crate::general::components::CollisionLayer;
 use crate::general::events::map_events::SpawnPlayer;
+use crate::model_settings::plugin::PlayerAssetDef;
 use crate::model_settings::resources::ModelSettings;
 use crate::player::bundle::PlayerBundle;
 use crate::sprite_billboard::components::{BillboardMeshHandle, SpriteBillboard};
@@ -38,7 +39,8 @@ impl FixSceneTransform {
 pub fn spawn_players(
     mut spawn_player_event_reader: MessageReader<SpawnPlayer>,
     mut commands: Commands,
-    game_assets: Res<GameAssets>,
+    mut game_assets: ResMut<GameAssets>,
+    mut player_asset_def: ResMut<PlayerAssetDef>,
     model_settings: Res<ModelSettings>,
     asset_server: Res<AssetServer>,
     roster: Option<Res<crate::player_setup::state::PlayerRoster>>,
@@ -127,13 +129,23 @@ pub fn spawn_players(
         } else {
             // 3D model path — use roster def if available for this slot, else default.
             let s = &*model_settings;
-            // Load scene from roster def if available.
+            // Load scene from roster def if available; also sync game_assets and
+            // player_asset_def so build_player_anim_graph uses the right GLTF.
             let scene = if let Some(ref r) = roster {
                 r.def_paths.get(slot)
                     .and_then(|def_path| {
                         let text = std::fs::read_to_string(def_path).ok()?;
                         let def: crate::assets::asset_definition::AssetDefinition = ron::from_str(&text).ok()?;
-                        Some(asset_server.load(GltfAssetLabel::Scene(0).from_asset(def.model_path)))
+                        let scene = asset_server.load(GltfAssetLabel::Scene(0).from_asset(def.model_path.clone()));
+                        // Slot 0 drives the shared animation graph — keep game_assets in sync.
+                        if slot == 0 {
+                            game_assets.player_scene = scene.clone();
+                            game_assets.player_gltf = asset_server.load(def.model_path.clone());
+                            if matches!(def.model_type, crate::assets::asset_definition::ModelType::Player(_)) {
+                                player_asset_def.0 = Some(def);
+                            }
+                        }
+                        Some(scene)
                     })
                     .unwrap_or_else(|| game_assets.player_scene.clone())
             } else {

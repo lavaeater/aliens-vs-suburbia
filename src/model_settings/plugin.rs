@@ -237,12 +237,14 @@ fn build_player_anim_graph(
             key.default_search()
         };
 
-        // If the value contains '|', the part before it is a source file stem.
+        // If the value contains '|', it may be "ExternalStem|ClipName" (external source)
+        // OR simply a GLTF clip name that itself contains '|' (e.g. "CharacterArmature|Idle").
+        // Try external sources first; fall back to the model's own GLTF either way.
         let handle = if let Some(pipe) = search.find('|') {
             let stem = &search[..pipe];
             let clip_fragment = &search[pipe + 1..];
-            // Find the matching extra GLTF by stem.
-            extra_gltfs.iter()
+            // Try to find a matching external GLTF by stem first.
+            let ext_handle = extra_gltfs.iter()
                 .find(|(path, _)| {
                     std::path::Path::new(path)
                         .file_stem().and_then(|s| s.to_str()) == Some(stem)
@@ -258,9 +260,17 @@ fn build_player_anim_graph(
                         .or_else(|| ext_gltf.named_animations.iter()
                             .find(|(name, _)| clip_matches(name, clip_fragment)))
                         .map(|(_, h)| h.clone())
-                })
+                });
+            // If no external source matched, the '|' is part of a GLTF clip name —
+            // search the model's own GLTF using the full string as both exact name and fragment.
+            ext_handle.or_else(|| {
+                gltf.named_animations.get(search).cloned()
+                    .or_else(|| gltf.named_animations.iter()
+                        .find(|(name, _)| clip_matches(name, search))
+                        .map(|(_, h)| h.clone()))
+            })
         } else {
-            // No pipe — search in the model's own GLTF as before.
+            // No pipe — search in the model's own GLTF.
             gltf.named_animations.iter()
                 .find(|(name, _)| {
                     let lower = name.to_lowercase();
