@@ -1,5 +1,5 @@
 use bevy::math::{Quat, Vec3};
-use bevy::prelude::{Children, Commands, Component, DetectChanges, Entity, Local, MessageReader, MessageWriter, Assets, Query, Res, ResMut, Transform, Visibility, With, Reflect};
+use bevy::prelude::*;
 use bevy::asset::AssetServer;
 use bevy::gltf::GltfAssetLabel;
 use bevy::scene::SceneRoot;
@@ -196,6 +196,7 @@ fn ability_for_slot(slot: usize) -> crate::player::systems::abilities::SpecialAb
 
 /// Marker placed on the direct scene-root child of the player so we can retarget it later.
 #[derive(Component, Default, Reflect)]
+#[reflect(Component, Default)]
 #[type_path = "aliensvssuburbia"]
 pub struct PlayerModelRoot;
 

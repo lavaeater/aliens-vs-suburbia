@@ -1,5 +1,4 @@
-use bevy::prelude::{Component, Resource};
-use bevy::reflect::Reflect;
+use bevy::prelude::*;
 use std::collections::HashMap;
 use avian3d::prelude::{CollisionLayers, LayerMask, RigidBody};
 use serde::{Deserialize, Serialize};
@@ -73,10 +72,12 @@ pub struct MapFile {
 }
 
 #[derive(Component, Default, Reflect)]
- #[type_path = "aliensvssuburbia"]
+#[reflect(Component, Default)]
+#[type_path = "aliensvssuburbia"]
 pub struct Wall {}
 
 #[derive(Component, Default, Reflect)]
+#[reflect(Component, Default)]
  #[type_path = "aliensvssuburbia"]
 pub struct AlienGoal;
 
@@ -113,6 +114,7 @@ pub struct CurrentTile {
 }
 
 #[derive(Component, Debug, Reflect, Default)]
+#[reflect(Component, Default)]
  #[type_path = "aliensvssuburbia"]
 pub struct AlienSpawnPoint {
     pub spawn_rate_per_minute: f32,
@@ -146,5 +148,6 @@ impl CoolDown for AlienSpawnPoint {
 
 
 #[derive(Component, Default, Reflect)]
+#[reflect(Component, Default)]
  #[type_path = "aliensvssuburbia"]
 pub struct Floor {}

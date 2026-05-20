@@ -1,21 +1,24 @@
 pub (crate) mod map_components;
 
-use bevy::prelude::{Component, Entity, Reflect};
+use bevy::prelude::*;
 use avian3d::prelude::PhysicsLayer;
 
 /// Entities with this component deal damage per second to any Player they collide with.
 #[derive(Component, Clone, Copy, Default, Reflect)]
- #[type_path = "aliensvssuburbia"]
+#[reflect(Component, Default)]
+#[type_path = "aliensvssuburbia"]
 pub struct TouchDamage {
     pub dps: f32,
 }
 
 /// Marker: this entity cannot be targeted or damaged by alien DestroyTheMap behaviour.
 #[derive(Component, Clone, Copy, Default, Reflect)]
+#[reflect(Component, Default)]
  #[type_path = "aliensvssuburbia"]
 pub struct Indestructible;
 
 #[derive(Component, Default, Reflect)]
+#[reflect(Component, Default)]
  #[type_path = "aliensvssuburbia"]
 pub struct Ball {
     pub entity: Option<Entity>,
@@ -36,6 +39,7 @@ impl Ball {
 }
 
 #[derive(Component, Default, Reflect)]
+#[reflect(Component, Default)]
  #[type_path = "aliensvssuburbia"]
 pub struct HittableTarget {}
 
@@ -55,6 +59,7 @@ pub enum CollisionLayer {
 }
 
 #[derive(Component, Clone, Debug, PartialEq, Reflect)]
+#[reflect(Component, Default)]
  #[type_path = "aliensvssuburbia"]
 pub struct Attack {
     pub damage_range: i32,
@@ -70,6 +75,7 @@ impl Default for Attack {
 
 
 #[derive(Component, Clone, Copy, Debug, PartialEq, Reflect)]
+#[reflect(Component, Default)]
  #[type_path = "aliensvssuburbia"]
 pub struct Health {
     pub health: i32,

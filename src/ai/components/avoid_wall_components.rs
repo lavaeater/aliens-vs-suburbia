@@ -1,10 +1,11 @@
 use bevy::log::info;
-use bevy::prelude::Component;
-use bevy::reflect::Reflect;
+use bevy::prelude::*;
 use crate::control::components::{ControlRotation, Opposite};
 use crate::general::components::map_components::CoolDown;
 
-#[derive(Clone, Component, Debug, Reflect)]
+#[derive(Clone, Component, Debug, Reflect, Default)]
+#[reflect(Component, Default)]
+#[type_path = "aliensvssuburbia"]
 pub struct AvoidWallsData {
     pub forward_distance: f32,
     pub left_distance: f32,

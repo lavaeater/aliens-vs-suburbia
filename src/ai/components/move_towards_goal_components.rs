@@ -1,7 +1,8 @@
-use bevy::prelude::{Component, Entity, Message};
-use bevy::reflect::Reflect;
+use bevy::prelude::*;
 
-#[derive(Clone, Component, Debug, Reflect)]
+#[derive(Clone, Component, Debug, Reflect, Default)]
+#[reflect(Component, Default)]
+#[type_path = "aliensvssuburbia"]
 pub struct MoveTowardsGoalData {
     pub path: Option<Vec<(usize, usize)>>,
 }

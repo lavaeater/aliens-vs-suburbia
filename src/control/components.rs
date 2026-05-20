@@ -1,5 +1,5 @@
 use bevy::math::Vec3;
-use bevy::prelude::{Component, Reflect};
+use bevy::prelude::*;
 use std::collections::HashSet;
 use bevy_inspector_egui::InspectorOptions;
 use crate::animation::animation_plugin::AnimationKey;
@@ -16,14 +16,20 @@ pub enum ControlCommand {
 }
 
 
-#[derive(Hash, PartialEq, Eq, Copy, Clone, Debug, Reflect)]
+#[derive(Hash, PartialEq, Eq, Copy, Clone, Debug, Reflect, Default)]
+#[reflect(Default)]
+#[type_path = "aliensvssuburbia"]
 pub enum ControlRotation {
+    #[default]
     Left,
     Right
 }
 
-#[derive(Hash, PartialEq, Eq, Copy, Clone, Debug, Reflect)]
+#[derive(Hash, PartialEq, Eq, Copy, Clone, Debug, Reflect, Default)]
+#[reflect(Default)]
+#[type_path = "aliensvssuburbia"]
 pub enum ControlDirection {
+    #[default]
     Forward,
     Backward,
     Left,
@@ -103,15 +109,18 @@ impl CoolDown for CharacterControl {
 
 
 #[derive(Component, Default, Reflect)]
+#[reflect(Component, Default)]
  #[type_path = "aliensvssuburbia"]
 pub struct DynamicMovement;
 
 
 #[derive(Component, Default, Reflect)]
+#[reflect(Component, Default)]
  #[type_path = "aliensvssuburbia"]
 pub struct KinematicMovement;
 
 #[derive(Component, Reflect)]
+#[reflect(Component, Default)]
  #[type_path = "aliensvssuburbia"]
 pub struct CharacterState {
     pub state: Vec<AnimationKey>,
