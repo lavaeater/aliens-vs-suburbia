@@ -3,7 +3,7 @@ use crate::general::components::map_components::CoolDown;
 
 #[derive(Default, Reflect)]
 #[reflect(Default)]
-#[type_path = "aliensvssuburbia"]
+#[type_path = "avs"]
 pub enum MustDestroyTheMapState {
   #[default]  
   NotStarted,
@@ -16,7 +16,7 @@ pub enum MustDestroyTheMapState {
 
 #[derive(Component, Reflect, Default)]
 #[reflect(Component, Default)]
-#[type_path = "aliensvssuburbia"]
+#[type_path = "avs"]
 pub struct MustDestroyTheMap {
     pub path_of_destruction: Option<Vec<(usize, usize)>>,
     pub state: MustDestroyTheMapState,

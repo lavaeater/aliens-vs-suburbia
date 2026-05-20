@@ -270,7 +270,6 @@ pub fn map_loader(
             }
         }
 
-        map_graph.path_finding_grid.enable_diagonal_mode();
 
         let map = MapDef {
             tiles,

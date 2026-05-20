@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 #[derive(Clone, Component, Debug, Reflect)]
 #[reflect(Component, Default)]
-#[type_path = "aliensvssuburbia"]
+#[type_path = "avs"]
 pub struct ApproachAndAttackPlayerData {
     pub seen_player: Option<Entity>,
     pub attack_distance: f32,

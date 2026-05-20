@@ -10,7 +10,7 @@ use crate::player::components::Player;
 /// Marker component for entities controlled by a gamepad.
 #[derive(Component, Reflect, Default)]
 #[reflect(Component, Default)]
-#[type_path = "aliensvssuburbia"]
+#[type_path = "avs"]
 pub struct InputGamepad {
     pub gamepad: Option<Entity>,
 }

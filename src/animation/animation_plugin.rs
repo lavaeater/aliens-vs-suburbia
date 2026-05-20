@@ -18,7 +18,7 @@ pub struct AnimationEvent(pub AnimationEventType, pub Entity, pub AnimationKey);
 
 #[derive(Component, Debug, Reflect, Default)]
 #[reflect(Component, Default)]
-#[type_path = "aliensvssuburbia"]
+#[type_path = "avs"]
 pub struct CurrentAnimationKey {
     pub group: String,
     pub key: AnimationKey,
@@ -59,7 +59,7 @@ pub struct AnimationStore {
 /// by `CharacterState::resolve()` into a concrete clip key at runtime.
 #[derive(Eq, Hash, PartialEq, Copy, Clone, Debug, Reflect, Default)]
 #[reflect(Default)]
-#[type_path = "aliensvssuburbia"]
+#[type_path = "avs"]
 pub enum AnimationKey {
     // ── Locomotion ─────────────────────────────────────────────────────────
     #[default]

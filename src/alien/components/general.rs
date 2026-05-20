@@ -4,7 +4,7 @@ use avian3d::prelude::Collider;
 use bevy::reflect::Reflect;
 
 #[derive(Component, Default, Reflect, Clone, Copy, Debug, PartialEq)]
- #[type_path = "aliensvssuburbia"]
+ #[type_path = "avs"]
 pub struct Alien;
 
 #[derive(Component, Clone, Debug)]

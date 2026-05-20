@@ -3,7 +3,7 @@ use bevy::prelude::*;
 
 #[derive(Component, Default, Reflect)]
 #[reflect(Component, Default)]
-#[type_path = "aliensvssuburbia"]
+#[type_path = "avs"]
 pub struct Player;
 
 #[derive(Hash, PartialEq, Eq, Clone, Reflect, Component)]
@@ -17,23 +17,23 @@ pub struct IsBuildIndicator;
 
 #[derive(Hash, PartialEq, Eq, Clone, Component, Default, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "aliensvssuburbia"]
+ #[type_path = "avs"]
 pub struct IsObstacle;
 
 #[derive(Hash, PartialEq, Eq, Clone, Component, Default, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "aliensvssuburbia"]
+ #[type_path = "avs"]
 pub struct ShootingTower;
 
 #[derive(Component, Default, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "aliensvssuburbia"]
+ #[type_path = "avs"]
 pub struct AutoAim(pub Vec3);
 
 /// Marks a player entity whose weapon nodes have been hidden.
 #[derive(Component, Default, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "aliensvssuburbia"]
+ #[type_path = "avs"]
 pub struct WeaponsHidden;
 
 /// Marks a player who is downed (health ≤ 0) and waiting for a revive.
@@ -41,7 +41,7 @@ pub struct WeaponsHidden;
 /// Removed when a teammate completes a revive.
 #[derive(Component, Default, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "aliensvssuburbia"]
+ #[type_path = "avs"]
 pub struct PlayerDead {
     /// Accumulated revive progress from 0.0 (none) to 1.0 (complete).
     pub revive_progress: f32,

@@ -73,12 +73,12 @@ pub struct MapFile {
 
 #[derive(Component, Default, Reflect)]
 #[reflect(Component, Default)]
-#[type_path = "aliensvssuburbia"]
+#[type_path = "avs"]
 pub struct Wall {}
 
 #[derive(Component, Default, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "aliensvssuburbia"]
+ #[type_path = "avs"]
 pub struct AlienGoal;
 
 pub struct ModelDefinition {
@@ -93,7 +93,7 @@ pub struct ModelDefinition {
 }
 
 #[derive(Hash, PartialEq, Eq, Clone, Reflect,Component, Default)]
- #[type_path = "aliensvssuburbia"]
+ #[type_path = "avs"]
 pub struct Tower {}
 
 impl ModelDefinition {
@@ -115,7 +115,7 @@ pub struct CurrentTile {
 
 #[derive(Component, Debug, Reflect, Default)]
 #[reflect(Component, Default)]
- #[type_path = "aliensvssuburbia"]
+ #[type_path = "avs"]
 pub struct AlienSpawnPoint {
     pub spawn_rate_per_minute: f32,
     pub spawn_cool_down: f32
@@ -149,5 +149,5 @@ impl CoolDown for AlienSpawnPoint {
 
 #[derive(Component, Default, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "aliensvssuburbia"]
+ #[type_path = "avs"]
 pub struct Floor {}

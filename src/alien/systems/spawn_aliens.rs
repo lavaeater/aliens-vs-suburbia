@@ -10,7 +10,7 @@ use crate::ai::components::move_towards_goal_components::MoveTowardsGoalData;
 use crate::alien::components::general::{Alien, AlienCounter, AlienSightShape};
 use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
 use crate::assets::assets_plugin::GameAssets;
-use crate::control::components::{CharacterControl, DynamicMovement};
+use crate::control::components::{CharacterControl, KinematicMovement};
 use crate::game_state::score_keeper::GameTrackingEvent;
 use crate::general::components::{Attack, CollisionLayer, Health, HittableTarget, TouchDamage};
 use crate::general::components::map_components::{AlienSpawnPoint, CoolDown, CurrentTile};
@@ -64,7 +64,7 @@ pub fn spawn_aliens(
             (
                 Name::from("Spider"),
                 HittableTarget {},
-                DynamicMovement {},
+                KinematicMovement {},
                 FixSceneTransform::new(
                     Vec3::new(0.0, -0.35, 0.0),
                     Quat::from_euler(EulerRot::YXZ, 180.0f32.to_radians(), 0.0, 0.0),

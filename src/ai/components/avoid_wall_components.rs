@@ -5,7 +5,7 @@ use crate::general::components::map_components::CoolDown;
 
 #[derive(Clone, Component, Debug, Reflect, Default)]
 #[reflect(Component, Default)]
-#[type_path = "aliensvssuburbia"]
+#[type_path = "avs"]
 pub struct AvoidWallsData {
     pub forward_distance: f32,
     pub left_distance: f32,

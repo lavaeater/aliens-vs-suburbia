@@ -1,3 +1,3 @@
 pub(crate) mod components;
 pub(crate) mod systems;
-pub mod ai_plugin;
+pub mod stateful_ai_plugin;

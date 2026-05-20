@@ -34,7 +34,7 @@ pub(crate) mod sprite_billboard;
 pub(crate) mod asset_browser;
 pub(crate) mod player_setup;
 pub(crate) mod map_editor;
-
+pub mod behavior;
 
 fn main() {
     App::new()

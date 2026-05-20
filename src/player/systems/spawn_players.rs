@@ -197,7 +197,7 @@ fn ability_for_slot(slot: usize) -> crate::player::systems::abilities::SpecialAb
 /// Marker placed on the direct scene-root child of the player so we can retarget it later.
 #[derive(Component, Default, Reflect)]
 #[reflect(Component, Default)]
-#[type_path = "aliensvssuburbia"]
+#[type_path = "avs"]
 pub struct PlayerModelRoot;
 
 pub fn fix_scene_transform(
@@ -207,11 +207,11 @@ pub fn fix_scene_transform(
 ) {
     for (parent, fix_scene_transform, children) in scene_instance_query.iter_mut() {
         for child in children.iter() {
-            if let Ok(mut transform) = child_query.get_mut(*child) {
+            if let Ok(mut transform) = child_query.get_mut(child) {
                 transform.translation = fix_scene_transform.translation;
                 transform.rotation = fix_scene_transform.rotation;
                 transform.scale = fix_scene_transform.scale;
-                commands.entity(*child).insert(PlayerModelRoot);
+                commands.entity(child).insert(PlayerModelRoot);
                 commands.entity(parent).remove::<FixSceneTransform>();
             }
         }
