@@ -2,7 +2,7 @@ use bevy::math::Vec3;
 use bevy::prelude::{Commands, Entity, MessageWriter, Query, Res, Transform, Without};
 use bevy::scene::SceneRoot;
 use bevy::time::Time;
-use avian3d::prelude::{Collider, CollisionLayers, LinearVelocity, Position, RigidBody};
+use avian3d::prelude::{Collider, CollisionEventsEnabled, CollisionLayers, LinearVelocity, Position, RigidBody};
 use bevy_wind_waker_shader::WindWakerShaderBuilder;
 use crate::animation::animation_plugin::{AnimationEvent, AnimationEventType, AnimationKey};
 use crate::assets::assets_plugin::GameAssets;
@@ -35,6 +35,7 @@ pub fn throwing(
                     Transform::from_xyz(launch_p.x, launch_p.y, launch_p.z),
                     RigidBody::Dynamic,
                     Collider::sphere(1.0 / 16.0),
+                    CollisionEventsEnabled,
                     WindWakerShaderBuilder::default().build(),
                     LinearVelocity(auto_aim.0 * 12.0),
                     CollisionLayers::new(
