@@ -28,12 +28,12 @@ impl Default for WaveManager {
     fn default() -> Self {
         Self {
             waves: vec![
-                WaveDef { alien_count: 1, spawn_rate_per_minute:  6.0, delay_before:  5.0 },
-                WaveDef { alien_count: 15, spawn_rate_per_minute:  9.0, delay_before: 20.0 },
+                WaveDef { alien_count: 1, spawn_rate_per_minute:  6.0, delay_before:  60.0 },
+                WaveDef { alien_count: 15, spawn_rate_per_minute:  9.0, delay_before: 30.0 },
                 WaveDef { alien_count: 20, spawn_rate_per_minute: 12.0, delay_before: 20.0 },
             ],
             current_wave: 0,
-            wave_timer: 5.0, // initial countdown before wave 1
+            wave_timer: 60.0, // initial countdown before wave 1
             spawning: false,
             spawned_this_wave: 0,
         }
