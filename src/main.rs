@@ -2,6 +2,7 @@ use bevy::app::{App, PluginGroup};
 use bevy::{DefaultPlugins, log};
 use bevy::log::LogPlugin;
 use avian3d::prelude::PhysicsPlugins;
+use bevy_skein::SkeinPlugin;
 use bevy_wind_waker_shader::flat::FlatShaderPlugin;
 use crate::ai::components::approach_and_attack_player_components::ApproachAndAttackPlayerData;
 use crate::ai::components::avoid_wall_components::AvoidWallsData;
@@ -50,6 +51,7 @@ fn main() {
                     level: log::Level::INFO,
                     ..Default::default()
                 }))
+      .add_plugins(SkeinPlugin::default())
         .add_plugins(PhysicsPlugins::default())
         .add_plugins(FlatShaderPlugin::global())
         .add_plugins(GamePlugin)
