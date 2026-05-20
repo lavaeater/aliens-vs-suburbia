@@ -35,15 +35,15 @@ pub fn collision_handling_system(
             let hittable_entity = if ball_is_first { entity2 } else { entity1 };
             if let Ok((mut target_health, _, is_alien)) = hittable_target_query.get_mut(hittable_entity) {
                 let ball_entity = if ball_is_first { entity1 } else { entity2 };
-                if let Ok(mut ball) = ball_query.get_mut(ball_entity) {
+                if let Ok(mut ball) = ball_query.get_mut(ball_entity) && let Some(hit_entity) = ball.entity {
                     if ball.can_score {
                         ball.can_score = false;
-                        game_mw.write(GameTrackingEvent::ShotHit(ball.entity));
+                        game_mw.write(GameTrackingEvent::ShotHit(hit_entity));
                     }
                     if ball.bounces <= 2 {
                         target_health.health -= 10;
                         if target_health.health <= 0 && is_alien {
-                            game_mw.write(GameTrackingEvent::AlienKilled(ball.entity));
+                            game_mw.write(GameTrackingEvent::AlienKilled(hit_entity));
                             alien_counter.count -= 1;
                         }
                     }

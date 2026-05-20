@@ -18,7 +18,7 @@ pub struct Coin {
 }
 
 /// How close (world units) a player must be to auto-collect coins.
-#[derive(Component, Default, Reflect)]
+#[derive(Component, Reflect)]
  #[type_path = "aliensvssuburbia"]
 pub struct PickupRange(pub f32);
 

@@ -7,8 +7,7 @@ use bevy::reflect::Reflect;
  #[type_path = "aliensvssuburbia"]
 pub struct Alien;
 
-#[derive(Component, Clone, Debug, Default, Reflect)]
- #[type_path = "aliensvssuburbia"]
+#[derive(Component, Clone, Debug)]
 pub struct AlienSightShape {
     pub shape: Collider,
     pub rotation: Quat,

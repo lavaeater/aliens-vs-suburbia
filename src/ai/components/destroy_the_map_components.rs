@@ -2,7 +2,8 @@ use bevy::prelude::Component;
 use bevy::reflect::Reflect;
 use crate::general::components::map_components::CoolDown;
 
-#[derive(Default)]
+#[derive(Default, Reflect)]
+#[type_path = "aliensvssuburbia"]
 pub enum MustDestroyTheMapState {
   #[default]  
   NotStarted,
@@ -14,7 +15,7 @@ pub enum MustDestroyTheMapState {
 }
 
 #[derive(Component, Reflect, Default)]
- #[type_path = "aliensvssuburbia"]
+#[type_path = "aliensvssuburbia"]
 pub struct MustDestroyTheMap {
     pub path_of_destruction: Option<Vec<(usize, usize)>>,
     pub state: MustDestroyTheMapState,

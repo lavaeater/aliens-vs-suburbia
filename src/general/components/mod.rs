@@ -18,7 +18,7 @@ pub struct Indestructible;
 #[derive(Component, Default, Reflect)]
  #[type_path = "aliensvssuburbia"]
 pub struct Ball {
-    pub entity: Entity,
+    pub entity: Option<Entity>,
     pub bounces: u32,
     pub max_bounces: u32,
     pub can_score: bool,
@@ -27,7 +27,7 @@ pub struct Ball {
 impl Ball {
     pub(crate) fn new(entity: Entity) -> Self {
         Self {
-            entity,
+            entity: Some(entity),
             bounces: 0,
             max_bounces: 5,
             can_score: true,
@@ -54,7 +54,7 @@ pub enum CollisionLayer {
     PlayerAimSensor,
 }
 
-#[derive(Component, Clone, Debug, PartialEq, Default, Reflect)]
+#[derive(Component, Clone, Debug, PartialEq, Reflect)]
  #[type_path = "aliensvssuburbia"]
 pub struct Attack {
     pub damage_range: i32,
@@ -69,7 +69,7 @@ impl Default for Attack {
 }
 
 
-#[derive(Component, Clone, Copy, Debug, PartialEq, Reflect, Default, Reflect)]
+#[derive(Component, Clone, Copy, Debug, PartialEq, Reflect)]
  #[type_path = "aliensvssuburbia"]
 pub struct Health {
     pub health: i32,

@@ -111,7 +111,7 @@ pub struct DynamicMovement;
  #[type_path = "aliensvssuburbia"]
 pub struct KinematicMovement;
 
-#[derive(Component, Default, Reflect)]
+#[derive(Component, Reflect)]
  #[type_path = "aliensvssuburbia"]
 pub struct CharacterState {
     pub state: Vec<AnimationKey>,
