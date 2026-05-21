@@ -8,6 +8,7 @@ use ratatui::{
 use enumflags2::BitFlags;
 use crate::map::MapFeatures;
 use super::app::{App, Mode, PromptKind};
+use super::commands::hints_for;
 
 fn tile_color(raw: u64) -> Color {
     if raw == 0 { return Color::Rgb(20, 20, 20); }
@@ -119,13 +120,7 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
 
     let hints = match &app.prompt {
         Some(p) => format!("{}: {}_", p.label, p.input),
-        None => match app.mode {
-            Mode::Normal  => "f:floor  s:spawn  g:goal  p:player  .:void  Del:erase  Alt:paint-mode  Ctrl:command".to_string(),
-            Mode::Alt     => "f/s/g/p: lock tile + enter paint mode  |  Alt: back to normal".to_string(),
-            Mode::Paint   => format!("painting: {}  |  arrows: move+paint  |  Alt: exit paint", tile_label(app.paint_tile)),
-            Mode::Command => "s:save  l:load  n:new  w:waves  q:quit  |  Esc: back".to_string(),
-            Mode::WaveEditor => "".to_string(),
-        },
+        None => hints_for(&app.mode, tile_label(app.paint_tile)),
     };
 
     let lines = vec![
@@ -189,7 +184,7 @@ fn draw_wave_editor(frame: &mut Frame, app: &App) {
     let file_str = app.file_path.as_deref().unwrap_or("<unsaved>");
     let hints = match &app.prompt {
         Some(p) => format!("{}: {}_", p.label, p.input),
-        None => "a:add  d:delete  e:edit  |  Esc: back to map".to_string(),
+        None => hints_for(&Mode::WaveEditor, ""),
     };
     let lines = vec![
         Line::from(vec![
