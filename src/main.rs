@@ -91,8 +91,30 @@ fn parse_create_map_args(args: &[String]) -> Option<()> {
     Some(())
 }
 
+fn print_help() {
+    println!("Aliens vs Suburbia\n");
+    println!("USAGE:");
+    println!("  cargo run                                  Launch the game");
+    println!("  cargo run --features map-editor -- --map-editor [--file <path>]");
+    println!("                                             Launch the map editor TUI");
+    println!("  cargo run -- --create-map [OPTIONS]        Generate a map file\n");
+    println!("MAP EDITOR OPTIONS:");
+    println!("  --file <path>    Open an existing map file (e.g. assets/maps/map_1.ron)\n");
+    println!("CREATE MAP OPTIONS:");
+    println!("  --seed <u64>     Random seed (default: time-based)");
+    println!("  --w <usize>      Map width in tiles (default: 32)");
+    println!("  --h <usize>      Map height in tiles (default: 12)");
+    println!("  --output <path>  Output file path (default: assets/maps/map_N.ron)");
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
+
+    if args.iter().any(|a| a == "--help" || a == "-h") {
+        print_help();
+        return;
+    }
+
     if parse_create_map_args(&args).is_some() {
         return;
     }
