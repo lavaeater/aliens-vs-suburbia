@@ -99,7 +99,7 @@ For the hand-crafted `level_01.ron`, switch from `generated: true` to an explici
 
 ### 6. Barrier & tower placement
 
-**Current state:** The building system (`src/building/`) lets the player place tiles. Only one tower type exists (`TowerShooter` that fires projectiles). Barriers block alien pathfinding via the `Impassable` collision layer.
+**Current state:** The building system (`src/building/`) lets the player place tiles. Only one tower type exists (`TowerShooter` that fires projectiles). Barriers block alien pathfinding via the `ImpassableAll` collision layer.
 
 **Tower type architecture:**
 
@@ -126,7 +126,7 @@ enum TowerEffect {
 
 The existing `shoot_alien_system` becomes one branch; `slow_alien_system` and `area_damage_system` are added in `src/towers/systems/`.
 
-**Barrier vs tower distinction:** Barriers (impassable walls) use the current `Impassable` collision layer and trigger alien path recalculation. Towers sit on floor tiles and do not block movement.
+**Barrier vs tower distinction:** Barriers (impassable walls) use the current `ImpassableAll` collision layer and trigger alien path recalculation. Towers sit on floor tiles and do not block movement.
 
 ---
 
@@ -361,7 +361,7 @@ This converts the `ModelType` data written in step 11 into actual in-game compon
 
 **Terrain:** when `map_generator` or the map editor places a terrain model:
 - Read its def → `TerrainProps`.
-- `blocks_enemies` → insert `Impassable` collider layer.
+- `blocks_enemies` → insert `ImpassableAll` collider layer.
 - `blocks_players` → insert `PlayerImpassable` collider layer (new layer).
 - `health: Some(h)` → insert `Health(h)`; absence → insert `Indestructible` marker component.
 - `Indestructible` causes `health_monitor_system` and `DestroyTheMap` to skip the entity.

@@ -81,7 +81,7 @@ Stored at `assets/defs/<model-stem>.ron`. Fields:
 
 ### Physics & Collision
 
-Uses **avian3d 0.6**. Collision layers in `src/general/components/mod.rs`: `Impassable`, `Floor`, `Ball`, `Alien`, `Player`, `BuildIndicator`, `Sensor`, `PlayerAimSensor`, `AlienSpawnPoint`, `AlienGoal`.
+Uses **avian3d 0.6**. Collision layers in `src/general/components/mod.rs`: `ImpassableAll`, `Floor`, `Ball`, `Alien`, `Player`, `BuildIndicator`, `Sensor`, `PlayerAimSensor`, `AlienSpawnPoint`, `AlienGoal`.
 
 ### AI Pattern
 

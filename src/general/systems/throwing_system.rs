@@ -41,7 +41,7 @@ pub fn throwing(
                     CollisionLayers::new(
                         [CollisionLayer::Ball],
                         [
-                            CollisionLayer::Impassable,
+                            CollisionLayer::ImpassableAll,
                             CollisionLayer::Floor,
                             CollisionLayer::Alien,
                             CollisionLayer::Player,

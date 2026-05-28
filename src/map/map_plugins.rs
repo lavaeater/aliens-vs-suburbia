@@ -32,7 +32,7 @@ impl Plugin for NonStateMapStuff {
                                 height: 19.0,
                                 depth: 1.0,
                                 rigid_body: RigidBody::Static,
-                                group: LayerMask::from([CollisionLayer::Impassable]),
+                                group: LayerMask::from([CollisionLayer::ImpassableAll]),
                                 mask: LayerMask::from([CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
                             }),
                             ("floor", ModelDefinition {
@@ -52,7 +52,7 @@ impl Plugin for NonStateMapStuff {
                                 height: 4.0,
                                 depth: 16.0,
                                 rigid_body: RigidBody::Kinematic,
-                                group: LayerMask::from([CollisionLayer::Impassable]),
+                                group: LayerMask::from([CollisionLayer::ImpassableAll]),
                                 mask: LayerMask::from([CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
                             }),
                             ("tower", ModelDefinition {
@@ -62,7 +62,7 @@ impl Plugin for NonStateMapStuff {
                                 height: 8.0,
                                 depth: 16.0,
                                 rigid_body: RigidBody::Kinematic,
-                                group: LayerMask::from([CollisionLayer::Impassable]),
+                                group: LayerMask::from([CollisionLayer::ImpassableAll]),
                                 mask: LayerMask::from([CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
                             }),
                             ("tower_slow", ModelDefinition {
@@ -72,7 +72,7 @@ impl Plugin for NonStateMapStuff {
                                 height: 8.0,
                                 depth: 16.0,
                                 rigid_body: RigidBody::Kinematic,
-                                group: LayerMask::from([CollisionLayer::Impassable]),
+                                group: LayerMask::from([CollisionLayer::ImpassableAll]),
                                 mask: LayerMask::from([CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
                             }),
                             ("tower_area", ModelDefinition {
@@ -82,7 +82,7 @@ impl Plugin for NonStateMapStuff {
                                 height: 8.0,
                                 depth: 16.0,
                                 rigid_body: RigidBody::Kinematic,
-                                group: LayerMask::from([CollisionLayer::Impassable]),
+                                group: LayerMask::from([CollisionLayer::ImpassableAll]),
                                 mask: LayerMask::from([CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
                             }),
                         ]),

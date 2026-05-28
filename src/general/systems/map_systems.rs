@@ -566,7 +566,7 @@ pub fn map_loader(
                         ec.insert((
                             IsObstacle,
                             tile_defs.create_collider(16.0, 8.0, 16.0),
-                            CollisionLayers::new([CollisionLayer::Impassable], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
+                            CollisionLayers::new([CollisionLayer::ImpassableAll], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
                         ));
                         map_graph.path_finding_grid.remove_vertex(tile_coord);
                     }
@@ -588,7 +588,7 @@ pub fn map_loader(
                         SceneRoot(scene_handle),
                         Transform::from_translation(pos).with_rotation(rot).with_scale(scale),
                         tile_defs.create_collider(16.0, 8.0, 16.0),
-                        CollisionLayers::new([CollisionLayer::Impassable], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
+                        CollisionLayers::new([CollisionLayer::ImpassableAll], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
                         RigidBody::Static,
                         CurrentTile { tile: tile_coord },
                         Health { health: hp, max_health: hp },

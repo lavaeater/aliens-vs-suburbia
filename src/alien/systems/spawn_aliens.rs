@@ -118,3 +118,16 @@ pub fn spawn_aliens(
         }
     }
 }
+CollisionLayers::new(
+[CollisionLayer::Alien],
+[
+CollisionLayer::Ball,
+CollisionLayer::Impassable,
+CollisionLayer::Floor,
+CollisionLayer::Alien,
+CollisionLayer::Player,
+CollisionLayer::AlienGoal,
+CollisionLayer::Sensor,
+CollisionLayer::PlayerAimSensor,
+]),
+
