@@ -25,16 +25,6 @@ impl Plugin for NonStateMapStuff {
                 MapModelDefinitions {
                     definitions: HashMap::from(
                         [
-                            ("wall", ModelDefinition {
-                                name: "wall",
-                                file: "map/wall_small.glb#Scene0",
-                                width: 16.0,
-                                height: 19.0,
-                                depth: 1.0,
-                                rigid_body: RigidBody::Static,
-                                group: LayerMask::from([CollisionLayer::ImpassableAll]),
-                                mask: LayerMask::from([CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
-                            }),
                             ("floor", ModelDefinition {
                                 name: "floor",
                                 file: "map/floor_small.glb#Scene0",

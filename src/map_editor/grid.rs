@@ -122,7 +122,13 @@ fn tile_color(raw: u64) -> Color {
     if flags.contains(MapFeatures::EnemySpawn)   { return Color::srgb(0.8, 0.2, 0.2); }
     if flags.contains(MapFeatures::EnemyExit)    { return Color::srgb(0.8, 0.6, 0.1); }
     if flags.contains(MapFeatures::ImpassableForPlayers) && flags.contains(MapFeatures::ImpassableForEnemies) {
-        return Color::srgb(0.25, 0.22, 0.18); // rock/wall — dark brown
+        return Color::srgb(0.25, 0.22, 0.18); // solid wall — dark brown
+    }
+    if flags.contains(MapFeatures::ImpassableForPlayers) {
+        return Color::srgb(0.55, 0.30, 0.12); // player-only wall — orange-brown
+    }
+    if flags.contains(MapFeatures::ImpassableForEnemies) {
+        return Color::srgb(0.15, 0.30, 0.50); // alien-only wall — steel blue
     }
 
     // Terrain type.
@@ -180,10 +186,10 @@ pub fn handle_grid_click(
     let Ok(window) = windows.single() else { return };
     let Some((col, row)) = cursor_to_tile(window, state.width, state.height) else { return };
 
-    if left {
-        state.place_at(col, row);
-    } else {
-        // Erase: remove any placement and reset tile to floor.
+    let erasing = right || (left && state.erase_mode);
+    if erasing {
         state.erase_at(col, row);
+    } else if left {
+        state.place_at(col, row);
     }
 }

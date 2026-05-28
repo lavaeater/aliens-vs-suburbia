@@ -17,7 +17,13 @@ fn tile_color(raw: u64) -> Color {
     if f.contains(MapFeatures::EnemySpawn)   { return Color::Rgb(180, 40, 40); }
     if f.contains(MapFeatures::EnemyExit)    { return Color::Rgb(40, 160, 40); }
     if f.contains(MapFeatures::ImpassableForPlayers) && f.contains(MapFeatures::ImpassableForEnemies) {
-        return Color::Rgb(60, 55, 45);
+        return Color::Rgb(60, 55, 45);  // solid wall — dark brown
+    }
+    if f.contains(MapFeatures::ImpassableForPlayers) {
+        return Color::Rgb(140, 75, 30); // player-only wall — orange-brown
+    }
+    if f.contains(MapFeatures::ImpassableForEnemies) {
+        return Color::Rgb(38, 75, 130); // alien-only wall — steel blue
     }
     if f.contains(MapFeatures::Water)  { return Color::Rgb(38, 90, 179); }
     if f.contains(MapFeatures::Mud)    { return Color::Rgb(115, 82, 46); }
@@ -33,7 +39,9 @@ fn tile_label(raw: u64) -> &'static str {
     if f.contains(MapFeatures::PlayerSpawn)  { return "player-spawn"; }
     if f.contains(MapFeatures::EnemySpawn)   { return "enemy-spawn"; }
     if f.contains(MapFeatures::EnemyExit)    { return "enemy-exit"; }
-    if f.contains(MapFeatures::ImpassableForPlayers) { return "impassable"; }
+    if f.contains(MapFeatures::ImpassableForPlayers) && f.contains(MapFeatures::ImpassableForEnemies) { return "wall-all"; }
+    if f.contains(MapFeatures::ImpassableForPlayers) { return "wall-player"; }
+    if f.contains(MapFeatures::ImpassableForEnemies) { return "wall-alien"; }
     if f.contains(MapFeatures::Water)  { return "water"; }
     if f.contains(MapFeatures::Mud)    { return "mud"; }
     if f.contains(MapFeatures::Snow)   { return "snow"; }

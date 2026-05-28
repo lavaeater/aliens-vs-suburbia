@@ -39,7 +39,8 @@ fn locked_axes()-> LockedAxes {
        [CollisionLayer::Alien],
        [
            CollisionLayer::Ball,
-           CollisionLayer::Impassable,
+           CollisionLayer::ImpassableAll,
+           CollisionLayer::ImpassableAlien,
            CollisionLayer::Floor,
            CollisionLayer::Alien,
            CollisionLayer::Player,

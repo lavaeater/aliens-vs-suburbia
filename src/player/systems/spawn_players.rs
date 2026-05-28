@@ -112,7 +112,8 @@ pub fn spawn_players(
                     [CollisionLayer::Player],
                     [
                         CollisionLayer::Ball,
-                        CollisionLayer::Impassable,
+                        CollisionLayer::ImpassableAll,
+                        CollisionLayer::ImpassablePlayer,
                         CollisionLayer::Floor,
                         CollisionLayer::Alien,
                         CollisionLayer::Player,
@@ -172,7 +173,8 @@ pub fn spawn_players(
                     [CollisionLayer::Player],
                     [
                         CollisionLayer::Ball,
-                        CollisionLayer::Impassable,
+                        CollisionLayer::ImpassableAll,
+                        CollisionLayer::ImpassablePlayer,
                         CollisionLayer::Floor,
                         CollisionLayer::Alien,
                         CollisionLayer::Player,

@@ -10,6 +10,10 @@ pub const TILE_SPECIAL_FLOOR: u64 = MapFeatures::Floor as u64;
 pub const TILE_ALIEN_SPAWN: u64   = MapFeatures::Floor as u64 | MapFeatures::EnemySpawn as u64;
 pub const TILE_ALIEN_GOAL: u64    = MapFeatures::Floor as u64 | MapFeatures::EnemyExit as u64;
 pub const TILE_PLAYER_SPAWN: u64  = MapFeatures::Floor as u64 | MapFeatures::PlayerSpawn as u64;
+pub const TILE_WALL_ALL: u64      = MapFeatures::Floor as u64 | MapFeatures::ImpassableForPlayers as u64 | MapFeatures::ImpassableForEnemies as u64;
+pub const TILE_WALL_PLAYER: u64   = MapFeatures::Floor as u64 | MapFeatures::ImpassableForPlayers as u64;
+pub const TILE_WALL_ALIEN: u64    = MapFeatures::Floor as u64 | MapFeatures::ImpassableForEnemies as u64;
+pub const TILE_VOID: u64          = 0;
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum PaletteTab {
@@ -74,6 +78,8 @@ pub struct MapEditorState {
     pub palette_dirty: bool,
     pub waves_dirty: bool,
     pub grid_dirty: bool,
+    /// When true, left-click erases instead of placing.
+    pub erase_mode: bool,
     /// Last seed used by "Generate Map".
     pub gen_seed: u64,
     pub seed_label_dirty: bool,
@@ -101,6 +107,7 @@ impl Default for MapEditorState {
             palette_dirty: true,
             waves_dirty: true,
             grid_dirty: true,
+            erase_mode: false,
             gen_seed: 0,
             seed_label_dirty: false,
             enemy_defs: scan_enemy_defs(),
@@ -116,11 +123,14 @@ impl MapEditorState {
     pub fn refresh_palette(&mut self) {
         self.palette_items = match self.active_tab {
             PaletteTab::Special => vec![
-                PaletteItem::Special { label: "Floor",        tile_value: TILE_SPECIAL_FLOOR },
-                PaletteItem::Special { label: "Alien Spawn",  tile_value: TILE_ALIEN_SPAWN },
-                PaletteItem::Special { label: "Alien Goal",   tile_value: TILE_ALIEN_GOAL },
-                PaletteItem::Special { label: "Player Spawn", tile_value: TILE_PLAYER_SPAWN },
-                PaletteItem::Special { label: "Erase Tile",   tile_value: 0 },
+                PaletteItem::Special { label: "Floor",         tile_value: TILE_SPECIAL_FLOOR },
+                PaletteItem::Special { label: "Wall (all)",    tile_value: TILE_WALL_ALL },
+                PaletteItem::Special { label: "Wall (player)", tile_value: TILE_WALL_PLAYER },
+                PaletteItem::Special { label: "Wall (alien)",  tile_value: TILE_WALL_ALIEN },
+                PaletteItem::Special { label: "Void",          tile_value: TILE_VOID },
+                PaletteItem::Special { label: "Alien Spawn",   tile_value: TILE_ALIEN_SPAWN },
+                PaletteItem::Special { label: "Alien Goal",    tile_value: TILE_ALIEN_GOAL },
+                PaletteItem::Special { label: "Player Spawn",  tile_value: TILE_PLAYER_SPAWN },
             ],
             _ => scan_defs_for_tab(&self.active_tab),
         };

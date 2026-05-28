@@ -15,6 +15,7 @@ use crate::ui::spawn_ui::StateMarker;
 #[derive(Component)] pub struct EnemyPickerContainer;
 #[derive(Component)] pub struct MapInfoLabel;
 #[derive(Component)] pub struct ActiveBrushLabel;
+#[derive(Component)] pub struct ModeLabel;
 #[derive(Component)] pub struct GenSeedLabel;
 
 const PANEL_BG: Color = Color::srgba(0.04, 0.08, 0.05, 0.95);
@@ -41,7 +42,13 @@ pub fn spawn_map_editor_ui(
     ui.side_panel(200.0, PANEL_BG, |left| {
         left.themed_header("Map Editor");
         left.label("[R] rotate  [S] save  [Esc] back", 11.0, Color::srgba(0.5, 0.7, 0.5, 0.7));
-        left.label("LClick place  RClick erase", 11.0, Color::srgba(0.5, 0.7, 0.5, 0.7));
+        left.label("[E] toggle erase  RClick erase", 11.0, Color::srgba(0.5, 0.7, 0.5, 0.7));
+        left.label("Hold LMB to drag-paint", 11.0, Color::srgba(0.5, 0.7, 0.5, 0.7));
+
+        left.with_child(|c| {
+            c.with_text("Mode: Paint", Some(lava_ui_builder::TextStyle::size_color(12.0, Color::srgb(0.6, 1.0, 0.6))))
+             .insert(ModeLabel);
+        });
 
         left.with_child(|c| {
             c.with_text("new_map  20x24", Some(lava_ui_builder::TextStyle::size_color(10.0, Color::srgb(0.7, 0.8, 0.7))))
@@ -279,6 +286,15 @@ pub fn rebuild_seed_label(
 
 // ── Key input ─────────────────────────────────────────────────────────────────
 
+pub fn rebuild_mode_label(
+    state: Res<MapEditorState>,
+    mut label_q: Query<&mut Text, With<ModeLabel>>,
+) {
+    if !state.is_changed() { return; }
+    let Ok(mut t) = label_q.single_mut() else { return };
+    **t = if state.erase_mode { "Mode: Erase".to_string() } else { "Mode: Paint".to_string() };
+}
+
 pub fn handle_editor_keys(
     mut state: ResMut<MapEditorState>,
     mut next: ResMut<NextState<GameState>>,
@@ -289,6 +305,9 @@ pub fn handle_editor_keys(
         match &event.logical_key {
             Key::Character(c) if c == "r" || c == "R" => state.rotate_brush(),
             Key::Character(c) if c == "s" || c == "S" => state.save(),
+            Key::Character(c) if c == "e" || c == "E" => {
+                state.erase_mode = !state.erase_mode;
+            }
             Key::Escape => next.set(GameState::Menu),
             _ => {}
         }

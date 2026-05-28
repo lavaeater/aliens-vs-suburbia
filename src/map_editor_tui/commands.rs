@@ -136,8 +136,8 @@ fn tile_keys(map: CommandMap, paint_fn: fn(KeyCode) -> Box<dyn Fn(&mut App, (usi
         .add(KeyCode::Char('m'), KeyModifiers::NONE, "mud",            paint_fn(KeyCode::Char('m')))
         .add(KeyCode::Char('s'), KeyModifiers::NONE, "snow",           paint_fn(KeyCode::Char('s')))
         .add(KeyCode::Char('r'), KeyModifiers::NONE, "rock",           paint_fn(KeyCode::Char('r')))
-        .add(KeyCode::Char('i'), KeyModifiers::NONE, "toggle-impass",  paint_fn(KeyCode::Char('i')))
-        .add(KeyCode::Char('e'), KeyModifiers::NONE, "toggle-enemy-wall", paint_fn(KeyCode::Char('e')))
+        .add(KeyCode::Char('i'), KeyModifiers::NONE, "wall-player",    paint_fn(KeyCode::Char('i')))
+        .add(KeyCode::Char('e'), KeyModifiers::NONE, "wall-alien",     paint_fn(KeyCode::Char('e')))
         .add(KeyCode::Char('p'), KeyModifiers::NONE, "player-spawn",   paint_fn(KeyCode::Char('p')))
         .add(KeyCode::Char('z'), KeyModifiers::NONE, "enemy-spawn",    paint_fn(KeyCode::Char('z')))
         .add(KeyCode::Char('x'), KeyModifiers::NONE, "enemy-exit",     paint_fn(KeyCode::Char('x')))
@@ -172,7 +172,8 @@ pub fn alt_map() -> CommandMap {
 
 pub fn paint_map() -> CommandMap {
     CommandMap::new("Paint")
-        .alt(KeyCode::Char('a'), "exit-paint", |app, _|    { app.mode = Mode::Normal; CmdResult::Continue })
+        .k(KeyCode::Esc,         "exit-paint", |app, _| { app.mode = Mode::Normal; CmdResult::Continue })
+        .alt(KeyCode::Char('a'), "",            |app, _| { app.mode = Mode::Normal; CmdResult::Continue })
         .k(KeyCode::Up,    "move+paint", |app, vp| { app.move_cursor(0, -1, vp.0, vp.1); app.paint(app.paint_tile); CmdResult::Continue })
         .k(KeyCode::Down,  "",           |app, vp| { app.move_cursor(0,  1, vp.0, vp.1); app.paint(app.paint_tile); CmdResult::Continue })
         .k(KeyCode::Left,  "",           |app, vp| { app.move_cursor(-1, 0, vp.0, vp.1); app.paint(app.paint_tile); CmdResult::Continue })
@@ -236,7 +237,7 @@ pub fn hints_for(mode: &Mode, paint_tile_label: &str) -> String {
     match mode {
         Mode::Normal  => normal_map().hints(),
         Mode::Alt     => "pick tile key to lock into paint mode  |  Esc: back".to_string(),
-        Mode::Paint   => format!("painting:{}  Alt:exit  arrows:move+paint", paint_tile_label),
+        Mode::Paint   => format!("painting:{}  Esc:exit  arrows:move+paint", paint_tile_label),
         Mode::Command => command_map().hints(),
         Mode::WaveEditor => wave_map().hints(),
     }
