@@ -258,8 +258,8 @@ pub fn map_loader(
         // Each tile category gets a solid cube: tilewidth × 3.0 tall × tilewidth.
         // Void tiles, tiles marked impassable for both → ImpassableAll (blocks everyone).
         // ImpassableForPlayers only → ImpassablePlayer.  ImpassableForEnemies only → ImpassableAlien.
-        let block_half_h = 1.5_f32;
-        let block_y = tile_defs.floor_level + block_half_h;
+        let block_half_h = 4.0_f32;
+        let block_y = tile_defs.floor_level;
         let tw = tile_defs.tile_width;
 
         let imp_configs: [(&HashSet<(i32, i32)>, CollisionLayers); 3] = [
