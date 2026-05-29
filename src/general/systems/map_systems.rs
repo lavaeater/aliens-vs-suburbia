@@ -258,7 +258,7 @@ pub fn map_loader(
         // Each tile category gets a solid cube: tilewidth × 3.0 tall × tilewidth.
         // Void tiles, tiles marked impassable for both → ImpassableAll (blocks everyone).
         // ImpassableForPlayers only → ImpassablePlayer.  ImpassableForEnemies only → ImpassableAlien.
-        let block_half_h = 4.0_f32;
+        let block_half_h = 4.0_f32 / 3.0;
         let block_y = tile_defs.floor_level;
         let tw = tile_defs.tile_width;
 
@@ -291,7 +291,7 @@ pub fn map_loader(
                     let center = Vec3::new(tw * (col + max_col) as f32 / 2.0, block_y, tw * (row + max_row) as f32 / 2.0);
                     commands.spawn((
                         RigidBody::Static,
-                        Collider::cuboid(tw * w / 2.0, block_half_h, tw * h / 2.0),
+                        Collider::cuboid(tw * w, block_half_h, tw * h),
                         *layers,
                         Transform::from_translation(center),
                         Position::from(center),
