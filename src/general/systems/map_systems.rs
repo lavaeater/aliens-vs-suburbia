@@ -114,9 +114,16 @@ pub fn map_loader(
 ) {
     for load_map in load_map_event_reader.read() {
         let map_file = &load_map.map;
-        let m = &map_file.tiles;
-        let rows = m.len();
-        let cols = m[0].len();
+        let raw = &map_file.tiles;
+        let rows = raw.len() + 2;
+        let cols = raw[0].len() + 2;
+        let mut padded = vec![vec![0u64; cols]; rows];
+        for (r, row_data) in raw.iter().enumerate() {
+            for (c, &v) in row_data.iter().enumerate() {
+                padded[r + 1][c + 1] = v;
+            }
+        }
+        let m = &padded;
         map_graph.path_finding_grid = Grid::new(cols, rows);
 
         // Single pass: build tile sets and handle functional markers.
@@ -297,27 +304,6 @@ pub fn map_loader(
                         Position::from(center),
                     ));
                 }
-            }
-        }
-
-        // ── Map-border barriers (ImpassableAll, 3 tiles thick on each side) ───
-        {
-            let border = tw * 3.0;
-            let map_w = cols as f32 * tw;
-            let map_h = rows as f32 * tw;
-            let cx = (map_w - tw) / 2.0;
-            let cz = (map_h - tw) / 2.0;
-            let bl = CollisionLayers::new([CollisionLayer::ImpassableAll], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]);
-            let half_w = (map_w + border * 2.0) / 2.0;
-            let half_h = (map_h + border * 2.0) / 2.0;
-            let half_b = border / 2.0;
-            for (name, pos, hx, hz) in [
-                ("BorderN", Vec3::new(cx, block_y, -tw / 2.0 - half_b), half_w, half_b),
-                ("BorderS", Vec3::new(cx, block_y, map_h - tw / 2.0 + half_b), half_w, half_b),
-                ("BorderW", Vec3::new(-tw / 2.0 - half_b, block_y, cz), half_b, half_h),
-                ("BorderE", Vec3::new(map_w - tw / 2.0 + half_b, block_y, cz), half_b, half_h),
-            ] {
-                commands.spawn((Name::from(name), RigidBody::Static, Collider::cuboid(hx, block_half_h, hz), bl, Transform::from_translation(pos), Position::from(pos)));
             }
         }
 
