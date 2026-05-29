@@ -2,18 +2,19 @@
 use crate::alien::components::general::{Alien, AlienCounter};
 use crate::assets::assets_plugin::GameAssets;
 use crate::game_state::score_keeper::GameTrackingEvent;
-use crate::general::components::map_components::{AlienSpawnPoint, CoolDown, CurrentTile};
+use crate::general::components::map_components::{AlienSpawnPoint, CoolDown};
 use crate::general::events::map_events::SpawnAlien;
 use crate::ui::spawn_ui::AddHealthBar;
 
 use bevy::math::{Quat, Vec3};
 use bevy::prelude::{
-    Commands, MessageReader, MessageWriter, Name, Query, Res, ResMut, Time, Transform,
+    Commands, MessageReader, MessageWriter, Query, Res, ResMut, Time, Transform,
 };
 use bevy::scene::SceneRoot;
 use bevy_wind_waker_shader::WindWakerShaderBuilder;
 use std::f32::consts::PI;
 use avian3d::prelude::Position;
+use bevy_wind_waker_shader::pixelate::PixelShaderBuilder;
 
 pub fn alien_spawner_system(
     time_res: Res<Time>,
@@ -103,7 +104,12 @@ pub fn spawn_aliens(
             Alien::default(),
             alien_transform,
             SceneRoot(game_assets.alien_scene.clone()),
-            WindWakerShaderBuilder::default().build(),
+            // WindWakerShaderBuilder::default().build(),
+            // PixelShaderBuilder::default()
+            //     .pixel_density(1.0)   // lower = blockier
+            //     .color_levels(2.0)    // lower = fewer colors
+            //     .build(),
+
         )).id();
 
         add_health_bar_mw.write(AddHealthBar {
@@ -118,3 +124,4 @@ pub fn spawn_aliens(
         }
     }
 }
+

@@ -58,9 +58,10 @@ pub struct MapFile {
     pub map_width: usize,
     #[serde(default = "default_map_height")]
     pub map_height: usize,
-    /// Row-major grid; 0=void, 1=floor, 5=alien spawn, 9=alien goal, 17=player spawn.
+    /// Row-major grid of `BitFlags<MapFeatures>` values stored as u64.
+    /// 0 = void (Nothing), non-zero = tile with feature flags set.
     #[serde(default)]
-    pub tiles: Vec<Vec<u8>>,
+    pub tiles: Vec<Vec<u64>>,
     #[serde(default)]
     pub decorations: Vec<DecorationItem>,
     /// Items placed by the map editor (def-driven models on specific tiles).

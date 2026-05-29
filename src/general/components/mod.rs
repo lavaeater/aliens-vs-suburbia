@@ -48,7 +48,9 @@ pub enum CollisionLayer {
     #[default]
     Floor,
     Ball,
-    Impassable,
+    ImpassableAll,
+    ImpassableAlien,
+    ImpassablePlayer,
     Alien,
     Player,
     AlienSpawnPoint,

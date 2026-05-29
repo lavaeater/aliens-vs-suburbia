@@ -109,7 +109,7 @@ pub fn shoot_alien_system(
                     CollisionLayers::new(
                         [CollisionLayer::Ball],
                         [
-                            CollisionLayer::Impassable,
+                            CollisionLayer::ImpassableAll,
                             CollisionLayer::Floor,
                             CollisionLayer::Alien,
                             CollisionLayer::Player,

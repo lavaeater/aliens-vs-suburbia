@@ -2,34 +2,21 @@ use bevy::asset::AssetServer;
 use bevy::math::{Quat, Vec3};
 use bevy::asset::RenderAssetUsages;
 use bevy::pbr::StandardMaterial;
-use bevy::prelude::{Assets, Color, Commands, Component, Has, Mesh, Mesh3d, MeshMaterial3d, MessageReader, MessageWriter, Name, Query, Res, ResMut, Resource, Transform};
+use bevy::prelude::{Assets, Color, Commands, Has, Mesh, Mesh3d, MeshMaterial3d, MessageReader, MessageWriter, Name, Query, Res, ResMut, Resource, Transform};
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::scene::SceneRoot;
-
-/// Marks a visual wall entity for occlusion testing by the camera system.
-#[derive(Component)]
-pub struct WallOccluder;
-
-/// Cloned material handles for a wall entity, used to fade alpha on occlusion.
-#[derive(Component, Default)]
-pub struct WallMaterials {
-    pub handles: Vec<bevy::asset::Handle<bevy::prelude::StandardMaterial>>,
-    pub initialized: bool,
-}
-use avian3d::prelude::{Collider, CollisionLayers, Position, RigidBody, Rotation};
-use flagset::{flags, FlagSet};
+use avian3d::prelude::{Collider, CollisionLayers, Position, RigidBody};
 use pathfinding::grid::Grid;
-use std::collections::{BTreeMap, HashSet};
-use std::f32::consts::PI;
+use std::collections::HashSet;
 use crate::alien::components::general::AlienCounter;
 use crate::general::components::CollisionLayer;
-use crate::general::components::map_components::{AlienGoal, AlienSpawnPoint, CurrentTile, Floor, MapModelDefinitions, Wall};
+use crate::general::components::map_components::{AlienGoal, AlienSpawnPoint, CurrentTile, Floor, MapModelDefinitions};
 use crate::general::events::map_events::{LoadMap, SpawnPlayer};
 use crate::general::resources::map_resources::MapGraph;
 use crate::settings::resources::GameSettings;
-use bevy::math::EulerRot;
 use bevy_wind_waker_shader::WindWakerShaderBuilder;
 use crate::assets::assets_plugin::GameAssets;
+use crate::map::{BitFlags, MapFeatures};
 use crate::building::systems::ToWorldCoordinates;
 use crate::player::components::{IsBuildIndicator, IsObstacle};
 use crate::general::components::{Health, Indestructible};
@@ -39,61 +26,6 @@ use crate::ui::spawn_ui::AddHealthBar;
 use avian3d::prelude::Sensor;
 use crate::player::events::building_events::{AddTile, RemoveTile};
 
-flags! {
-    pub enum FileFlags: u16 {
-        Floor = 1, // 1
-        Pickup = 2, // 2
-        AlienSpawn = 4, // 4,
-        FloorPickup = 3,
-        FloorSpawn = 5,
-        AlienGoal = 8, // 8
-        FloorAlienGoal = 9,
-        PlayerSpawn = 16, // 16
-        FloorPlayerSpawn = 17,
-    }
-}
-
-// Max number of flags is... 64, dummy
-flags! {
-    pub enum TileFlags: u64 {
-        Floor = 1, //1
-        WallNorth = 2, //2
-        WallEast = 4, //4
-        WallSouth = 8, //8
-        WallWest = 16, //16
-        Pickup = 32, //32
-        AlienSpawnPoint = 64, //64
-        AlienGoal = 128, //128
-        PlayerSpawn = 256, //256,
-        AnyWall = 512,
-        WallNorthEast = (TileFlags::WallNorth | TileFlags::WallEast).bits(),
-        WallEastSouth = (TileFlags::WallEast | TileFlags::WallSouth).bits(),
-        WallSouthWest = (TileFlags::WallSouth | TileFlags::WallWest).bits(),
-        WallWestNorth = (TileFlags::WallWest | TileFlags::WallNorth).bits(),
-        WallNorthEastSouth = (TileFlags::WallNorthEast | TileFlags::WallSouth).bits(),
-        WallEastSouthWest = (TileFlags::WallEastSouth | TileFlags::WallWest).bits(),
-        WallSouthWestNorth = (TileFlags::WallSouthWest | TileFlags::WallNorth).bits(),
-        WallWestNorthEast = (TileFlags::WallWestNorth | TileFlags::WallEast).bits(),
-        WallWestEast = (TileFlags::WallWest | TileFlags::WallEast).bits(),
-        WallNorthSouth = (TileFlags::WallNorth | TileFlags::WallSouth).bits(),
-    }
-}
-
-pub struct MapTile {
-    features: FlagSet<TileFlags>,
-    x: i32,
-    y: i32,
-}
-
-impl MapTile {
-    fn new(x: i32, y: i32, features: impl Into<FlagSet<TileFlags>>) -> MapTile {
-        MapTile { features: features.into(), x, y }
-    }
-}
-
-pub struct MapDef {
-    pub tiles: Vec<MapTile>,
-} //No data needed now
 
 pub fn load_map_one(mut send_event: MessageWriter<LoadMap>) {
     let text = std::fs::read_to_string("assets/maps/level_01.ron")
@@ -152,37 +84,15 @@ impl TileDefinitions {
         Vec3::new(self.tile_width * x as f32, self.floor_level, self.tile_width * y as f32)
     }
     
-    pub fn create_wall_collider_merged(&self, tile_count: f32) -> Collider {
-        Collider::cuboid(self.tile_width * tile_count, self.wall_height, self.tile_depth)
-    }
+}
 
-    pub fn get_wall_position(&self, x: i32, y: i32, wall_direction: TileFlags) -> Vec3 {
-        match wall_direction {
-            TileFlags::WallNorth => {
-                Vec3::new(self.tile_width * x as f32, -self.wall_height, self.tile_width * y as f32 - self.tile_width / 2.0)
-            }
-            TileFlags::WallEast => {
-                Vec3::new(self.tile_width * x as f32 + self.tile_width / 2.0 - self.tile_size / self.tile_basis, -self.wall_height, self.tile_width * y as f32)
-            }
-            TileFlags::WallSouth => {
-                Vec3::new(self.tile_width * x as f32, -self.wall_height, self.tile_width * y as f32 + self.tile_width / 2.0)
-            }
-            TileFlags::WallWest => {
-                Vec3::new(self.tile_width * x as f32 - self.tile_width / 2.0, -self.wall_height, self.tile_width * y as f32)
-            }
-            _ => { panic!("Not a wall direction") }
-        }
-    }
-
-    pub fn get_wall_rotation(&self, wall_direction: TileFlags) -> Quat {
-        match wall_direction {
-            TileFlags::WallNorth => { Quat::from_euler(EulerRot::YXZ, 0.0, 0.0, 0.0) }
-            TileFlags::WallSouth => { Quat::from_euler(EulerRot::YXZ, 0.0, 0.0, 0.0) }
-            TileFlags::WallEast => { Quat::from_euler(EulerRot::YXZ, PI / 2.0, 0.0, 0.0) }
-            TileFlags::WallWest => { Quat::from_euler(EulerRot::YXZ, PI / 2.0, 0.0, 0.0) }
-            _ => { panic!("Not a wall direction") }
-        }
-    }
+fn terrain_color_key(mf: BitFlags<MapFeatures>) -> [u8; 3] {
+    if mf.contains(MapFeatures::Water)  { return [38,  90, 179]; }
+    if mf.contains(MapFeatures::Mud)    { return [115, 82,  46]; }
+    if mf.contains(MapFeatures::Snow)   { return [209, 224, 235]; }
+    if mf.contains(MapFeatures::Rock)   { return [ 97,  89,  77]; }
+    if mf.contains(MapFeatures::Grass)  { return [ 56, 140,  56]; }
+    [140, 133, 122] // Floor (default)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -204,122 +114,96 @@ pub fn map_loader(
 ) {
     for load_map in load_map_event_reader.read() {
         let map_file = &load_map.map;
-        let m = &map_file.tiles;
-        let rows = m.len();
-        let cols = m[0].len();
+        let raw = &map_file.tiles;
+        let rows = raw.len() + 2;
+        let cols = raw[0].len() + 2;
+        let mut padded = vec![vec![0u64; cols]; rows];
+        for (r, row_data) in raw.iter().enumerate() {
+            for (c, &v) in row_data.iter().enumerate() {
+                padded[r + 1][c + 1] = v;
+            }
+        }
+        let m = &padded;
         map_graph.path_finding_grid = Grid::new(cols, rows);
-        let checks = [
-            [-1, 0],
-            [1, 0],
-            [0, -1],
-            [0, 1]
-        ];
-        let mut tiles: Vec<MapTile> = Vec::new();
-        for (row, rows) in m.iter().enumerate() {
-            for (column, t) in rows.iter().enumerate() {
-                let mut flag_val: FlagSet<TileFlags> = TileFlags::Floor.into();
-                if *t != 0 {
-                    map_graph.path_finding_grid.add_vertex((column, row));
-                    if column == 0 {
-                        flag_val |= TileFlags::WallWest | TileFlags::AnyWall;
-                    }
-                    if column == rows.len() - 1 {
-                        flag_val |= TileFlags::WallEast | TileFlags::AnyWall;
-                    }
-                    if row == 0 {
-                        flag_val |= TileFlags::WallNorth | TileFlags::AnyWall;
-                    }
-                    if row == m.len() - 1 {
-                        flag_val |= TileFlags::WallSouth | TileFlags::AnyWall;
-                    }
 
-                    for check in checks.iter() {
-                        let column_check = column as i32 + check[0];
-                        let row_check = row as i32 + check[1];
-                        if column_check >= 0 && column_check < rows.len() as i32 {
-                            if column_check < column as i32 && m[row][column_check as usize] == 0 {
-                                flag_val |= TileFlags::WallWest | TileFlags::AnyWall;
-                            }
-                            if column_check > column as i32 && m[row][column_check as usize] == 0 {
-                                flag_val |= TileFlags::WallEast | TileFlags::AnyWall;
-                            }
-                        }
-                        if row_check >= 0 && row_check < m.len() as i32 {
-                            if row_check < row as i32 && m[row_check as usize][column] == 0 {
-                                flag_val |= TileFlags::WallNorth | TileFlags::AnyWall;
-                            }
-                            if row_check > row as i32 && m[row_check as usize][column] == 0 {
-                                flag_val |= TileFlags::WallSouth | TileFlags::AnyWall;
-                            }
-                        }
-                    }
-                    if *t == 3 {
-                        flag_val |= TileFlags::Pickup;
-                    }
-                    if *t == 5 {
-                        flag_val |= TileFlags::AlienSpawnPoint;
-                    }
-                    if *t == 9 {
-                        flag_val |= TileFlags::AlienGoal;
-                    }
-                    if *t == 17 {
-                        flag_val |= TileFlags::PlayerSpawn;
-                    }
-                    tiles.push(MapTile::new(column as i32, row as i32, flag_val));
+        // Single pass: build tile sets and handle functional markers.
+        let mut floor_set: HashSet<(i32, i32)> = HashSet::new();
+        let mut imp_all_set: HashSet<(i32, i32)> = HashSet::new();
+        let mut imp_player_set: HashSet<(i32, i32)> = HashSet::new();
+        let mut imp_alien_set: HashSet<(i32, i32)> = HashSet::new();
+
+        for (row, cols_data) in m.iter().enumerate() {
+            for (col, &raw) in cols_data.iter().enumerate() {
+                if raw == 0 {
+                    imp_all_set.insert((col as i32, row as i32));
+                    continue;
+                }
+                let mf = BitFlags::<MapFeatures>::from_bits_truncate(raw);
+                let for_players = mf.contains(MapFeatures::ImpassableForPlayers);
+                let for_enemies = mf.contains(MapFeatures::ImpassableForEnemies);
+
+                floor_set.insert((col as i32, row as i32));
+                if !for_enemies { map_graph.path_finding_grid.add_vertex((col, row)); }
+
+                if for_players && for_enemies      { imp_all_set.insert((col as i32, row as i32)); }
+                else if for_players                { imp_player_set.insert((col as i32, row as i32)); }
+                else if for_enemies                { imp_alien_set.insert((col as i32, row as i32)); }
+
+                if mf.contains(MapFeatures::EnemySpawn) {
+                    alien_counter.max_count = 100;
+                    commands.spawn((
+                        Name::from(format!("Alien Spawn Point {}:{}", col, row)),
+                        AlienSpawnPoint::new(2.0),
+                        SceneRoot(game_assets.alien_construct.clone()),
+                        RigidBody::Static,
+                        WindWakerShaderBuilder::default().build(),
+                        Collider::cuboid(0.5, 0.5, 0.45),
+                        Position::from((col, row).to_world_coords(&tile_defs) + Vec3::new(0.0, -tile_defs.wall_height, 0.0)),
+                        CollisionLayers::new([CollisionLayer::AlienSpawnPoint], [CollisionLayer::Player]),
+                    ));
+                }
+                if mf.contains(MapFeatures::EnemyExit) {
+                    map_graph.goal = (col, row);
+                    commands.spawn((
+                        Name::from(format!("Alien Goal {}:{}", col, row)),
+                        AlienGoal,
+                        SceneRoot(game_assets.alien_construct.clone()),
+                        RigidBody::Static,
+                        WindWakerShaderBuilder::default().build(),
+                        Collider::cuboid(0.5, 0.5, 0.45),
+                        Position::from((col, row).to_world_coords(&tile_defs) + Vec3::new(0.0, -tile_defs.wall_height, 0.0)),
+                        CollisionLayers::new([CollisionLayer::AlienGoal], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
+                    ));
+                }
+                if mf.contains(MapFeatures::PlayerSpawn) {
+                    spawn_player_event_writer.write(SpawnPlayer {
+                        position: (col, row).to_world_coords(&tile_defs) + Vec3::new(0.0, 1.0, 0.0),
+                    });
                 }
             }
         }
 
-
-        let map = MapDef {
-            tiles,
-        };
-
-        // Spawn merged floor colliders using greedy maximal rectangles.
-        // All rectangles are also collected into a single procedural mesh to avoid seams.
+        // ── Floor colliders (greedy rectangle merge) ──────────────────────────
         {
             let floor_model_def = model_defs.definitions.get("floor").unwrap();
-            let floor_set: HashSet<(i32, i32)> = map.tiles.iter()
-                .filter(|t| t.features.contains(TileFlags::Floor))
-                .map(|t| (t.x, t.y))
-                .collect();
             let mut covered = vec![vec![false; cols]; rows];
-
-            let mut positions: Vec<[f32; 3]> = Vec::new();
-            let mut normals: Vec<[f32; 3]> = Vec::new();
-            let mut uvs: Vec<[f32; 2]> = Vec::new();
-            let mut indices: Vec<u32> = Vec::new();
-
             for row in 0..rows {
                 for col in 0..cols {
-                    if covered[row][col] || !floor_set.contains(&(col as i32, row as i32)) {
-                        continue;
-                    }
+                    if covered[row][col] || !floor_set.contains(&(col as i32, row as i32)) { continue; }
                     let mut max_col = col;
-                    while max_col + 1 < cols
-                        && floor_set.contains(&((max_col + 1) as i32, row as i32))
-                        && !covered[row][max_col + 1]
-                    {
+                    while max_col + 1 < cols && floor_set.contains(&((max_col + 1) as i32, row as i32)) && !covered[row][max_col + 1] {
                         max_col += 1;
                     }
                     let mut max_row = row;
-                    'extend_down: loop {
+                    'extend_floor: loop {
                         if max_row + 1 >= rows { break; }
                         #[allow(clippy::needless_range_loop)]
                         for c in col..=max_col {
-                            if !floor_set.contains(&(c as i32, (max_row + 1) as i32))
-                                || covered[max_row + 1][c]
-                            {
-                                break 'extend_down;
-                            }
+                            if !floor_set.contains(&(c as i32, (max_row + 1) as i32)) || covered[max_row + 1][c] { break 'extend_floor; }
                         }
                         max_row += 1;
                     }
-                    for row_data in covered[row..=max_row].iter_mut() {
-                        for cell in row_data[col..=max_col].iter_mut() {
-                            *cell = true;
-                        }
-                    }
+                    for r in row..=max_row { for c in col..=max_col { covered[r][c] = true; } }
                     let w = (max_col - col + 1) as f32;
                     let h = (max_row - row + 1) as f32;
                     let center = Vec3::new(
@@ -336,171 +220,90 @@ pub fn map_loader(
                         floor_model_def.create_collision_layers(),
                         WindWakerShaderBuilder::default().build(),
                     ));
-
-                    // Add this rectangle as two triangles in the shared floor mesh.
-                    let base = positions.len() as u32;
-                    let tw = tile_defs.tile_width;
-                    let x0 = tw * (col as f32 - 0.5);
-                    let x1 = tw * (max_col as f32 + 0.5);
-                    let z0 = tw * (row as f32 - 0.5);
-                    let z1 = tw * (max_row as f32 + 0.5);
-                    let y = tile_defs.floor_level;
-                    positions.extend_from_slice(&[[x0,y,z0],[x1,y,z0],[x1,y,z1],[x0,y,z1]]);
-                    normals.extend_from_slice(&[[0.0,1.0,0.0];4]);
-                    uvs.extend_from_slice(&[[0.0,0.0],[1.0,0.0],[1.0,1.0],[0.0,1.0]]);
-                    indices.extend_from_slice(&[base,base+2,base+1, base,base+3,base+2]);
                 }
             }
-
-            let mut mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD);
-            mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
-            mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
-            mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
-            mesh.insert_indices(Indices::U32(indices));
-            commands.spawn((
-                Name::from("Floor"),
-                Floor {},
-                Mesh3d(meshes.add(mesh)),
-                MeshMaterial3d(materials.add(StandardMaterial {
-                    base_color: Color::srgb(0.55, 0.52, 0.48),
-                    perceptual_roughness: 1.0,
-                    metallic: 0.0,
-                    ..Default::default()
-                })),
-            ));
         }
 
-        // Spawn merged wall colliders: N/S walls merge along columns, E/W merge along rows.
+        // ── Floor visual mesh (per-terrain-type coloured quads) ───────────────
         {
-            let wall_model_def = model_defs.definitions.get("wall").unwrap();
-
-            fn merge_runs(sorted_vals: &[i32]) -> Vec<(i32, i32)> {
-                let mut runs = Vec::new();
-                let mut start = 0;
-                while start < sorted_vals.len() {
-                    let mut end = start;
-                    while end + 1 < sorted_vals.len() && sorted_vals[end + 1] == sorted_vals[end] + 1 {
-                        end += 1;
-                    }
-                    runs.push((sorted_vals[start], sorted_vals[end]));
-                    start = end + 1;
-                }
-                runs
-            }
-
-            // North/South: group by row, merge consecutive columns.
-            for dir in [TileFlags::WallNorth, TileFlags::WallSouth] {
-                let mut by_row: BTreeMap<i32, Vec<i32>> = BTreeMap::new();
-                for tile in map.tiles.iter() {
-                    if tile.features.contains(dir) {
-                        by_row.entry(tile.y).or_default().push(tile.x);
-                    }
-                }
-                for (row, mut cols) in by_row {
-                    cols.sort();
-                    for (c1, c2) in merge_runs(&cols) {
-                        let count = (c2 - c1 + 1) as f32;
-                        let center_x = tile_defs.tile_width * (c1 + c2) as f32 / 2.0;
-                        let z = if dir == TileFlags::WallNorth {
-                            tile_defs.tile_width * row as f32 - tile_defs.tile_width / 2.0
-                        } else {
-                            tile_defs.tile_width * row as f32 + tile_defs.tile_width / 2.0
-                        };
-                        let pos = Vec3::new(center_x, -tile_defs.wall_height, z);
-                        let rot = tile_defs.get_wall_rotation(dir);
-                        commands.spawn((
-                            Wall {},
-                            wall_model_def.rigid_body,
-                            tile_defs.create_wall_collider_merged(count),
-                            Position::from(pos),
-                            Rotation::from(rot),
-                            wall_model_def.create_collision_layers(),
-                            WindWakerShaderBuilder::default().build(),
-                        ));
-                        commands.spawn((
-                            Name::from(format!("Wall {:?} {}:{} count{}", dir, row, c1, count as i32)),
-                            WallOccluder,
-                            WallMaterials::default(),
-                            SceneRoot(asset_server.load(wall_model_def.file)),
-                            Transform::from_translation(pos).with_rotation(rot).with_scale(Vec3::new(count, 1.0, 1.0)),
-                        ));
-                    }
+            let mut terrain_quads: std::collections::HashMap<[u8;3], (Vec<[f32;3]>, Vec<[f32;3]>, Vec<[f32;2]>, Vec<u32>)> = Default::default();
+            let tw = tile_defs.tile_width;
+            let y_floor = tile_defs.floor_level;
+            for row in 0..rows {
+                for col in 0..cols {
+                    let raw = m[row][col];
+                    if raw == 0 { continue; }
+                    let mf = BitFlags::<MapFeatures>::from_bits_truncate(raw);
+                    let color_key = terrain_color_key(mf);
+                    let entry = terrain_quads.entry(color_key).or_default();
+                    let base = entry.0.len() as u32;
+                    let (x0, x1) = (tw * (col as f32 - 0.5), tw * (col as f32 + 0.5));
+                    let (z0, z1) = (tw * (row as f32 - 0.5), tw * (row as f32 + 0.5));
+                    entry.0.extend_from_slice(&[[x0,y_floor,z0],[x1,y_floor,z0],[x1,y_floor,z1],[x0,y_floor,z1]]);
+                    entry.1.extend_from_slice(&[[0.0,1.0,0.0];4]);
+                    entry.2.extend_from_slice(&[[0.0,0.0],[1.0,0.0],[1.0,1.0],[0.0,1.0]]);
+                    entry.3.extend_from_slice(&[base,base+2,base+1, base,base+3,base+2]);
                 }
             }
-
-            // East/West: group by col, merge consecutive rows.
-            for dir in [TileFlags::WallEast, TileFlags::WallWest] {
-                let mut by_col: BTreeMap<i32, Vec<i32>> = BTreeMap::new();
-                for tile in map.tiles.iter() {
-                    if tile.features.contains(dir) {
-                        by_col.entry(tile.x).or_default().push(tile.y);
-                    }
-                }
-                for (col, mut tile_rows) in by_col {
-                    tile_rows.sort();
-                    for (r1, r2) in merge_runs(&tile_rows) {
-                        let count = (r2 - r1 + 1) as f32;
-                        let x = if dir == TileFlags::WallEast {
-                            tile_defs.tile_width * col as f32 + tile_defs.tile_width / 2.0 - tile_defs.tile_size / tile_defs.tile_basis
-                        } else {
-                            tile_defs.tile_width * col as f32 - tile_defs.tile_width / 2.0
-                        };
-                        let center_z = tile_defs.tile_width * (r1 + r2) as f32 / 2.0;
-                        let pos = Vec3::new(x, -tile_defs.wall_height, center_z);
-                        let rot = tile_defs.get_wall_rotation(dir);
-                        commands.spawn((
-                            Wall {},
-                            wall_model_def.rigid_body,
-                            tile_defs.create_wall_collider_merged(count),
-                            Position::from(pos),
-                            Rotation::from(rot),
-                            wall_model_def.create_collision_layers(),
-                            WindWakerShaderBuilder::default().build(),
-                        ));
-                        commands.spawn((
-                            Name::from(format!("Wall {:?} {}:{} count{}", dir, col, r1, count as i32)),
-                            WallOccluder,
-                            WallMaterials::default(),
-                            SceneRoot(asset_server.load(wall_model_def.file)),
-                            Transform::from_translation(pos).with_rotation(rot).with_scale(Vec3::new(count, 1.0, 1.0)),
-                        ));
-                    }
-                }
+            for ([r,g,b], (positions, normals, uvs, indices)) in terrain_quads {
+                let mut mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD);
+                mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
+                mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+                mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
+                mesh.insert_indices(Indices::U32(indices));
+                let base_color = Color::srgb(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+                commands.spawn((
+                    Name::from("Floor"),
+                    Floor {},
+                    Mesh3d(meshes.add(mesh)),
+                    MeshMaterial3d(materials.add(StandardMaterial { base_color, perceptual_roughness: 1.0, metallic: 0.0, ..Default::default() })),
+                ));
             }
         }
 
-        for tile in map.tiles.iter() {
-            if tile.features.contains(TileFlags::AlienSpawnPoint) {
-                alien_counter.max_count = 100;
-                commands.spawn((
-                    Name::from(format!("Alien Spawn Point{}:{}", tile.x, tile.y)),
-                    AlienSpawnPoint::new(2.0),
-                    SceneRoot(game_assets.alien_construct.clone()),
-                    RigidBody::Static,
-                    WindWakerShaderBuilder::default().build(),
-                    Collider::cuboid(0.5, 0.5, 0.45),
-                    Position::from((tile.x as usize, tile.y as usize).to_world_coords(&tile_defs) + Vec3::new(0.0, -tile_defs.wall_height, 0.0)),
-                    CollisionLayers::new([CollisionLayer::AlienSpawnPoint], [CollisionLayer::Player]),
-                ));
-            }
-            if tile.features.contains(TileFlags::AlienGoal) {
-                map_graph.goal = (tile.x as usize, tile.y as usize);
-                commands.spawn((
-                    Name::from(format!("Alien Goal {}:{}", tile.x, tile.y)),
-                    AlienGoal,
-                    SceneRoot(game_assets.alien_construct.clone()),
-                    RigidBody::Static,
-                    WindWakerShaderBuilder::default().build(),
-                    Collider::cuboid(0.5, 0.5, 0.45),
-                    Position::from((tile.x as usize, tile.y as usize).to_world_coords(&tile_defs) + Vec3::new(0.0, -tile_defs.wall_height, 0.0)),
-                    CollisionLayers::new([CollisionLayer::AlienGoal], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
-                ));
-            }
+        // ── Impassable cube colliders (greedy merge per category) ─────────────
+        // Each tile category gets a solid cube: tilewidth × 3.0 tall × tilewidth.
+        // Void tiles, tiles marked impassable for both → ImpassableAll (blocks everyone).
+        // ImpassableForPlayers only → ImpassablePlayer.  ImpassableForEnemies only → ImpassableAlien.
+        let block_half_h = 4.0_f32 / 3.0;
+        let block_y = tile_defs.floor_level;
+        let tw = tile_defs.tile_width;
 
-            if tile.features.contains(TileFlags::PlayerSpawn) {
-                spawn_player_event_writer.write(SpawnPlayer {
-                    position: (tile.x as usize, tile.y as usize).to_world_coords(&tile_defs) + Vec3::new(0.0, 1.0, 0.0),
-                });
+        let imp_configs: [(&HashSet<(i32, i32)>, CollisionLayers); 3] = [
+            (&imp_all_set,    CollisionLayers::new([CollisionLayer::ImpassableAll],    [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player])),
+            (&imp_player_set, CollisionLayers::new([CollisionLayer::ImpassablePlayer], [CollisionLayer::Player])),
+            (&imp_alien_set,  CollisionLayers::new([CollisionLayer::ImpassableAlien],  [CollisionLayer::Alien])),
+        ];
+
+        for (set, layers) in &imp_configs {
+            let mut covered = vec![vec![false; cols]; rows];
+            for row in 0..rows {
+                for col in 0..cols {
+                    if covered[row][col] || !set.contains(&(col as i32, row as i32)) { continue; }
+                    let mut max_col = col;
+                    while max_col + 1 < cols && set.contains(&((max_col + 1) as i32, row as i32)) && !covered[row][max_col + 1] {
+                        max_col += 1;
+                    }
+                    let mut max_row = row;
+                    'extend_imp: loop {
+                        if max_row + 1 >= rows { break; }
+                        for c in col..=max_col {
+                            if !set.contains(&(c as i32, (max_row + 1) as i32)) || covered[max_row + 1][c] { break 'extend_imp; }
+                        }
+                        max_row += 1;
+                    }
+                    for r in row..=max_row { for c in col..=max_col { covered[r][c] = true; } }
+                    let w = (max_col - col + 1) as f32;
+                    let h = (max_row - row + 1) as f32;
+                    let center = Vec3::new(tw * (col + max_col) as f32 / 2.0, block_y, tw * (row + max_row) as f32 / 2.0);
+                    commands.spawn((
+                        RigidBody::Static,
+                        Collider::cuboid(tw * w, block_half_h, tw * h),
+                        *layers,
+                        Transform::from_translation(center),
+                        Position::from(center),
+                    ));
+                }
             }
         }
 
@@ -556,7 +359,7 @@ pub fn map_loader(
                         ec.insert((
                             IsObstacle,
                             tile_defs.create_collider(16.0, 8.0, 16.0),
-                            CollisionLayers::new([CollisionLayer::Impassable], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
+                            CollisionLayers::new([CollisionLayer::ImpassableAll], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
                         ));
                         map_graph.path_finding_grid.remove_vertex(tile_coord);
                     }
@@ -578,7 +381,7 @@ pub fn map_loader(
                         SceneRoot(scene_handle),
                         Transform::from_translation(pos).with_rotation(rot).with_scale(scale),
                         tile_defs.create_collider(16.0, 8.0, 16.0),
-                        CollisionLayers::new([CollisionLayer::Impassable], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
+                        CollisionLayers::new([CollisionLayer::ImpassableAll], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
                         RigidBody::Static,
                         CurrentTile { tile: tile_coord },
                         Health { health: hp, max_health: hp },

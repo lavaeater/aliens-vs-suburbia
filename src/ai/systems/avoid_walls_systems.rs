@@ -22,7 +22,7 @@ pub fn avoid_walls_data_system(
         avoid_wall_data.left_distance = avoid_wall_data.max_left_distance;
         avoid_wall_data.right_distance = avoid_wall_data.max_right_distance;
 
-        let filter = SpatialQueryFilter::from_mask([CollisionLayer::Impassable]);
+        let filter = SpatialQueryFilter::from_mask([CollisionLayer::ImpassableAll]);
 
         if let Ok(forward_dir) = bevy::math::Dir3::new(forward)
             && let Some(hit) = spatial_query.cast_ray(

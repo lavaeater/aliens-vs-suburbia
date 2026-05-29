@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use avian3d::prelude::{LinearVelocity, Position, Rotation};
-use bevy::log;
 use crate::ai::components::move_towards_goal_components::{AgentCannotFindPath, AgentReachedGoal, MoveTowardsGoalData};
 use crate::alien::components::general::{Alien, AlienCounter};
 use crate::general::components::map_components::{AlienGoal, CurrentTile};
@@ -31,7 +30,7 @@ pub fn move_towards_goal_system(
          alien_position,
          alien_rotation,
          alien_current_tile,
-         linear_velocity,
+         _linear_velocity,
     ) in alien_query.iter_mut() {
         
         // if move_towards_goal_data.path.is_some() && linear_velocity.0.length() < 0.001 {

@@ -51,7 +51,15 @@ pub fn spawn_players(
     mut add_health_bar_mw: MessageWriter<AddHealthBar>,
     mut player_added_mw: MessageWriter<GameTrackingEvent>,
 ) {
-    for (slot, spawn_player) in (existing_players.iter().count()..).zip(spawn_player_event_reader.read()) {
+    let max_players = roster.as_ref()
+        .map(|r| r.def_paths.len().max(1))
+        .unwrap_or(1);
+    let current_count = existing_players.iter().count();
+    let spawn_events: Vec<_> = spawn_player_event_reader.read()
+        .take(max_players.saturating_sub(current_count))
+        .collect();
+
+    for (slot, spawn_player) in (current_count..).zip(spawn_events.iter()) {
         let pos = Transform::from_xyz(
             spawn_player.position.x,
             spawn_player.position.y,
@@ -104,7 +112,8 @@ pub fn spawn_players(
                     [CollisionLayer::Player],
                     [
                         CollisionLayer::Ball,
-                        CollisionLayer::Impassable,
+                        CollisionLayer::ImpassableAll,
+                        CollisionLayer::ImpassablePlayer,
                         CollisionLayer::Floor,
                         CollisionLayer::Alien,
                         CollisionLayer::Player,
@@ -164,7 +173,8 @@ pub fn spawn_players(
                     [CollisionLayer::Player],
                     [
                         CollisionLayer::Ball,
-                        CollisionLayer::Impassable,
+                        CollisionLayer::ImpassableAll,
+                        CollisionLayer::ImpassablePlayer,
                         CollisionLayer::Floor,
                         CollisionLayer::Alien,
                         CollisionLayer::Player,

@@ -1,11 +1,19 @@
 use bevy::prelude::Resource;
+use enumflags2::BitFlags;
 use crate::assets::asset_definition::{AssetDefinition, ModelType};
 use crate::general::components::map_components::{MapFile, TilePlacement, WaveDef};
+use crate::map::MapFeatures;
 
-pub const TILE_SPECIAL_FLOOR: u8 = 1;
-pub const TILE_ALIEN_SPAWN: u8 = 5;
-pub const TILE_ALIEN_GOAL: u8 = 9;
-pub const TILE_PLAYER_SPAWN: u8 = 17;
+fn flags(f: impl Into<BitFlags<MapFeatures>>) -> u64 { f.into().bits() }
+
+pub const TILE_SPECIAL_FLOOR: u64 = MapFeatures::Floor as u64;
+pub const TILE_ALIEN_SPAWN: u64   = MapFeatures::Floor as u64 | MapFeatures::EnemySpawn as u64;
+pub const TILE_ALIEN_GOAL: u64    = MapFeatures::Floor as u64 | MapFeatures::EnemyExit as u64;
+pub const TILE_PLAYER_SPAWN: u64  = MapFeatures::Floor as u64 | MapFeatures::PlayerSpawn as u64;
+pub const TILE_WALL_ALL: u64      = MapFeatures::Floor as u64 | MapFeatures::ImpassableForPlayers as u64 | MapFeatures::ImpassableForEnemies as u64;
+pub const TILE_WALL_PLAYER: u64   = MapFeatures::Floor as u64 | MapFeatures::ImpassableForPlayers as u64;
+pub const TILE_WALL_ALIEN: u64    = MapFeatures::Floor as u64 | MapFeatures::ImpassableForEnemies as u64;
+pub const TILE_VOID: u64          = 0;
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum PaletteTab {
@@ -36,7 +44,7 @@ pub enum PaletteItem {
     /// A model def file.
     Def { path: String, name: String },
     /// A special tile marker (spawn point, goal, player spawn).
-    Special { label: &'static str, tile_value: u8 },
+    Special { label: &'static str, tile_value: u64 },
 }
 
 impl PaletteItem {
@@ -53,8 +61,8 @@ pub struct MapEditorState {
     pub map_name: String,
     pub width: usize,
     pub height: usize,
-    /// Row-major tile grid; same encoding as MapFile.tiles.
-    pub tiles: Vec<Vec<u8>>,
+    /// Row-major tile grid; each cell is a `BitFlags<MapFeatures>` stored as u64.
+    pub tiles: Vec<Vec<u64>>,
     /// Editor placements.
     pub placements: Vec<TilePlacement>,
     /// Wave definitions.
@@ -70,6 +78,8 @@ pub struct MapEditorState {
     pub palette_dirty: bool,
     pub waves_dirty: bool,
     pub grid_dirty: bool,
+    /// When true, left-click erases instead of placing.
+    pub erase_mode: bool,
     /// Last seed used by "Generate Map".
     pub gen_seed: u64,
     pub seed_label_dirty: bool,
@@ -87,7 +97,7 @@ impl Default for MapEditorState {
             map_name: "new_map".to_string(),
             width,
             height,
-            tiles: vec![vec![1u8; width]; height],
+            tiles: vec![vec![TILE_SPECIAL_FLOOR; width]; height],
             placements: Vec::new(),
             waves: Vec::new(),
             active_tab: PaletteTab::Special,
@@ -97,6 +107,7 @@ impl Default for MapEditorState {
             palette_dirty: true,
             waves_dirty: true,
             grid_dirty: true,
+            erase_mode: false,
             gen_seed: 0,
             seed_label_dirty: false,
             enemy_defs: scan_enemy_defs(),
@@ -112,11 +123,14 @@ impl MapEditorState {
     pub fn refresh_palette(&mut self) {
         self.palette_items = match self.active_tab {
             PaletteTab::Special => vec![
-                PaletteItem::Special { label: "Floor",        tile_value: TILE_SPECIAL_FLOOR },
-                PaletteItem::Special { label: "Alien Spawn",  tile_value: TILE_ALIEN_SPAWN },
-                PaletteItem::Special { label: "Alien Goal",   tile_value: TILE_ALIEN_GOAL },
-                PaletteItem::Special { label: "Player Spawn", tile_value: TILE_PLAYER_SPAWN },
-                PaletteItem::Special { label: "Erase Tile",   tile_value: 0 },
+                PaletteItem::Special { label: "Floor",         tile_value: TILE_SPECIAL_FLOOR },
+                PaletteItem::Special { label: "Wall (all)",    tile_value: TILE_WALL_ALL },
+                PaletteItem::Special { label: "Wall (player)", tile_value: TILE_WALL_PLAYER },
+                PaletteItem::Special { label: "Wall (alien)",  tile_value: TILE_WALL_ALIEN },
+                PaletteItem::Special { label: "Void",          tile_value: TILE_VOID },
+                PaletteItem::Special { label: "Alien Spawn",   tile_value: TILE_ALIEN_SPAWN },
+                PaletteItem::Special { label: "Alien Goal",    tile_value: TILE_ALIEN_GOAL },
+                PaletteItem::Special { label: "Player Spawn",  tile_value: TILE_PLAYER_SPAWN },
             ],
             _ => scan_defs_for_tab(&self.active_tab),
         };
@@ -140,7 +154,7 @@ impl MapEditorState {
         // Resolve what to place before taking mutable borrows.
         let action = match self.palette_items.get(self.selected_palette) {
             Some(PaletteItem::Special { tile_value, .. }) => Some((*tile_value, None::<String>)),
-            Some(PaletteItem::Def { path, .. }) => Some((1u8, Some(path.clone()))),
+            Some(PaletteItem::Def { path, .. }) => Some((TILE_SPECIAL_FLOOR, Some(path.clone()))),
             None => None,
         };
 
