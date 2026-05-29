@@ -14,6 +14,7 @@ use bevy::scene::SceneRoot;
 use bevy_wind_waker_shader::WindWakerShaderBuilder;
 use std::f32::consts::PI;
 use avian3d::prelude::Position;
+use bevy_wind_waker_shader::pixelate::PixelShaderBuilder;
 
 pub fn alien_spawner_system(
     time_res: Res<Time>,
@@ -103,7 +104,12 @@ pub fn spawn_aliens(
             Alien::default(),
             alien_transform,
             SceneRoot(game_assets.alien_scene.clone()),
-            WindWakerShaderBuilder::default().build(),
+            // WindWakerShaderBuilder::default().build(),
+            PixelShaderBuilder::default()
+                .pixel_density(8.0)   // lower = blockier
+                .color_levels(4.0)    // lower = fewer colors
+                .build(),
+
         )).id();
 
         add_health_bar_mw.write(AddHealthBar {

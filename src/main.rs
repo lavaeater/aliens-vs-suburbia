@@ -6,6 +6,7 @@ use bevy::gizmos::config::GizmoConfig;
 use bevy::gizmos::AppGizmoBuilder;
 use bevy_skein::SkeinPlugin;
 use bevy_wind_waker_shader::flat::FlatShaderPlugin;
+use bevy_wind_waker_shader::prelude::PixelShaderPlugin;
 use crate::ai::components::approach_and_attack_player_components::ApproachAndAttackPlayerData;
 use crate::ai::components::avoid_wall_components::AvoidWallsData;
 use camera::components::CameraOffset;
@@ -150,6 +151,7 @@ fn main() {
         .add_plugins(PhysicsDebugPlugin::default())
         .insert_gizmo_config(PhysicsGizmos::default(), GizmoConfig { enabled: false, ..Default::default() })
         .add_plugins(FlatShaderPlugin::global())
+        .add_plugins(PixelShaderPlugin)
         .add_plugins(GamePlugin)
         .run();
 }
