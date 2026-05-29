@@ -105,10 +105,10 @@ pub fn spawn_aliens(
             alien_transform,
             SceneRoot(game_assets.alien_scene.clone()),
             // WindWakerShaderBuilder::default().build(),
-            PixelShaderBuilder::default()
-                .pixel_density(8.0)   // lower = blockier
-                .color_levels(4.0)    // lower = fewer colors
-                .build(),
+            // PixelShaderBuilder::default()
+            //     .pixel_density(1.0)   // lower = blockier
+            //     .color_levels(2.0)    // lower = fewer colors
+            //     .build(),
 
         )).id();
 

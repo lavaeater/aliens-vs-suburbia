@@ -56,7 +56,7 @@ fn auto_outline_scenes(
         commands.entity(entity).insert((
             OutlineVolume {
                 visible: true,
-                width: 4.0,
+                width: 2.0,
                 colour: Color::BLACK,
             },
             AsyncSceneInheritOutline::default(),

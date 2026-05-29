@@ -151,7 +151,7 @@ fn main() {
         .add_plugins(PhysicsDebugPlugin::default())
         .insert_gizmo_config(PhysicsGizmos::default(), GizmoConfig { enabled: false, ..Default::default() })
         .add_plugins(FlatShaderPlugin::global())
-        .add_plugins(PixelShaderPlugin)
+        // .add_plugins(PixelShaderPlugin::default())
         .add_plugins(GamePlugin)
         .run();
 }
