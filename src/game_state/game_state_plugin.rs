@@ -1,5 +1,7 @@
 use bevy::app::{App, Plugin, Update};
-use bevy::prelude::{in_state, IntoScheduleConfigs, OnEnter, Time};
+use bevy::gizmos::config::GizmoConfigStore;
+use bevy::prelude::{in_state, ButtonInput, IntoScheduleConfigs, KeyCode, OnEnter, Res, ResMut, Time};
+use avian3d::prelude::PhysicsGizmos;
 use bevy::state::app::AppExtStates;
 use bevy::time::Fixed;
 use crate::ai::stateful_ai_plugin::StatefulAiPlugin;

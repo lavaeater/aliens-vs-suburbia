@@ -1,7 +1,9 @@
 use bevy::app::{App, PluginGroup};
 use bevy::{DefaultPlugins, log};
 use bevy::log::LogPlugin;
-use avian3d::prelude::{PhysicsDebugPlugin, PhysicsPlugins};
+use avian3d::prelude::{PhysicsDebugPlugin, PhysicsGizmos, PhysicsPlugins};
+use bevy::gizmos::config::GizmoConfig;
+use bevy::prelude::AppGizmoBuilder;
 use bevy_skein::SkeinPlugin;
 use bevy_wind_waker_shader::flat::FlatShaderPlugin;
 use crate::ai::components::approach_and_attack_player_components::ApproachAndAttackPlayerData;
@@ -146,6 +148,7 @@ fn main() {
       .add_plugins(SkeinPlugin::default())
         .add_plugins(PhysicsPlugins::default())
         .add_plugins(PhysicsDebugPlugin::default())
+        .insert_gizmo_config(PhysicsGizmos::default(), GizmoConfig { enabled: false, ..Default::default() })
         .add_plugins(FlatShaderPlugin::global())
         .add_plugins(GamePlugin)
         .run();
