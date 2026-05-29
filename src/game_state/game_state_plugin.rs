@@ -2,6 +2,7 @@ use bevy::app::{App, Plugin, Update};
 use bevy::gizmos::config::GizmoConfigStore;
 use bevy::prelude::{in_state, ButtonInput, IntoScheduleConfigs, KeyCode, OnEnter, Res, ResMut, Time};
 use avian3d::prelude::PhysicsGizmos;
+
 use bevy::state::app::AppExtStates;
 use bevy::time::Fixed;
 use crate::ai::stateful_ai_plugin::StatefulAiPlugin;
@@ -34,6 +35,16 @@ use crate::asset_browser::plugin::AssetBrowserPlugin;
 use crate::player_setup::plugin::PlayerSetupPlugin;
 use crate::map_editor::plugin::MapEditorPlugin;
 use crate::sprite_billboard::plugin::SpriteBillboardPlugin;
+
+fn toggle_physics_debug(
+    keys: Res<ButtonInput<KeyCode>>,
+    mut store: ResMut<GizmoConfigStore>,
+) {
+    if keys.just_pressed(KeyCode::F3) {
+        let (config, _) = store.config_mut::<PhysicsGizmos>();
+        config.enabled = !config.enabled;
+    }
+}
 
 pub struct GamePlugin;
 
@@ -72,6 +83,7 @@ impl Plugin for GamePlugin {
                 OnEnter(GameState::InGame),
                 spawn_lights,
             )
+            .add_systems(Update, toggle_physics_debug)
             .add_systems(
                 Update,
                 (

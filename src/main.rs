@@ -3,7 +3,7 @@ use bevy::{DefaultPlugins, log};
 use bevy::log::LogPlugin;
 use avian3d::prelude::{PhysicsDebugPlugin, PhysicsGizmos, PhysicsPlugins};
 use bevy::gizmos::config::GizmoConfig;
-use bevy::prelude::AppGizmoBuilder;
+use bevy::gizmos::AppGizmoBuilder;
 use bevy_skein::SkeinPlugin;
 use bevy_wind_waker_shader::flat::FlatShaderPlugin;
 use crate::ai::components::approach_and_attack_player_components::ApproachAndAttackPlayerData;
