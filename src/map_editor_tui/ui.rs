@@ -8,7 +8,7 @@ use ratatui::{
 use enumflags2::BitFlags;
 use crate::map::MapFeatures;
 use super::app::{App, Mode, PromptKind};
-use super::commands::hints_for;
+use super::commands::hints_lines;
 
 fn tile_color(raw: u64) -> Color {
     if raw == 0 { return Color::Rgb(20, 20, 20); }
@@ -31,6 +31,24 @@ fn tile_color(raw: u64) -> Color {
     if f.contains(MapFeatures::Rock)   { return Color::Rgb(97, 89, 77); }
     if f.contains(MapFeatures::Grass)  { return Color::Rgb(56, 140, 56); }
     Color::Rgb(80, 80, 80) // Floor
+}
+
+fn tile_flags_str(raw: u64) -> String {
+    if raw == 0 { return "void".to_string(); }
+    let f = BitFlags::<MapFeatures>::from_bits_truncate(raw);
+    let mut flags: Vec<&str> = Vec::new();
+    if f.contains(MapFeatures::Floor)               { flags.push("floor"); }
+    if f.contains(MapFeatures::Grass)               { flags.push("grass"); }
+    if f.contains(MapFeatures::Water)               { flags.push("water"); }
+    if f.contains(MapFeatures::Mud)                 { flags.push("mud"); }
+    if f.contains(MapFeatures::Snow)                { flags.push("snow"); }
+    if f.contains(MapFeatures::Rock)                { flags.push("rock"); }
+    if f.contains(MapFeatures::ImpassableForPlayers){ flags.push("wall-player"); }
+    if f.contains(MapFeatures::ImpassableForEnemies){ flags.push("wall-alien"); }
+    if f.contains(MapFeatures::PlayerSpawn)         { flags.push("player-spawn"); }
+    if f.contains(MapFeatures::EnemySpawn)          { flags.push("enemy-spawn"); }
+    if f.contains(MapFeatures::EnemyExit)           { flags.push("enemy-exit"); }
+    if flags.is_empty() { "?".to_string() } else { flags.join(", ") }
 }
 
 fn tile_label(raw: u64) -> &'static str {
@@ -57,7 +75,7 @@ pub fn draw(frame: &mut Frame, app: &App) {
     }
 
     let area = frame.area();
-    let status_height = 4u16;
+    let status_height = 5u16;
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -120,15 +138,15 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
     let (cur_col, cur_row) = app.cursor;
     let w = app.map_width();
     let h = app.map_height();
-    let cur_tile = if cur_row < h && cur_col < w {
-        tile_label(app.map.tiles[cur_row][cur_col])
+    let cur_flags = if cur_row < h && cur_col < w {
+        tile_flags_str(app.map.tiles[cur_row][cur_col])
     } else {
-        "?"
+        "?".to_string()
     };
 
-    let hints = match &app.prompt {
-        Some(p) => format!("{}: {}_", p.label, p.input),
-        None => hints_for(&app.mode, tile_label(app.paint_tile)),
+    let (hints3, hints4) = match &app.prompt {
+        Some(p) => (format!("{}: {}_", p.label, p.input), String::new()),
+        None => hints_lines(&app.mode, tile_label(app.paint_tile)),
     };
 
     let lines = vec![
@@ -136,8 +154,9 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
             Span::styled(format!(" Mode: {mode_str:<8}"), Style::default().add_modifier(Modifier::BOLD)),
             Span::raw(format!("  File: {file_str}{dirty}")),
         ]),
-        Line::from(format!(" Cursor: ({cur_col}, {cur_row})  Size: {w}x{h}  Tile: {cur_tile}")),
-        Line::from(format!(" {hints}")),
+        Line::from(format!(" Cursor: ({cur_col}, {cur_row})  Size: {w}x{h}  Tile: {cur_flags}")),
+        Line::from(format!(" {hints3}")),
+        Line::from(format!(" {hints4}")),
     ];
 
     frame.render_widget(
@@ -148,7 +167,7 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
 
 fn draw_wave_editor(frame: &mut Frame, app: &App) {
     let area = frame.area();
-    let status_height = 4u16;
+    let status_height = 5u16;
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Min(1), Constraint::Length(status_height)])
@@ -190,9 +209,9 @@ fn draw_wave_editor(frame: &mut Frame, app: &App) {
     // Status bar
     let dirty = if app.dirty { " *" } else { "" };
     let file_str = app.file_path.as_deref().unwrap_or("<unsaved>");
-    let hints = match &app.prompt {
-        Some(p) => format!("{}: {}_", p.label, p.input),
-        None => hints_for(&Mode::WaveEditor, ""),
+    let (hints3, hints4) = match &app.prompt {
+        Some(p) => (format!("{}: {}_", p.label, p.input), String::new()),
+        None => hints_lines(&Mode::WaveEditor, ""),
     };
     let lines = vec![
         Line::from(vec![
@@ -200,7 +219,8 @@ fn draw_wave_editor(frame: &mut Frame, app: &App) {
             Span::raw(format!(" File: {file_str}{dirty}")),
         ]),
         Line::from(format!(" Waves: {}   Selected: {}", app.map.waves.len(), app.wave_selected)),
-        Line::from(format!(" {hints}")),
+        Line::from(format!(" {hints3}")),
+        Line::from(format!(" {hints4}")),
     ];
     frame.render_widget(
         Paragraph::new(lines).block(Block::default().borders(Borders::TOP)),

@@ -1,3 +1,4 @@
+use crossterm::event::KeyCode;
 use enumflags2::BitFlags;
 use crate::general::components::map_components::{MapFile, WaveDef};
 use crate::map::MapFeatures;
@@ -39,7 +40,8 @@ pub struct App {
     pub file_path: Option<String>,
     pub cursor: (usize, usize), // (col, row)
     pub mode: Mode,
-    pub paint_tile: u64,
+    pub paint_tile: u64,  // preview label only
+    pub paint_key: KeyCode,
     pub dirty: bool,
     pub viewport: (usize, usize), // (col_offset, row_offset)
     pub prompt: Option<Prompt>,
@@ -73,6 +75,7 @@ impl App {
             cursor: (0, 0),
             mode: Mode::Normal,
             paint_tile: TILE_FLOOR,
+            paint_key: KeyCode::Char('f'),
             dirty: false,
             viewport: (0, 0),
             prompt: None,

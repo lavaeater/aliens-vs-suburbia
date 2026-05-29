@@ -119,8 +119,8 @@ fn paint_via_key(code: KeyCode) -> impl Fn(&mut App, (usize, usize)) -> CmdResul
 
 fn lock_paint_via_key(code: KeyCode) -> impl Fn(&mut App, (usize, usize)) -> CmdResult + Send + Sync {
     move |app: &mut App, _vp| {
-        let dummy = BitFlags::<MapFeatures>::default();
-        app.paint_tile = key_to_feature(&code, dummy).bits();
+        app.paint_key = code;
+        app.paint_tile = key_to_feature(&code, BitFlags::default()).bits();
         app.mode = Mode::Paint;
         CmdResult::Continue
     }
@@ -170,14 +170,26 @@ pub fn alt_map() -> CommandMap {
     tile_keys(base, wrap_lock)
 }
 
+fn apply_paint(app: &mut App) {
+    let key = app.paint_key;
+    let current = BitFlags::<MapFeatures>::from_bits_truncate(
+        app.map.tiles.get(app.cursor.1)
+            .and_then(|r| r.get(app.cursor.0))
+            .copied()
+            .unwrap_or(0),
+    );
+    let next = key_to_feature(&key, current).bits();
+    app.paint(next);
+}
+
 pub fn paint_map() -> CommandMap {
     CommandMap::new("Paint")
         .k(KeyCode::Esc,         "exit-paint", |app, _| { app.mode = Mode::Normal; CmdResult::Continue })
         .alt(KeyCode::Char('a'), "",            |app, _| { app.mode = Mode::Normal; CmdResult::Continue })
-        .k(KeyCode::Up,    "move+paint", |app, vp| { app.move_cursor(0, -1, vp.0, vp.1); app.paint(app.paint_tile); CmdResult::Continue })
-        .k(KeyCode::Down,  "",           |app, vp| { app.move_cursor(0,  1, vp.0, vp.1); app.paint(app.paint_tile); CmdResult::Continue })
-        .k(KeyCode::Left,  "",           |app, vp| { app.move_cursor(-1, 0, vp.0, vp.1); app.paint(app.paint_tile); CmdResult::Continue })
-        .k(KeyCode::Right, "",           |app, vp| { app.move_cursor( 1, 0, vp.0, vp.1); app.paint(app.paint_tile); CmdResult::Continue })
+        .k(KeyCode::Up,    "move+paint", |app, vp| { app.move_cursor(0, -1, vp.0, vp.1); apply_paint(app); CmdResult::Continue })
+        .k(KeyCode::Down,  "",           |app, vp| { app.move_cursor(0,  1, vp.0, vp.1); apply_paint(app); CmdResult::Continue })
+        .k(KeyCode::Left,  "",           |app, vp| { app.move_cursor(-1, 0, vp.0, vp.1); apply_paint(app); CmdResult::Continue })
+        .k(KeyCode::Right, "",           |app, vp| { app.move_cursor( 1, 0, vp.0, vp.1); apply_paint(app); CmdResult::Continue })
 }
 
 pub fn command_map() -> CommandMap {
@@ -232,13 +244,25 @@ pub fn wave_map() -> CommandMap {
         })
 }
 
-/// Returns a hint string for modes that don't use a full CommandMap in the status bar.
-pub fn hints_for(mode: &Mode, paint_tile_label: &str) -> String {
+pub const BRUSH_HINTS_1: &str = "f:floor  g:grass  w:water  m:mud  s:snow  r:rock";
+pub const BRUSH_HINTS_2: &str = "i:wall-player  e:wall-alien  p:player-spawn  z:enemy-spawn  x:enemy-exit  Del:void";
+
+/// Returns two hint lines for the status bar.
+pub fn hints_lines(mode: &Mode, paint_tile_label: &str) -> (String, String) {
     match mode {
-        Mode::Normal  => normal_map().hints(),
-        Mode::Alt     => "pick tile key to lock into paint mode  |  Esc: back".to_string(),
-        Mode::Paint   => format!("painting:{}  Esc:exit  arrows:move+paint", paint_tile_label),
-        Mode::Command => command_map().hints(),
-        Mode::WaveEditor => wave_map().hints(),
+        Mode::Normal => (
+            format!("{BRUSH_HINTS_1}  Ctrl+C:command  Ctrl+A:alt"),
+            BRUSH_HINTS_2.to_string(),
+        ),
+        Mode::Alt => (
+            format!("{BRUSH_HINTS_1}  Esc:back"),
+            BRUSH_HINTS_2.to_string(),
+        ),
+        Mode::Paint => (
+            format!("painting:{paint_tile_label}  Esc:exit  arrows:move+paint"),
+            format!("{BRUSH_HINTS_1}  {BRUSH_HINTS_2}"),
+        ),
+        Mode::Command => (command_map().hints(), String::new()),
+        Mode::WaveEditor => (wave_map().hints(), String::new()),
     }
 }
