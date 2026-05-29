@@ -293,6 +293,7 @@ pub fn map_loader(
                         RigidBody::Static,
                         Collider::cuboid(tw * w / 2.0, block_half_h, tw * h / 2.0),
                         *layers,
+                        Transform::from_translation(center),
                         Position::from(center),
                     ));
                 }
@@ -316,7 +317,7 @@ pub fn map_loader(
                 ("BorderW", Vec3::new(-tw / 2.0 - half_b, block_y, cz), half_b, half_h),
                 ("BorderE", Vec3::new(map_w - tw / 2.0 + half_b, block_y, cz), half_b, half_h),
             ] {
-                commands.spawn((Name::from(name), RigidBody::Static, Collider::cuboid(hx, block_half_h, hz), bl, Position::from(pos)));
+                commands.spawn((Name::from(name), RigidBody::Static, Collider::cuboid(hx, block_half_h, hz), bl, Transform::from_translation(pos), Position::from(pos)));
             }
         }
 
