@@ -7,7 +7,7 @@ use ratatui::{
 };
 use enumflags2::BitFlags;
 use crate::map::MapFeatures;
-use super::app::{App, Mode, PromptKind};
+use super::app::{App, Mode};
 use super::commands::hints_lines;
 
 fn tile_color(raw: u64) -> Color {

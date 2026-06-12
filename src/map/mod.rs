@@ -24,15 +24,18 @@ pub enum MapFeatures {
   EnemyExit, // Tile Addor - removes impassableFor Enemies
 }
 
+#[cfg(feature = "map-editor")]
 fn terrain_bits() -> BitFlags<MapFeatures> {
     MapFeatures::Water | MapFeatures::Grass | MapFeatures::Floor
     | MapFeatures::Mud | MapFeatures::Snow | MapFeatures::Rock
 }
 
+#[cfg(feature = "map-editor")]
 fn set_terrain(current: BitFlags<MapFeatures>, terrain: MapFeatures) -> BitFlags<MapFeatures> {
     (current & !terrain_bits()) | BitFlags::from_flag(terrain)
 }
 
+#[cfg(feature = "map-editor")]
 fn toggle(current: BitFlags<MapFeatures>, flag: MapFeatures) -> BitFlags<MapFeatures> {
     if current.contains(flag) { current & !BitFlags::from_flag(flag) } else { current | flag }
 }

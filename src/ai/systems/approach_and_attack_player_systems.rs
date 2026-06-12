@@ -1,3 +1,5 @@
+// Behavior systems kept as scaffolding for the alien AI; not yet registered in any schedule.
+#![allow(dead_code)]
 use bevy::prelude::*;
 use avian3d::prelude::{Position, Rotation, SpatialQuery, SpatialQueryFilter};
 use bevy::math::Vec2;

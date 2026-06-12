@@ -60,6 +60,7 @@ fn locked_axes()-> LockedAxes {
 pub struct Alien;
 
 #[derive(Component, Clone, Debug)]
+#[allow(dead_code)]
 pub struct AlienSightShape {
     pub shape: Collider,
     pub rotation: Quat,

@@ -1,10 +1,7 @@
 use bevy::prelude::Resource;
-use enumflags2::BitFlags;
 use crate::assets::asset_definition::{AssetDefinition, ModelType};
 use crate::general::components::map_components::{MapFile, TilePlacement, WaveDef};
 use crate::map::MapFeatures;
-
-fn flags(f: impl Into<BitFlags<MapFeatures>>) -> u64 { f.into().bits() }
 
 pub const TILE_SPECIAL_FLOOR: u64 = MapFeatures::Floor as u64;
 pub const TILE_ALIEN_SPAWN: u64   = MapFeatures::Floor as u64 | MapFeatures::EnemySpawn as u64;

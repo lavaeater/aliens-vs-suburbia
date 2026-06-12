@@ -1,11 +1,9 @@
 use bevy::app::{App, Plugin, Update};
 use bevy::prelude::{Component, Entity, Message, MessageReader, MessageWriter, Res, ResMut,
-                    Resource, With, in_state, IntoScheduleConfigs, Query};
+                    Resource, in_state, IntoScheduleConfigs, Query};
 use bevy::time::Time;
-use crate::alien::wave_manager::WaveManager;
+use crate::facts::StoryEffect;
 use crate::game_state::GameState;
-use crate::general::components::Health;
-use crate::player::components::Player;
 use crate::ui::spawn_ui::GotoState;
 
 #[allow(dead_code)]
@@ -106,6 +104,7 @@ impl Plugin for ScoreKeeperPlugin {
         app
             .add_message::<GameTrackingEvent>()
             .insert_resource(LevelTracker::default())
+            .add_systems(bevy::prelude::OnEnter(GameState::InGame), reset_level_state)
             .add_systems(Update, (
                 game_tracking_event_system,
                 level_state_system,
@@ -114,6 +113,13 @@ impl Plugin for ScoreKeeperPlugin {
             )
         ;
     }
+}
+
+/// Resets the level-flow state on entering a level so the story-driven transitions re-fire
+/// cleanly on a replay (the `Level Start` story re-seeds its facts on activation in parallel).
+pub fn reset_level_state(mut level_tracker: ResMut<LevelTracker>) {
+    level_tracker.level_state = LevelState::NotStarted;
+    level_tracker.end_delay = 0.0;
 }
 
 pub fn game_tracking_event_system(
@@ -151,35 +157,27 @@ pub fn game_tracking_event_system(
     }
 }
 
+/// Drives [`LevelState`] from the facts engine instead of computing win/lose inline. The
+/// level-flow stories (`crate::facts::stories`) own the verdict and surface it as named
+/// [`StoryEffect`]s; this system just maps those effects onto the tracker's state and runs
+/// the brief end-screen delay. See `docs/turbofacts.md` section 5.
 pub fn level_state_system(
     mut level_tracker: ResMut<LevelTracker>,
     mut goto_state_mw: MessageWriter<GotoState>,
+    mut story_effects: MessageReader<StoryEffect>,
     time: Res<Time>,
-    player_query: Query<&Health, With<Player>>,
-    wave_manager: Option<Res<WaveManager>>,
 ) {
-    if matches!(level_tracker.level_state, LevelState::NotStarted) {
-        level_tracker.level_state = LevelState::InProgress;
-    }
-
-    if matches!(level_tracker.level_state, LevelState::InProgress) {
-        // Win: all waves done and all spawned aliens killed.
-        let all_waves_done = wave_manager.as_ref().is_none_or(|wm| !wm.waves_remaining());
-        let all_killed = level_tracker.aliens_killed >= level_tracker.aliens_to_spawn
-            && level_tracker.aliens_to_spawn > 0;
-        if all_waves_done && all_killed {
-            level_tracker.level_state = LevelState::Completed;
-        }
-
-        // Lose: too many reached the goal.
-        if level_tracker.aliens_reached_goal >= level_tracker.aliens_win_cut_off {
-            level_tracker.level_state = LevelState::Failed;
-        }
-
-        // Lose: every player is out of health simultaneously.
-        let players: Vec<&Health> = player_query.iter().collect();
-        if !players.is_empty() && players.iter().all(|h| h.health <= 0) {
-            level_tracker.level_state = LevelState::Failed;
+    for StoryEffect { effect } in story_effects.read() {
+        match effect.as_str() {
+            "level_starting" => level_tracker.level_state = LevelState::InProgress,
+            // Only the first terminal verdict wins; ignore later effects once we've ended.
+            "level_complete" if matches!(level_tracker.level_state, LevelState::InProgress) => {
+                level_tracker.level_state = LevelState::Completed;
+            }
+            "level_failed" if matches!(level_tracker.level_state, LevelState::InProgress) => {
+                level_tracker.level_state = LevelState::Failed;
+            }
+            _ => {}
         }
     }
 

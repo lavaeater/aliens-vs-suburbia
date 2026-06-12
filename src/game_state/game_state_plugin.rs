@@ -16,6 +16,7 @@ use crate::control::gamepad_input::GamepadPlugin;
 use crate::game_state::clear_game_entities_plugin::ClearGameEntitiesPlugin;
 use crate::game_state::GameState;
 use crate::game_state::score_keeper::ScoreKeeperPlugin;
+use crate::facts::{FactsPlugin, FactsGameIntegrationPlugin};
 use crate::general::systems::collision_handling_system::collision_handling_system;
 use crate::general::systems::health_monitor_system::health_monitor_system;
 use crate::general::systems::touch_damage_system::touch_damage_system;
@@ -78,6 +79,8 @@ impl Plugin for GamePlugin {
                 AssetBrowserPlugin,
                 PlayerSetupPlugin,
                 MapEditorPlugin,
+                FactsPlugin,
+                FactsGameIntegrationPlugin,
             ))
             .add_systems(
                 OnEnter(GameState::InGame),

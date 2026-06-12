@@ -1,6 +1,6 @@
 use bevy::math::{Quat, Rect, Vec2, Vec3};
 use bevy::prelude::{
-    Assets, Camera, Camera2d, Camera3d, Commands, Entity, Image,
+    Assets, Camera, Camera2d, Camera3d, Commands, Image,
     Name, OrthographicProjection, PerspectiveProjection, Query, Res,
     ResMut, Sprite, Transform, Window, With, default,
 };

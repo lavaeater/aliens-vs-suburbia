@@ -1,0 +1,36 @@
+// Example turbofacts story file. Load with `facts::persistence::load_stories`.
+// A list of stories; each fires its consequences once all its rules pass.
+//
+// Criterion variants:  BoolIs(key, expected) | AnyBool(pattern, expected) | AllBool(..)
+//                       IntCmp(key, op, value) | AnyIntCmp(pattern,..) | AllIntCmp(..)
+//                       IntVsInt(lhs, op, rhs) | FloatCmp(key, op, value)
+//                       TextEq(key, value) | TextContains(key, value)
+//                       ListContains(key, value) | ListSize(key, op, value)
+//                       SetContains(key, value) | SetSize(key, op, value)
+//   op is one of: Lt | Gt | Eq
+// Consequence variants: SetFact(key, value) | AddInt(key, delta) | Emit(effect)
+//   value is a FactValue: Bool(true) | Int(5) | Float(1.5) | Text("hi")
+[
+    (
+        name: "Reach the Kill Count",
+        repeat: false,
+        exclusive: true,
+        init_facts: [
+            ("EnemyKillCount", Int(0)),
+            ("TargetEnemyKillCount", Int(10)),
+        ],
+        rules: [
+            (
+                name: "enough kills",
+                criteria: [
+                    BoolIs(key: "LevelStarted", expected: true),
+                    IntVsInt(lhs: "EnemyKillCount", op: Gt, rhs: "TargetEnemyKillCount"),
+                ],
+            ),
+        ],
+        consequences: [
+            SetFact(key: "LevelComplete", value: Bool(true)),
+            Emit(effect: "level_complete"),
+        ],
+    ),
+]

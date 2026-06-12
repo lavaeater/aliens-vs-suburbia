@@ -47,6 +47,7 @@ pub fn load_map_showcase(mut send_event: MessageWriter<LoadMap>) {
 #[derive(Resource)]
 pub struct TileDefinitions {
     pub tile_size: f32,
+    #[allow(dead_code)]
     pub tile_basis: f32,
     pub tile_unit: f32,
     pub tile_width: f32,

@@ -1,3 +1,5 @@
+// Kept as scaffolding; not yet registered in any schedule.
+#![allow(dead_code)]
 use bevy::prelude::{Query, With};
 use crate::alien::components::general::Alien;
 use crate::control::components::{ControlDirection, CharacterControl};

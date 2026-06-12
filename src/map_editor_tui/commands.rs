@@ -16,6 +16,7 @@ pub struct Cmd {
 }
 
 pub struct CommandMap {
+    #[allow(dead_code)]
     pub name: &'static str,
     cmds: Vec<Cmd>,
 }

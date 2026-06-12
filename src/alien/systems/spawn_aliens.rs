@@ -11,10 +11,8 @@ use bevy::prelude::{
     Commands, MessageReader, MessageWriter, Query, Res, ResMut, Time, Transform,
 };
 use bevy::scene::SceneRoot;
-use bevy_wind_waker_shader::WindWakerShaderBuilder;
 use std::f32::consts::PI;
 use avian3d::prelude::Position;
-use bevy_wind_waker_shader::pixelate::PixelShaderBuilder;
 
 pub fn alien_spawner_system(
     time_res: Res<Time>,

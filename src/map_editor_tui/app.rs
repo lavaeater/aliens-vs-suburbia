@@ -1,5 +1,4 @@
 use crossterm::event::KeyCode;
-use enumflags2::BitFlags;
 use crate::general::components::map_components::{MapFile, WaveDef};
 use crate::map::MapFeatures;
 use ron::ser::PrettyConfig;
@@ -53,8 +52,11 @@ pub struct App {
 
 pub const TILE_VOID: u64   = 0;
 pub const TILE_FLOOR: u64  = MapFeatures::Floor as u64;
+#[allow(dead_code)]
 pub const TILE_SPAWN: u64  = MapFeatures::Floor as u64 | MapFeatures::EnemySpawn as u64;
+#[allow(dead_code)]
 pub const TILE_GOAL: u64   = MapFeatures::Floor as u64 | MapFeatures::EnemyExit as u64;
+#[allow(dead_code)]
 pub const TILE_PLAYER: u64 = MapFeatures::Floor as u64 | MapFeatures::PlayerSpawn as u64;
 
 impl App {

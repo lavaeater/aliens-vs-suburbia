@@ -8,3 +8,6 @@
 [submodule "bevy_wind_waker_shader"]
 	path = bevy_wind_waker_shader
 	url = git@github.com:lavaeater/bevy_wind_waker_shader.git
+[submodule "rusty_music"]
+	path = rusty_music
+	url = git@github.com:lavaeater/rusty_music.git

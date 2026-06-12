@@ -7,7 +7,7 @@
 # You may check the current default at
 #   https://github.com/Canop/bacon/blob/main/defaults/default-bacon.toml
 
-default_job = "check"
+default_job = "nextest"
 env.CARGO_TERM_COLOR = "always"
 
 [jobs.check]
@@ -59,8 +59,8 @@ need_stdout = true
 
 [jobs.nextest]
 command = [
-    "cargo", "nextest", "run",
-    "--hide-progress-bar", "--failure-output", "final"
+    "sh", "-c",
+    "cargo llvm-cov nextest --workspace --hide-progress-bar --failure-output final | awk '/^Filename/{printf \"%-40s %9s %8s %13s %9s\\n\",\"File\",\"MissLine\",\"Line%\",\"MissBranch\",\"Branch%\"; printf \"%s\\n\",\"----------------------------------------\"; next} /^-/{next} NF==13{printf \"%-40s %9s %8s %13s %9s\\n\",$1,$9,$10,$12,$13; next} {print}'"
 ]
 need_stdout = true
 analyzer = "nextest"
