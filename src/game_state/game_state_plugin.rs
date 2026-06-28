@@ -35,6 +35,7 @@ use crate::character_creator::plugin::CharacterCreatorPlugin;
 use crate::asset_browser::plugin::AssetBrowserPlugin;
 use crate::player_setup::plugin::PlayerSetupPlugin;
 use crate::map_editor::plugin::MapEditorPlugin;
+use crate::music::game_music_plugin::GameMusicPlugin;
 use crate::sprite_billboard::plugin::SpriteBillboardPlugin;
 
 fn toggle_physics_debug(
@@ -81,6 +82,7 @@ impl Plugin for GamePlugin {
                 MapEditorPlugin,
                 FactsPlugin,
                 FactsGameIntegrationPlugin,
+                GameMusicPlugin,
             ))
             .add_systems(
                 OnEnter(GameState::InGame),

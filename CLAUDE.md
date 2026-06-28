@@ -53,6 +53,7 @@ Most gameplay systems use `.run_if(in_state(InGame))`. Physics runs on a fixed t
 | `src/general/` | Core mechanics: collision, `Health`/health bars, `TouchDamage`, `Indestructible`, `Coin`/`TeamWallet` economy, physics throws, lighting, kinematic movement, tile tracking. |
 | `src/animation/` | State-machine animations. `AnimationStore` maps model keys to `AnimationGraph` handles. External animation sources supported via `animation_sources` in defs. |
 | `src/ui/` | Menu, HUD (`spawn_ui.rs`). HUD shows: aliens, wave info, coins, build cost, ability cooldown. |
+| `src/music/` | Generative soundtrack via the `rusty_music` submodule (path dep). `GameMusicPlugin` spawns the band; `MusicMoods` holds two intensity measures (`combat`, `danger`) computed from game state, smoothed into the global `Intensity` and gating musician channels (`Ambient`/`Groove`/`Combat`/`Danger`) via `Muted` with hysteresis. Samples live in `assets/instruments/` (copied from `rusty_music/assets/samples/`). |
 | `src/camera/` | Isometric camera tracking with wall occlusion fading. |
 | `src/assets/` | `AssetDefinition` (`asset_definition.rs`) — the core per-model def type persisted to `assets/defs/*.ron`. |
 | `src/asset_browser/` | In-engine tool for importing models: browse GLB files, set scale/height, toggle hidden nodes, map animation clips to game states, add external animation sources, set `ModelType`. Press `I` to export `.ron`. |
@@ -106,6 +107,7 @@ Each behavior has its own submodule under `src/ai/`. When aliens can't find a pa
 - `bevy_mod_outline 0.12` — entity outlines
 - `bevy-inspector-egui 0.36` — runtime debug inspector
 - `lava_ui_builder` — local UI helper crate used throughout for panels and buttons
+- `rusty_music` — local submodule (path dep, excluded from the workspace): generative music plugin built on `bevy_seedling 0.7`
 - `ron` — serialization for all `.ron` files
 
 ### Assets
@@ -120,3 +122,4 @@ Each behavior has its own submodule under `src/ai/`. When aliens can't find a pa
 - **System order matters**: systems in a single `add_systems(Update, (...))` tuple run sequentially. If two systems share a dirty flag, the one that clears it must run after the one that reads it — or use separate flags (see `nodes_dirty` vs `nodes_ui_dirty` in `src/asset_browser/`).
 - **Animation sources path format**: always relative to `assets/` with no prefix. `"packs/foo/bar.glb"` is correct; `"assets/packs/foo/bar.glb"` is wrong and will silently fail to load.
 - **GLTF vs GLB**: both work. `.gltf` + `.bin` sidecar files load identically to `.glb` — keep them in the same folder.
+- **WAV loading**: `bevy_seedling`'s symphonia-based loader rejects some wavs with `malformed fmt_pcm chunk` even though other tools play them fine. Fix by re-encoding: `ffmpeg -i in.wav -c:a pcm_s16le out.wav` (this happened with `pluck.wav`).
