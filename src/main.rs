@@ -38,6 +38,7 @@ pub(crate) mod asset_browser;
 pub(crate) mod player_setup;
 pub(crate) mod map_editor;
 pub mod behavior;
+pub(crate) mod music;
 #[cfg(feature = "map-editor")]
 pub(crate) mod map_editor_tui;
 

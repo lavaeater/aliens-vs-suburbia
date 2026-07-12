@@ -115,6 +115,7 @@ dependencies = [
  "bevy",
  "bevy-inspector-egui",
  "bevy_mod_outline",
+ "bevy_seedling",
  "bevy_skein",
  "bevy_wind_waker_shader",
  "bonsai-bt",
@@ -542,7 +543,6 @@ dependencies = [
 [[package]]
 name = "bevy-rusty-music-macros"
 version = "0.1.0"
-source = "git+https://github.com/lavaeater/rusty_music.git?branch=main#20457a38c796f38b6dcbaacc44a515c61498c7ae"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6588,7 +6588,6 @@ checksum = "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
 [[package]]
 name = "rusty_music"
 version = "0.3.0"
-source = "git+https://github.com/lavaeater/rusty_music.git?branch=main#20457a38c796f38b6dcbaacc44a515c61498c7ae"
 dependencies = [
  "bevy",
  "bevy-rusty-music-macros",

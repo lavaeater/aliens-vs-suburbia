@@ -7,6 +7,8 @@ edition = "2024"
 # under `cargo test` / `cargo nextest run` from the workspace root.
 [workspace]
 members = ["turbofacts"]
+# rusty_music is its own workspace (path dependency via the submodule).
+exclude = ["rusty_music"]
 resolver = "2"
 
 [dependencies]
@@ -33,7 +35,9 @@ ratatui   = { version = "0.30", optional = true }
 crossterm = { version = "0.29", optional = true }
 enumflags2 = { version = "0.7.12",  features = ["serde"] }
 strum = "0.28.0"
-rusty_music = {git = "https://github.com/lavaeater/rusty_music.git" , branch="main" }
+# Use the submodule checkout so local edits to rusty_music take effect immediately.
+rusty_music = { path = "rusty_music" }
+bevy_seedling = { version = "0.7.2", default-features = false, features = ["wav"] }
 
 [features]
 map-editor = ["dep:ratatui", "dep:crossterm"]
