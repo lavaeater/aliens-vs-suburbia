@@ -62,6 +62,8 @@ pub struct AssetBrowserState {
     // ── Clip tagging + game-key bindings (for import) ──────────────────────────
     /// Free-form hierarchical tag per clip. Key = clip name as it appears in
     /// `anim_names`, value = "/"-separated path (e.g. "Combat/Ranged/Shoot").
+    /// Tag paths are unique across clips (enforced in `tag_edit_commit`), so a
+    /// path maps to exactly one clip.
     pub clip_tags: HashMap<String, String>,
     /// Binds a game-state key (ANIM_KEY_NAMES entry) → a tag path from `clip_tags`.
     pub animation_bindings: HashMap<String, String>,
@@ -295,13 +297,17 @@ impl AssetBrowserState {
     }
 
     /// Commit the buffer as `clip`'s tag. Trims slashes/whitespace; an empty
-    /// result clears the tag.
+    /// result clears the tag. Tag paths are unique: assigning a path that another
+    /// clip already carries moves it off that clip, so each path maps to exactly
+    /// one clip and runtime resolution is deterministic.
     pub fn tag_edit_commit(&mut self) {
         if let Some(clip) = self.tag_edit_clip.take() {
             let path = normalize_tag_path(&self.tag_edit_buffer);
             if path.is_empty() {
                 self.clip_tags.remove(&clip);
             } else {
+                // Steal the path from whatever other clip currently holds it.
+                self.clip_tags.retain(|c, t| c == &clip || t != &path);
                 self.clip_tags.insert(clip, path);
             }
         }
