@@ -1,7 +1,7 @@
 use bevy::app::{App, Plugin, Update};
 use bevy::prelude::{IntoScheduleConfigs, OnEnter, OnExit, in_state};
 use crate::asset_browser::state::AssetBrowserState;
-use crate::asset_browser::ui::{handle_key_input, rebuild_folder_list, rebuild_list, rebuild_mapping_list, rebuild_node_list, rebuild_sources_list, rebuild_type_picker, scroll_to_selection, spawn_asset_browser_ui};
+use crate::asset_browser::ui::{handle_key_input, rebuild_binding_list, rebuild_clip_tag_list, rebuild_folder_list, rebuild_list, rebuild_node_list, rebuild_sources_list, rebuild_type_picker, scroll_to_selection, spawn_asset_browser_ui};
 use crate::asset_browser::viewer::{
     apply_node_visibility, apply_viewer_animation, apply_viewer_scale, compute_model_height,
     handle_model_load, load_extra_animation_sources, merge_extra_anim_clips,
@@ -40,7 +40,8 @@ impl Plugin for AssetBrowserPlugin {
                     load_extra_animation_sources,
                     merge_extra_anim_clips,
                     rebuild_node_list,
-                    rebuild_mapping_list,
+                    rebuild_clip_tag_list,
+                    rebuild_binding_list,
                     rebuild_sources_list,
                     rebuild_type_picker,
                 )

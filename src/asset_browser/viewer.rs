@@ -177,7 +177,7 @@ pub fn setup_viewer_animation(
     state.anim_node_indices = nodes;
     state.anim_names = names_by_index;
     state.anim_dirty = !gltf.animations.is_empty(); // only auto-play if model has clips
-    state.mapping_dirty = true;
+    state.tags_dirty = true;
     state.gltf_handle = None;
 }
 
@@ -241,7 +241,7 @@ pub fn merge_extra_anim_clips(
         if let Some(player_entity) = state.anim_player_entity {
             commands.entity(player_entity).insert(AnimationGraphHandle(graph_handle));
         }
-        state.mapping_dirty = true;
+        state.tags_dirty = true;
     }
 
     let _ = last_merged_count; // suppress unused warning

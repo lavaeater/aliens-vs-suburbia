@@ -56,7 +56,7 @@ Most gameplay systems use `.run_if(in_state(InGame))`. Physics runs on a fixed t
 | `src/music/` | Generative soundtrack via the `rusty_music` submodule (path dep). `GameMusicPlugin` spawns the band; `MusicMoods` holds two intensity measures (`combat`, `danger`) computed from game state, smoothed into the global `Intensity` and gating musician channels (`Ambient`/`Groove`/`Combat`/`Danger`) via `Muted` with hysteresis. Samples live in `assets/instruments/` (copied from `rusty_music/assets/samples/`). |
 | `src/camera/` | Isometric camera tracking with wall occlusion fading. |
 | `src/assets/` | `AssetDefinition` (`asset_definition.rs`) — the core per-model def type persisted to `assets/defs/*.ron`. |
-| `src/asset_browser/` | In-engine tool for importing models: browse GLB files, set scale/height, toggle hidden nodes, map animation clips to game states, add external animation sources, set `ModelType`. Press `I` to export `.ron`. |
+| `src/asset_browser/` | In-engine tool for importing models: browse GLB files, set scale/height, toggle hidden nodes, tag each animation clip with a free-form hierarchical path and bind game animation keys to those tag paths, add external animation sources, set `ModelType`. Press `I` to export `.ron`. |
 | `src/player_setup/` | `GameState::PlayerSetup` screen. Keyboard (Enter) and gamepad (South) to join slots, arrow keys / d-pad to pick model. Writes `PlayerRoster` resource. |
 | `src/map_editor/` | `GameState::MapEditor`. Grid-based map layout tool. Palette sidebar filtered by `ModelType`. Left-click to place, right-click erase, `R` rotate, `S` save. Wave editor on right panel. |
 | `src/model_settings/` | Live model hot-reload, `build_player_anim_graph` — builds the player animation graph, resolves `stem|clip` values against external GLTF sources. |
@@ -69,7 +69,9 @@ Stored at `assets/defs/<model-stem>.ron`. Fields:
 - `scale` — uniform scale (computed as `target_height_m / mesh_aabb_height` in asset browser)
 - `model_type` — `Player(PlayerProps)`, `Tower(TowerProps)`, `Terrain(TerrainProps)`, `Item(ItemProps)`, or `Enemy(EnemyProps)`
 - `hidden_nodes` — node names to hide (e.g. weapon nodes)
-- `animation_mapping` — `HashMap<game_state_key, clip_fragment>`. Values may be plain (`"idle"`) or `"SourceStem|ClipName"` for external sources.
+- `clip_tags` — `HashMap<clip_name, tag_path>`. Free-form hierarchical tag per clip (e.g. `"CharacterArmature|Run_Shoot" -> "Combat/Ranged/RunShoot"`). Clip name is the model's own clip, or `"SourceStem|ClipName"` for external sources.
+- `animation_bindings` — `HashMap<game_state_key, tag_path>`. Binds a game key to a tag path; at runtime `AssetDefinition::resolved_clip` maps game key -> tag path -> the clip carrying that tag.
+- `animation_mapping` — **legacy** `HashMap<game_state_key, clip_fragment>`. Superseded by `clip_tags` + `animation_bindings`; still read at runtime as a fallback and auto-migrated into tags/bindings when an old def is loaded in the asset browser.
 - `animation_sources` — paths (relative to `assets/`) of external GLB/GLTF animation files. **No `assets/` prefix** — same convention as `model_path`.
 
 ### Economy

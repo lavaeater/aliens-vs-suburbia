@@ -15,7 +15,8 @@ use crate::ui::spawn_ui::StateMarker;
 #[derive(Component)] pub struct AssetPathLabel;
 #[derive(Component)] pub struct AssetAnimLabel;
 #[derive(Component)] pub struct NodeListContainer;
-#[derive(Component)] pub struct MappingContainer;
+#[derive(Component)] pub struct ClipTagContainer;
+#[derive(Component)] pub struct BindingContainer;
 #[derive(Component)] pub struct FolderContainer;
 #[derive(Component)] pub struct FolderPathLabel;
 #[derive(Component)] pub struct HeightDisplay;
@@ -24,7 +25,6 @@ use crate::ui::spawn_ui::StateMarker;
 #[derive(Component)] pub struct SourcesContainer;
 
 #[derive(Component)] pub struct ListItem(pub usize);
-#[derive(Component)] pub struct MappingRow(#[allow(dead_code)] pub String); // game-state key
 
 // ── Spawn ─────────────────────────────────────────────────────────────────────
 
@@ -94,16 +94,33 @@ pub fn spawn_asset_browser_ui(
              .insert(NodeListContainer);
         });
 
-        // Animation mapping section
+        // Clip tags section — tag each of the model's clips with a free-form path.
         left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label("-- Anim Mapping --", &TextTheme {
+            c.insert_bundle(lava_ui_builder::label("-- Clip Tags --", &TextTheme {
+                label_size: 11.0, label_color: Color::srgb(0.5, 0.8, 0.6), ..t.clone()
+            }));
+        });
+        left.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label("click a clip, type a path e.g. Combat/Ranged/Shoot", &hint));
+        });
+        left.with_child(|c| {
+            c.display_flex().flex_column().gap_px(2.0)
+             .overflow_scroll_y()
+             .modify_node(|mut n| { n.align_self = AlignSelf::Stretch; n.max_height = Val::Px(170.0); })
+             .insert(ClipTagContainer).insert(ScrollPosition::default());
+        });
+
+        // Key bindings section — bind each game animation key to a tag path.
+        left.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label("-- Key Bindings --", &TextTheme {
                 label_size: 11.0, label_color: Color::srgb(0.5, 0.8, 0.6), ..t.clone()
             }));
         });
         left.with_child(|c| {
             c.display_flex().flex_column().gap_px(2.0)
-             .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
-             .insert(MappingContainer);
+             .overflow_scroll_y()
+             .modify_node(|mut n| { n.align_self = AlignSelf::Stretch; n.max_height = Val::Px(150.0); })
+             .insert(BindingContainer).insert(ScrollPosition::default());
         });
 
         // Height section
@@ -199,6 +216,20 @@ pub fn handle_key_input(
 ) {
     for event in keyboard_reader.read() {
         if event.state != ButtonState::Pressed { continue; }
+
+        // While a tag text-box is open, keystrokes edit the buffer instead of navigating.
+        if state.tag_edit_clip.is_some() {
+            match &event.logical_key {
+                Key::Escape    => state.tag_edit_cancel(),
+                Key::Enter     => state.tag_edit_commit(),
+                Key::Backspace => state.tag_edit_backspace(),
+                Key::Space     => state.tag_edit_push(" "),
+                Key::Character(c) => state.tag_edit_push(c.as_str()),
+                _ => {}
+            }
+            continue;
+        }
+
         match &event.logical_key {
             Key::ArrowUp        => state.move_up(),
             Key::ArrowDown      => state.move_down(),
@@ -378,29 +409,150 @@ pub fn rebuild_node_list(
     });
 }
 
-pub fn rebuild_mapping_list(
+/// One list item per clip in the model (plus external-source clips). Click a clip
+/// to open a text box and type a free-form hierarchical tag path. While editing,
+/// the buffer and any matching autocomplete suggestions are shown inline.
+pub fn rebuild_clip_tag_list(
+    state: Res<AssetBrowserState>,
+    mut commands: Commands,
+    container_q: Query<Entity, With<ClipTagContainer>>,
+) {
+    if !state.tags_dirty { return; }
+    // tags_dirty is also consumed by rebuild_binding_list; clear it there (runs after).
+
+    let Ok(container) = container_q.single() else { return };
+    commands.entity(container).despawn_related::<Children>();
+
+    // Distinct, non-empty clip names, sorted, matching the browser's clip list.
+    let mut clips: Vec<String> = state.anim_names.iter()
+        .filter(|n| !n.is_empty())
+        .cloned()
+        .collect();
+    clips.sort();
+    clips.dedup();
+
+    let editing = state.tag_edit_clip.clone();
+    let buffer = state.tag_edit_buffer.clone();
+    let suggestions = state.tag_suggestions();
+
+    commands.entity(container).with_children(|parent| {
+        if clips.is_empty() {
+            parent.spawn((
+                Text::new("no clips in this model"),
+                TextFont::default().with_font_size(10.0),
+                TextColor(Color::srgba(0.4, 0.5, 0.4, 0.6)),
+            ));
+            return;
+        }
+        for clip in clips {
+            let tag = state.clip_tags.get(&clip).cloned().unwrap_or_default();
+            let short = clip.rsplit('|').next().unwrap_or(&clip).to_string();
+            let is_editing = editing.as_deref() == Some(clip.as_str());
+
+            // Clickable row: "clipname   tag".
+            let clip_for_click = clip.clone();
+            let bg = if is_editing { Color::srgba(0.14, 0.20, 0.10, 0.95) } else { Color::srgba(0.07, 0.10, 0.14, 0.70) };
+            parent.spawn((
+                Node {
+                    width: Val::Percent(100.0),
+                    flex_direction: FlexDirection::Row,
+                    justify_content: JustifyContent::SpaceBetween,
+                    align_items: AlignItems::Center,
+                    padding: UiRect::axes(Val::Px(5.0), Val::Px(2.0)),
+                    border_radius: BorderRadius::all(Val::Px(3.0)),
+                    column_gap: Val::Px(6.0),
+                    ..Default::default()
+                },
+                BackgroundColor(bg),
+                InteractionPalette { none: bg, hovered: Color::srgba(0.15, 0.24, 0.14, 0.95), pressed: Color::srgba(0.10, 0.16, 0.10, 1.0) },
+                bevy::picking::hover::Hovered::default(),
+                bevy::ui_widgets::Button,
+            ))
+            .with_children(|row| {
+                row.spawn((
+                    Text::new(short),
+                    TextFont::default().with_font_size(10.0),
+                    TextColor(Color::srgb(0.8, 0.75, 0.9)),
+                    Node { flex_grow: 1.0, overflow: Overflow::clip(), ..Default::default() },
+                ));
+                let (tag_text, tag_color) = if tag.is_empty() {
+                    ("--".to_string(), Color::srgba(0.5, 0.55, 0.5, 0.6))
+                } else {
+                    (tag.clone(), Color::srgb(0.55, 0.85, 0.65))
+                };
+                row.spawn((
+                    Text::new(tag_text),
+                    TextFont::default().with_font_size(10.0),
+                    TextColor(tag_color),
+                ));
+            })
+            .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                s.begin_tag_edit(&clip_for_click);
+            });
+
+            // While this clip is being edited, show the text box + suggestions.
+            if is_editing {
+                let display = format!("> {}_", buffer);
+                parent.spawn((
+                    Text::new(display),
+                    TextFont::default().with_font_size(11.0),
+                    TextColor(Color::srgb(0.95, 0.95, 0.7)),
+                    Node { padding: UiRect::axes(Val::Px(8.0), Val::Px(2.0)), ..Default::default() },
+                    BackgroundColor(Color::srgba(0.05, 0.08, 0.05, 0.9)),
+                ));
+                parent.spawn((
+                    Text::new("[Enter] save  [Esc] cancel"),
+                    TextFont::default().with_font_size(9.0),
+                    TextColor(Color::srgba(0.45, 0.6, 0.45, 0.7)),
+                    Node { padding: UiRect::axes(Val::Px(8.0), Val::Px(0.0)), ..Default::default() },
+                ));
+                if !suggestions.is_empty() {
+                    parent.spawn((
+                        Node { flex_direction: FlexDirection::Row, flex_wrap: FlexWrap::Wrap, column_gap: Val::Px(3.0), row_gap: Val::Px(3.0), padding: UiRect::axes(Val::Px(8.0), Val::Px(2.0)), ..Default::default() },
+                    ))
+                    .with_children(|chips| {
+                        for sug in &suggestions {
+                            let sug_clone = sug.clone();
+                            let cbg = Color::srgba(0.10, 0.22, 0.18, 0.9);
+                            chips.spawn((
+                                Node { padding: UiRect::axes(Val::Px(5.0), Val::Px(2.0)), border_radius: BorderRadius::all(Val::Px(3.0)), ..Default::default() },
+                                BackgroundColor(cbg),
+                                InteractionPalette { none: cbg, hovered: Color::srgba(0.15, 0.35, 0.28, 0.95), pressed: Color::srgba(0.08, 0.18, 0.14, 1.0) },
+                                bevy::picking::hover::Hovered::default(),
+                                bevy::ui_widgets::Button,
+                            ))
+                            .with_child((Text::new(sug.clone()), TextFont::default().with_font_size(9.0), TextColor(Color::srgb(0.7, 0.9, 0.8))))
+                            .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.tag_edit_accept_suggestion(&sug_clone); });
+                        }
+                    });
+                }
+            }
+        }
+    });
+}
+
+/// One row per game animation key, cycling its binding through the in-use tag paths.
+pub fn rebuild_binding_list(
     mut state: ResMut<AssetBrowserState>,
     mut commands: Commands,
-    container_q: Query<Entity, With<MappingContainer>>,
+    container_q: Query<Entity, With<BindingContainer>>,
 ) {
-    if !state.mapping_dirty { return; }
-    state.mapping_dirty = false;
+    if !state.tags_dirty { return; }
+    state.tags_dirty = false; // last consumer of the flag
 
     let Ok(container) = container_q.single() else { return };
     commands.entity(container).despawn_related::<Children>();
 
     let rows: Vec<(String, String)> = ANIM_KEY_NAMES.iter()
-        .map(|&k| (k.to_string(), state.anim_mapping.get(k).cloned().unwrap_or_default()))
+        .map(|&k| (k.to_string(), state.animation_bindings.get(k).cloned().unwrap_or_default()))
         .collect();
 
     commands.entity(container).with_children(|parent| {
-        for (key, clip) in rows {
-            let key_clone = key.clone();
-            let key_clone2 = key.clone();
-            let clip_display = if clip.is_empty() { "--".to_string() } else {
-                // Show just the part after | if present.
-                clip.rsplit('|').next().unwrap_or(&clip).to_string()
-            };
+        for (key, tag) in rows {
+            let key_prev = key.clone();
+            let key_next = key.clone();
+            let tag_display = if tag.is_empty() { "--".to_string() } else { tag.clone() };
+            let tag_color = if tag.is_empty() { Color::srgb(0.5, 0.55, 0.5) } else { Color::srgb(0.9, 0.85, 0.65) };
             parent.spawn((
                 Node {
                     width: Val::Percent(100.0),
@@ -408,10 +560,10 @@ pub fn rebuild_mapping_list(
                     justify_content: JustifyContent::SpaceBetween,
                     align_items: AlignItems::Center,
                     padding: UiRect::axes(Val::Px(4.0), Val::Px(2.0)),
+                    column_gap: Val::Px(4.0),
                     ..Default::default()
                 },
                 BackgroundColor(Color::srgba(0.07, 0.10, 0.14, 0.70)),
-                MappingRow(key.clone()),
             ))
             .with_children(|row| {
                 row.spawn((
@@ -419,8 +571,6 @@ pub fn rebuild_mapping_list(
                     TextFont::default().with_font_size(10.0),
                     TextColor(Color::srgb(0.6, 0.75, 0.6)),
                 ));
-                // "←" button
-                let kc = key_clone.clone();
                 row.spawn((
                     Node { width: Val::Px(14.0), ..Default::default() },
                     BackgroundColor(Color::srgba(0.15, 0.15, 0.15, 0.6)),
@@ -428,16 +578,15 @@ pub fn rebuild_mapping_list(
                     bevy::ui_widgets::Button,
                 ))
                 .with_child((Text::new("<"), TextFont::default().with_font_size(9.0), TextColor(Color::srgb(0.8, 0.8, 0.8))))
-                .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.cycle_mapping_prev(&kc); });
+                .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.cycle_binding(&key_prev, -1); });
 
                 row.spawn((
-                    Text::new(clip_display),
+                    Text::new(tag_display),
                     TextFont::default().with_font_size(10.0),
-                    TextColor(Color::srgb(0.9, 0.85, 0.65)),
+                    TextColor(tag_color),
                     Node { flex_grow: 1.0, overflow: Overflow::clip(), ..Default::default() },
                 ));
 
-                // "→" button
                 row.spawn((
                     Node { width: Val::Px(14.0), ..Default::default() },
                     BackgroundColor(Color::srgba(0.15, 0.15, 0.15, 0.6)),
@@ -445,7 +594,7 @@ pub fn rebuild_mapping_list(
                     bevy::ui_widgets::Button,
                 ))
                 .with_child((Text::new(">"), TextFont::default().with_font_size(9.0), TextColor(Color::srgb(0.8, 0.8, 0.8))))
-                .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.cycle_mapping_next(&key_clone2); });
+                .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.cycle_binding(&key_next, 1); });
             });
         }
     });

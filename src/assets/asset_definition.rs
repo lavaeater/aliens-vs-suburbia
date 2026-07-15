@@ -131,11 +131,22 @@ pub struct AssetDefinition {
     /// Node names that should be hidden when this model is used in-game.
     #[serde(default)]
     pub hidden_nodes: Vec<String>,
-    /// Maps game-state keys (e.g. "idle", "walk", "throwing") to clip name fragments.
-    /// Values may be plain fragments ("idle") searched within the model's own GLTF,
-    /// or "SourceStem|ClipFragment" to pull from an external file listed in animation_sources.
+    /// LEGACY. Maps game-state keys (e.g. "idle", "walk", "throwing") directly to
+    /// clip name fragments. Superseded by `clip_tags` + `animation_bindings`, but
+    /// still read at runtime as a fallback so pre-migration defs keep working.
     #[serde(default)]
     pub animation_mapping: HashMap<String, String>,
+    /// Free-form hierarchical tag assigned to each clip. Key = full clip name as it
+    /// appears in the browser's clip list (the model's own clip names, or
+    /// "SourceStem|ClipName" for clips supplied by an external source). Value = a
+    /// "/"-separated category path, e.g. "Combat/Ranged/Shoot". Purely for
+    /// organization; the leaf carries no special meaning.
+    #[serde(default)]
+    pub clip_tags: HashMap<String, String>,
+    /// Binds a game-state key (e.g. "idle", "throwing") to a tag path from
+    /// `clip_tags`. At runtime the key resolves to whichever clip carries that tag.
+    #[serde(default)]
+    pub animation_bindings: HashMap<String, String>,
     /// Paths of external GLB/GLTF files that supply additional animation clips.
     /// Same convention as model_path: relative to the assets/ folder, no "assets/" prefix.
     /// e.g. "packs/AnimPack.glb"
@@ -151,8 +162,28 @@ impl Default for AssetDefinition {
             model_type: ModelType::default(),
             hidden_nodes: Vec::new(),
             animation_mapping: HashMap::new(),
+            clip_tags: HashMap::new(),
+            animation_bindings: HashMap::new(),
             animation_sources: Vec::new(),
         }
+    }
+}
+
+impl AssetDefinition {
+    /// Resolve a game-state key (e.g. "idle") to the clip name it should play,
+    /// using the tag/binding system first and falling back to the legacy
+    /// `animation_mapping`. Returns `None` when nothing is configured for the key,
+    /// in which case the caller should use its own default search fragment.
+    pub fn resolved_clip(&self, key: &str) -> Option<String> {
+        if let Some(tag) = self.animation_bindings.get(key).filter(|t| !t.is_empty()) {
+            // Find the clip carrying this tag path.
+            if let Some((clip, _)) = self.clip_tags.iter().find(|(_, t)| *t == tag) {
+                return Some(clip.clone());
+            }
+            // Binding points at a tag no clip carries (yet) — nothing to play.
+            return None;
+        }
+        self.animation_mapping.get(key).filter(|s| !s.is_empty()).cloned()
     }
 }
 
@@ -180,5 +211,52 @@ impl AssetDefinition {
         if let Ok(text) = ron::ser::to_string_pretty(self, ron::ser::PrettyConfig::default()) {
             let _ = std::fs::write(path, text);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resolved_clip_follows_binding_to_tagged_clip() {
+        let mut def = AssetDefinition::default();
+        def.clip_tags.insert("CharacterArmature|Run_Shoot".into(), "Combat/Ranged/RunShoot".into());
+        def.animation_bindings.insert("run_shoot".into(), "Combat/Ranged/RunShoot".into());
+
+        assert_eq!(def.resolved_clip("run_shoot").as_deref(), Some("CharacterArmature|Run_Shoot"));
+    }
+
+    #[test]
+    fn resolved_clip_binding_to_missing_tag_yields_none() {
+        let mut def = AssetDefinition::default();
+        // Binding points at a tag no clip carries.
+        def.animation_bindings.insert("idle".into(), "Idle/Neutral".into());
+
+        assert_eq!(def.resolved_clip("idle"), None);
+    }
+
+    #[test]
+    fn resolved_clip_falls_back_to_legacy_mapping() {
+        let mut def = AssetDefinition::default();
+        def.animation_mapping.insert("walk".into(), "CharacterArmature|Walk".into());
+
+        assert_eq!(def.resolved_clip("walk").as_deref(), Some("CharacterArmature|Walk"));
+    }
+
+    #[test]
+    fn resolved_clip_binding_wins_over_legacy_mapping() {
+        let mut def = AssetDefinition::default();
+        def.animation_mapping.insert("walk".into(), "Old|Walk".into());
+        def.clip_tags.insert("New|Stroll".into(), "Locomotion/Walk".into());
+        def.animation_bindings.insert("walk".into(), "Locomotion/Walk".into());
+
+        assert_eq!(def.resolved_clip("walk").as_deref(), Some("New|Stroll"));
+    }
+
+    #[test]
+    fn resolved_clip_unconfigured_key_is_none() {
+        let def = AssetDefinition::default();
+        assert_eq!(def.resolved_clip("death"), None);
     }
 }

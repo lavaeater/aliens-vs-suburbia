@@ -1,0 +1,31 @@
+(
+    model_path: "packs/mesh2motion/amy.glb",
+    scale: 1.0666666,
+    model_type: Player((
+        ability: Bombardment,
+        throw_rate_per_minute: 60.0,
+    )),
+    hidden_nodes: [],
+    animation_mapping: {
+        "walk_shoot": "Victory RT",
+        "run_gun": "Pistol_Idle_Loop RT",
+        "hitreact": "Hit_Chest RT",
+        "no": "Melee_Hook_Rec RT",
+        "yes": "Yes RT",
+        "death": "Death01 RT",
+        "wave": "Greeting RT",
+        "idle_shoot": "Idle_Lantern_Loop RT",
+        "jump_idle": "Jump_Start RT",
+        "idle": "Idle_Loop RT",
+        "jump": "Jump_Loop RT",
+        "throwing": "OverhandThrow RT",
+        "building": "Interact RT",
+        "jump_land": "Jump_Land RT",
+        "run": "Run Anime RT",
+        "walk": "Walk_Loop RT",
+        "punch": "Punch_Cross RT",
+    },
+    animation_sources: [
+        "packs/mesh2motion/amy.glb",
+    ],
+)
