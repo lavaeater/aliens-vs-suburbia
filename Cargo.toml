@@ -38,7 +38,6 @@ strum = "0.28.0"
 # Use the submodule checkout so local edits to rusty_music take effect immediately.
 rusty_music = { path = "rusty_music" }
 bevy_seedling = { version = "0.7.2", default-features = false, features = ["wav"] }
-rolt = "0.3.1"
 
 [features]
 map-editor = ["dep:ratatui", "dep:crossterm"]
