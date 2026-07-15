@@ -147,6 +147,24 @@ pub fn setup_viewer_animation(
         None => return,
     };
     let Some(gltf) = gltf_assets.get(&gltf_handle) else { return };
+    let Some(viewer_entity) = state.viewer_entity else { return };
+
+    // The Scene spawns its entity hierarchy a frame or more after the Gltf asset
+    // finishes loading. If the model has embedded animations, its AnimationPlayer
+    // lives on a scene node, so wait for that node to spawn before wiring anything
+    // up — otherwise we'd bind our graph to a freshly inserted, target-less player
+    // and nothing would animate (this bit larger models like amy.glb hardest, since
+    // they lose the load-vs-spawn race). Retry next frame by leaving gltf_handle set.
+    let existing_player = get_child_with_component_recursive(viewer_entity, &child_query, &anim_players);
+    let scene_spawned = child_query.get(viewer_entity).map(|c| c.len() > 0).unwrap_or(false);
+    if existing_player.is_none() {
+        if !gltf.animations.is_empty() {
+            return; // has embedded anims; its player hasn't spawned yet
+        }
+        if !scene_spawned {
+            return; // wait so the fallback player lands on a real hierarchy
+        }
+    }
 
     // Collect mesh node names from the Gltf hierarchy.
     let mut mesh_nodes: Vec<String> = gltf.named_nodes.iter()
@@ -161,8 +179,6 @@ pub fn setup_viewer_animation(
     state.nodes_dirty = true;
     state.nodes_ui_dirty = true;
 
-    let Some(viewer_entity) = state.viewer_entity else { return };
-
     // Build graph with whatever clips the model itself has (may be empty).
     let mut names_by_index = vec![String::new(); gltf.animations.len()];
     for (name, handle) in &gltf.named_animations {
@@ -176,9 +192,9 @@ pub fn setup_viewer_animation(
         .collect();
     let graph_handle = animation_graphs.add(graph);
 
-    // Find the AnimationPlayer in the hierarchy, or insert one on the viewer root
-    // (needed for models that have no embedded animations so external clips can play).
-    let player_entity = get_child_with_component_recursive(viewer_entity, &child_query, &anim_players)
+    // Use the scene's own AnimationPlayer (found above), or — only for models with
+    // no embedded animations — insert one on the viewer root so external clips can play.
+    let player_entity = existing_player
         .unwrap_or_else(|| {
             commands.entity(viewer_entity).insert(AnimationPlayer::default());
             viewer_entity
