@@ -16,6 +16,9 @@ use crate::ui::spawn_ui::StateMarker;
 #[derive(Component)] pub struct AssetAnimLabel;
 #[derive(Component)] pub struct NodeListContainer;
 #[derive(Component)] pub struct ClipTagContainer;
+/// Kept for a future re-enable of the game-key -> tag-path binding UI. Currently
+/// not spawned; bind resolution still works off the persisted `animation_bindings`.
+#[allow(dead_code)]
 #[derive(Component)] pub struct BindingContainer;
 #[derive(Component)] pub struct FolderContainer;
 #[derive(Component)] pub struct FolderPathLabel;
@@ -104,23 +107,13 @@ pub fn spawn_asset_browser_ui(
             c.insert_bundle(lava_ui_builder::label("click a clip, type a path e.g. Combat/Ranged/Shoot", &hint));
         });
         left.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label("scroll wheel over the list to see more", &hint));
+        });
+        left.with_child(|c| {
             c.display_flex().flex_column().gap_px(2.0)
              .overflow_scroll_y()
-             .modify_node(|mut n| { n.align_self = AlignSelf::Stretch; n.max_height = Val::Px(170.0); })
+             .modify_node(|mut n| { n.align_self = AlignSelf::Stretch; n.max_height = Val::Px(280.0); })
              .insert(ClipTagContainer).insert(ScrollPosition::default());
-        });
-
-        // Key bindings section — bind each game animation key to a tag path.
-        left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label("-- Key Bindings --", &TextTheme {
-                label_size: 11.0, label_color: Color::srgb(0.5, 0.8, 0.6), ..t.clone()
-            }));
-        });
-        left.with_child(|c| {
-            c.display_flex().flex_column().gap_px(2.0)
-             .overflow_scroll_y()
-             .modify_node(|mut n| { n.align_self = AlignSelf::Stretch; n.max_height = Val::Px(150.0); })
-             .insert(BindingContainer).insert(ScrollPosition::default());
         });
 
         // Height section
@@ -373,6 +366,41 @@ pub fn scroll_to_selection(
     }
 }
 
+/// Mouse-wheel scrolling for the clip-tag list: scrolls only while the cursor is
+/// over the list, and clamps to the scrollable range so scroll offset never runs
+/// past the content (Bevy clamps the rendered offset but not the component value).
+pub fn scroll_clip_tag_list(
+    mut wheel: MessageReader<bevy::input::mouse::MouseWheel>,
+    windows: Query<&Window>,
+    mut container_q: Query<(&ComputedNode, &bevy::ui::UiGlobalTransform, &mut ScrollPosition), With<ClipTagContainer>>,
+) {
+    use bevy::input::mouse::MouseScrollUnit;
+    let mut dy = 0.0f32;
+    for ev in wheel.read() {
+        dy += match ev.unit {
+            MouseScrollUnit::Line => ev.y * 18.0,
+            MouseScrollUnit::Pixel => ev.y,
+        };
+    }
+    if dy == 0.0 { return; }
+
+    let Ok(window) = windows.single() else { return };
+    let Some(cursor) = window.cursor_position() else { return };
+    let cursor = cursor * window.scale_factor(); // logical -> physical
+
+    let Ok((node, transform, mut scroll)) = container_q.single_mut() else { return };
+    let size = node.size();
+    let center = transform.affine().translation;
+    let min = center - size * 0.5;
+    let max = center + size * 0.5;
+    if cursor.x < min.x || cursor.x > max.x || cursor.y < min.y || cursor.y > max.y {
+        return;
+    }
+
+    let max_scroll = (node.content_size().y - size.y).max(0.0);
+    scroll.0.y = (scroll.0.y - dy).clamp(0.0, max_scroll);
+}
+
 pub fn rebuild_node_list(
     mut state: ResMut<AssetBrowserState>,
     mut commands: Commands,
@@ -413,12 +441,12 @@ pub fn rebuild_node_list(
 /// to open a text box and type a free-form hierarchical tag path. While editing,
 /// the buffer and any matching autocomplete suggestions are shown inline.
 pub fn rebuild_clip_tag_list(
-    state: Res<AssetBrowserState>,
+    mut state: ResMut<AssetBrowserState>,
     mut commands: Commands,
     container_q: Query<Entity, With<ClipTagContainer>>,
 ) {
     if !state.tags_dirty { return; }
-    // tags_dirty is also consumed by rebuild_binding_list; clear it there (runs after).
+    state.tags_dirty = false;
 
     let Ok(container) = container_q.single() else { return };
     commands.entity(container).despawn_related::<Children>();
@@ -532,13 +560,14 @@ pub fn rebuild_clip_tag_list(
 }
 
 /// One row per game animation key, cycling its binding through the in-use tag paths.
+/// Currently unregistered — the bindings UI is hidden for now (see BindingContainer).
+#[allow(dead_code)]
 pub fn rebuild_binding_list(
-    mut state: ResMut<AssetBrowserState>,
+    state: Res<AssetBrowserState>,
     mut commands: Commands,
     container_q: Query<Entity, With<BindingContainer>>,
 ) {
     if !state.tags_dirty { return; }
-    state.tags_dirty = false; // last consumer of the flag
 
     let Ok(container) = container_q.single() else { return };
     commands.entity(container).despawn_related::<Children>();

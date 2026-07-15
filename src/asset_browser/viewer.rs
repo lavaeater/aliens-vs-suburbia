@@ -104,12 +104,30 @@ pub fn orbit_viewer(
 pub fn zoom_viewer(
     mut cameras: Query<&mut Transform, With<AssetBrowserViewerCamera>>,
     mut scroll: MessageReader<bevy::input::mouse::MouseWheel>,
+    windows: Query<&Window>,
+    panels: Query<(&bevy::ui::ComputedNode, &bevy::ui::UiGlobalTransform), With<AssetBrowserViewerPanel>>,
 ) {
     let mut delta = 0.0f32;
     for ev in scroll.read() {
         delta -= ev.y;
     }
     if delta == 0.0 { return; }
+
+    // Only zoom when the cursor is over the 3D viewer panel, so scrolling the
+    // clip-tag list (or other left-panel lists) doesn't also move the camera.
+    if let (Ok(window), Ok((node, transform))) = (windows.single(), panels.single())
+        && let Some(cursor) = window.cursor_position()
+    {
+        let cursor = cursor * window.scale_factor();
+        let size = node.size();
+        let center = transform.affine().translation;
+        let min = center - size * 0.5;
+        let max = center + size * 0.5;
+        if cursor.x < min.x || cursor.x > max.x || cursor.y < min.y || cursor.y > max.y {
+            return;
+        }
+    }
+
     let Ok(mut transform) = cameras.single_mut() else { return };
     let forward = transform.forward().as_vec3();
     transform.translation += forward * delta * 0.3;
