@@ -1,11 +1,13 @@
 use bevy::app::{App, Plugin, Update};
 use bevy::prelude::{IntoScheduleConfigs, OnEnter, OnExit, in_state};
 use crate::asset_browser::state::AssetBrowserState;
-use crate::asset_browser::ui::{handle_key_input, rebuild_clip_tag_list, rebuild_folder_list, rebuild_list, rebuild_node_list, rebuild_sources_list, rebuild_type_picker, scroll_clip_tag_list, scroll_to_selection, spawn_asset_browser_ui};
+use crate::asset_browser::ui::{handle_key_input, rebuild_attachment_panel, rebuild_bone_list, rebuild_clip_tag_list, rebuild_folder_list, rebuild_list, rebuild_node_list, rebuild_sources_list, rebuild_type_picker, scroll_clip_tag_list, scroll_to_selection, spawn_asset_browser_ui};
 use crate::asset_browser::viewer::{
-    apply_node_visibility, apply_viewer_animation, apply_viewer_scale, compute_model_height,
-    handle_model_load, load_extra_animation_sources, merge_extra_anim_clips,
-    orbit_viewer, setup_viewer_animation, spawn_asset_browser_cameras,
+    apply_attachment_transforms, apply_node_visibility, apply_viewer_animation, apply_viewer_scale,
+    collect_bone_names, compute_model_height,
+    draw_skeleton_gizmos, handle_model_load, load_extra_animation_sources, merge_extra_anim_clips,
+    orbit_viewer, rebuild_attachment_scenes, reset_skeleton_gizmo_config, setup_skeleton_gizmo_config,
+    setup_viewer_animation, spawn_asset_browser_cameras,
     sync_viewer_viewport, zoom_viewer,
 };
 use crate::game_state::GameState;
@@ -18,9 +20,9 @@ impl Plugin for AssetBrowserPlugin {
         app.init_resource::<AssetBrowserState>()
             .add_systems(
                 OnEnter(GameState::AssetBrowser),
-                (spawn_asset_browser_ui, spawn_asset_browser_cameras),
+                (spawn_asset_browser_ui, spawn_asset_browser_cameras, setup_skeleton_gizmo_config),
             )
-            .add_systems(OnExit(GameState::AssetBrowser), cleanup_state)
+            .add_systems(OnExit(GameState::AssetBrowser), (cleanup_state, reset_skeleton_gizmo_config))
             .add_systems(
                 Update,
                 (
@@ -44,6 +46,18 @@ impl Plugin for AssetBrowserPlugin {
                     rebuild_clip_tag_list,
                     rebuild_sources_list,
                     rebuild_type_picker,
+                )
+                    .run_if(in_state(GameState::AssetBrowser)),
+            )
+            .add_systems(
+                Update,
+                (
+                    draw_skeleton_gizmos,
+                    collect_bone_names,
+                    rebuild_attachment_scenes,
+                    apply_attachment_transforms,
+                    rebuild_bone_list,
+                    rebuild_attachment_panel,
                 )
                     .run_if(in_state(GameState::AssetBrowser)),
             );

@@ -117,6 +117,37 @@ impl ModelType {
     }
 }
 
+/// A model attached to one of a character's bones (a "socket"), e.g. a rifle in
+/// the right hand. Positioned by a local offset relative to the bone.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Attachment {
+    /// Name of the bone entity to parent the attached model to (e.g. "mixamorigRightHand").
+    pub bone: String,
+    /// Path of the attached model, relative to `assets/` with no prefix (same as `model_path`).
+    pub model_path: String,
+    /// Local translation relative to the bone.
+    #[serde(default)]
+    pub translation: [f32; 3],
+    /// Local rotation relative to the bone, as XYZ Euler angles in degrees.
+    #[serde(default)]
+    pub rotation_euler_deg: [f32; 3],
+    /// Local uniform scale.
+    #[serde(default = "default_scale")]
+    pub scale: f32,
+}
+
+impl Default for Attachment {
+    fn default() -> Self {
+        Self {
+            bone: String::new(),
+            model_path: String::new(),
+            translation: [0.0; 3],
+            rotation_euler_deg: [0.0; 3],
+            scale: 1.0,
+        }
+    }
+}
+
 /// Persisted definition for one imported asset. Written to `assets/defs/*.ron`
 /// by the asset browser and read at runtime to drive hidden-node lists and
 /// animation mappings without hard-coding them in source.
@@ -152,6 +183,9 @@ pub struct AssetDefinition {
     /// e.g. "packs/AnimPack.glb"
     #[serde(default)]
     pub animation_sources: Vec<String>,
+    /// Models attached to the character's bones (e.g. a held rifle).
+    #[serde(default)]
+    pub attachments: Vec<Attachment>,
 }
 
 impl Default for AssetDefinition {
@@ -165,6 +199,7 @@ impl Default for AssetDefinition {
             clip_tags: HashMap::new(),
             animation_bindings: HashMap::new(),
             animation_sources: Vec::new(),
+            attachments: Vec::new(),
         }
     }
 }

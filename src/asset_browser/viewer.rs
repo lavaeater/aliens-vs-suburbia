@@ -15,6 +15,175 @@ pub struct AssetBrowserViewerModel;
 #[derive(Component)]
 pub struct AssetBrowserViewerPanel;
 
+/// Pull the default gizmos slightly toward the camera so the skeleton overlay
+/// draws on top of the mesh instead of being hidden inside it.
+pub fn setup_skeleton_gizmo_config(mut config_store: ResMut<GizmoConfigStore>) {
+    let (config, _) = config_store.config_mut::<DefaultGizmoConfigGroup>();
+    config.depth_bias = -1.0;
+    config.line.width = 2.0;
+}
+
+/// Restore the default gizmo config on exit so other states' debug gizmos aren't
+/// affected by the skeleton overlay's depth bias.
+pub fn reset_skeleton_gizmo_config(mut config_store: ResMut<GizmoConfigStore>) {
+    let (config, _) = config_store.config_mut::<DefaultGizmoConfigGroup>();
+    config.depth_bias = 0.0;
+}
+
+/// Draw the skinned-mesh skeleton as gizmo lines (bone -> parent bone) plus a small
+/// cross at each joint. Toggled with `B` via `AssetBrowserState::show_skeleton`.
+pub fn draw_skeleton_gizmos(
+    state: Res<AssetBrowserState>,
+    mut gizmos: Gizmos,
+    skinned_q: Query<&bevy::mesh::skinning::SkinnedMesh>,
+    transforms: Query<&GlobalTransform>,
+    names: Query<&Name>,
+    parents: Query<&ChildOf>,
+) {
+    if !state.show_skeleton { return; }
+
+    // Union of all joints across the model's skinned meshes (asset browser only
+    // ever shows one model at a time).
+    let mut joints: std::collections::HashSet<Entity> = std::collections::HashSet::new();
+    for sm in skinned_q.iter() {
+        joints.extend(sm.joints.iter().copied());
+    }
+    if joints.is_empty() { return; }
+
+    let selected_bone = state.selected_bone_name();
+    let bone_color = Color::srgb(0.2, 1.0, 0.5);
+    let joint_color = Color::srgb(1.0, 0.85, 0.2);
+    let socket_color = Color::srgb(1.0, 0.3, 0.9);
+    for &joint in &joints {
+        let Ok(jt) = transforms.get(joint) else { continue };
+        let p = jt.translation();
+
+        // Highlight the joint currently chosen as the attachment socket.
+        let is_socket = selected_bone.is_some()
+            && names.get(joint).map(|n| Some(n.as_str()) == selected_bone).unwrap_or(false);
+        let (mark_color, s) = if is_socket { (socket_color, 0.03) } else { (joint_color, 0.012) };
+
+        // Joint marker: a small 3-axis cross scaled to the model.
+        gizmos.line(p - Vec3::X * s, p + Vec3::X * s, mark_color);
+        gizmos.line(p - Vec3::Y * s, p + Vec3::Y * s, mark_color);
+        gizmos.line(p - Vec3::Z * s, p + Vec3::Z * s, mark_color);
+
+        // Bone segment to the parent joint (skip the skeleton root, whose parent
+        // is a non-joint scene node).
+        if let Ok(child_of) = parents.get(joint)
+            && joints.contains(&child_of.parent())
+            && let Ok(pt) = transforms.get(child_of.parent())
+        {
+            gizmos.line(pt.translation(), p, bone_color);
+        }
+    }
+}
+
+/// Build a local Transform from an attachment's stored offset (Euler degrees).
+fn attachment_transform(a: &crate::asset_browser::state::Attachment) -> Transform {
+    let [rx, ry, rz] = a.rotation_euler_deg;
+    Transform {
+        translation: Vec3::from(a.translation),
+        rotation: Quat::from_euler(EulerRot::XYZ, rx.to_radians(), ry.to_radians(), rz.to_radians()),
+        scale: Vec3::splat(a.scale),
+    }
+}
+
+/// Once the scene spawns, collect the skeleton's bone names (sorted) so the UI can
+/// list them. Retries each frame until a skinned mesh with named joints appears.
+pub fn collect_bone_names(
+    mut state: ResMut<AssetBrowserState>,
+    skinned_q: Query<&bevy::mesh::skinning::SkinnedMesh>,
+    names: Query<&Name>,
+) {
+    if !state.bone_names.is_empty() { return; }
+    let mut set: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    for sm in skinned_q.iter() {
+        for &j in &sm.joints {
+            if let Ok(n) = names.get(j) {
+                set.insert(n.as_str().to_string());
+            }
+        }
+    }
+    if set.is_empty() { return; }
+    state.bone_names = set.into_iter().collect();
+    state.bones_ui_dirty = true;
+    state.attachments_struct_dirty = true; // bones now resolvable → (re)spawn previews
+}
+
+/// Spawn/refresh the preview weapon scenes, parenting each attachment to its bone.
+/// Runs on structural changes (bone/model/count). Waits until bones are resolvable.
+pub fn rebuild_attachment_scenes(
+    mut state: ResMut<AssetBrowserState>,
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    skinned_q: Query<&bevy::mesh::skinning::SkinnedMesh>,
+    names: Query<&Name>,
+) {
+    if !state.attachments_struct_dirty { return; }
+
+    // Map bone name -> entity from the skinned mesh joints.
+    let mut bone_map: std::collections::HashMap<String, Entity> = std::collections::HashMap::new();
+    for sm in skinned_q.iter() {
+        for &j in &sm.joints {
+            if let Ok(n) = names.get(j) {
+                bone_map.entry(n.as_str().to_string()).or_insert(j);
+            }
+        }
+    }
+    // If there are attachments to place but the skeleton isn't ready, retry later.
+    if !state.attachments.is_empty() && bone_map.is_empty() {
+        return;
+    }
+
+    // Despawn stale previews.
+    for e in std::mem::take(&mut state.attachment_preview_entities).into_iter().flatten() {
+        commands.entity(e).despawn();
+    }
+
+    let attachments = state.attachments.clone();
+    let mut preview = Vec::with_capacity(attachments.len());
+    for a in &attachments {
+        if a.model_path.is_empty() {
+            preview.push(None);
+            continue;
+        }
+        if let Some(&bone_ent) = bone_map.get(&a.bone) {
+            let scene: Handle<Scene> = asset_server.load(
+                GltfAssetLabel::Scene(0).from_asset(a.model_path.clone()),
+            );
+            let e = commands.spawn((SceneRoot(scene), attachment_transform(a), StateMarker)).id();
+            commands.entity(bone_ent).add_child(e);
+            preview.push(Some(e));
+        } else {
+            preview.push(None);
+        }
+    }
+    state.attachment_preview_entities = preview;
+    state.attachments_struct_dirty = false;
+    state.attachments_xform_dirty = false; // transforms already applied at spawn
+}
+
+/// Update preview weapon transforms in place when only the offset changed (cheap;
+/// avoids respawning the scene on every nudge).
+pub fn apply_attachment_transforms(
+    mut state: ResMut<AssetBrowserState>,
+    mut transforms: Query<&mut Transform>,
+) {
+    if !state.attachments_xform_dirty { return; }
+    state.attachments_xform_dirty = false;
+
+    let updates: Vec<(Entity, Transform)> = state.attachments.iter()
+        .zip(state.attachment_preview_entities.iter())
+        .filter_map(|(a, e)| (*e).map(|ent| (ent, attachment_transform(a))))
+        .collect();
+    for (ent, t) in updates {
+        if let Ok(mut tr) = transforms.get_mut(ent) {
+            *tr = t;
+        }
+    }
+}
+
 pub fn spawn_asset_browser_cameras(mut commands: Commands) {
     commands.spawn((
         Camera2d,
@@ -156,7 +325,7 @@ pub fn setup_viewer_animation(
     // and nothing would animate (this bit larger models like amy.glb hardest, since
     // they lose the load-vs-spawn race). Retry next frame by leaving gltf_handle set.
     let existing_player = get_child_with_component_recursive(viewer_entity, &child_query, &anim_players);
-    let scene_spawned = child_query.get(viewer_entity).map(|c| c.len() > 0).unwrap_or(false);
+    let scene_spawned = child_query.get(viewer_entity).map(|c| !c.is_empty()).unwrap_or(false);
     if existing_player.is_none() {
         if !gltf.animations.is_empty() {
             return; // has embedded anims; its player hasn't spawned yet

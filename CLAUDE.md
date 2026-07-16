@@ -56,7 +56,7 @@ Most gameplay systems use `.run_if(in_state(InGame))`. Physics runs on a fixed t
 | `src/music/` | Generative soundtrack via the `rusty_music` submodule (path dep). `GameMusicPlugin` spawns the band; `MusicMoods` holds two intensity measures (`combat`, `danger`) computed from game state, smoothed into the global `Intensity` and gating musician channels (`Ambient`/`Groove`/`Combat`/`Danger`) via `Muted` with hysteresis. Samples live in `assets/instruments/` (copied from `rusty_music/assets/samples/`). |
 | `src/camera/` | Isometric camera tracking with wall occlusion fading. |
 | `src/assets/` | `AssetDefinition` (`asset_definition.rs`) — the core per-model def type persisted to `assets/defs/*.ron`. |
-| `src/asset_browser/` | In-engine tool for importing models: browse GLB files, set scale/height, toggle hidden nodes, tag each animation clip with a free-form hierarchical path and bind game animation keys to those tag paths, add external animation sources, set `ModelType`. Press `I` to export `.ron`. |
+| `src/asset_browser/` | In-engine tool for importing models: browse GLB files, set scale/height, toggle hidden nodes, tag each animation clip with a free-form hierarchical path and bind game animation keys to those tag paths, add external animation sources, set `ModelType`, overlay the skinned skeleton (`B`), and attach weapon models to bones (sockets) with live numeric-nudge offset editing. Press `I` to export `.ron`. |
 | `src/player_setup/` | `GameState::PlayerSetup` screen. Keyboard (Enter) and gamepad (South) to join slots, arrow keys / d-pad to pick model. Writes `PlayerRoster` resource. |
 | `src/map_editor/` | `GameState::MapEditor`. Grid-based map layout tool. Palette sidebar filtered by `ModelType`. Left-click to place, right-click erase, `R` rotate, `S` save. Wave editor on right panel. |
 | `src/model_settings/` | Live model hot-reload, `build_player_anim_graph` — builds the player animation graph, resolves `stem|clip` values against external GLTF sources. |
@@ -73,6 +73,7 @@ Stored at `assets/defs/<model-stem>.ron`. Fields:
 - `animation_bindings` — `HashMap<game_state_key, tag_path>`. Binds a game key to a tag path; at runtime `AssetDefinition::resolved_clip` maps game key -> tag path -> the clip carrying that tag.
 - `animation_mapping` — **legacy** `HashMap<game_state_key, clip_fragment>`. Superseded by `clip_tags` + `animation_bindings`; still read at runtime as a fallback and auto-migrated into tags/bindings when an old def is loaded in the asset browser.
 - `animation_sources` — paths (relative to `assets/`) of external GLB/GLTF animation files. **No `assets/` prefix** — same convention as `model_path`.
+- `attachments` — `Vec<Attachment>` of models socketed to bones (e.g. a held rifle). Each has `bone` (bone entity name), `model_path`, and a local offset (`translation`, `rotation_euler_deg`, `scale`). Currently authored/previewed in the asset browser only; runtime spawning on characters is not wired up yet.
 
 ### Economy
 

@@ -26,6 +26,8 @@ use crate::ui::spawn_ui::StateMarker;
 #[derive(Component)] pub struct TypeContainer;
 #[derive(Component)] pub struct TypePropsContainer;
 #[derive(Component)] pub struct SourcesContainer;
+#[derive(Component)] pub struct BoneListContainer;
+#[derive(Component)] pub struct AttachmentContainer;
 
 #[derive(Component)] pub struct ListItem(pub usize);
 
@@ -61,6 +63,7 @@ pub fn spawn_asset_browser_ui(
         left.with_child(|c| { c.insert_bundle(lava_ui_builder::header("Asset Browser", &t)); });
         left.with_child(|c| { c.insert_bundle(lava_ui_builder::label("[Up/Dn] navigate  [Enter] load  [I] import", &hint)); });
         left.with_child(|c| { c.insert_bundle(lava_ui_builder::label("[Bksp] up folder  [[ ]] anim  [= / -] height", &hint)); });
+        left.with_child(|c| { c.insert_bundle(lava_ui_builder::label("[B] toggle skeleton overlay", &hint)); });
 
         // Current folder path
         left.with_child(|c| {
@@ -112,7 +115,7 @@ pub fn spawn_asset_browser_ui(
         left.with_child(|c| {
             c.display_flex().flex_column().gap_px(2.0)
              .overflow_scroll_y()
-             .modify_node(|mut n| { n.align_self = AlignSelf::Stretch; n.max_height = Val::Px(280.0); })
+             .modify_node(|mut n| { n.align_self = AlignSelf::Stretch; n.max_height = Val::Px(180.0); })
              .insert(ClipTagContainer).insert(ScrollPosition::default());
         });
 
@@ -175,6 +178,35 @@ pub fn spawn_asset_browser_ui(
                 }
             });
 
+        // Weapon attachment section
+        left.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label("-- Weapon Attach --", &TextTheme {
+                label_size: 11.0, label_color: Color::srgb(0.5, 0.8, 0.6), ..t.clone()
+            }));
+        });
+        left.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label("[B] skeleton  [, .] cycle bone  then Attach", &hint));
+        });
+        // Bone list (click to pick the socket)
+        left.with_child(|c| {
+            c.display_flex().flex_column().gap_px(1.0)
+             .overflow_scroll_y()
+             .modify_node(|mut n| { n.align_self = AlignSelf::Stretch; n.max_height = Val::Px(110.0); })
+             .insert(BoneListContainer).insert(ScrollPosition::default());
+        });
+        left.add_button_observe("Attach selected file to bone", |b| { b.width(percent(100.0)).height(px(22.0)).font_size(11.0); },
+            |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                if let Some(path) = s.selected_path().map(|p| p.to_string()) {
+                    s.attach_selected_model(path);
+                }
+            });
+        // Attachment editor (socket info + offset nudge controls)
+        left.with_child(|c| {
+            c.display_flex().flex_column().gap_px(2.0)
+             .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
+             .insert(AttachmentContainer);
+        });
+
         // File list
         left.with_child(|c| {
             c.with_flex_grow(1.0).width_percent(100.0)
@@ -236,6 +268,9 @@ pub fn handle_key_input(
             Key::Character(c) if c == "=" || c == "+" => state.height_up(),
             Key::Character(c) if c == "-" => state.height_down(),
             Key::Character(c) if c == "i" || c == "I" => state.export_definition(),
+            Key::Character(c) if c == "b" || c == "B" => state.toggle_skeleton(),
+            Key::Character(c) if c == "," => state.cycle_bone(-1),
+            Key::Character(c) if c == "." => state.cycle_bone(1),
             _ => {}
         }
     }
@@ -769,6 +804,188 @@ pub fn rebuild_sources_list(
                 });
             });
         }
+    });
+}
+
+// ── Weapon attachment UI ──────────────────────────────────────────────────────
+
+#[derive(Clone, Copy)]
+enum NudgeKind { TransX, TransY, TransZ, RotX, RotY, RotZ, Scale }
+
+fn apply_nudge(s: &mut AssetBrowserState, kind: NudgeKind, delta: f32) {
+    match kind {
+        NudgeKind::TransX => s.nudge_translation(0, delta),
+        NudgeKind::TransY => s.nudge_translation(1, delta),
+        NudgeKind::TransZ => s.nudge_translation(2, delta),
+        NudgeKind::RotX  => s.nudge_rotation(0, delta),
+        NudgeKind::RotY  => s.nudge_rotation(1, delta),
+        NudgeKind::RotZ  => s.nudge_rotation(2, delta),
+        // Scale is multiplicative: the sign of `delta` picks grow (x1.1) vs shrink.
+        NudgeKind::Scale => s.nudge_scale(if delta > 0.0 { 1.1 } else { 1.0 / 1.1 }),
+    }
+}
+
+pub fn rebuild_bone_list(
+    mut state: ResMut<AssetBrowserState>,
+    mut commands: Commands,
+    container_q: Query<Entity, With<BoneListContainer>>,
+) {
+    if !state.bones_ui_dirty { return; }
+    state.bones_ui_dirty = false;
+
+    let Ok(container) = container_q.single() else { return };
+    commands.entity(container).despawn_related::<Children>();
+
+    let bones: Vec<String> = state.bone_names.clone();
+    let selected = state.selected_bone;
+
+    commands.entity(container).with_children(|parent| {
+        if bones.is_empty() {
+            parent.spawn((
+                Text::new("(no skeleton / still loading)"),
+                TextFont::default().with_font_size(10.0),
+                TextColor(Color::srgba(0.4, 0.5, 0.4, 0.6)),
+            ));
+            return;
+        }
+        for (idx, name) in bones.iter().enumerate() {
+            let is_sel = idx == selected;
+            let bg = if is_sel { Color::srgba(0.35, 0.12, 0.30, 0.95) } else { Color::srgba(0.07, 0.10, 0.14, 0.70) };
+            let tc = if is_sel { Color::srgb(1.0, 0.7, 0.95) } else { Color::srgb(0.7, 0.78, 0.85) };
+            parent.spawn((
+                Node { width: Val::Percent(100.0), padding: UiRect::axes(Val::Px(5.0), Val::Px(2.0)), border_radius: BorderRadius::all(Val::Px(3.0)), ..Default::default() },
+                BackgroundColor(bg),
+                InteractionPalette { none: bg, hovered: Color::srgba(0.25, 0.15, 0.30, 0.9), pressed: Color::srgba(0.18, 0.10, 0.22, 1.0) },
+                bevy::picking::hover::Hovered::default(),
+                bevy::ui_widgets::Button,
+            ))
+            .with_child((Text::new(name.clone()), TextFont::default().with_font_size(10.0), TextColor(tc)))
+            .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.set_selected_bone(idx); });
+        }
+    });
+}
+
+pub fn rebuild_attachment_panel(
+    mut state: ResMut<AssetBrowserState>,
+    mut commands: Commands,
+    container_q: Query<Entity, With<AttachmentContainer>>,
+) {
+    if !state.attachment_ui_dirty { return; }
+    state.attachment_ui_dirty = false;
+
+    let Ok(container) = container_q.single() else { return };
+    commands.entity(container).despawn_related::<Children>();
+
+    let attachments = state.attachments.clone();
+    let active_idx = state.active_attachment;
+    let active = state.active_attachment_ref().cloned();
+
+    commands.entity(container).with_children(|parent| {
+        if attachments.is_empty() {
+            parent.spawn((
+                Text::new("no attachments"),
+                TextFont::default().with_font_size(10.0),
+                TextColor(Color::srgba(0.4, 0.5, 0.4, 0.6)),
+            ));
+            return;
+        }
+
+        // Chips to switch the active attachment.
+        parent.spawn((Node { flex_direction: FlexDirection::Row, flex_wrap: FlexWrap::Wrap, column_gap: Val::Px(3.0), row_gap: Val::Px(3.0), ..Default::default() },))
+            .with_children(|chips| {
+                for (idx, a) in attachments.iter().enumerate() {
+                    let is_active = Some(idx) == active_idx;
+                    let stem = std::path::Path::new(&a.model_path).file_stem().and_then(|s| s.to_str()).unwrap_or("?").to_string();
+                    let bg = if is_active { Color::srgba(0.20, 0.40, 0.25, 0.95) } else { Color::srgba(0.10, 0.16, 0.12, 0.85) };
+                    chips.spawn((
+                        Node { padding: UiRect::axes(Val::Px(6.0), Val::Px(2.0)), border_radius: BorderRadius::all(Val::Px(3.0)), ..Default::default() },
+                        BackgroundColor(bg),
+                        InteractionPalette { none: bg, hovered: Color::srgba(0.25, 0.5, 0.30, 0.95), pressed: Color::srgba(0.15, 0.3, 0.20, 1.0) },
+                        bevy::picking::hover::Hovered::default(),
+                        bevy::ui_widgets::Button,
+                    ))
+                    .with_child((Text::new(stem), TextFont::default().with_font_size(9.0), TextColor(Color::srgb(0.8, 1.0, 0.85))))
+                    .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.select_attachment(idx); });
+                }
+            });
+
+        let Some(a) = active else { return };
+
+        // Header: model @ bone
+        let stem = std::path::Path::new(&a.model_path).file_stem().and_then(|s| s.to_str()).unwrap_or("?").to_string();
+        parent.spawn((
+            Text::new(format!("{stem} @ {}", a.bone)),
+            TextFont::default().with_font_size(10.0),
+            TextColor(Color::srgb(0.85, 0.8, 1.0)),
+            Node { padding: UiRect::axes(Val::Px(2.0), Val::Px(1.0)), ..Default::default() },
+        ));
+
+        // Offset nudge rows.
+        let rows: [(&str, String, NudgeKind, f32); 7] = [
+            ("Pos X", format!("{:+.3}", a.translation[0]), NudgeKind::TransX, 0.01),
+            ("Pos Y", format!("{:+.3}", a.translation[1]), NudgeKind::TransY, 0.01),
+            ("Pos Z", format!("{:+.3}", a.translation[2]), NudgeKind::TransZ, 0.01),
+            ("Rot X", format!("{:.0}", a.rotation_euler_deg[0]), NudgeKind::RotX, 5.0),
+            ("Rot Y", format!("{:.0}", a.rotation_euler_deg[1]), NudgeKind::RotY, 5.0),
+            ("Rot Z", format!("{:.0}", a.rotation_euler_deg[2]), NudgeKind::RotZ, 5.0),
+            ("Scale", format!("{:.2}", a.scale), NudgeKind::Scale, 0.05),
+        ];
+        for (label, value, kind, step) in rows {
+            parent.spawn((
+                Node { width: Val::Percent(100.0), flex_direction: FlexDirection::Row, align_items: AlignItems::Center, column_gap: Val::Px(4.0), padding: UiRect::axes(Val::Px(2.0), Val::Px(1.0)), ..Default::default() },
+                BackgroundColor(Color::srgba(0.07, 0.10, 0.14, 0.6)),
+            ))
+            .with_children(|row| {
+                row.spawn((Text::new(label), TextFont::default().with_font_size(10.0), TextColor(Color::srgb(0.6, 0.75, 0.6)),
+                    Node { width: Val::Px(38.0), ..Default::default() }));
+                row.spawn((
+                    Node { width: Val::Px(16.0), justify_content: JustifyContent::Center, ..Default::default() },
+                    BackgroundColor(Color::srgba(0.15, 0.15, 0.15, 0.6)),
+                    bevy::picking::hover::Hovered::default(),
+                    bevy::ui_widgets::Button,
+                ))
+                .with_child((Text::new("-"), TextFont::default().with_font_size(11.0), TextColor(Color::srgb(0.8, 0.8, 0.8))))
+                .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { apply_nudge(&mut s, kind, -step); });
+
+                row.spawn((Text::new(value), TextFont::default().with_font_size(10.0), TextColor(Color::srgb(0.9, 0.85, 0.65)),
+                    Node { flex_grow: 1.0, justify_content: JustifyContent::Center, ..Default::default() }));
+
+                row.spawn((
+                    Node { width: Val::Px(16.0), justify_content: JustifyContent::Center, ..Default::default() },
+                    BackgroundColor(Color::srgba(0.15, 0.15, 0.15, 0.6)),
+                    bevy::picking::hover::Hovered::default(),
+                    bevy::ui_widgets::Button,
+                ))
+                .with_child((Text::new("+"), TextFont::default().with_font_size(11.0), TextColor(Color::srgb(0.8, 0.8, 0.8))))
+                .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { apply_nudge(&mut s, kind, step); });
+            });
+        }
+
+        // Re-socket + remove buttons.
+        parent.spawn((Node { flex_direction: FlexDirection::Row, column_gap: Val::Px(4.0), ..Default::default() },))
+            .with_children(|row| {
+                let rebg = Color::srgba(0.12, 0.22, 0.35, 0.9);
+                row.spawn((
+                    Node { flex_grow: 1.0, padding: UiRect::axes(Val::Px(4.0), Val::Px(3.0)), justify_content: JustifyContent::Center, border_radius: BorderRadius::all(Val::Px(3.0)), ..Default::default() },
+                    BackgroundColor(rebg),
+                    InteractionPalette { none: rebg, hovered: Color::srgba(0.18, 0.32, 0.5, 0.95), pressed: Color::srgba(0.10, 0.18, 0.30, 1.0) },
+                    bevy::picking::hover::Hovered::default(),
+                    bevy::ui_widgets::Button,
+                ))
+                .with_child((Text::new("Set to bone"), TextFont::default().with_font_size(10.0), TextColor(Color::srgb(0.8, 0.9, 1.0))))
+                .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.set_active_attachment_bone(); });
+
+                let rmbg = Color::srgba(0.35, 0.1, 0.1, 0.85);
+                row.spawn((
+                    Node { padding: UiRect::axes(Val::Px(8.0), Val::Px(3.0)), justify_content: JustifyContent::Center, border_radius: BorderRadius::all(Val::Px(3.0)), ..Default::default() },
+                    BackgroundColor(rmbg),
+                    InteractionPalette { none: rmbg, hovered: Color::srgba(0.55, 0.15, 0.15, 0.95), pressed: Color::srgba(0.28, 0.08, 0.08, 1.0) },
+                    bevy::picking::hover::Hovered::default(),
+                    bevy::ui_widgets::Button,
+                ))
+                .with_child((Text::new("Remove"), TextFont::default().with_font_size(10.0), TextColor(Color::srgb(1.0, 0.8, 0.8))))
+                .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.remove_active_attachment(); });
+            });
     });
 }
 

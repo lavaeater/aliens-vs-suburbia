@@ -4,7 +4,8 @@ use bevy::prelude::*;
 use std::collections::{HashMap, HashSet};
 
 // Re-export from shared location so asset browser code keeps using the same name.
-pub use crate::assets::asset_definition::{AssetDefinition, ModelType};
+pub use crate::assets::asset_definition::{Attachment, AssetDefinition, ModelType};
+use bevy::prelude::Entity;
 
 const WINDOW_SIZE: usize = 36;
 pub const CHARACTER_NODE_PREFIX: &str = "Character_";
@@ -73,6 +74,30 @@ pub struct AssetBrowserState {
     pub tag_edit_clip: Option<String>,
     pub tag_edit_buffer: String,
 
+    // ── Skeleton overlay ───────────────────────────────────────────────────────
+    /// Draw the skinned-mesh skeleton (bones) as a gizmo overlay on the model.
+    pub show_skeleton: bool,
+
+    // ── Weapon attachments (sockets) ─────────────────────────────────────────────
+    /// Bone names of the loaded model's skeleton, sorted. Populated once the scene
+    /// spawns (see `collect_bone_names`).
+    pub bone_names: Vec<String>,
+    pub bones_ui_dirty: bool,
+    /// Index into `bone_names` currently highlighted as the socket to attach to.
+    pub selected_bone: usize,
+    /// Working copy of the model's attachments (persisted to the def on import).
+    pub attachments: Vec<Attachment>,
+    /// Index of the attachment being edited by the nudge controls.
+    pub active_attachment: Option<usize>,
+    /// Preview weapon entities in the viewer, one per attachment (same order).
+    pub attachment_preview_entities: Vec<Option<Entity>>,
+    /// Set when an attachment's bone/model/count changed (needs respawn).
+    pub attachments_struct_dirty: bool,
+    /// Set when only an attachment's offset changed (update transform in place).
+    pub attachments_xform_dirty: bool,
+    /// Rebuild flag for the attachment UI panel.
+    pub attachment_ui_dirty: bool,
+
     // ── External animation sources ─────────────────────────────────────────────
     /// Paths of extra GLB/GLTF files whose clips supplement the model's own clips.
     pub animation_sources: Vec<String>,
@@ -125,6 +150,16 @@ impl Default for AssetBrowserState {
             tags_dirty: false,
             tag_edit_clip: None,
             tag_edit_buffer: String::new(),
+            show_skeleton: false,
+            bone_names: Vec::new(),
+            bones_ui_dirty: false,
+            selected_bone: 0,
+            attachments: Vec::new(),
+            active_attachment: None,
+            attachment_preview_entities: Vec::new(),
+            attachments_struct_dirty: false,
+            attachments_xform_dirty: false,
+            attachment_ui_dirty: false,
             animation_sources: Vec::new(),
             extra_gltf_handles: Vec::new(),
             sources_dirty: false,
@@ -174,6 +209,122 @@ impl AssetBrowserState {
         // clip names, like the old anim_mapping did) but close any open text box.
         self.tag_edit_clip = None;
         self.tag_edit_buffer.clear();
+        // Bone list belongs to the old skeleton; the preview weapons died with the
+        // old scene. Attachments themselves are (re)populated by load_definition.
+        self.bone_names.clear();
+        self.bones_ui_dirty = true;
+        self.selected_bone = 0;
+        self.attachment_preview_entities.clear();
+        self.attachments_struct_dirty = true;
+        self.attachment_ui_dirty = true;
+    }
+
+    pub fn toggle_skeleton(&mut self) {
+        self.show_skeleton = !self.show_skeleton;
+    }
+
+    // ── Weapon attachments ──────────────────────────────────────────────────────
+
+    pub fn selected_bone_name(&self) -> Option<&str> {
+        self.bone_names.get(self.selected_bone).map(|s| s.as_str())
+    }
+
+    /// Cycle the highlighted socket bone.
+    pub fn cycle_bone(&mut self, delta: i32) {
+        if self.bone_names.is_empty() { return; }
+        let n = self.bone_names.len() as i32;
+        self.selected_bone = (self.selected_bone as i32 + delta).rem_euclid(n) as usize;
+        self.bones_ui_dirty = true;
+    }
+
+    pub fn set_selected_bone(&mut self, idx: usize) {
+        if idx < self.bone_names.len() {
+            self.selected_bone = idx;
+            self.bones_ui_dirty = true;
+        }
+    }
+
+    /// Attach `model_path` to the currently highlighted bone and make it the active
+    /// (nudge-editable) attachment.
+    pub fn attach_selected_model(&mut self, model_path: String) {
+        let Some(bone) = self.selected_bone_name().map(|s| s.to_string()) else { return };
+        self.attachments.push(Attachment { bone, model_path, ..Default::default() });
+        self.active_attachment = Some(self.attachments.len() - 1);
+        self.attachments_struct_dirty = true;
+        self.attachment_ui_dirty = true;
+    }
+
+    pub fn select_attachment(&mut self, idx: usize) {
+        if idx < self.attachments.len() {
+            self.active_attachment = Some(idx);
+            if let Some(bone_idx) = self.bone_names.iter()
+                .position(|b| b == &self.attachments[idx].bone)
+            {
+                self.selected_bone = bone_idx;
+            }
+            self.bones_ui_dirty = true;
+            self.attachment_ui_dirty = true;
+        }
+    }
+
+    pub fn remove_active_attachment(&mut self) {
+        if let Some(idx) = self.active_attachment.take()
+            && idx < self.attachments.len()
+        {
+            self.attachments.remove(idx);
+            self.attachments_struct_dirty = true;
+            self.attachment_ui_dirty = true;
+        }
+    }
+
+    /// Re-parent the active attachment to the currently highlighted bone.
+    pub fn set_active_attachment_bone(&mut self) {
+        let Some(bone) = self.selected_bone_name().map(|s| s.to_string()) else { return };
+        if let Some(idx) = self.active_attachment
+            && let Some(a) = self.attachments.get_mut(idx)
+        {
+            a.bone = bone;
+            self.attachments_struct_dirty = true;
+            self.attachment_ui_dirty = true;
+        }
+    }
+
+    /// Nudge the active attachment's translation on `axis` (0=x,1=y,2=z) by `delta`.
+    pub fn nudge_translation(&mut self, axis: usize, delta: f32) {
+        if let Some(idx) = self.active_attachment
+            && let Some(a) = self.attachments.get_mut(idx)
+        {
+            a.translation[axis] += delta;
+            self.attachments_xform_dirty = true;
+            self.attachment_ui_dirty = true;
+        }
+    }
+
+    /// Nudge the active attachment's rotation (degrees) on `axis` by `delta`.
+    pub fn nudge_rotation(&mut self, axis: usize, delta: f32) {
+        if let Some(idx) = self.active_attachment
+            && let Some(a) = self.attachments.get_mut(idx)
+        {
+            a.rotation_euler_deg[axis] = (a.rotation_euler_deg[axis] + delta).rem_euclid(360.0);
+            self.attachments_xform_dirty = true;
+            self.attachment_ui_dirty = true;
+        }
+    }
+
+    /// Scale the active attachment by `factor` (multiplicative, so it reaches any
+    /// magnitude quickly — bone world-scale varies wildly between rigs).
+    pub fn nudge_scale(&mut self, factor: f32) {
+        if let Some(idx) = self.active_attachment
+            && let Some(a) = self.attachments.get_mut(idx)
+        {
+            a.scale = (a.scale * factor).clamp(0.0001, 10000.0);
+            self.attachments_xform_dirty = true;
+            self.attachment_ui_dirty = true;
+        }
+    }
+
+    pub fn active_attachment_ref(&self) -> Option<&Attachment> {
+        self.active_attachment.and_then(|i| self.attachments.get(i))
     }
 
     pub fn computed_scale(&self) -> f32 {
@@ -367,6 +518,7 @@ impl AssetBrowserState {
             clip_tags: self.clip_tags.clone(),
             animation_bindings: self.animation_bindings.clone(),
             animation_sources: self.animation_sources.clone(),
+            attachments: self.attachments.clone(),
         };
         def.save();
     }
@@ -395,6 +547,14 @@ impl AssetBrowserState {
             self.sources_dirty = true;
             self.model_type = def.model_type;
             self.type_dirty = true;
+            // Attachments are skeleton-specific, so load them fresh (don't carry over).
+            self.attachments = def.attachments;
+            // Strip a stray "assets/" prefix on attachment model paths, same as sources.
+            for a in &mut self.attachments {
+                if let Some(stripped) = a.model_path.strip_prefix("assets/") {
+                    a.model_path = stripped.to_string();
+                }
+            }
             // Stash the stored scale; target_height_m is resolved once the mesh AABB is measured.
             self.pending_scale = Some(def.scale);
         } else {
@@ -403,7 +563,11 @@ impl AssetBrowserState {
             self.hidden_nodes.clear();
             self.animation_sources.clear();
             self.sources_dirty = true;
+            self.attachments.clear();
         }
+        self.active_attachment = None;
+        self.attachments_struct_dirty = true;
+        self.attachment_ui_dirty = true;
         self.tag_edit_clip = None;
         self.tag_edit_buffer.clear();
         self.nodes_dirty = true;
