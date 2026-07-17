@@ -3,8 +3,7 @@ use bevy::prelude::*;
 use bevy::camera::primitives::Aabb;
 use crate::animation::animation_plugin::get_child_with_component_recursive;
 use crate::asset_browser::state::{AssetBrowserState, CHARACTER_NODE_PREFIX};
-use crate::assets::asset_definition::Hardpoint;
-use crate::assets::hardpoint::{frame_from_euler, transform_from_frame, weapon_local};
+use crate::assets::hardpoint::{frame_from_euler, snap_transform};
 use crate::asset_browser::ui::{AssetAnimLabel, HeightDisplay};
 use crate::ui::spawn_ui::StateMarker;
 
@@ -202,16 +201,6 @@ fn bone_entity_map(
         }
     }
     map
-}
-
-/// Local transform that snaps a weapon (with `weapon_grip`) onto a character's
-/// `char_grip`, scaled by the weapon def's `scale`.
-fn snap_transform(char_grip: &Hardpoint, weapon_grip: &Hardpoint, scale: f32) -> Transform {
-    let cg = frame_from_euler(char_grip.translation, char_grip.rotation_euler_deg);
-    let wg = frame_from_euler(weapon_grip.translation, weapon_grip.rotation_euler_deg);
-    let mut t = transform_from_frame(weapon_local(cg, wg));
-    t.scale = Vec3::splat(scale);
-    t
 }
 
 /// Draw each hardpoint as a small RGB axis cross at its world frame, so you can see

@@ -59,6 +59,19 @@ pub fn weapon_world(
     hand_world * weapon_local(grip_offset, weapon_grip)
 }
 
+/// The local `Transform` for a weapon parented to a character's grip anchor, so its
+/// `weapon_grip` lands on `char_grip`. `scale` is the weapon def's scale.
+///
+/// Used by both the asset-browser preview and the in-game equip, so the browser
+/// preview and the real thing can't drift apart.
+pub fn snap_transform(char_grip: &Hardpoint, weapon_grip: &Hardpoint, scale: f32) -> Transform {
+    let cg = hardpoint_frame(char_grip);
+    let wg = hardpoint_frame(weapon_grip);
+    let mut t = transform_from_frame(weapon_local(cg, wg));
+    t.scale = Vec3::splat(scale);
+    t
+}
+
 /// Convert a hardpoint frame to a `Transform` (scale 1) for spawning.
 pub fn transform_from_frame(iso: Isometry3d) -> Transform {
     Transform {
@@ -77,6 +90,27 @@ mod tests {
         // Quaternions q and -q represent the same rotation, so compare via dot.
         let r = a.rotation.dot(b.rotation).abs() > 1.0 - 1e-4;
         t && r
+    }
+
+    #[test]
+    fn snap_transform_places_grip_and_applies_scale() {
+        // What the browser preview and the in-game equip both spawn with.
+        let char_grip = Hardpoint {
+            anchor: Some("hand".into()),
+            translation: [0.01, 0.02, -0.03],
+            rotation_euler_deg: [0.0, 0.0, 0.0],
+        };
+        let weapon_grip = Hardpoint {
+            anchor: None,
+            translation: [0.0, 0.0, 0.0],
+            rotation_euler_deg: [0.0, 90.0, 0.0],
+        };
+        let t = snap_transform(&char_grip, &weapon_grip, 0.17);
+
+        assert_eq!(t.scale, Vec3::splat(0.17));
+        // The weapon's grip must land exactly on the character's grip frame.
+        let placed = Isometry3d::new(t.translation, t.rotation) * hardpoint_frame(&weapon_grip);
+        assert!(approx_eq(placed, hardpoint_frame(&char_grip)));
     }
 
     #[test]

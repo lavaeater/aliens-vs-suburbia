@@ -69,11 +69,19 @@ pub struct PlayerProps {
     /// Balls thrown per minute. Defaults to 60 (one per second).
     #[serde(default = "default_throw_rate")]
     pub throw_rate_per_minute: f32,
+    /// Def path of the weapon to equip on spawn, e.g. `"assets/defs/Pistol.ron"`.
+    /// Snapped to this model's `grip` hardpoint. `None` = unarmed.
+    #[serde(default)]
+    pub weapon: Option<String>,
 }
 
 impl Default for PlayerProps {
     fn default() -> Self {
-        Self { ability: PlayerAbility::default(), throw_rate_per_minute: default_throw_rate() }
+        Self {
+            ability: PlayerAbility::default(),
+            throw_rate_per_minute: default_throw_rate(),
+            weapon: None,
+        }
     }
 }
 
@@ -281,6 +289,13 @@ impl AssetDefinition {
     pub fn load(model_path: &str) -> Option<Self> {
         let path = Self::def_path(model_path);
         let text = std::fs::read_to_string(&path).ok()?;
+        ron::from_str(&text).ok()
+    }
+
+    /// Load a def straight from its own `.ron` path (e.g. `"assets/defs/Pistol.ron"`),
+    /// as stored in `PlayerRoster::def_paths` and `PlayerProps::weapon`.
+    pub fn load_from_def_path(def_path: &str) -> Option<Self> {
+        let text = std::fs::read_to_string(def_path).ok()?;
         ron::from_str(&text).ok()
     }
 

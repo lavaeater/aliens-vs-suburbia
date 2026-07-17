@@ -4,6 +4,7 @@
     model_type: Player((
         ability: Bombardment,
         throw_rate_per_minute: 60.0,
+        weapon: Some("assets/defs/Pistol.ron"),
     )),
     hidden_nodes: [],
     animation_mapping: {},

@@ -243,8 +243,15 @@ useful even if IK is deprioritized (one-handed weapons just work).
   (grip/foregrip/stock/sight), anchor a character role to the selected bone, Pos/Rot
   nudge, delete; `H` toggles RGB axis-gizmo frames; "Preview selected weapon" snaps a
   saved weapon onto a character's `grip` live via `weapon_local`.
-- ⏳ **Next (stage 1 finish)**: in-game equip/spawn driven by hardpoint data.
+- ✅ **In-game equip** (`src/player/systems/equip.rs`): `PlayerProps.weapon` names a
+  weapon def path; `PendingEquip::resolve` reads both defs at spawn, and
+  `equip_pending_weapons` waits for the skeleton, finds the grip bone *under that
+  character*, and spawns the weapon as its child using the shared
+  `hardpoint::snap_transform`. Browser preview and in-game equip call the same
+  function, so they can't drift apart.
 - ⏳ **Stage 2**: two-bone analytic IK for the support hand onto the rifle `foregrip`.
+  Needs a `foregrip` on the weapon and the arm chain (shoulder/elbow/hand bones) on
+  the character — currently only `grip` is authored.
 
 ## 14. Glossary (for when the brain hurts)
 
