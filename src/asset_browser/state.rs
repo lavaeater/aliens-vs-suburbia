@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use std::collections::{HashMap, HashSet};
 
 // Re-export from shared location so asset browser code keeps using the same name.
-pub use crate::assets::asset_definition::{Attachment, AssetDefinition, ModelType};
+pub use crate::assets::asset_definition::{Attachment, AssetDefinition, Hardpoint, ModelType};
 use bevy::prelude::Entity;
 
 const WINDOW_SIZE: usize = 36;
@@ -19,6 +19,10 @@ pub const ANIM_KEY_NAMES: &[&str] = &[
     "punch", "wave", "yes", "no",
     "death", "hitreact", "throwing", "building",
 ];
+
+/// Standard hardpoint role names, shared across characters and weapons so the snap
+/// can pair them (character `grip` <-> weapon `grip`, etc.).
+pub const HARDPOINT_ROLES: &[&str] = &["grip", "foregrip", "stock", "sight"];
 
 // ── Browser state ─────────────────────────────────────────────────────────────
 
@@ -98,6 +102,24 @@ pub struct AssetBrowserState {
     /// Rebuild flag for the attachment UI panel.
     pub attachment_ui_dirty: bool,
 
+    // ── Hardpoints (weapon snapping) ─────────────────────────────────────────────
+    /// Named connection frames authored for this model (role -> frame). Round-tripped
+    /// through the def.
+    pub hardpoints: std::collections::HashMap<String, Hardpoint>,
+    /// The role currently being edited by the nudge controls.
+    pub active_hardpoint_role: Option<String>,
+    pub hardpoints_ui_dirty: bool,
+    /// Draw hardpoint axis gizmos in the viewer.
+    pub show_hardpoints: bool,
+    /// A reference weapon (asset-relative path) snapped onto this character's `grip`
+    /// hardpoint as a live preview, plus its cached grip frame + scale from its def.
+    pub hardpoint_ref_weapon: Option<String>,
+    pub hardpoint_ref_grip: Option<Hardpoint>,
+    pub hardpoint_ref_scale: f32,
+    pub hardpoint_preview_entity: Option<Entity>,
+    /// Respawn/reparent the preview weapon (ref weapon or grip bone changed).
+    pub hardpoint_preview_dirty: bool,
+
     // ── External animation sources ─────────────────────────────────────────────
     /// Paths of extra GLB/GLTF files whose clips supplement the model's own clips.
     pub animation_sources: Vec<String>,
@@ -160,6 +182,15 @@ impl Default for AssetBrowserState {
             attachments_struct_dirty: false,
             attachments_xform_dirty: false,
             attachment_ui_dirty: false,
+            hardpoints: HashMap::new(),
+            active_hardpoint_role: None,
+            hardpoints_ui_dirty: false,
+            show_hardpoints: true,
+            hardpoint_ref_weapon: None,
+            hardpoint_ref_grip: None,
+            hardpoint_ref_scale: 1.0,
+            hardpoint_preview_entity: None,
+            hardpoint_preview_dirty: false,
             animation_sources: Vec::new(),
             extra_gltf_handles: Vec::new(),
             sources_dirty: false,
@@ -181,6 +212,7 @@ impl AssetBrowserState {
         self.list_dirty = true;
         self.folder_list_dirty = true;
         self.type_dirty = true;
+        self.hardpoints_ui_dirty = true;
     }
 
     pub fn reset_anim(&mut self) {
@@ -217,6 +249,12 @@ impl AssetBrowserState {
         self.attachment_preview_entities.clear();
         self.attachments_struct_dirty = true;
         self.attachment_ui_dirty = true;
+        // Preview weapon died with the old scene; keep the chosen ref weapon so it
+        // re-snaps onto the newly loaded character.
+        self.active_hardpoint_role = None;
+        self.hardpoint_preview_entity = None;
+        self.hardpoint_preview_dirty = true;
+        self.hardpoints_ui_dirty = true;
     }
 
     pub fn toggle_skeleton(&mut self) {
@@ -325,6 +363,91 @@ impl AssetBrowserState {
 
     pub fn active_attachment_ref(&self) -> Option<&Attachment> {
         self.active_attachment.and_then(|i| self.attachments.get(i))
+    }
+
+    // ── Hardpoints ──────────────────────────────────────────────────────────────
+
+    pub fn toggle_hardpoints(&mut self) {
+        self.show_hardpoints = !self.show_hardpoints;
+    }
+
+    /// Characters anchor hardpoints to bones; weapons anchor to the model origin.
+    pub fn is_character_model(&self) -> bool {
+        matches!(self.model_type, ModelType::Player(_) | ModelType::Enemy(_))
+    }
+
+    /// Select a role for editing, creating it (with a sensible default anchor) if it
+    /// doesn't exist yet.
+    pub fn select_hardpoint_role(&mut self, role: &str) {
+        if !self.hardpoints.contains_key(role) {
+            let anchor = if self.is_character_model() {
+                self.selected_bone_name().map(|s| s.to_string())
+            } else {
+                None
+            };
+            self.hardpoints.insert(role.to_string(), Hardpoint { anchor, ..Default::default() });
+            if role == "grip" { self.hardpoint_preview_dirty = true; }
+        }
+        self.active_hardpoint_role = Some(role.to_string());
+        self.hardpoints_ui_dirty = true;
+    }
+
+    pub fn active_hardpoint(&self) -> Option<&Hardpoint> {
+        self.active_hardpoint_role.as_ref().and_then(|r| self.hardpoints.get(r))
+    }
+
+    /// Re-anchor the active hardpoint to the currently highlighted bone.
+    pub fn set_active_hardpoint_bone(&mut self) {
+        let bone = self.selected_bone_name().map(|s| s.to_string());
+        if let Some(role) = self.active_hardpoint_role.clone()
+            && let Some(h) = self.hardpoints.get_mut(&role)
+        {
+            h.anchor = bone;
+            self.hardpoints_ui_dirty = true;
+            if role == "grip" { self.hardpoint_preview_dirty = true; }
+        }
+    }
+
+    pub fn delete_active_hardpoint(&mut self) {
+        if let Some(role) = self.active_hardpoint_role.take() {
+            self.hardpoints.remove(&role);
+            if role == "grip" { self.hardpoint_preview_dirty = true; }
+        }
+        self.hardpoints_ui_dirty = true;
+    }
+
+    pub fn nudge_hardpoint_translation(&mut self, axis: usize, delta: f32) {
+        if let Some(role) = self.active_hardpoint_role.clone()
+            && let Some(h) = self.hardpoints.get_mut(&role)
+        {
+            h.translation[axis] += delta;
+            self.hardpoints_ui_dirty = true;
+        }
+    }
+
+    pub fn nudge_hardpoint_rotation(&mut self, axis: usize, delta: f32) {
+        if let Some(role) = self.active_hardpoint_role.clone()
+            && let Some(h) = self.hardpoints.get_mut(&role)
+        {
+            h.rotation_euler_deg[axis] = (h.rotation_euler_deg[axis] + delta).rem_euclid(360.0);
+            self.hardpoints_ui_dirty = true;
+        }
+    }
+
+    /// Choose a reference weapon to snap onto this character's `grip` for preview.
+    /// Caches the weapon's `grip` frame and scale from its saved def.
+    pub fn set_ref_weapon(&mut self, path: String) {
+        let def = AssetDefinition::load(&path);
+        self.hardpoint_ref_grip = def.as_ref().and_then(|d| d.hardpoints.get("grip").cloned());
+        self.hardpoint_ref_scale = def.map(|d| d.scale).unwrap_or(1.0);
+        self.hardpoint_ref_weapon = Some(path);
+        self.hardpoint_preview_dirty = true;
+    }
+
+    pub fn clear_ref_weapon(&mut self) {
+        self.hardpoint_ref_weapon = None;
+        self.hardpoint_ref_grip = None;
+        self.hardpoint_preview_dirty = true;
     }
 
     pub fn computed_scale(&self) -> f32 {
@@ -519,6 +642,7 @@ impl AssetBrowserState {
             animation_bindings: self.animation_bindings.clone(),
             animation_sources: self.animation_sources.clone(),
             attachments: self.attachments.clone(),
+            hardpoints: self.hardpoints.clone(),
         };
         def.save();
     }
@@ -547,8 +671,9 @@ impl AssetBrowserState {
             self.sources_dirty = true;
             self.model_type = def.model_type;
             self.type_dirty = true;
-            // Attachments are skeleton-specific, so load them fresh (don't carry over).
+            // Attachments and hardpoints are skeleton/model-specific — load fresh.
             self.attachments = def.attachments;
+            self.hardpoints = def.hardpoints;
             // Strip a stray "assets/" prefix on attachment model paths, same as sources.
             for a in &mut self.attachments {
                 if let Some(stripped) = a.model_path.strip_prefix("assets/") {
@@ -564,6 +689,7 @@ impl AssetBrowserState {
             self.animation_sources.clear();
             self.sources_dirty = true;
             self.attachments.clear();
+            self.hardpoints.clear();
         }
         self.active_attachment = None;
         self.attachments_struct_dirty = true;

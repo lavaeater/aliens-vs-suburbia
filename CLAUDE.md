@@ -67,13 +67,14 @@ Most gameplay systems use `.run_if(in_state(InGame))`. Physics runs on a fixed t
 Stored at `assets/defs/<model-stem>.ron`. Fields:
 - `model_path` — path relative to `assets/` folder (e.g. `"packs/toon-shooter/characters/Soldier.glb"`)
 - `scale` — uniform scale (computed as `target_height_m / mesh_aabb_height` in asset browser)
-- `model_type` — `Player(PlayerProps)`, `Tower(TowerProps)`, `Terrain(TerrainProps)`, `Item(ItemProps)`, or `Enemy(EnemyProps)`
+- `model_type` — `Player(PlayerProps)`, `Tower(TowerProps)`, `Terrain(TerrainProps)`, `Item(ItemProps)`, `Enemy(EnemyProps)`, or `Weapon(WeaponProps)`
 - `hidden_nodes` — node names to hide (e.g. weapon nodes)
 - `clip_tags` — `HashMap<clip_name, tag_path>`. Free-form hierarchical tag per clip (e.g. `"CharacterArmature|Run_Shoot" -> "Combat/Ranged/RunShoot"`). Clip name is the model's own clip, or `"SourceStem|ClipName"` for external sources.
 - `animation_bindings` — `HashMap<game_state_key, tag_path>`. Binds a game key to a tag path; at runtime `AssetDefinition::resolved_clip` maps game key -> tag path -> the clip carrying that tag.
 - `animation_mapping` — **legacy** `HashMap<game_state_key, clip_fragment>`. Superseded by `clip_tags` + `animation_bindings`; still read at runtime as a fallback and auto-migrated into tags/bindings when an old def is loaded in the asset browser.
 - `animation_sources` — paths (relative to `assets/`) of external GLB/GLTF animation files. **No `assets/` prefix** — same convention as `model_path`.
-- `attachments` — `Vec<Attachment>` of models socketed to bones (e.g. a held rifle). Each has `bone` (bone entity name), `model_path`, and a local offset (`translation`, `rotation_euler_deg`, `scale`). Currently authored/previewed in the asset browser only; runtime spawning on characters is not wired up yet.
+- `attachments` — `Vec<Attachment>` of models socketed to bones (e.g. a held rifle). Each has `bone` (bone entity name), `model_path`, and a local offset (`translation`, `rotation_euler_deg`, `scale`). Manual, fixed props; authored/previewed in the asset browser only.
+- `hardpoints` — `HashMap<String, Hardpoint>` of named connection frames (role -> frame) for dynamic weapon snapping, on both characters (`grip` anchored to a hand bone) and weapons (`grip`/`foregrip`/`stock`/`sight`, anchor `None` = model origin). `Hardpoint { anchor: Option<String>, translation, rotation_euler_deg }`. The snap math (`src/assets/hardpoint.rs`, unit-tested) makes a weapon's `grip` coincide with a character's `grip`. Authored + previewed in the asset browser (`H` toggles frame gizmos); in-game equip/spawn and two-bone IK for the support hand are future stages. See `docs/inverse-kinematics-hardpoints.md`.
 
 ### Economy
 

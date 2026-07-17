@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy::ui::ScrollPosition;
 use bevy::ui_widgets::Activate;
 use lava_ui_builder::{InteractionPalette, LavaTheme, TextTheme, UIBuilder};
-use crate::asset_browser::state::{ANIM_KEY_NAMES, AssetBrowserState, CHARACTER_NODE_PREFIX, ModelType};
+use crate::asset_browser::state::{ANIM_KEY_NAMES, AssetBrowserState, CHARACTER_NODE_PREFIX, HARDPOINT_ROLES, ModelType};
 use crate::asset_browser::viewer::AssetBrowserViewerPanel;
 use crate::game_state::GameState;
 use crate::ui::spawn_ui::StateMarker;
@@ -28,6 +28,7 @@ use crate::ui::spawn_ui::StateMarker;
 #[derive(Component)] pub struct SourcesContainer;
 #[derive(Component)] pub struct BoneListContainer;
 #[derive(Component)] pub struct AttachmentContainer;
+#[derive(Component)] pub struct HardpointContainer;
 
 #[derive(Component)] pub struct ListItem(pub usize);
 
@@ -207,6 +208,21 @@ pub fn spawn_asset_browser_ui(
              .insert(AttachmentContainer);
         });
 
+        // Hardpoints section (dynamic weapon snapping)
+        left.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label("-- Hardpoints --", &TextTheme {
+                label_size: 11.0, label_color: Color::srgb(0.5, 0.8, 0.6), ..t.clone()
+            }));
+        });
+        left.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label("[H] show frames. char: anchor grip to a bone", &hint));
+        });
+        left.with_child(|c| {
+            c.display_flex().flex_column().gap_px(2.0)
+             .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
+             .insert(HardpointContainer);
+        });
+
         // File list
         left.with_child(|c| {
             c.with_flex_grow(1.0).width_percent(100.0)
@@ -269,6 +285,7 @@ pub fn handle_key_input(
             Key::Character(c) if c == "-" => state.height_down(),
             Key::Character(c) if c == "i" || c == "I" => state.export_definition(),
             Key::Character(c) if c == "b" || c == "B" => state.toggle_skeleton(),
+            Key::Character(c) if c == "h" || c == "H" => state.toggle_hardpoints(),
             Key::Character(c) if c == "," => state.cycle_bone(-1),
             Key::Character(c) if c == "." => state.cycle_bone(1),
             _ => {}
@@ -737,6 +754,18 @@ pub fn rebuild_type_picker(
                         Node { padding: UiRect::axes(Val::Px(4.0), Val::Px(1.0)), ..Default::default() },
                     ));
                 }
+                ModelType::Weapon(p) => {
+                    let hands = match p.hands {
+                        crate::assets::asset_definition::WeaponHands::OneHanded => "1-handed",
+                        crate::assets::asset_definition::WeaponHands::TwoHanded => "2-handed",
+                    };
+                    parent.spawn((
+                        Text::new(format!("hands: {hands}")),
+                        TextFont::default().with_font_size(10.0),
+                        TextColor(Color::srgb(0.75, 0.82, 0.75)),
+                        Node { padding: UiRect::axes(Val::Px(4.0), Val::Px(1.0)), ..Default::default() },
+                    ));
+                }
                 ModelType::Player(_) => {}
             }
         });
@@ -986,6 +1015,180 @@ pub fn rebuild_attachment_panel(
                 .with_child((Text::new("Remove"), TextFont::default().with_font_size(10.0), TextColor(Color::srgb(1.0, 0.8, 0.8))))
                 .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.remove_active_attachment(); });
             });
+    });
+}
+
+#[derive(Clone, Copy)]
+enum HpNudge { TX, TY, TZ, RX, RY, RZ }
+
+fn apply_hp_nudge(s: &mut AssetBrowserState, kind: HpNudge, delta: f32) {
+    match kind {
+        HpNudge::TX => s.nudge_hardpoint_translation(0, delta),
+        HpNudge::TY => s.nudge_hardpoint_translation(1, delta),
+        HpNudge::TZ => s.nudge_hardpoint_translation(2, delta),
+        HpNudge::RX => s.nudge_hardpoint_rotation(0, delta),
+        HpNudge::RY => s.nudge_hardpoint_rotation(1, delta),
+        HpNudge::RZ => s.nudge_hardpoint_rotation(2, delta),
+    }
+}
+
+pub fn rebuild_hardpoint_panel(
+    mut state: ResMut<AssetBrowserState>,
+    mut commands: Commands,
+    container_q: Query<Entity, With<HardpointContainer>>,
+) {
+    if !state.hardpoints_ui_dirty { return; }
+    state.hardpoints_ui_dirty = false;
+
+    let Ok(container) = container_q.single() else { return };
+    commands.entity(container).despawn_related::<Children>();
+
+    let is_char = state.is_character_model();
+    let active = state.active_hardpoint_role.clone();
+    let existing: std::collections::HashSet<String> = state.hardpoints.keys().cloned().collect();
+    let active_hp = state.active_hardpoint().cloned();
+    let ref_weapon = state.hardpoint_ref_weapon.clone();
+    let ref_has_grip = state.hardpoint_ref_grip.is_some();
+
+    commands.entity(container).with_children(|parent| {
+        // Role chips (click to select/create).
+        parent.spawn((Node { flex_direction: FlexDirection::Row, flex_wrap: FlexWrap::Wrap, column_gap: Val::Px(3.0), row_gap: Val::Px(3.0), ..Default::default() },))
+            .with_children(|chips| {
+                for &role in HARDPOINT_ROLES {
+                    let has = existing.contains(role);
+                    let is_active = active.as_deref() == Some(role);
+                    let bg = if is_active { Color::srgba(0.20, 0.45, 0.25, 0.95) }
+                             else if has { Color::srgba(0.12, 0.26, 0.16, 0.9) }
+                             else { Color::srgba(0.10, 0.13, 0.11, 0.8) };
+                    let tc = if has { Color::srgb(0.8, 1.0, 0.85) } else { Color::srgb(0.55, 0.65, 0.55) };
+                    chips.spawn((
+                        Node { padding: UiRect::axes(Val::Px(7.0), Val::Px(2.0)), border_radius: BorderRadius::all(Val::Px(3.0)), ..Default::default() },
+                        BackgroundColor(bg),
+                        InteractionPalette { none: bg, hovered: Color::srgba(0.25, 0.5, 0.3, 0.95), pressed: Color::srgba(0.15, 0.32, 0.2, 1.0) },
+                        bevy::picking::hover::Hovered::default(),
+                        bevy::ui_widgets::Button,
+                    ))
+                    .with_child((Text::new(role), TextFont::default().with_font_size(10.0), TextColor(tc)))
+                    .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.select_hardpoint_role(role); });
+                }
+            });
+
+        // Active hardpoint editor.
+        if let (Some(role), Some(hp)) = (active, active_hp) {
+            let anchor_txt = hp.anchor.clone().unwrap_or_else(|| "origin".to_string());
+            parent.spawn((
+                Text::new(format!("{role} @ {anchor_txt}")),
+                TextFont::default().with_font_size(10.0),
+                TextColor(Color::srgb(0.85, 0.8, 1.0)),
+                Node { padding: UiRect::axes(Val::Px(2.0), Val::Px(1.0)), ..Default::default() },
+            ));
+
+            if is_char {
+                parent.spawn((
+                    Node { padding: UiRect::axes(Val::Px(6.0), Val::Px(3.0)), justify_content: JustifyContent::Center, border_radius: BorderRadius::all(Val::Px(3.0)), ..Default::default() },
+                    BackgroundColor(Color::srgba(0.12, 0.22, 0.35, 0.9)),
+                    InteractionPalette { none: Color::srgba(0.12, 0.22, 0.35, 0.9), hovered: Color::srgba(0.18, 0.32, 0.5, 0.95), pressed: Color::srgba(0.1, 0.18, 0.3, 1.0) },
+                    bevy::picking::hover::Hovered::default(),
+                    bevy::ui_widgets::Button,
+                ))
+                .with_child((Text::new("Anchor to selected bone"), TextFont::default().with_font_size(10.0), TextColor(Color::srgb(0.8, 0.9, 1.0))))
+                .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.set_active_hardpoint_bone(); });
+            }
+
+            let rows: [(&str, String, HpNudge, f32); 6] = [
+                ("Pos X", format!("{:+.3}", hp.translation[0]), HpNudge::TX, 0.01),
+                ("Pos Y", format!("{:+.3}", hp.translation[1]), HpNudge::TY, 0.01),
+                ("Pos Z", format!("{:+.3}", hp.translation[2]), HpNudge::TZ, 0.01),
+                ("Rot X", format!("{:.0}", hp.rotation_euler_deg[0]), HpNudge::RX, 5.0),
+                ("Rot Y", format!("{:.0}", hp.rotation_euler_deg[1]), HpNudge::RY, 5.0),
+                ("Rot Z", format!("{:.0}", hp.rotation_euler_deg[2]), HpNudge::RZ, 5.0),
+            ];
+            for (label, value, kind, step) in rows {
+                parent.spawn((
+                    Node { width: Val::Percent(100.0), flex_direction: FlexDirection::Row, align_items: AlignItems::Center, column_gap: Val::Px(4.0), padding: UiRect::axes(Val::Px(2.0), Val::Px(1.0)), ..Default::default() },
+                    BackgroundColor(Color::srgba(0.07, 0.10, 0.14, 0.6)),
+                ))
+                .with_children(|row| {
+                    row.spawn((Text::new(label), TextFont::default().with_font_size(10.0), TextColor(Color::srgb(0.6, 0.75, 0.6)),
+                        Node { width: Val::Px(38.0), ..Default::default() }));
+                    row.spawn((
+                        Node { width: Val::Px(16.0), justify_content: JustifyContent::Center, ..Default::default() },
+                        BackgroundColor(Color::srgba(0.15, 0.15, 0.15, 0.6)),
+                        bevy::picking::hover::Hovered::default(),
+                        bevy::ui_widgets::Button,
+                    ))
+                    .with_child((Text::new("-"), TextFont::default().with_font_size(11.0), TextColor(Color::srgb(0.8, 0.8, 0.8))))
+                    .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { apply_hp_nudge(&mut s, kind, -step); });
+
+                    row.spawn((Text::new(value), TextFont::default().with_font_size(10.0), TextColor(Color::srgb(0.9, 0.85, 0.65)),
+                        Node { flex_grow: 1.0, justify_content: JustifyContent::Center, ..Default::default() }));
+
+                    row.spawn((
+                        Node { width: Val::Px(16.0), justify_content: JustifyContent::Center, ..Default::default() },
+                        BackgroundColor(Color::srgba(0.15, 0.15, 0.15, 0.6)),
+                        bevy::picking::hover::Hovered::default(),
+                        bevy::ui_widgets::Button,
+                    ))
+                    .with_child((Text::new("+"), TextFont::default().with_font_size(11.0), TextColor(Color::srgb(0.8, 0.8, 0.8))))
+                    .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { apply_hp_nudge(&mut s, kind, step); });
+                });
+            }
+
+            let rmbg = Color::srgba(0.35, 0.1, 0.1, 0.85);
+            parent.spawn((
+                Node { padding: UiRect::axes(Val::Px(6.0), Val::Px(3.0)), justify_content: JustifyContent::Center, border_radius: BorderRadius::all(Val::Px(3.0)), ..Default::default() },
+                BackgroundColor(rmbg),
+                InteractionPalette { none: rmbg, hovered: Color::srgba(0.55, 0.15, 0.15, 0.95), pressed: Color::srgba(0.28, 0.08, 0.08, 1.0) },
+                bevy::picking::hover::Hovered::default(),
+                bevy::ui_widgets::Button,
+            ))
+            .with_child((Text::new(format!("Delete {role}")), TextFont::default().with_font_size(10.0), TextColor(Color::srgb(1.0, 0.8, 0.8))))
+            .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.delete_active_hardpoint(); });
+        }
+
+        // Reference-weapon preview (characters only): snap a saved weapon onto `grip`.
+        if is_char {
+            let rw = ref_weapon.as_deref()
+                .map(|p| std::path::Path::new(p).file_stem().and_then(|s| s.to_str()).unwrap_or(p).to_string())
+                .unwrap_or_else(|| "none".to_string());
+            // Flag the common gotcha: chosen weapon has no `grip` hardpoint saved.
+            let (suffix, col) = if ref_weapon.is_some() && !ref_has_grip {
+                ("  (no grip in def!)".to_string(), Color::srgb(1.0, 0.6, 0.4))
+            } else {
+                (String::new(), Color::srgb(0.7, 0.8, 0.9))
+            };
+            parent.spawn((
+                Text::new(format!("ref weapon: {rw}{suffix}")),
+                TextFont::default().with_font_size(10.0),
+                TextColor(col),
+                Node { padding: UiRect::axes(Val::Px(2.0), Val::Px(1.0)), ..Default::default() },
+            ));
+            parent.spawn((Node { flex_direction: FlexDirection::Row, column_gap: Val::Px(4.0), ..Default::default() },))
+                .with_children(|row| {
+                    let usebg = Color::srgba(0.12, 0.22, 0.35, 0.9);
+                    row.spawn((
+                        Node { flex_grow: 1.0, padding: UiRect::axes(Val::Px(4.0), Val::Px(3.0)), justify_content: JustifyContent::Center, border_radius: BorderRadius::all(Val::Px(3.0)), ..Default::default() },
+                        BackgroundColor(usebg),
+                        InteractionPalette { none: usebg, hovered: Color::srgba(0.18, 0.32, 0.5, 0.95), pressed: Color::srgba(0.1, 0.18, 0.3, 1.0) },
+                        bevy::picking::hover::Hovered::default(),
+                        bevy::ui_widgets::Button,
+                    ))
+                    .with_child((Text::new("Preview selected weapon"), TextFont::default().with_font_size(10.0), TextColor(Color::srgb(0.8, 0.9, 1.0))))
+                    .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                        if let Some(p) = s.selected_path().map(|p| p.to_string()) { s.set_ref_weapon(p); }
+                    });
+                    let clrbg = Color::srgba(0.2, 0.14, 0.1, 0.85);
+                    row.spawn((
+                        Node { padding: UiRect::axes(Val::Px(8.0), Val::Px(3.0)), justify_content: JustifyContent::Center, border_radius: BorderRadius::all(Val::Px(3.0)), ..Default::default() },
+                        BackgroundColor(clrbg),
+                        InteractionPalette { none: clrbg, hovered: Color::srgba(0.3, 0.2, 0.14, 0.95), pressed: Color::srgba(0.16, 0.1, 0.08, 1.0) },
+                        bevy::picking::hover::Hovered::default(),
+                        bevy::ui_widgets::Button,
+                    ))
+                    .with_child((Text::new("clear"), TextFont::default().with_font_size(10.0), TextColor(Color::srgb(0.9, 0.8, 0.7))))
+                    .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.clear_ref_weapon(); });
+                });
+        }
     });
 }
 

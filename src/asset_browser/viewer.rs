@@ -3,6 +3,8 @@ use bevy::prelude::*;
 use bevy::camera::primitives::Aabb;
 use crate::animation::animation_plugin::get_child_with_component_recursive;
 use crate::asset_browser::state::{AssetBrowserState, CHARACTER_NODE_PREFIX};
+use crate::assets::asset_definition::Hardpoint;
+use crate::assets::hardpoint::{frame_from_euler, transform_from_frame, weapon_local};
 use crate::asset_browser::ui::{AssetAnimLabel, HeightDisplay};
 use crate::ui::spawn_ui::StateMarker;
 
@@ -181,6 +183,124 @@ pub fn apply_attachment_transforms(
         if let Ok(mut tr) = transforms.get_mut(ent) {
             *tr = t;
         }
+    }
+}
+
+// ── Hardpoints ────────────────────────────────────────────────────────────────
+
+/// Map bone name -> entity from the loaded model's skinned meshes.
+fn bone_entity_map(
+    skinned_q: &Query<&bevy::mesh::skinning::SkinnedMesh>,
+    names: &Query<&Name>,
+) -> std::collections::HashMap<String, Entity> {
+    let mut map = std::collections::HashMap::new();
+    for sm in skinned_q.iter() {
+        for &j in &sm.joints {
+            if let Ok(n) = names.get(j) {
+                map.entry(n.as_str().to_string()).or_insert(j);
+            }
+        }
+    }
+    map
+}
+
+/// Local transform that snaps a weapon (with `weapon_grip`) onto a character's
+/// `char_grip`, scaled by the weapon def's `scale`.
+fn snap_transform(char_grip: &Hardpoint, weapon_grip: &Hardpoint, scale: f32) -> Transform {
+    let cg = frame_from_euler(char_grip.translation, char_grip.rotation_euler_deg);
+    let wg = frame_from_euler(weapon_grip.translation, weapon_grip.rotation_euler_deg);
+    let mut t = transform_from_frame(weapon_local(cg, wg));
+    t.scale = Vec3::splat(scale);
+    t
+}
+
+/// Draw each hardpoint as a small RGB axis cross at its world frame, so you can see
+/// where it sits and which way it points.
+pub fn draw_hardpoint_gizmos(
+    state: Res<AssetBrowserState>,
+    mut gizmos: Gizmos,
+    skinned_q: Query<&bevy::mesh::skinning::SkinnedMesh>,
+    names: Query<&Name>,
+    transforms: Query<&GlobalTransform>,
+) {
+    if !state.show_hardpoints || state.hardpoints.is_empty() { return; }
+    let Some(viewer) = state.viewer_entity else { return };
+    let bone_map = bone_entity_map(&skinned_q, &names);
+    let active = state.active_hardpoint_role.as_deref();
+
+    for (role, hp) in &state.hardpoints {
+        // Weapon hardpoints anchor to the model root; character ones to a bone.
+        let anchor_ent = match &hp.anchor {
+            Some(bone) => bone_map.get(bone).copied(),
+            None => Some(viewer),
+        };
+        let Some(ent) = anchor_ent else { continue };
+        let Ok(gt) = transforms.get(ent) else { continue };
+
+        let frame = frame_from_euler(hp.translation, hp.rotation_euler_deg);
+        let pos = gt.transform_point(Vec3::from(frame.translation));
+        let rot = gt.rotation() * frame.rotation;
+        let size = if Some(role.as_str()) == active { 0.09 } else { 0.055 };
+        gizmos.line(pos, pos + rot * Vec3::X * size, Color::srgb(1.0, 0.25, 0.25));
+        gizmos.line(pos, pos + rot * Vec3::Y * size, Color::srgb(0.25, 1.0, 0.25));
+        gizmos.line(pos, pos + rot * Vec3::Z * size, Color::srgb(0.35, 0.55, 1.0));
+    }
+}
+
+/// Spawn/despawn the reference-weapon preview, parented to the character's `grip`
+/// bone. Runs on structural change (ref weapon or grip bone). Waits for bones.
+pub fn rebuild_hardpoint_preview(
+    mut state: ResMut<AssetBrowserState>,
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    skinned_q: Query<&bevy::mesh::skinning::SkinnedMesh>,
+    names: Query<&Name>,
+) {
+    if !state.hardpoint_preview_dirty { return; }
+
+    if let Some(e) = state.hardpoint_preview_entity.take() {
+        commands.entity(e).despawn();
+    }
+
+    // Need a character grip anchored to a bone, plus a chosen reference weapon.
+    let (Some(char_grip), Some(ref_path), Some(ref_grip)) = (
+        state.hardpoints.get("grip").cloned(),
+        state.hardpoint_ref_weapon.clone(),
+        state.hardpoint_ref_grip.clone(),
+    ) else {
+        state.hardpoint_preview_dirty = false;
+        return;
+    };
+    let Some(bone_name) = char_grip.anchor.clone() else {
+        state.hardpoint_preview_dirty = false;
+        return;
+    };
+
+    let bone_map = bone_entity_map(&skinned_q, &names);
+    let Some(&bone_ent) = bone_map.get(&bone_name) else {
+        return; // skeleton not ready yet — retry next frame (keep dirty)
+    };
+
+    let scene: Handle<Scene> = asset_server.load(GltfAssetLabel::Scene(0).from_asset(ref_path));
+    let t = snap_transform(&char_grip, &ref_grip, state.hardpoint_ref_scale);
+    let e = commands.spawn((SceneRoot(scene), t, StateMarker)).id();
+    commands.entity(bone_ent).add_child(e);
+    state.hardpoint_preview_entity = Some(e);
+    state.hardpoint_preview_dirty = false;
+}
+
+/// Keep the preview weapon snapped as the character's `grip` is nudged (cheap, runs
+/// every frame while a preview exists).
+pub fn apply_hardpoint_preview_transform(
+    state: Res<AssetBrowserState>,
+    mut transforms: Query<&mut Transform>,
+) {
+    let Some(e) = state.hardpoint_preview_entity else { return };
+    let (Some(char_grip), Some(ref_grip)) =
+        (state.hardpoints.get("grip"), state.hardpoint_ref_grip.as_ref())
+    else { return };
+    if let Ok(mut t) = transforms.get_mut(e) {
+        *t = snap_transform(char_grip, ref_grip, state.hardpoint_ref_scale);
     }
 }
 

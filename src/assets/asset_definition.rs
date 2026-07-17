@@ -77,6 +77,20 @@ impl Default for PlayerProps {
     }
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
+pub enum WeaponHands {
+    #[default]
+    OneHanded,
+    TwoHanded,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct WeaponProps {
+    #[serde(default)]
+    pub hands: WeaponHands,
+    // Gameplay stats (damage, fire rate, ammo, projectile) come later.
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ModelType {
     Player(PlayerProps),
@@ -84,6 +98,7 @@ pub enum ModelType {
     Terrain(TerrainProps),
     Item(ItemProps),
     Enemy(EnemyProps),
+    Weapon(WeaponProps),
 }
 
 impl Default for ModelType {
@@ -98,11 +113,12 @@ impl ModelType {
             ModelType::Terrain(_)  => "Terrain",
             ModelType::Item(_)     => "Item",
             ModelType::Enemy(_)    => "Enemy",
+            ModelType::Weapon(_)   => "Weapon",
         }
     }
 
     pub fn all_labels() -> &'static [&'static str] {
-        &["Player", "Tower", "Terrain", "Item", "Enemy"]
+        &["Player", "Tower", "Terrain", "Item", "Enemy", "Weapon"]
     }
 
     /// Return a default instance for each label.
@@ -112,8 +128,32 @@ impl ModelType {
             "Terrain" => ModelType::Terrain(TerrainProps::default()),
             "Item"    => ModelType::Item(ItemProps::default()),
             "Enemy"   => ModelType::Enemy(EnemyProps::default()),
+            "Weapon"  => ModelType::Weapon(WeaponProps::default()),
             _         => ModelType::Player(PlayerProps::default()),
         }
+    }
+}
+
+/// A named coordinate frame ("hardpoint") on a model, used to snap weapons onto
+/// characters. On a character the frame is relative to a bone (`anchor = Some(bone)`);
+/// on a weapon it is relative to the model origin (`anchor = None`). Roles are keyed
+/// by name (e.g. "grip", "foregrip", "stock", "sight") and paired across the two
+/// defs at equip time. See `docs/inverse-kinematics-hardpoints.md`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Hardpoint {
+    /// Bone the frame is relative to (characters), or `None` for the model origin (weapons).
+    #[serde(default)]
+    pub anchor: Option<String>,
+    #[serde(default)]
+    pub translation: [f32; 3],
+    /// XYZ Euler angles in degrees (authored via the asset browser).
+    #[serde(default)]
+    pub rotation_euler_deg: [f32; 3],
+}
+
+impl Default for Hardpoint {
+    fn default() -> Self {
+        Self { anchor: None, translation: [0.0; 3], rotation_euler_deg: [0.0; 3] }
     }
 }
 
@@ -183,9 +223,14 @@ pub struct AssetDefinition {
     /// e.g. "packs/AnimPack.glb"
     #[serde(default)]
     pub animation_sources: Vec<String>,
-    /// Models attached to the character's bones (e.g. a held rifle).
+    /// Models attached to the character's bones (e.g. a held rifle). Manual, fixed
+    /// props. Superseded for dynamic weapon-holding by `hardpoints` (see below).
     #[serde(default)]
     pub attachments: Vec<Attachment>,
+    /// Named connection frames for dynamic weapon snapping (role -> frame), on both
+    /// characters (grip in the hand) and weapons (grip/foregrip/stock/sight).
+    #[serde(default)]
+    pub hardpoints: HashMap<String, Hardpoint>,
 }
 
 impl Default for AssetDefinition {
@@ -200,6 +245,7 @@ impl Default for AssetDefinition {
             animation_bindings: HashMap::new(),
             animation_sources: Vec::new(),
             attachments: Vec::new(),
+            hardpoints: HashMap::new(),
         }
     }
 }
