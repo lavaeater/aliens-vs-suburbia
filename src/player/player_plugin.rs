@@ -6,7 +6,7 @@ use crate::player::systems::auto_aim::{auto_aim, debug_gizmos};
 use crate::player::systems::death_revive::{detect_player_death, player_revive_system};
 use crate::player::systems::spawn_players::{fix_scene_transform, spawn_players};
 use crate::player::systems::abilities::{AbilityInput, activate_ability, tick_ability_flash, tick_cooldowns, tick_whirlwind};
-use crate::player::systems::equip::equip_pending_weapons;
+use crate::player::systems::equip::{equip_pending_weapons, keep_weapons_snapped};
 use bevy::prelude::*;
 use bevy::scene::{SceneInstance, SceneRoot};
 use bevy_mod_outline::{AsyncSceneInheritOutline, AutoGenerateOutlineNormalsPlugin, InheritOutline, OutlinePlugin, OutlineVolume};
@@ -29,6 +29,7 @@ impl Plugin for PlayerPlugin {
                 (
                     spawn_players,
                     equip_pending_weapons,
+                    keep_weapons_snapped,
                     fix_scene_transform,
                     auto_aim,
                     hide_player_weapon_nodes,

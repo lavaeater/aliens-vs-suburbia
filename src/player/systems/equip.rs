@@ -66,9 +66,22 @@ impl PendingEquip {
 #[derive(Component)]
 pub struct EquippedWeapon(#[allow(dead_code)] pub Entity);
 
-/// Marker on the spawned weapon scene root.
+/// Marker on the spawned weapon scene root, carrying everything needed to keep it
+/// snapped every frame. We re-derive the scale continuously (rather than once at
+/// spawn) because a rig's bone `GlobalTransform` may not be propagated on the frame
+/// the skeleton first appears — a single stale read there would collapse the weapon
+/// permanently. Cheap: one query lookup per equipped weapon.
 #[derive(Component)]
-pub struct WeaponModel;
+pub struct WeaponModel {
+    char_grip: Hardpoint,
+    weapon_grip: Hardpoint,
+    weapon_def_scale: f32,
+    /// The grip bone the weapon is parented to (its world scale folds in the rig's
+    /// baked scale, which we cancel out).
+    bone: Entity,
+    /// The character's model root (its world scale is how big the character renders).
+    root: Entity,
+}
 
 /// Breadth-first search for a named entity under `root`, so we only ever match bones
 /// belonging to *this* character (several players may share a skeleton's bone names).
@@ -90,17 +103,17 @@ fn find_descendant_named(
     None
 }
 
-/// World scale of this character's own `PlayerModelRoot` (the scaled scene child),
-/// found by walking descendants so multi-player scenes don't cross wires.
-fn find_descendant_root_scale(
+/// This character's own `PlayerModelRoot` entity (the scaled scene child), found by
+/// walking descendants so multi-player scenes don't cross wires.
+fn find_descendant_root(
     character: Entity,
     children: &Query<&Children>,
-    root_q: &Query<&GlobalTransform, With<PlayerModelRoot>>,
-) -> Option<f32> {
+    root_q: &Query<(), With<PlayerModelRoot>>,
+) -> Option<Entity> {
     let mut queue = vec![character];
     while let Some(entity) = queue.pop() {
-        if let Ok(gt) = root_q.get(entity) {
-            return Some(gt.scale().x);
+        if root_q.get(entity).is_ok() {
+            return Some(entity);
         }
         if let Ok(kids) = children.get(entity) {
             queue.extend(kids.iter());
@@ -117,8 +130,7 @@ pub fn equip_pending_weapons(
     mut pending: Query<(Entity, &mut PendingEquip), Without<EquippedWeapon>>,
     children: Query<&Children>,
     names: Query<&Name>,
-    global_transforms: Query<&GlobalTransform>,
-    root_q: Query<&GlobalTransform, With<PlayerModelRoot>>,
+    root_q: Query<(), With<PlayerModelRoot>>,
 ) {
     for (character, mut equip) in pending.iter_mut() {
         let anchor = match equip.bone.clone() {
@@ -140,26 +152,29 @@ pub fn equip_pending_weapons(
             },
         };
 
-        // Cancel the rig's baked bone scale and track the character's rendered scale,
-        // so a tiny bone world scale (mesh2motion bakes ~0.0136) doesn't collapse the
-        // weapon. Wait until this character's own PlayerModelRoot exists — that only
-        // happens after fix_scene_transform has run and transforms have propagated, so
-        // both scales below are settled rather than first-frame identity garbage.
-        let Some(root_scale) = find_descendant_root_scale(character, &children, &root_q) else {
+        // Wait for this character's own PlayerModelRoot (set by fix_scene_transform) so
+        // the scale-tracking below has a root to read. The actual scale is derived every
+        // frame in keep_weapons_snapped, not here — see WeaponModel.
+        let Some(root) = find_descendant_root(character, &children, &root_q) else {
             equip.tries += 1;
-            continue; // skeleton is up but the scaled root isn't settled yet — retry
+            continue;
         };
-        let bone_scale = global_transforms.get(anchor).map(|gt| gt.scale().x).unwrap_or(1.0);
-        let effective = weapon_local_scale(equip.weapon_scale, root_scale, bone_scale);
-        let local = snap_transform(&equip.char_grip, &equip.weapon_grip, effective);
 
         let scene = asset_server
             .load(GltfAssetLabel::Scene(0).from_asset(equip.weapon_model_path.clone()));
+        // Spawn with an identity-ish transform; keep_weapons_snapped sets the real one
+        // next frame from settled GlobalTransforms.
         let weapon = commands
             .spawn((
                 SceneRoot(scene),
-                local,
-                WeaponModel,
+                Transform::default(),
+                WeaponModel {
+                    char_grip: equip.char_grip.clone(),
+                    weapon_grip: equip.weapon_grip.clone(),
+                    weapon_def_scale: equip.weapon_scale,
+                    bone: anchor,
+                    root,
+                },
             ))
             .id();
         commands.entity(anchor).add_child(weapon);
@@ -167,5 +182,35 @@ pub fn equip_pending_weapons(
             .entity(character)
             .insert(EquippedWeapon(weapon))
             .remove::<PendingEquip>();
+    }
+}
+
+/// Keep each equipped weapon snapped onto its grip bone, re-deriving the scale from
+/// the current (settled) bone and character-root world scales every frame. Constant
+/// in practice — bone world scale barely changes across animation — but immune to the
+/// spawn-frame propagation race that would otherwise collapse the weapon.
+pub fn keep_weapons_snapped(
+    weapons: Query<(Entity, &WeaponModel)>,
+    global_transforms: Query<&GlobalTransform>,
+    mut transforms: Query<&mut Transform>,
+    mut logged: Local<std::collections::HashSet<Entity>>,
+) {
+    for (weapon, snap) in weapons.iter() {
+        let bone_scale = global_transforms.get(snap.bone).map(|gt| gt.scale().x).unwrap_or(1.0);
+        let root_scale = global_transforms.get(snap.root).map(|gt| gt.scale().x).unwrap_or(1.0);
+        let effective = weapon_local_scale(snap.weapon_def_scale, root_scale, bone_scale);
+        // TEMP: log once per weapon once its transforms have settled to non-identity.
+        if bone_scale != 1.0 && logged.insert(weapon) {
+            info!(
+                "equipped weapon settled: root scale = {root_scale}, bone world scale = \
+                 {bone_scale}, weapon def scale = {}, effective local scale = {effective}, \
+                 weapon world scale ~= {}",
+                snap.weapon_def_scale,
+                bone_scale * effective
+            );
+        }
+        if let Ok(mut t) = transforms.get_mut(weapon) {
+            *t = snap_transform(&snap.char_grip, &snap.weapon_grip, effective);
+        }
     }
 }
