@@ -97,6 +97,7 @@ pub fn equip_pending_weapons(
     mut pending: Query<(Entity, &mut PendingEquip), Without<EquippedWeapon>>,
     children: Query<&Children>,
     names: Query<&Name>,
+    global_transforms: Query<&GlobalTransform>,
 ) {
     for (character, mut equip) in pending.iter_mut() {
         let anchor = match equip.bone.clone() {
@@ -118,12 +119,26 @@ pub fn equip_pending_weapons(
             },
         };
 
+        let local = snap_transform(&equip.char_grip, &equip.weapon_grip, equip.weapon_scale);
+        // TEMP diagnostic: what world scale does the anchor bone carry? If it's not
+        // ~1, the weapon's def scale (a world-space size) is being multiplied by it.
+        let bone_scale = global_transforms
+            .get(anchor)
+            .map(|gt| gt.scale())
+            .unwrap_or(Vec3::ONE);
+        info!(
+            "equip: bone world scale = {bone_scale:?}, weapon local scale = {:?}, \
+             weapon world scale ~= {:?}",
+            local.scale,
+            bone_scale * local.scale
+        );
+
         let scene = asset_server
             .load(GltfAssetLabel::Scene(0).from_asset(equip.weapon_model_path.clone()));
         let weapon = commands
             .spawn((
                 SceneRoot(scene),
-                snap_transform(&equip.char_grip, &equip.weapon_grip, equip.weapon_scale),
+                local,
                 WeaponModel,
             ))
             .id();
