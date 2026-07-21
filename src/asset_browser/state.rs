@@ -478,6 +478,12 @@ impl AssetBrowserState {
     }
 
     pub fn set_model_type(&mut self, label: &str) {
+        // Re-clicking the current type must not wipe its props (e.g. a Player's
+        // `weapon`/`ability`); only actually changing type resets to defaults.
+        if ModelType::from_label(label).same_variant(&self.model_type) {
+            self.type_dirty = true;
+            return;
+        }
         self.model_type = ModelType::from_label(label);
         self.type_dirty = true;
     }

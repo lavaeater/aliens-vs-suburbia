@@ -129,6 +129,12 @@ impl ModelType {
         &["Player", "Tower", "Terrain", "Item", "Enemy", "Weapon"]
     }
 
+    /// True if `self` and `other` are the same `ModelType` variant, ignoring their
+    /// props. Used so re-selecting the current type in the picker keeps its props.
+    pub fn same_variant(&self, other: &Self) -> bool {
+        std::mem::discriminant(self) == std::mem::discriminant(other)
+    }
+
     /// Return a default instance for each label.
     pub fn from_label(label: &str) -> Self {
         match label {
