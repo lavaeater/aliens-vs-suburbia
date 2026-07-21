@@ -116,6 +116,9 @@ pub struct AssetBrowserState {
     pub hardpoint_ref_weapon: Option<String>,
     pub hardpoint_ref_grip: Option<Hardpoint>,
     pub hardpoint_ref_scale: f32,
+    /// The bone-scale-corrected local scale for the preview weapon, computed on
+    /// rebuild and reused each frame (see `weapon_local_scale`).
+    pub hardpoint_preview_scale: f32,
     pub hardpoint_preview_entity: Option<Entity>,
     /// Respawn/reparent the preview weapon (ref weapon or grip bone changed).
     pub hardpoint_preview_dirty: bool,
@@ -189,6 +192,7 @@ impl Default for AssetBrowserState {
             hardpoint_ref_weapon: None,
             hardpoint_ref_grip: None,
             hardpoint_ref_scale: 1.0,
+            hardpoint_preview_scale: 1.0,
             hardpoint_preview_entity: None,
             hardpoint_preview_dirty: false,
             animation_sources: Vec::new(),

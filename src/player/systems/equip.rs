@@ -13,7 +13,8 @@ use bevy::gltf::GltfAssetLabel;
 use bevy::scene::SceneRoot;
 
 use crate::assets::asset_definition::{AssetDefinition, Hardpoint, ModelType};
-use crate::assets::hardpoint::snap_transform;
+use crate::assets::hardpoint::{snap_transform, weapon_local_scale};
+use crate::player::systems::spawn_players::PlayerModelRoot;
 
 /// The role both sides use to attach a one-handed weapon to a hand.
 pub const GRIP_ROLE: &str = "grip";
@@ -89,6 +90,25 @@ fn find_descendant_named(
     None
 }
 
+/// World scale of this character's own `PlayerModelRoot` (the scaled scene child),
+/// found by walking descendants so multi-player scenes don't cross wires.
+fn find_descendant_root_scale(
+    character: Entity,
+    children: &Query<&Children>,
+    root_q: &Query<&GlobalTransform, With<PlayerModelRoot>>,
+) -> Option<f32> {
+    let mut queue = vec![character];
+    while let Some(entity) = queue.pop() {
+        if let Ok(gt) = root_q.get(entity) {
+            return Some(gt.scale().x);
+        }
+        if let Ok(kids) = children.get(entity) {
+            queue.extend(kids.iter());
+        }
+    }
+    None
+}
+
 /// Spawns the weapon once the character's skeleton exists, snapped onto its grip.
 /// Retries until the bone shows up, since the scene loads asynchronously.
 pub fn equip_pending_weapons(
@@ -98,6 +118,7 @@ pub fn equip_pending_weapons(
     children: Query<&Children>,
     names: Query<&Name>,
     global_transforms: Query<&GlobalTransform>,
+    root_q: Query<&GlobalTransform, With<PlayerModelRoot>>,
 ) {
     for (character, mut equip) in pending.iter_mut() {
         let anchor = match equip.bone.clone() {
@@ -119,19 +140,18 @@ pub fn equip_pending_weapons(
             },
         };
 
-        let local = snap_transform(&equip.char_grip, &equip.weapon_grip, equip.weapon_scale);
-        // TEMP diagnostic: what world scale does the anchor bone carry? If it's not
-        // ~1, the weapon's def scale (a world-space size) is being multiplied by it.
-        let bone_scale = global_transforms
-            .get(anchor)
-            .map(|gt| gt.scale())
-            .unwrap_or(Vec3::ONE);
-        info!(
-            "equip: bone world scale = {bone_scale:?}, weapon local scale = {:?}, \
-             weapon world scale ~= {:?}",
-            local.scale,
-            bone_scale * local.scale
-        );
+        // Cancel the rig's baked bone scale and track the character's rendered scale,
+        // so a tiny bone world scale (mesh2motion bakes ~0.0136) doesn't collapse the
+        // weapon. Wait until this character's own PlayerModelRoot exists — that only
+        // happens after fix_scene_transform has run and transforms have propagated, so
+        // both scales below are settled rather than first-frame identity garbage.
+        let Some(root_scale) = find_descendant_root_scale(character, &children, &root_q) else {
+            equip.tries += 1;
+            continue; // skeleton is up but the scaled root isn't settled yet — retry
+        };
+        let bone_scale = global_transforms.get(anchor).map(|gt| gt.scale().x).unwrap_or(1.0);
+        let effective = weapon_local_scale(equip.weapon_scale, root_scale, bone_scale);
+        let local = snap_transform(&equip.char_grip, &equip.weapon_grip, effective);
 
         let scene = asset_server
             .load(GltfAssetLabel::Scene(0).from_asset(equip.weapon_model_path.clone()));

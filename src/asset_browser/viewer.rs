@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use bevy::camera::primitives::Aabb;
 use crate::animation::animation_plugin::get_child_with_component_recursive;
 use crate::asset_browser::state::{AssetBrowserState, CHARACTER_NODE_PREFIX};
-use crate::assets::hardpoint::{frame_from_euler, snap_transform};
+use crate::assets::hardpoint::{frame_from_euler, snap_transform, weapon_local_scale};
 use crate::asset_browser::ui::{AssetAnimLabel, HeightDisplay};
 use crate::ui::spawn_ui::StateMarker;
 
@@ -244,6 +244,8 @@ pub fn rebuild_hardpoint_preview(
     asset_server: Res<AssetServer>,
     skinned_q: Query<&bevy::mesh::skinning::SkinnedMesh>,
     names: Query<&Name>,
+    global_transforms: Query<&GlobalTransform>,
+    root_q: Query<&GlobalTransform, With<AssetBrowserViewerModel>>,
 ) {
     if !state.hardpoint_preview_dirty { return; }
 
@@ -271,7 +273,13 @@ pub fn rebuild_hardpoint_preview(
     };
 
     let scene: Handle<Scene> = asset_server.load(GltfAssetLabel::Scene(0).from_asset(ref_path));
-    let t = snap_transform(&char_grip, &ref_grip, state.hardpoint_ref_scale);
+    // Cancel the rig's baked bone scale and track the character's rendered scale, so
+    // the weapon isn't collapsed by a tiny bone world scale (mesh2motion bakes ~0.0136).
+    let bone_scale = global_transforms.get(bone_ent).map(|gt| gt.scale().x).unwrap_or(1.0);
+    let root_scale = root_q.single().map(|gt| gt.scale().x).unwrap_or(1.0);
+    let effective = weapon_local_scale(state.hardpoint_ref_scale, root_scale, bone_scale);
+    state.hardpoint_preview_scale = effective;
+    let t = snap_transform(&char_grip, &ref_grip, effective);
     let e = commands.spawn((SceneRoot(scene), t, StateMarker)).id();
     commands.entity(bone_ent).add_child(e);
     state.hardpoint_preview_entity = Some(e);
@@ -289,7 +297,7 @@ pub fn apply_hardpoint_preview_transform(
         (state.hardpoints.get("grip"), state.hardpoint_ref_grip.as_ref())
     else { return };
     if let Ok(mut t) = transforms.get_mut(e) {
-        *t = snap_transform(char_grip, ref_grip, state.hardpoint_ref_scale);
+        *t = snap_transform(char_grip, ref_grip, state.hardpoint_preview_scale);
     }
 }
 

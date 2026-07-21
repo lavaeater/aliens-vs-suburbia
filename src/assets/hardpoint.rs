@@ -59,6 +59,26 @@ pub fn weapon_world(
     hand_world * weapon_local(grip_offset, weapon_grip)
 }
 
+/// Local uniform scale for a weapon parented under a character's grip bone.
+///
+/// A weapon's def `scale` is calibrated as its size at *world scale 1* (unparented).
+/// But skinned rigs often bake an arbitrary scale into the bone chain (mesh2motion
+/// amy bakes ~0.0136), so parenting the weapon to the hand bone and using the def
+/// scale directly collapses it. We cancel the bone's world scale and re-apply the
+/// character's model-root world scale, so the weapon ends up at world scale
+/// `weapon_def_scale * char_root_scale` — it tracks how big the character is drawn
+/// and is independent of whatever the rig baked into the skeleton.
+///
+/// - `weapon_def_scale`: the weapon def's `scale`.
+/// - `char_root_scale`: the character model root's world scale (how big it renders).
+/// - `bone_world_scale`: the grip bone's world scale (root scale times rig-baked scale).
+pub fn weapon_local_scale(weapon_def_scale: f32, char_root_scale: f32, bone_world_scale: f32) -> f32 {
+    if bone_world_scale.abs() < 1e-6 {
+        return weapon_def_scale;
+    }
+    weapon_def_scale * char_root_scale / bone_world_scale
+}
+
 /// The local `Transform` for a weapon parented to a character's grip anchor, so its
 /// `weapon_grip` lands on `char_grip`. `scale` is the weapon def's scale.
 ///
@@ -90,6 +110,23 @@ mod tests {
         // Quaternions q and -q represent the same rotation, so compare via dot.
         let r = a.rotation.dot(b.rotation).abs() > 1.0 - 1e-4;
         t && r
+    }
+
+    #[test]
+    fn weapon_local_scale_cancels_baked_bone_scale() {
+        // amy's real numbers: bone bakes 0.0136, weapon def scale 0.172, char root 1.333.
+        let local = weapon_local_scale(0.172, 1.333, 0.0136);
+        // The weapon's resulting *world* scale is bone_world * local, which must equal
+        // weapon_def_scale * char_root_scale (tracks the character, not the rig).
+        let world = 0.0136 * local;
+        assert!((world - 0.172 * 1.333).abs() < 1e-4, "world scale = {world}");
+        // And it's much bigger than naively using the def scale under the tiny bone.
+        assert!(local > 1.0);
+    }
+
+    #[test]
+    fn weapon_local_scale_degenerate_bone_falls_back() {
+        assert_eq!(weapon_local_scale(0.172, 1.0, 0.0), 0.172);
     }
 
     #[test]
