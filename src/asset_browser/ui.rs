@@ -1095,42 +1095,51 @@ pub fn rebuild_hardpoint_panel(
                 .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.set_active_hardpoint_bone(); });
             }
 
-            let rows: [(&str, String, HpNudge, f32); 6] = [
-                ("Pos X", format!("{:+.3}", hp.translation[0]), HpNudge::TX, 0.01),
-                ("Pos Y", format!("{:+.3}", hp.translation[1]), HpNudge::TY, 0.01),
-                ("Pos Z", format!("{:+.3}", hp.translation[2]), HpNudge::TZ, 0.01),
-                ("Rot X", format!("{:.0}", hp.rotation_euler_deg[0]), HpNudge::RX, 5.0),
-                ("Rot Y", format!("{:.0}", hp.rotation_euler_deg[1]), HpNudge::RY, 5.0),
-                ("Rot Z", format!("{:.0}", hp.rotation_euler_deg[2]), HpNudge::RZ, 5.0),
+            // (label, value, kind, fine step, coarse step). Translation is in bone-local
+            // space; on a rig that bakes a tiny bone scale (amy ~0.0136) even 0.5 local
+            // is a small world move, so the coarse step is generous.
+            let rows: [(&str, String, HpNudge, f32, f32); 6] = [
+                ("Pos X", format!("{:+.3}", hp.translation[0]), HpNudge::TX, 0.05, 0.5),
+                ("Pos Y", format!("{:+.3}", hp.translation[1]), HpNudge::TY, 0.05, 0.5),
+                ("Pos Z", format!("{:+.3}", hp.translation[2]), HpNudge::TZ, 0.05, 0.5),
+                ("Rot X", format!("{:.0}", hp.rotation_euler_deg[0]), HpNudge::RX, 5.0, 45.0),
+                ("Rot Y", format!("{:.0}", hp.rotation_euler_deg[1]), HpNudge::RY, 5.0, 45.0),
+                ("Rot Z", format!("{:.0}", hp.rotation_euler_deg[2]), HpNudge::RZ, 5.0, 45.0),
             ];
-            for (label, value, kind, step) in rows {
+            for (label, value, kind, fine, coarse) in rows {
                 parent.spawn((
-                    Node { width: Val::Percent(100.0), flex_direction: FlexDirection::Row, align_items: AlignItems::Center, column_gap: Val::Px(4.0), padding: UiRect::axes(Val::Px(2.0), Val::Px(1.0)), ..Default::default() },
+                    Node { width: Val::Percent(100.0), flex_direction: FlexDirection::Row, align_items: AlignItems::Center, column_gap: Val::Px(3.0), padding: UiRect::axes(Val::Px(2.0), Val::Px(1.0)), ..Default::default() },
                     BackgroundColor(Color::srgba(0.07, 0.10, 0.14, 0.6)),
                 ))
                 .with_children(|row| {
                     row.spawn((Text::new(label), TextFont::default().with_font_size(10.0), TextColor(Color::srgb(0.6, 0.75, 0.6)),
                         Node { width: Val::Px(38.0), ..Default::default() }));
-                    row.spawn((
-                        Node { width: Val::Px(16.0), justify_content: JustifyContent::Center, ..Default::default() },
-                        BackgroundColor(Color::srgba(0.15, 0.15, 0.15, 0.6)),
-                        bevy::picking::hover::Hovered::default(),
-                        bevy::ui_widgets::Button,
-                    ))
-                    .with_child((Text::new("-"), TextFont::default().with_font_size(11.0), TextColor(Color::srgb(0.8, 0.8, 0.8))))
-                    .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { apply_hp_nudge(&mut s, kind, -step); });
+
+                    // Coarse then fine on the left (--, -), fine then coarse on the right (+, ++).
+                    let nudge_btn = |row: &mut ChildSpawnerCommands, glyph: &str, delta: f32, coarse: bool| {
+                        let (w, bg) = if coarse {
+                            (22.0, Color::srgba(0.20, 0.15, 0.10, 0.7))
+                        } else {
+                            (16.0, Color::srgba(0.15, 0.15, 0.15, 0.6))
+                        };
+                        row.spawn((
+                            Node { width: Val::Px(w), justify_content: JustifyContent::Center, ..Default::default() },
+                            BackgroundColor(bg),
+                            bevy::picking::hover::Hovered::default(),
+                            bevy::ui_widgets::Button,
+                        ))
+                        .with_child((Text::new(glyph), TextFont::default().with_font_size(11.0), TextColor(Color::srgb(0.8, 0.8, 0.8))))
+                        .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { apply_hp_nudge(&mut s, kind, delta); });
+                    };
+
+                    nudge_btn(row, "--", -coarse, true);
+                    nudge_btn(row, "-", -fine, false);
 
                     row.spawn((Text::new(value), TextFont::default().with_font_size(10.0), TextColor(Color::srgb(0.9, 0.85, 0.65)),
                         Node { flex_grow: 1.0, justify_content: JustifyContent::Center, ..Default::default() }));
 
-                    row.spawn((
-                        Node { width: Val::Px(16.0), justify_content: JustifyContent::Center, ..Default::default() },
-                        BackgroundColor(Color::srgba(0.15, 0.15, 0.15, 0.6)),
-                        bevy::picking::hover::Hovered::default(),
-                        bevy::ui_widgets::Button,
-                    ))
-                    .with_child((Text::new("+"), TextFont::default().with_font_size(11.0), TextColor(Color::srgb(0.8, 0.8, 0.8))))
-                    .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { apply_hp_nudge(&mut s, kind, step); });
+                    nudge_btn(row, "+", fine, false);
+                    nudge_btn(row, "++", coarse, true);
                 });
             }
 
