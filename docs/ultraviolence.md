@@ -30,6 +30,9 @@ concrete components, files, and events to touch. Order roughly follows dependenc
 payoff: the cheap, high-impact gore (blood, gibs) comes first because it re-skins death,
 which every other system already produces.
 
+> **Progress (2026-07-24):** shared groundwork, blood (feature 2), and gibs
+> (feature 3) are implemented in `src/gore/` — see the ✅ notes below.
+
 ## Shared groundwork: a gore/FX layer
 
 Almost every feature here spawns short-lived visual entities (blood, gibs, debris, fire,
@@ -51,6 +54,13 @@ Rather than copy that five times, introduce one small module first:
   it turns gore into event subscribers rather than special cases sprinkled through combat.
 
 Effort: ~1 day. Everything after this is cheaper because of it.
+
+✅ **Done.** `src/gore/` now holds `DamageDealt` + `EntityDied` messages, an `Ephemeral`
+grow/fade-then-despawn component (`tick_ephemeral`), a `GoreBudget` recycler, and a
+`LastHit` component (`record_last_hit`) so the death path can attribute the killing blow.
+`collision_handling_system` and `touch_damage_system` emit `DamageDealt`;
+`health_monitor_system` emits `EntityDied`. `GorePlugin` wires it all up. Explosive/fire
+kinds are stubbed for §4.
 
 ## 1. Guns, guns and guns
 
@@ -100,6 +110,12 @@ Plan:
 
 Effort: 2 days. Highest visual payoff per hour of the whole list.
 
+✅ **Done (first pass).** `src/gore/blood.rs`: a procedurally-generated crimson splat
+texture (no art dependency), a bright grow-and-fade impact puff, and a persistent,
+budget-capped ground stain under each hit. Lethal blows bleed ~1.8x. Fire hits are skipped
+(they'll scorch in §4). Still a polish pass away from arcing airborne droplets and true
+surface-conforming wall decals (`ForwardDecal`).
+
 ## 3. Body parts / organs / gibs
 
 On death (currently `health_monitor_system` just `despawn()`s non-players), burst the corpse
@@ -121,6 +137,12 @@ Plan:
   retire it — gibs replace it thematically.
 
 Effort: 2–3 days. Depends on gore groundwork + decals.
+
+✅ **Done (first pass).** `src/gore/gibs.rs`: on `EntityDied`, bursts the corpse into 6
+procedural dark-red physics chunks (`RigidBody::Dynamic`, randomized impulse + spin) thrown
+away from the killing blow, lingering 6 s then despawning, budget-capped. Chunks collide
+with the world but not with aliens/players. Next: per-enemy gib sets (`EnemyProps.gib_set`),
+authored gib art, and a blood decal on floor-impact.
 
 ## 4. Macabre gameplay (molotovs, SFX, dialogue)
 

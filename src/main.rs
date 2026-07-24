@@ -17,6 +17,7 @@ use crate::game_state::game_state_plugin::GamePlugin;
 pub(crate) mod player;
 pub(crate) mod facts;
 pub(crate) mod general;
+pub(crate) mod gore;
 pub(crate) mod camera;
 pub(crate) mod alien;
 pub(crate) mod ai;

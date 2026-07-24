@@ -37,6 +37,7 @@ use crate::player_setup::plugin::PlayerSetupPlugin;
 use crate::map_editor::plugin::MapEditorPlugin;
 use crate::music::game_music_plugin::GameMusicPlugin;
 use crate::sprite_billboard::plugin::SpriteBillboardPlugin;
+use crate::gore::plugin::GorePlugin;
 
 fn toggle_physics_debug(
     keys: Res<ButtonInput<KeyCode>>,
@@ -83,6 +84,7 @@ impl Plugin for GamePlugin {
                 FactsPlugin,
                 FactsGameIntegrationPlugin,
                 GameMusicPlugin,
+                GorePlugin,
             ))
             .add_systems(
                 OnEnter(GameState::InGame),
