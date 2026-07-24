@@ -181,6 +181,14 @@ Three sub-features; they're independent, ship in any order.
 
 Effort: fire ~2 days; SFX ~1 day; barks ~2–3 days (the writing is the long pole).
 
+✅ **Fire done (first pass).** `src/gore/fire.rs`: a `SpawnFire` message spawns a `FireField`
+(glowing base + flickering flame puffs) that burns creatures inside its radius on a repeating
+tick, emitting `DamageDealt(Fire)` (blood skips fire; death/score still fire), and scorches the
+ground with a persistent decal on burnout. Wired to a new **Molotov** `SpecialAbility` (Q) that
+rains a ring of fire around the player. `SpawnFire` is the reusable hook for thrown molotovs
+later. **SFX and barks not started** — SFX needs sample assets; barks want the facts system +
+writing.
+
 ## 5. Destructible terrain
 
 Half-built already: map-editor terrain placements take an optional `props.health` and get a
@@ -203,6 +211,15 @@ Plan:
   erodes wave by wave.
 
 Effort: 2 days for the core loop (most plumbing exists); +1–2 for staged meshes.
+
+✅ **Done (first pass).** Bullets already damage any `Health` structure (the shoot raycast hits
+`ImpassableAll`), and aliens already re-open the tiles they chew through. `src/gore/terrain.rs`
+closes the loop: `destroy_damaged_terrain` owns obstacle death — re-opens the tile for
+pathfinding (so `recheck_path_after_tile_opened` re-routes aliens no matter *who* destroyed it),
+bursts the structure into grey rubble physics chunks + a dust puff, and despawns it.
+`health_monitor_system` is now `Without<IsObstacle>` so structures crumble into rubble instead of
+flesh gibs. Next: staged pristine→cracked→rubble meshes, and letting thrown balls damage walls
+too (currently guns/aliens only).
 
 ## 6. A feeling of despair
 

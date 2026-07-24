@@ -58,6 +58,7 @@ pub enum PlayerAbility {
     Healing,
     Whirlwind,
     GoldDigger,
+    Molotov,
 }
 
 fn default_throw_rate() -> f32 { 60.0 }

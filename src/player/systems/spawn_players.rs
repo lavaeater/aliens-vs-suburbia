@@ -86,6 +86,7 @@ pub fn spawn_players(
                     Healing     => SpecialAbility::Healing,
                     Whirlwind   => SpecialAbility::Whirlwind,
                     GoldDigger  => SpecialAbility::GoldDigger,
+                    Molotov     => SpecialAbility::Molotov,
                 };
                 (ability, props.throw_rate_per_minute)
             })

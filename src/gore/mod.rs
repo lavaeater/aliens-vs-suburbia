@@ -6,6 +6,8 @@
 
 pub(crate) mod blood;
 pub(crate) mod components;
+pub(crate) mod fire;
 pub(crate) mod gibs;
 pub(crate) mod plugin;
 pub(crate) mod systems;
+pub(crate) mod terrain;
