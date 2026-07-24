@@ -117,11 +117,29 @@ command = ["cargo", "run", "--example"]
 need_stdout = true
 allow_warnings = true
 
-# You may define here keybindings that would be specific to
-# a project, for example a shortcut to launch a specific job.
-# Shortcuts to internal functions (scrolling, toggling, etc.)
-# should go in your personal global prefs.toml file instead.
+# 1. Standard build, but with timings enabled
+[jobs.build-timings]
+command = [
+    "cargo", "build",
+    "--timings"
+]
+need_stdout = true
+
+# 2. "Super Optimized" custom job
+# Uses nightly toolchain, Cranelift backend, parallel jobs, and timings
+[jobs.superoptimized]
+command = [
+    "cargo", "+nightly", "build",
+    "-Z", "codegen-backend=cranelift", # Passes the unstable cranelift flag inline
+    "-j", "16",                        # Hardcodes higher parallel workers for this run
+    "--timings"
+]
+need_stdout = true
+env.RUSTC_WRAPPER = "sccache"
+
 [keybindings]
-# alt-m = "job:my-job"
+# Remap 'c' or choose custom keys to trigger your profiling layouts on a whim
+t = "job:build-timings"   # Press 't' in bacon to run basic build + timings
+s = "job:superoptimized"  # Press 's' in bacon to engage super-optimized hyperdrive
 c = "job:clippy-all" # comment this to have 'c' run clippy on only the default target
 p = "job:pedantic" 
