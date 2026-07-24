@@ -89,6 +89,15 @@ Plan:
 
 Effort: 2–3 days. Depends on the `DamageDealt` message from groundwork.
 
+✅ **Done (first pass).** `WeaponProps` gained combat stats (`damage`, `fire_rate_per_minute`,
+`range`, `spread_deg`, `pellets`, `auto`) with serde defaults so old defs still load.
+`"muzzle"` is now an authorable hardpoint role (asset browser). `src/player/systems/shoot.rs`
+does hitscan from the muzzle along auto-aim, applies damage, emits `DamageDealt` (→ blood),
+and spawns a muzzle flash + tracer; recoil kicks the weapon in `keep_weapons_snapped`.
+`throwing` is gated `Without<EquippedWeapon>`, so the same fire button shoots when armed and
+throws when not. Pistol.ron carries a placeholder muzzle frame to fine-tune in the browser.
+Next: hitscan vs physics grenades split, ammo/reload, shoot animation binding, per-weapon SFX.
+
 ## 2. Blood splatter decals
 
 Two flavors: **airborne spray** (particles that arc off a hit) and **ground/wall decals**

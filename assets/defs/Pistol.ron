@@ -3,6 +3,12 @@
     scale: 0.17218262,
     model_type: Weapon((
         hands: OneHanded,
+        damage: 25,
+        fire_rate_per_minute: 210.0,
+        range: 40.0,
+        spread_deg: 1.5,
+        pellets: 1,
+        auto: false,
     )),
     hidden_nodes: [],
     animation_mapping: {},
@@ -55,6 +61,13 @@
         "foregrip": (
             anchor: Some("mixamorigHead"),
             translation: (0.0, 0.0, 0.0),
+            rotation_euler_deg: (0.0, 0.0, 0.0),
+        ),
+        // Where the muzzle flash/tracer originate (weapon-local). Rough forward guess;
+        // nudge to the barrel tip in the asset browser (select the "muzzle" role).
+        "muzzle": (
+            anchor: None,
+            translation: (0.0, 0.0, -2.0),
             rotation_euler_deg: (0.0, 0.0, 0.0),
         ),
     },

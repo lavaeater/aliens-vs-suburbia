@@ -92,11 +92,48 @@ pub enum WeaponHands {
     TwoHanded,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+fn default_weapon_damage() -> i32 { 20 }
+fn default_fire_rate() -> f32 { 300.0 }
+fn default_weapon_range() -> f32 { 40.0 }
+fn default_spread_deg() -> f32 { 1.5 }
+fn default_pellets() -> u32 { 1 }
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WeaponProps {
     #[serde(default)]
     pub hands: WeaponHands,
-    // Gameplay stats (damage, fire rate, ammo, projectile) come later.
+    /// Damage per pellet that lands.
+    #[serde(default = "default_weapon_damage")]
+    pub damage: i32,
+    /// Shots per minute. 300 = 5/s.
+    #[serde(default = "default_fire_rate")]
+    pub fire_rate_per_minute: f32,
+    /// Hitscan range in world units.
+    #[serde(default = "default_weapon_range")]
+    pub range: f32,
+    /// Cone half-angle in degrees applied to each pellet.
+    #[serde(default = "default_spread_deg")]
+    pub spread_deg: f32,
+    /// Pellets per shot (1 = pistol/rifle, 8 = shotgun).
+    #[serde(default = "default_pellets")]
+    pub pellets: u32,
+    /// Holds-to-fire (automatic) vs one shot per trigger press.
+    #[serde(default)]
+    pub auto: bool,
+}
+
+impl Default for WeaponProps {
+    fn default() -> Self {
+        Self {
+            hands: WeaponHands::default(),
+            damage: default_weapon_damage(),
+            fire_rate_per_minute: default_fire_rate(),
+            range: default_weapon_range(),
+            spread_deg: default_spread_deg(),
+            pellets: default_pellets(),
+            auto: false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

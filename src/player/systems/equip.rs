@@ -12,12 +12,16 @@ use bevy::prelude::*;
 use bevy::gltf::GltfAssetLabel;
 use bevy::scene::SceneRoot;
 
-use crate::assets::asset_definition::{AssetDefinition, Hardpoint, ModelType};
+use crate::assets::asset_definition::{AssetDefinition, Hardpoint, ModelType, WeaponProps};
 use crate::assets::hardpoint::{snap_transform, weapon_local_scale};
+use crate::player::systems::shoot::Weapon;
 use crate::player::systems::spawn_players::PlayerModelRoot;
 
 /// The role both sides use to attach a one-handed weapon to a hand.
 pub const GRIP_ROLE: &str = "grip";
+
+/// Weapon-only role: the frame bullets leave from.
+pub const MUZZLE_ROLE: &str = "muzzle";
 
 /// How many frames we wait for the skeleton to spawn before giving up (and saying so).
 const EQUIP_MAX_TRIES: u32 = 600;
@@ -36,6 +40,10 @@ pub struct PendingEquip {
     pub weapon_model_path: String,
     /// Weapon def scale, applied as the weapon's local scale under the bone.
     pub weapon_scale: f32,
+    /// The weapon's `muzzle` hardpoint (where bullets leave), if authored.
+    pub muzzle: Option<Hardpoint>,
+    /// Combat stats resolved from the weapon def.
+    pub weapon_props: WeaponProps,
     tries: u32,
 }
 
@@ -45,17 +53,21 @@ impl PendingEquip {
     pub fn resolve(character: &AssetDefinition, weapon_def_path: &str) -> Option<Self> {
         let char_grip = character.hardpoints.get(GRIP_ROLE)?.clone();
         let weapon = AssetDefinition::load_from_def_path(weapon_def_path)?;
-        if !matches!(weapon.model_type, ModelType::Weapon(_)) {
+        let ModelType::Weapon(props) = &weapon.model_type else {
             warn!("{weapon_def_path} is not a Weapon def; not equipping");
             return None;
-        }
+        };
+        let weapon_props = props.clone();
         let weapon_grip = weapon.hardpoints.get(GRIP_ROLE)?.clone();
+        let muzzle = weapon.hardpoints.get(MUZZLE_ROLE).cloned();
         Some(Self {
             bone: char_grip.anchor.clone(),
             char_grip,
             weapon_grip,
             weapon_model_path: weapon.model_path,
             weapon_scale: weapon.scale,
+            muzzle,
+            weapon_props,
             tries: 0,
         })
     }
@@ -175,6 +187,7 @@ pub fn equip_pending_weapons(
                     bone: anchor,
                     root,
                 },
+                Weapon::from_props(&equip.weapon_props, equip.muzzle.clone()),
             ))
             .id();
         commands.entity(anchor).add_child(weapon);
@@ -190,27 +203,30 @@ pub fn equip_pending_weapons(
 /// in practice — bone world scale barely changes across animation — but immune to the
 /// spawn-frame propagation race that would otherwise collapse the weapon.
 pub fn keep_weapons_snapped(
+    time: Res<Time>,
     weapons: Query<(Entity, &WeaponModel)>,
     global_transforms: Query<&GlobalTransform>,
     mut transforms: Query<&mut Transform>,
-    mut logged: Local<std::collections::HashSet<Entity>>,
+    mut recoil_q: Query<&mut Weapon>,
 ) {
+    let dt = time.delta_secs();
     for (weapon, snap) in weapons.iter() {
         let bone_scale = global_transforms.get(snap.bone).map(|gt| gt.scale().x).unwrap_or(1.0);
         let root_scale = global_transforms.get(snap.root).map(|gt| gt.scale().x).unwrap_or(1.0);
         let effective = weapon_local_scale(snap.weapon_def_scale, root_scale, bone_scale);
-        // TEMP: log once per weapon once its transforms have settled to non-identity.
-        if bone_scale != 1.0 && logged.insert(weapon) {
-            info!(
-                "equipped weapon settled: root scale = {root_scale}, bone world scale = \
-                 {bone_scale}, weapon def scale = {}, effective local scale = {effective}, \
-                 weapon world scale ~= {}",
-                snap.weapon_def_scale,
-                bone_scale * effective
-            );
-        }
+
         if let Ok(mut t) = transforms.get_mut(weapon) {
             *t = snap_transform(&snap.char_grip, &snap.weapon_grip, effective);
+
+            // Recoil: kick the muzzle up around the weapon's local X, decaying fast.
+            if let Ok(mut wpn) = recoil_q.get_mut(weapon) {
+                if wpn.recoil > 0.0001 {
+                    t.rotation *= Quat::from_rotation_x(wpn.recoil);
+                    wpn.recoil = (wpn.recoil - wpn.recoil * 14.0 * dt).max(0.0);
+                } else {
+                    wpn.recoil = 0.0;
+                }
+            }
         }
     }
 }

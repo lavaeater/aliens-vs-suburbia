@@ -21,8 +21,9 @@ pub const ANIM_KEY_NAMES: &[&str] = &[
 ];
 
 /// Standard hardpoint role names, shared across characters and weapons so the snap
-/// can pair them (character `grip` <-> weapon `grip`, etc.).
-pub const HARDPOINT_ROLES: &[&str] = &["grip", "foregrip", "stock", "sight"];
+/// can pair them (character `grip` <-> weapon `grip`, etc.). `muzzle` is weapon-only:
+/// the frame bullets leave from (see `src/player/systems/shoot.rs`).
+pub const HARDPOINT_ROLES: &[&str] = &["grip", "foregrip", "stock", "sight", "muzzle"];
 
 // ── Browser state ─────────────────────────────────────────────────────────────
 
