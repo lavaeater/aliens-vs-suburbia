@@ -47,7 +47,7 @@ Most gameplay systems use `.run_if(in_state(InGame))`. Physics runs on a fixed t
 | `src/alien/` | Alien spawning (wave-based via `WaveManager`). `wave_manager.rs` drives wave progression; waves can come from `MapFile.waves` or fall back to hardcoded defaults. |
 | `src/player/` | Player character: physics, auto-aim, scene loading, outline rendering, death/revive, special abilities (`src/player/systems/abilities.rs`). |
 | `src/towers/` | Tower entities: shooting, slow, area-damage sensors and cooldown systems. |
-| `src/control/` | Input: keyboard (`keyboard_input.rs`), gamepad (`gamepad_input.rs`). `Q` key fires special ability via `AbilityInput` resource. |
+| `src/control/` | Input: keyboard (`keyboard_input.rs`), gamepad (`gamepad_input.rs`), mouse aim (`mouse_aim.rs`). `Q` key fires special ability via `AbilityInput` resource. The keyboard player aims with the mouse: `mouse_aim` projects the cursor onto the ground plane and sets `AutoAim`; `mouse_face` steers the body to face it (overriding A/D tank rotation). Gamepad players keep `auto_aim` (closest-in-FOV). |
 | `src/building/` | Build mode: enter/exit, tile placement preview, tower construction. Checks `TeamWallet` for cost. |
 | `src/map/` | Tile-based level: map generator, pathfinding grid (`MapGraph`), wall/floor/obstacle spawning. `map_loader` now also spawns editor `placements` from `MapFile`. |
 | `src/general/` | Core mechanics: collision, `Health`/health bars, `TouchDamage`, `Indestructible`, `Coin`/`TeamWallet` economy, physics throws, lighting, kinematic movement, tile tracking. |
