@@ -1,13 +1,18 @@
 //! The gore/FX layer. Registers the shared damage/death messages, the budget, and
-//! the subscriber systems (blood now; gibs, scorch, SFX later).
+//! the subscriber systems: blood, gibs, destructible-terrain rubble, fire, plus the
+//! juice layer (SFX + barks).
 
 use bevy::prelude::*;
 
 use crate::game_state::GameState;
+use crate::gore::barks::{
+    bark_on_events, reset_atrocity, setup_bark_caption, tick_bark_caption, AtrocityMeter, BarkState,
+};
 use crate::gore::blood::{setup_blood_assets, spawn_blood_on_damage};
 use crate::gore::components::{DamageDealt, EntityDied, GoreBudget};
 use crate::gore::fire::{setup_fire_assets, spawn_fire_fields, tick_fire_fields, SpawnFire};
 use crate::gore::gibs::{setup_gib_assets, spawn_gibs_on_death};
+use crate::gore::sfx::{emit_combat_sfx, play_sfx, setup_sfx_bank, PlaySfx};
 use crate::gore::systems::{record_last_hit, tick_ephemeral};
 use crate::gore::terrain::{destroy_damaged_terrain, setup_debris_assets};
 
@@ -18,7 +23,10 @@ impl Plugin for GorePlugin {
         app.add_message::<DamageDealt>()
             .add_message::<EntityDied>()
             .add_message::<SpawnFire>()
+            .add_message::<PlaySfx>()
             .init_resource::<GoreBudget>()
+            .init_resource::<AtrocityMeter>()
+            .init_resource::<BarkState>()
             .add_systems(
                 Startup,
                 (
@@ -26,7 +34,12 @@ impl Plugin for GorePlugin {
                     setup_gib_assets,
                     setup_debris_assets,
                     setup_fire_assets,
+                    setup_sfx_bank,
                 ),
+            )
+            .add_systems(
+                OnEnter(GameState::InGame),
+                (setup_bark_caption, reset_atrocity),
             )
             .add_systems(
                 Update,
@@ -38,6 +51,10 @@ impl Plugin for GorePlugin {
                     spawn_fire_fields,
                     tick_fire_fields,
                     tick_ephemeral,
+                    emit_combat_sfx,
+                    play_sfx,
+                    bark_on_events,
+                    tick_bark_caption,
                 )
                     .run_if(in_state(GameState::InGame)),
             );

@@ -186,8 +186,20 @@ Effort: fire ~2 days; SFX ~1 day; barks ~2–3 days (the writing is the long pol
 tick, emitting `DamageDealt(Fire)` (blood skips fire; death/score still fire), and scorches the
 ground with a persistent decal on burnout. Wired to a new **Molotov** `SpecialAbility` (Q) that
 rains a ring of fire around the player. `SpawnFire` is the reusable hook for thrown molotovs
-later. **SFX and barks not started** — SFX needs sample assets; barks want the facts system +
-writing.
+later.
+
+✅ **SFX done (asset-free).** `src/gore/sfx.rs`: combat/gore messages become `PlaySfx`
+requests played as one-shot `bevy_seedling` voices with pitch/gain jitter, capped at 24
+concurrent. At startup it scans `assets/sfx/` and loads `.wav`s by filename prefix
+(`hit*`, `death*`, `gib*`, `fire*`, `shoot*`, `bark*`) — silent until you drop samples in.
+See `assets/sfx/README.md`.
+
+✅ **Barks done (first pass).** `src/gore/barks.rs`: ultraviolent one-liners surface as a
+fading bottom-screen caption (and a `bark*.wav` if present), triggered by kills / multikills /
+the player getting hurt / near-death, on a cooldown. An `AtrocityMeter` (body count) drifts the
+lines and caption color from gung-ho zeal toward haunted doubt — the obedience-vs-faith theme.
+Triggers key off gore events for now; moving them to authored `turbofacts` stories (wave,
+streak, health-aware) is the natural refinement.
 
 ## 5. Destructible terrain
 
