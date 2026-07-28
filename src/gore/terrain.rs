@@ -78,21 +78,23 @@ pub fn destroy_damaged_terrain(
         (With<IsObstacle>, Without<Indestructible>),
     >,
 ) {
-    let Some(debris) = debris else { return };
-
     for (entity, health, tile, transform) in structures.iter() {
         if health.health > 0 {
             continue;
         }
 
         // Re-open the tile so aliens can path through the gap (idempotent if the alien
-        // that broke it already did this). `recheck_path_after_tile_opened` reacts.
+        // that broke it already did this). `recheck_path_after_tile_opened` reacts. This
+        // happens even before art is loaded — pathing must not depend on FX assets.
         if let Some(tile) = tile {
             map_graph.path_finding_grid.add_vertex(tile.tile);
             map_graph.path_reopened = true;
         }
 
-        spawn_debris(&mut commands, &mut materials, &mut budget, &debris, transform);
+        // The visual burst needs the shared debris art; skip it if not ready yet.
+        if let Some(debris) = debris.as_ref() {
+            spawn_debris(&mut commands, &mut materials, &mut budget, debris, transform);
+        }
         commands.entity(entity).despawn();
     }
 }
@@ -151,5 +153,73 @@ fn spawn_debris(
         if let Some(evicted) = budget.push_gib(chunk) {
             commands.entity(evicted).despawn();
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::destroy_damaged_terrain;
+    use bevy::prelude::*;
+    use pathfinding::grid::Grid;
+    use std::collections::HashSet;
+    use crate::general::components::map_components::CurrentTile;
+    use crate::general::components::Health;
+    use crate::general::resources::map_resources::MapGraph;
+    use crate::gore::components::GoreBudget;
+    use crate::player::components::IsObstacle;
+
+    fn test_app() -> App {
+        let mut app = App::new();
+        app.init_resource::<Assets<StandardMaterial>>();
+        app.init_resource::<GoreBudget>();
+        app.insert_resource(MapGraph {
+            path_finding_grid: Grid::new(8, 8),
+            occupied_tiles: HashSet::new(),
+            goal: (0, 0),
+            path_reopened: false,
+        });
+        // No DebrisAssets -> FX skipped, but reopen + despawn still run.
+        app.add_systems(Update, destroy_damaged_terrain);
+        app
+    }
+
+    #[test]
+    fn destroyed_obstacle_reopens_its_tile_and_despawns() {
+        let mut app = test_app();
+        let wall = app
+            .world_mut()
+            .spawn((
+                IsObstacle,
+                Health { health: 0, max_health: 100 },
+                CurrentTile { tile: (3, 4) },
+                Transform::default(),
+            ))
+            .id();
+
+        app.update();
+
+        let map = app.world().resource::<MapGraph>();
+        assert!(map.path_finding_grid.has_vertex((3, 4)), "the tile should re-open");
+        assert!(map.path_reopened, "the recheck flag should be set");
+        assert!(app.world().get::<Health>(wall).is_none(), "the wall should despawn");
+    }
+
+    #[test]
+    fn a_healthy_wall_is_untouched() {
+        let mut app = test_app();
+        let wall = app
+            .world_mut()
+            .spawn((
+                IsObstacle,
+                Health { health: 60, max_health: 100 },
+                CurrentTile { tile: (3, 4) },
+                Transform::default(),
+            ))
+            .id();
+
+        app.update();
+
+        assert!(app.world().get::<Health>(wall).is_some(), "a living wall stays");
+        assert!(!app.world().resource::<MapGraph>().path_reopened);
     }
 }

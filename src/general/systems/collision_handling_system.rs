@@ -72,3 +72,95 @@ pub fn collision_handling_system(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::collision_handling_system;
+    use avian3d::prelude::CollisionStart;
+    use bevy::prelude::*;
+    use crate::alien::components::general::{Alien, AlienCounter};
+    use crate::game_state::score_keeper::GameTrackingEvent;
+    use crate::general::components::{Ball, Health, HittableTarget};
+    use crate::gore::components::DamageDealt;
+
+    #[derive(Resource)]
+    struct Collision(Entity, Entity);
+
+    fn fire_collision(pair: Res<Collision>, mut w: MessageWriter<CollisionStart>) {
+        w.write(CollisionStart {
+            collider1: pair.0,
+            collider2: pair.1,
+            body1: None,
+            body2: None,
+        });
+    }
+
+    #[derive(Resource, Default)]
+    struct Caught(Vec<DamageDealt>);
+
+    fn catch(mut r: MessageReader<DamageDealt>, mut c: ResMut<Caught>) {
+        for d in r.read() {
+            c.0.push(*d);
+        }
+    }
+
+    #[test]
+    fn ball_hitting_an_alien_damages_it_and_counts_the_kill() {
+        let mut app = App::new();
+        app.add_message::<CollisionStart>();
+        app.add_message::<GameTrackingEvent>();
+        app.add_message::<DamageDealt>();
+        app.insert_resource(AlienCounter { count: 1, max_count: 10 });
+        app.init_resource::<Caught>();
+        app.add_systems(Update, (fire_collision, collision_handling_system, catch).chain());
+
+        let thrower = app.world_mut().spawn_empty().id();
+        let ball = app.world_mut().spawn(Ball::new(thrower)).id();
+        let alien = app
+            .world_mut()
+            .spawn((Health { health: 10, max_health: 10 }, HittableTarget {}, Alien))
+            .id();
+        app.insert_resource(Collision(ball, alien));
+
+        app.update();
+
+        let health = app.world().get::<Health>(alien).expect("alien still exists");
+        assert!(health.health <= 0, "10 hp minus BALL_DAMAGE (10) leaves it dead");
+
+        let caught = &app.world().resource::<Caught>().0;
+        assert_eq!(caught.len(), 1, "one DamageDealt emitted");
+        assert_eq!(caught[0].target, alien);
+        assert!(caught[0].lethal, "the killing blow is flagged lethal");
+
+        assert_eq!(
+            app.world().resource::<AlienCounter>().count,
+            0,
+            "killing the alien decrements the live counter"
+        );
+    }
+
+    #[test]
+    fn a_glancing_ball_only_wounds() {
+        let mut app = App::new();
+        app.add_message::<CollisionStart>();
+        app.add_message::<GameTrackingEvent>();
+        app.add_message::<DamageDealt>();
+        app.insert_resource(AlienCounter { count: 1, max_count: 10 });
+        app.init_resource::<Caught>();
+        app.add_systems(Update, (fire_collision, collision_handling_system, catch).chain());
+
+        let thrower = app.world_mut().spawn_empty().id();
+        let ball = app.world_mut().spawn(Ball::new(thrower)).id();
+        let alien = app
+            .world_mut()
+            .spawn((Health { health: 100, max_health: 100 }, HittableTarget {}, Alien))
+            .id();
+        app.insert_resource(Collision(ball, alien));
+
+        app.update();
+
+        assert_eq!(app.world().get::<Health>(alien).unwrap().health, 90);
+        assert!(!app.world().resource::<Caught>().0[0].lethal);
+        assert_eq!(app.world().resource::<AlienCounter>().count, 1, "no kill, no decrement");
+    }
+}

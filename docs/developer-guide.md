@@ -353,8 +353,19 @@ Examples in the tree: `assets/hardpoint.rs` (frame math), `gore/components.rs`
 
 Follows [Bevy's `how_to_test_systems`](https://github.com/bevyengine/bevy/blob/main/tests/how_to_test_systems.rs):
 build a headless `App`, register messages, add the system, spawn inputs, `app.update()`,
-assert. Worked example: `general/systems/health_monitor_system.rs` (dead entity → despawn +
-`EntityDied`; live entity untouched).
+assert. Worked examples in the tree:
+- `general/systems/health_monitor_system.rs` — dead entity → despawn + `EntityDied`;
+  Player/Indestructible/Obstacle left alone.
+- `general/systems/collision_handling_system.rs` — feed a constructed `CollisionStart`,
+  assert damage/kill/counter (uses a small writer system to emit the message and a "catch"
+  resource to capture `DamageDealt`).
+- `gore/terrain.rs` — a destroyed obstacle re-opens its `MapGraph` tile and despawns
+  (builds a `MapGraph` with `Grid::new`, no render assets needed).
+- `gore/systems.rs` — `record_last_hit` stamps `LastHit` from a `DamageDealt`.
+
+Two reusable tricks these lean on: a **writer system** (`fn fire(res, mut w: MessageWriter<_>)`)
+to inject a message with entity ids captured in a `Resource`, and a **catch system** that
+pushes read messages into a `Resource` `Vec` so you can assert what was emitted.
 
 Skeleton:
 
