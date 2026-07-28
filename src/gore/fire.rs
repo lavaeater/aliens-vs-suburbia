@@ -35,6 +35,23 @@ pub struct FireField {
     radius: f32,
 }
 
+impl FireField {
+    /// How often the field applies damage (also the window each tick's damage covers).
+    const DAMAGE_INTERVAL: f32 = 0.25;
+    /// How often a flame puff spawns.
+    const FLAME_INTERVAL: f32 = 0.08;
+
+    pub fn new(duration: f32, dps: f32, radius: f32) -> Self {
+        Self {
+            life: Timer::from_seconds(duration, TimerMode::Once),
+            damage_tick: Timer::from_seconds(Self::DAMAGE_INTERVAL, TimerMode::Repeating),
+            flame_tick: Timer::from_seconds(Self::FLAME_INTERVAL, TimerMode::Repeating),
+            dps,
+            radius,
+        }
+    }
+}
+
 /// Shared fire art.
 #[derive(Resource)]
 pub struct FireAssets {
@@ -80,13 +97,7 @@ pub fn spawn_fire_fields(
             ..default()
         });
         commands.spawn((
-            FireField {
-                life: Timer::from_seconds(fire.duration, TimerMode::Once),
-                damage_tick: Timer::from_seconds(0.25, TimerMode::Repeating),
-                flame_tick: Timer::from_seconds(0.08, TimerMode::Repeating),
-                dps: fire.dps,
-                radius: fire.radius,
-            },
+            FireField::new(fire.duration, fire.dps, fire.radius),
             Mesh3d(meshes.add(Mesh::from(Sphere::new(0.5)))),
             MeshMaterial3d(base_mat),
             Transform::from_translation(fire.position + Vec3::Y * 0.15)
@@ -203,5 +214,61 @@ pub fn tick_fire_fields(
             }
             commands.entity(entity).despawn();
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{tick_fire_fields, FireField};
+    use avian3d::prelude::Position;
+    use bevy::prelude::*;
+    use std::time::Duration;
+    use crate::alien::components::general::Alien;
+    use crate::general::components::Health;
+    use crate::gore::components::{DamageDealt, DamageKind, GoreBudget};
+
+    #[derive(Resource, Default)]
+    struct Caught(Vec<DamageDealt>);
+
+    fn catch(mut r: MessageReader<DamageDealt>, mut c: ResMut<Caught>) {
+        for d in r.read() {
+            c.0.push(*d);
+        }
+    }
+
+    #[test]
+    fn fire_burns_creatures_inside_the_radius_only() {
+        let mut app = App::new();
+        app.add_message::<DamageDealt>();
+        app.init_resource::<Caught>();
+        app.init_resource::<Time>();
+        app.init_resource::<GoreBudget>();
+        app.init_resource::<Assets<Mesh>>();
+        app.init_resource::<Assets<StandardMaterial>>();
+        // No FireAssets resource -> flame puffs use the mesh fallback; fine for a test.
+        app.add_systems(Update, (tick_fire_fields, catch).chain());
+
+        // Fire at the origin: radius 2, 40 dps.
+        app.world_mut().spawn((FireField::new(5.0, 40.0, 2.0), Transform::from_translation(Vec3::ZERO)));
+        let inside = app
+            .world_mut()
+            .spawn((Alien, Health { health: 100, max_health: 100 }, Position(Vec3::new(1.0, 0.0, 0.0))))
+            .id();
+        let outside = app
+            .world_mut()
+            .spawn((Alien, Health { health: 100, max_health: 100 }, Position(Vec3::new(9.0, 0.0, 0.0))))
+            .id();
+
+        // 0.3s -> one 0.25s damage tick -> 40 * 0.25 = 10 damage.
+        app.world_mut().resource_mut::<Time>().advance_by(Duration::from_millis(300));
+        app.update();
+
+        assert_eq!(app.world().get::<Health>(inside).unwrap().health, 90, "creature in the fire burns");
+        assert_eq!(app.world().get::<Health>(outside).unwrap().health, 100, "creature outside is safe");
+
+        let caught = &app.world().resource::<Caught>().0;
+        assert_eq!(caught.len(), 1);
+        assert_eq!(caught[0].target, inside);
+        assert_eq!(caught[0].kind, DamageKind::Fire);
     }
 }

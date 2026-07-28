@@ -362,6 +362,18 @@ assert. Worked examples in the tree:
 - `gore/terrain.rs` — a destroyed obstacle re-opens its `MapGraph` tile and despawns
   (builds a `MapGraph` with `Grid::new`, no render assets needed).
 - `gore/systems.rs` — `record_last_hit` stamps `LastHit` from a `DamageDealt`.
+- `general/systems/touch_damage_system.rs` — advances a headless `Time`, feeds a
+  constructed `CollidingEntities`, asserts the player takes dps×dt and the hit emits
+  `DamageDealt(Blunt)`; no overlap → no damage.
+- `gore/fire.rs` — advances `Time` one damage tick and checks a `FireField` burns a
+  creature inside its radius (emitting `DamageDealt(Fire)`) but not one outside.
+- `control/mouse_aim.rs` — pure-function tests for `ground_aim_from_ray` (cursor→ground
+  projection): straight-down hit, slanted ray flattened + normalized, parallel/on-player
+  rays return `None`.
+
+Advancing time headlessly: `app.init_resource::<Time>()`, then
+`app.world_mut().resource_mut::<Time>().advance_by(Duration::from_millis(..))` before
+`app.update()` — how the touch-damage and fire DoT tests exercise per-second logic.
 
 Two reusable tricks these lean on: a **writer system** (`fn fire(res, mut w: MessageWriter<_>)`)
 to inject a message with entity ids captured in a `Resource`, and a **catch system** that

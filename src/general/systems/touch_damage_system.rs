@@ -36,3 +36,81 @@ pub fn touch_damage_system(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::touch_damage_system;
+    use avian3d::prelude::{CollidingEntities, Position};
+    use bevy::ecs::entity::EntityHashSet;
+    use bevy::prelude::*;
+    use std::time::Duration;
+    use crate::general::components::{Health, TouchDamage};
+    use crate::gore::components::{DamageDealt, DamageKind};
+    use crate::player::components::Player;
+
+    #[derive(Resource, Default)]
+    struct Caught(Vec<DamageDealt>);
+
+    fn catch(mut r: MessageReader<DamageDealt>, mut c: ResMut<Caught>) {
+        for d in r.read() {
+            c.0.push(*d);
+        }
+    }
+
+    fn overlapping(targets: impl IntoIterator<Item = Entity>) -> CollidingEntities {
+        let mut set = EntityHashSet::default();
+        set.extend(targets);
+        CollidingEntities(set)
+    }
+
+    #[test]
+    fn a_toucher_damages_the_player_it_overlaps() {
+        let mut app = App::new();
+        app.add_message::<DamageDealt>();
+        app.init_resource::<Caught>();
+        app.init_resource::<Time>();
+        app.add_systems(Update, (touch_damage_system, catch).chain());
+
+        let player = app
+            .world_mut()
+            .spawn((Player, Health { health: 100, max_health: 100 }, Position(Vec3::ZERO)))
+            .id();
+        app.world_mut().spawn((
+            TouchDamage { dps: 100.0 },
+            overlapping([player]),
+            Position(Vec3::new(1.0, 0.0, 0.0)),
+        ));
+
+        // 0.3s at 100 dps -> 30 damage.
+        app.world_mut().resource_mut::<Time>().advance_by(Duration::from_millis(300));
+        app.update();
+
+        assert_eq!(app.world().get::<Health>(player).unwrap().health, 70);
+        let caught = &app.world().resource::<Caught>().0;
+        assert_eq!(caught.len(), 1);
+        assert_eq!(caught[0].kind, DamageKind::Blunt);
+        assert_eq!(caught[0].target, player);
+    }
+
+    #[test]
+    fn no_damage_without_overlap() {
+        let mut app = App::new();
+        app.add_message::<DamageDealt>();
+        app.init_resource::<Caught>();
+        app.init_resource::<Time>();
+        app.add_systems(Update, (touch_damage_system, catch).chain());
+
+        let player = app
+            .world_mut()
+            .spawn((Player, Health { health: 100, max_health: 100 }, Position(Vec3::ZERO)))
+            .id();
+        // Toucher overlaps nobody.
+        app.world_mut().spawn((TouchDamage { dps: 100.0 }, overlapping([]), Position(Vec3::ZERO)));
+
+        app.world_mut().resource_mut::<Time>().advance_by(Duration::from_millis(300));
+        app.update();
+
+        assert_eq!(app.world().get::<Health>(player).unwrap().health, 100);
+        assert!(app.world().resource::<Caught>().0.is_empty());
+    }
+}
