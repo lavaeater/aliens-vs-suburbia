@@ -245,3 +245,52 @@ pub fn tick_ability_flash(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{AbilityCooldown, SpecialAbility};
+
+    #[test]
+    fn charge_fills_over_throws_and_reports_when_ready() {
+        let mut cd = AbilityCooldown::new(4);
+        assert!(!cd.ready());
+        for _ in 0..3 {
+            assert!(!cd.add_throw(), "not full yet");
+            assert!(!cd.ready());
+        }
+        assert!(cd.add_throw(), "the 4th throw tops it off");
+        assert!(cd.ready());
+    }
+
+    #[test]
+    fn extra_throws_after_full_do_nothing() {
+        let mut cd = AbilityCooldown::new(1);
+        assert!(cd.add_throw());
+        assert!(!cd.add_throw(), "already full");
+        assert!(cd.ready());
+    }
+
+    #[test]
+    fn reset_empties_the_meter() {
+        let mut cd = AbilityCooldown::new(2);
+        cd.add_throw();
+        cd.add_throw();
+        assert!(cd.ready());
+        cd.reset();
+        assert!(!cd.ready());
+        assert_eq!(cd.charge, 0.0);
+    }
+
+    #[test]
+    fn every_ability_has_a_positive_charge_cost() {
+        for a in [
+            SpecialAbility::Bombardment,
+            SpecialAbility::Healing,
+            SpecialAbility::Whirlwind,
+            SpecialAbility::GoldDigger,
+            SpecialAbility::Molotov,
+        ] {
+            assert!(a.throws_to_charge() > 0, "{} must cost something", a.label());
+        }
+    }
+}

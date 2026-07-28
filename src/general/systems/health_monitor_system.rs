@@ -28,3 +28,65 @@ pub fn health_monitor_system(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::health_monitor_system;
+    use bevy::prelude::*;
+    use crate::general::components::{Health, Indestructible};
+    use crate::gore::components::EntityDied;
+    use crate::player::components::IsObstacle;
+
+    /// Collects the deaths the system announced, so we can assert on them.
+    #[derive(Resource, Default)]
+    struct Caught(Vec<Entity>);
+
+    fn catch(mut reader: MessageReader<EntityDied>, mut caught: ResMut<Caught>) {
+        for died in reader.read() {
+            caught.0.push(died.entity);
+        }
+    }
+
+    fn test_app() -> App {
+        let mut app = App::new();
+        app.add_message::<EntityDied>();
+        app.init_resource::<Caught>();
+        // catch runs after the monitor so it sees the message emitted this frame.
+        app.add_systems(Update, (health_monitor_system, catch).chain());
+        app
+    }
+
+    #[test]
+    fn dead_nonplayer_despawns_and_announces_its_death() {
+        let mut app = test_app();
+        let dead = app.world_mut().spawn(Health { health: 0, max_health: 100 }).id();
+        let alive = app.world_mut().spawn(Health { health: 40, max_health: 100 }).id();
+
+        app.update();
+
+        assert!(app.world().get::<Health>(dead).is_none(), "a dead entity should despawn");
+        assert!(app.world().get::<Health>(alive).is_some(), "a living entity should survive");
+        assert_eq!(app.world().resource::<Caught>().0, vec![dead], "exactly the dead one is announced");
+    }
+
+    #[test]
+    fn indestructible_and_obstacles_are_left_for_other_systems() {
+        let mut app = test_app();
+        // Indestructible things never despawn from health loss...
+        let indestructible = app
+            .world_mut()
+            .spawn((Health { health: 0, max_health: 100 }, Indestructible))
+            .id();
+        // ...and obstacles crumble via destroy_damaged_terrain, not here.
+        let obstacle = app
+            .world_mut()
+            .spawn((Health { health: 0, max_health: 100 }, IsObstacle))
+            .id();
+
+        app.update();
+
+        assert!(app.world().get::<Health>(indestructible).is_some());
+        assert!(app.world().get::<Health>(obstacle).is_some());
+        assert!(app.world().resource::<Caught>().0.is_empty(), "no deaths announced for those");
+    }
+}

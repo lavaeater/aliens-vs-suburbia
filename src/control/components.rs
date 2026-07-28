@@ -174,3 +174,38 @@ impl Default for CharacterState {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::CharacterState;
+    use crate::animation::animation_plugin::AnimationKey;
+
+    #[test]
+    fn default_state_is_idle() {
+        assert_eq!(CharacterState::default().resolve(), AnimationKey::Idle);
+    }
+
+    #[test]
+    fn walk_plus_throwing_resolves_to_throwing() {
+        let mut s = CharacterState::default();
+        s.enter_state(AnimationKey::Walk);
+        s.enter_state(AnimationKey::Throwing);
+        assert_eq!(s.resolve(), AnimationKey::Throwing);
+    }
+
+    #[test]
+    fn death_takes_priority_over_movement() {
+        let mut s = CharacterState::default();
+        s.enter_state(AnimationKey::Walk);
+        s.enter_state(AnimationKey::Death);
+        assert_eq!(s.resolve(), AnimationKey::Death);
+    }
+
+    #[test]
+    fn leaving_the_last_state_returns_to_idle() {
+        let mut s = CharacterState::default();
+        s.enter_state(AnimationKey::Walk);
+        s.leave_state(AnimationKey::Walk);
+        assert_eq!(s.resolve(), AnimationKey::Idle);
+    }
+}

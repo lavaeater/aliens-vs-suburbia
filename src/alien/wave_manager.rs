@@ -113,3 +113,22 @@ pub fn count_wave_spawn(
         .iter().map(|w| w.alien_count).sum();
     manager.spawned_this_wave = (tracker.aliens_to_spawn - tracker.aliens_left_to_spawn - wave_offset).max(0);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::WaveManager;
+
+    #[test]
+    fn default_waves_sum_to_expected_total() {
+        // 1 + 15 + 20 in the hardcoded default schedule.
+        assert_eq!(WaveManager::default().total_aliens(), 36);
+    }
+
+    #[test]
+    fn waves_remaining_flips_when_the_last_wave_is_consumed() {
+        let mut wm = WaveManager::default();
+        assert!(wm.waves_remaining());
+        wm.current_wave = wm.waves.len();
+        assert!(!wm.waves_remaining());
+    }
+}

@@ -147,3 +147,39 @@ impl GoreBudget {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bevy::prelude::World;
+
+    /// Mint real `Entity` ids without spinning up a full app.
+    fn entities(n: usize) -> Vec<Entity> {
+        let mut world = World::new();
+        (0..n).map(|_| world.spawn_empty().id()).collect()
+    }
+
+    #[test]
+    fn decal_budget_recycles_oldest_first() {
+        let e = entities(3);
+        let mut budget = GoreBudget::default();
+        budget.max_decals = 2;
+
+        assert_eq!(budget.push_decal(e[0]), None, "under cap: nothing evicted");
+        assert_eq!(budget.push_decal(e[1]), None, "at cap: nothing evicted");
+        assert_eq!(budget.push_decal(e[2]), Some(e[0]), "over cap: evict the oldest");
+    }
+
+    #[test]
+    fn gib_and_decal_budgets_are_independent() {
+        let e = entities(3);
+        let mut budget = GoreBudget::default();
+        budget.max_gibs = 1;
+        budget.max_decals = 10;
+
+        // Pushing decals never evicts gibs, and vice versa.
+        assert_eq!(budget.push_decal(e[0]), None);
+        assert_eq!(budget.push_gib(e[1]), None);
+        assert_eq!(budget.push_gib(e[2]), Some(e[1]), "second gib evicts the first");
+    }
+}
