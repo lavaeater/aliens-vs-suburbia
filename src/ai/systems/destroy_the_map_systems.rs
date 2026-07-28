@@ -221,3 +221,83 @@ pub fn destroy_the_map_action_system(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::recheck_path_after_tile_opened;
+    use bevy::prelude::*;
+    use pathfinding::grid::Grid;
+    use std::collections::HashSet;
+    use crate::ai::components::destroy_the_map_components::MustDestroyTheMap;
+    use crate::ai::components::move_towards_goal_components::MoveTowardsGoalData;
+    use crate::alien::components::general::Alien;
+    use crate::general::components::map_components::CurrentTile;
+    use crate::general::resources::map_resources::MapGraph;
+
+    /// Grid with the given tiles opened (present + connected to adjacent open tiles).
+    fn graph(goal: (usize, usize), open: &[(usize, usize)], reopened: bool) -> MapGraph {
+        let mut grid = Grid::new(8, 8);
+        for &t in open {
+            grid.add_vertex(t);
+        }
+        MapGraph {
+            path_finding_grid: grid,
+            occupied_tiles: HashSet::new(),
+            goal,
+            path_reopened: reopened,
+        }
+    }
+
+    #[test]
+    fn a_reopened_path_clears_destroy_behavior_and_lowers_the_flag() {
+        let mut app = App::new();
+        // Open a straight corridor (2,0)-(1,0)-(0,0) so A* connects alien to goal.
+        app.insert_resource(graph((0, 0), &[(0, 0), (1, 0), (2, 0)], true));
+        app.add_systems(Update, recheck_path_after_tile_opened);
+
+        let alien = app
+            .world_mut()
+            .spawn((Alien, CurrentTile { tile: (2, 0) }, MustDestroyTheMap::new()))
+            .id();
+
+        app.update();
+
+        assert!(app.world().get::<MustDestroyTheMap>(alien).is_none(), "destroy behavior cleared");
+        assert!(app.world().get::<MoveTowardsGoalData>(alien).is_some(), "path reset for fresh A*");
+        assert!(!app.world().resource::<MapGraph>().path_reopened, "flag consumed");
+    }
+
+    #[test]
+    fn no_path_leaves_the_alien_still_destroying() {
+        let mut app = App::new();
+        // Alien's tile is isolated from the goal -> no path.
+        app.insert_resource(graph((0, 0), &[(0, 0), (2, 0)], true));
+        app.add_systems(Update, recheck_path_after_tile_opened);
+
+        let alien = app
+            .world_mut()
+            .spawn((Alien, CurrentTile { tile: (2, 0) }, MustDestroyTheMap::new()))
+            .id();
+
+        app.update();
+
+        assert!(app.world().get::<MustDestroyTheMap>(alien).is_some(), "still no route: keep destroying");
+    }
+
+    #[test]
+    fn does_nothing_while_the_flag_is_down() {
+        let mut app = App::new();
+        // path_reopened = false: the system should early-out and touch nothing.
+        app.insert_resource(graph((0, 0), &[(0, 0), (1, 0), (2, 0)], false));
+        app.add_systems(Update, recheck_path_after_tile_opened);
+
+        let alien = app
+            .world_mut()
+            .spawn((Alien, CurrentTile { tile: (2, 0) }, MustDestroyTheMap::new()))
+            .id();
+
+        app.update();
+
+        assert!(app.world().get::<MustDestroyTheMap>(alien).is_some(), "no recheck requested");
+    }
+}

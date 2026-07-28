@@ -70,3 +70,47 @@ pub fn coin_pickup_system(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{coin_pickup_system, Coin, PickupRange, TeamWallet};
+    use bevy::prelude::*;
+    use crate::player::components::Player;
+
+    fn app_with_player_at(x: f32, range: f32) -> App {
+        let mut app = App::new();
+        app.init_resource::<TeamWallet>();
+        app.add_systems(Update, coin_pickup_system);
+        app.world_mut()
+            .spawn((Player, Transform::from_xyz(x, 0.0, 0.0), PickupRange(range)));
+        app
+    }
+
+    #[test]
+    fn a_coin_in_range_is_collected_into_the_wallet_and_despawned() {
+        let mut app = app_with_player_at(0.0, 1.8);
+        let coin = app
+            .world_mut()
+            .spawn((Coin { value: 5 }, Transform::from_xyz(1.0, 0.0, 0.0)))
+            .id();
+
+        app.update();
+
+        assert_eq!(app.world().resource::<TeamWallet>().coins, 5);
+        assert!(app.world().get::<Coin>(coin).is_none(), "the coin should be picked up");
+    }
+
+    #[test]
+    fn a_coin_out_of_range_is_left_alone() {
+        let mut app = app_with_player_at(0.0, 1.8);
+        let coin = app
+            .world_mut()
+            .spawn((Coin { value: 5 }, Transform::from_xyz(10.0, 0.0, 0.0)))
+            .id();
+
+        app.update();
+
+        assert_eq!(app.world().resource::<TeamWallet>().coins, 0);
+        assert!(app.world().get::<Coin>(coin).is_some(), "a distant coin stays on the ground");
+    }
+}
