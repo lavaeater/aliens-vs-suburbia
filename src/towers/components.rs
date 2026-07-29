@@ -90,14 +90,14 @@ mod tests {
     use crate::general::components::map_components::{AlienSpawnPoint, CoolDown};
 
     #[test]
-    fn shooter_fires_only_after_its_interval_elapses() {
-        // 60 rpm -> one shot per second.
+    fn shooter_fires_immediately_then_respects_its_interval() {
+        // 60 rpm -> one shot per second. cool_down starts at 0.0, so the first tick fires.
         let mut shooter = TowerShooter::new(60.0);
-        assert!(!shooter.cool_down(0.4), "0.4s in: not ready");
-        assert!(!shooter.cool_down(0.4), "0.8s in: still not ready");
-        assert!(shooter.cool_down(0.4), "past 1.0s: fires");
-        // And it re-arms rather than firing every subsequent call.
-        assert!(!shooter.cool_down(0.4));
+        assert!(shooter.cool_down(0.4), "starts charged: first tick fires");
+        // Now it must accumulate a full second before firing again.
+        assert!(!shooter.cool_down(0.4), "0.4s since: not ready");
+        assert!(!shooter.cool_down(0.4), "0.8s since: still not ready");
+        assert!(shooter.cool_down(0.4), "past 1.0s: fires again");
     }
 
     #[test]
@@ -110,10 +110,10 @@ mod tests {
 
     #[test]
     fn spawn_point_cooldown_matches_its_rate() {
-        // 120 spawns/min -> one every 0.5s.
+        // 120 spawns/min -> one every 0.5s. Also starts charged (cool_down 0.0).
         let mut sp = AlienSpawnPoint::new(120.0);
-        assert!(!sp.cool_down(0.3));
-        assert!(sp.cool_down(0.3), "0.6s in: spawn");
-        assert!(!sp.cool_down(0.3), "re-armed for the next 0.5s");
+        assert!(sp.cool_down(0.3), "starts charged: first tick spawns");
+        assert!(!sp.cool_down(0.3), "0.3s since: not ready");
+        assert!(sp.cool_down(0.3), "0.6s since: spawn, re-armed for the next 0.5s");
     }
 }

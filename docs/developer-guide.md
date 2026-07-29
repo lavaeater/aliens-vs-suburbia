@@ -371,6 +371,15 @@ assert. Worked examples in the tree:
   projection): straight-down hit, slanted ray flattened + normalized, parallel/on-player
   rays return `None`.
 
+- `general/systems/coin_system.rs` — a coin within `PickupRange` is banked into
+  `TeamWallet` and despawned; a distant coin is left alone.
+- `towers/components.rs` — pure `CoolDown` tests for `TowerShooter`, `TowerArea`, and
+  `AlienSpawnPoint` (note: shooter + spawn-point start *charged* at `cool_down = 0.0` and
+  fire on the first tick; area towers start at their interval).
+- `ai/systems/destroy_the_map_systems.rs` — `recheck_path_after_tile_opened`: a reopened
+  path clears `MustDestroyTheMap` + resets `MoveTowardsGoalData` and lowers the flag; no
+  path keeps the alien destroying; flag down → no-op. Builds a passable `Grid` corridor.
+
 Advancing time headlessly: `app.init_resource::<Time>()`, then
 `app.world_mut().resource_mut::<Time>().advance_by(Duration::from_millis(..))` before
 `app.update()` — how the touch-damage and fire DoT tests exercise per-second logic.
