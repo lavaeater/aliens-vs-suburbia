@@ -149,7 +149,7 @@ pub fn exit_build_mode(
 }
 
 /// Tower costs by build indicator key.
-fn tower_cost(key: &str) -> u32 {
+pub(crate) fn tower_cost(key: &str) -> u32 {
     match key {
         "tower"      => 50,
         "tower_slow" => 75,
@@ -372,5 +372,97 @@ pub fn build_tower_system(
             entity: id,
             name: "OBSTACLE",
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::tower_cost;
+
+    #[test]
+    fn known_tower_keys_have_their_prices() {
+        assert_eq!(tower_cost("tower"), 50);
+        assert_eq!(tower_cost("tower_slow"), 75);
+        assert_eq!(tower_cost("tower_area"), 100);
+    }
+
+    #[test]
+    fn an_unknown_key_is_free() {
+        // Build indicators that aren't towers (e.g. a plain tile) cost nothing.
+        assert_eq!(tower_cost("not_a_tower"), 0);
+        assert_eq!(tower_cost(""), 0);
+    }
+}
+
+#[cfg(test)]
+mod execute_build_tests {
+    use super::execute_build;
+    use avian3d::prelude::Position;
+    use bevy::prelude::*;
+    use std::collections::{HashMap, HashSet};
+    use crate::general::components::map_components::{CurrentTile, MapModelDefinitions};
+    use crate::general::resources::map_resources::MapGraph;
+    use crate::general::systems::coin_system::TeamWallet;
+    use crate::player::components::{BuildingIndicator, IsBuildIndicator};
+    use crate::player::events::building_events::{ExecuteBuild, RemoveTile};
+    use crate::towers::events::BuildTower;
+
+    #[derive(Resource, Default)]
+    struct Built(Vec<BuildTower>);
+
+    fn catch(mut r: MessageReader<BuildTower>, mut c: ResMut<Built>) {
+        for b in r.read() {
+            c.0.push(b.clone());
+        }
+    }
+
+    /// A world with one player aiming a "tower" indicator at an unoccupied tile.
+    fn setup(coins: u32) -> (App, Entity) {
+        let mut app = App::new();
+        app.add_message::<ExecuteBuild>();
+        app.add_message::<RemoveTile>();
+        app.add_message::<BuildTower>();
+        app.init_resource::<Built>();
+        app.insert_resource(TeamWallet { coins });
+        app.insert_resource(MapModelDefinitions {
+            definitions: HashMap::new(),
+            build_indicators: vec!["tower"], // cost 50
+        });
+        app.insert_resource(MapGraph {
+            path_finding_grid: pathfinding::grid::Grid::new(8, 8),
+            occupied_tiles: HashSet::new(),
+            goal: (0, 0),
+            path_reopened: false,
+        });
+        app.add_systems(Update, (execute_build, catch).chain());
+
+        let indicator = app
+            .world_mut()
+            .spawn((IsBuildIndicator, Position::from(Vec3::ZERO), CurrentTile { tile: (2, 2) }))
+            .id();
+        let player = app.world_mut().spawn(BuildingIndicator(indicator, 0)).id();
+        (app, player)
+    }
+
+    #[test]
+    fn affordable_build_deducts_cost_and_requests_the_tower() {
+        let (mut app, player) = setup(100);
+        app.world_mut().resource_mut::<Messages<ExecuteBuild>>().write(ExecuteBuild(player));
+
+        app.update();
+
+        assert_eq!(app.world().resource::<TeamWallet>().coins, 50, "100 - 50 tower cost");
+        assert_eq!(app.world().resource::<Built>().0.len(), 1, "a BuildTower was requested");
+    }
+
+    #[test]
+    fn a_broke_team_cannot_build() {
+        let (mut app, player) = setup(30); // less than the 50 cost
+        app.world_mut().resource_mut::<Messages<ExecuteBuild>>().write(ExecuteBuild(player));
+
+        app.update();
+
+        assert_eq!(app.world().resource::<TeamWallet>().coins, 30, "no deduction when broke");
+        assert!(app.world().resource::<Built>().0.is_empty(), "no tower requested");
     }
 }

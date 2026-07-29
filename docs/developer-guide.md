@@ -379,6 +379,14 @@ assert. Worked examples in the tree:
 - `ai/systems/destroy_the_map_systems.rs` — `recheck_path_after_tile_opened`: a reopened
   path clears `MustDestroyTheMap` + resets `MoveTowardsGoalData` and lowers the flag; no
   path keeps the alien destroying; flag down → no-op. Builds a passable `Grid` corridor.
+- `building/systems.rs` — `tower_cost` price table + unknown-key-is-free; and an
+  `execute_build` system test proving the wallet gate (affordable → deduct + `BuildTower`;
+  broke → no deduction, no build).
+- `game_state/score_keeper.rs` — `game_tracking_event_system`: per-player `Score` (shots
+  fired/hit, kills) and `LevelTracker` aggregates (killed / left-to-spawn / escaped).
+- `alien/wave_manager.rs` — `wave_system`: countdown → wave starts + spawn points armed
+  with the wave's rate; a cleared wave (all spawned, none alive) advances; aliens still
+  alive → no advance.
 
 Advancing time headlessly: `app.init_resource::<Time>()`, then
 `app.world_mut().resource_mut::<Time>().advance_by(Duration::from_millis(..))` before
