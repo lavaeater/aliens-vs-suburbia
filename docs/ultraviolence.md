@@ -256,6 +256,17 @@ Plan:
 
 Effort: 2–3 days, best done last as an integration/tuning pass.
 
+✅ **Done (first pass).** `src/gore/despair.rs`: everything rides `MusicMoods.danger` (the
+smoothed measure the music system already computes), so image and audio swell together.
+`apply_despair` drives three asset-free channels — a camera `ColorGrading` (drains
+saturation toward a sodium-gray, sickly green/warm tint, crushed exposure), the
+`GlobalAmbientLight` dimming, and a `DistanceFog` haze that fades in by dread — inserting
+the post-processing components on the camera the first frame it sees them. `despair_heartbeat`
+thuds a `Heartbeat` SFX on a cadence that tightens as the most-hurt living player nears death
+(silent until a `heartbeat*.wav` exists). `DespairSettings` dials the whole effect down in
+one place. Next tuning: couple persistence-of-carnage (don't clean up decals/gibs between
+waves) and add the ambient dread audio bed; both are pure tuning on the existing signal.
+
 ---
 
 # Feature 0 (missing from the list): Cool maps

@@ -51,6 +51,7 @@ force it (see the control plugin).
 | **Destructible terrain (rubble)**      | `src/gore/terrain.rs`                                     |
 | **Gore sound effects**                 | `src/gore/sfx.rs`                                         |
 | **Barks (one-liners)**                 | `src/gore/barks.rs`                                       |
+| **Despair pass (grade/fog/heartbeat)** | `src/gore/despair.rs`                                     |
 | The damage/death event bus             | `src/gore/components.rs`                                  |
 | Aliens spawning / waves                | `src/alien/`, `src/alien/wave_manager.rs`                 |
 | Enemy AI behaviors                     | `src/ai/systems/`                                         |
@@ -246,6 +247,22 @@ triggered by kills/multikills/player-hurt/near-death on `BARK_COOLDOWN` (3.5s). 
 only — the default font has no Unicode). Migrating triggers to authored `turbofacts` stories
 is the planned refinement.
 
+### 7h. Despair pass — `src/gore/despair.rs`
+
+Mood, not mechanic. `apply_despair` reads `MusicMoods.danger` (0..1, smoothed by the music
+system) and drives three asset-free channels: the `GameCamera`'s `ColorGrading` (desaturate
++ sickly tint + crushed exposure via `despair_grade`), the `GlobalAmbientLight` brightness
+(dims), and a `DistanceFog` haze (`despair_fog`, fades in by dread). The post-processing
+components are inserted onto the camera the first frame they're missing, then mutated in
+place. `despair_heartbeat` emits a `Heartbeat` SFX on a cadence that tightens as the
+most-hurt *living* player nears death (`HEARTBEAT_THRESHOLD`), silent until a
+`heartbeat*.wav` exists.
+
+Tweak: the per-channel curves in `despair_grade`/`despair_fog`; ambient range + overall
+`max_strength` in `DespairSettings`; `HEARTBEAT_THRESHOLD` and the beat-interval range in
+`despair_heartbeat`. To make dread more/less reactive, change what feeds `MusicMoods.danger`
+in `src/music/game_music_plugin.rs`.
+
 ---
 
 ## 8. Aliens, waves, AI
@@ -329,6 +346,8 @@ Tweak wave composition: `MapFile.waves` in the map `.ron`, or the default in `wa
 | Max persistent gore             | `components.rs : GoreBudget` caps                         |
 | SFX volume / voice cap          | `sfx.rs : emit_combat_sfx gains / MAX_VOICES`            |
 | Bark lines / pacing / drift     | `barks.rs : KILL... / BARK_COOLDOWN / HAUNTED_AT`        |
+| Despair grade / fog / dimming   | `despair.rs : despair_grade / despair_fog / DespairSettings` |
+| Heartbeat threshold / cadence   | `despair.rs : HEARTBEAT_THRESHOLD / despair_heartbeat`   |
 | Aim cone width (gamepad)        | `constants.rs : PLAYER_FOV_DOT`                          |
 | Mouse turn responsiveness       | `mouse_aim.rs : mouse_face` gain (`12.0`)                |
 | Wave composition                | map `.ron` `waves` / `wave_manager.rs` default           |

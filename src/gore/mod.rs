@@ -7,6 +7,7 @@
 pub(crate) mod barks;
 pub(crate) mod blood;
 pub(crate) mod components;
+pub(crate) mod despair;
 pub(crate) mod fire;
 pub(crate) mod gibs;
 pub(crate) mod sfx;

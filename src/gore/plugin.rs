@@ -10,6 +10,7 @@ use crate::gore::barks::{
 };
 use crate::gore::blood::{setup_blood_assets, spawn_blood_on_damage};
 use crate::gore::components::{DamageDealt, EntityDied, GoreBudget};
+use crate::gore::despair::{apply_despair, despair_heartbeat, DespairSettings, Heartbeat};
 use crate::gore::fire::{setup_fire_assets, spawn_fire_fields, tick_fire_fields, SpawnFire};
 use crate::gore::gibs::{setup_gib_assets, spawn_gibs_on_death};
 use crate::gore::sfx::{emit_combat_sfx, play_sfx, setup_sfx_bank, PlaySfx};
@@ -27,6 +28,8 @@ impl Plugin for GorePlugin {
             .init_resource::<GoreBudget>()
             .init_resource::<AtrocityMeter>()
             .init_resource::<BarkState>()
+            .init_resource::<DespairSettings>()
+            .init_resource::<Heartbeat>()
             .add_systems(
                 Startup,
                 (
@@ -55,6 +58,8 @@ impl Plugin for GorePlugin {
                     play_sfx,
                     bark_on_events,
                     tick_bark_caption,
+                    apply_despair,
+                    despair_heartbeat,
                 )
                     .run_if(in_state(GameState::InGame)),
             );

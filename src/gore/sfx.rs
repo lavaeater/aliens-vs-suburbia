@@ -27,6 +27,8 @@ pub enum SfxKind {
     Fire,
     Shoot,
     Bark,
+    /// The despair heartbeat when a player is bleeding out (see `despair.rs`).
+    Heartbeat,
 }
 
 impl SfxKind {
@@ -38,16 +40,18 @@ impl SfxKind {
             SfxKind::Fire => "fire",
             SfxKind::Shoot => "shoot",
             SfxKind::Bark => "bark",
+            SfxKind::Heartbeat => "heartbeat",
         }
     }
 
-    const ALL: [SfxKind; 6] = [
+    const ALL: [SfxKind; 7] = [
         SfxKind::Hit,
         SfxKind::Death,
         SfxKind::Gib,
         SfxKind::Fire,
         SfxKind::Shoot,
         SfxKind::Bark,
+        SfxKind::Heartbeat,
     ];
 }
 

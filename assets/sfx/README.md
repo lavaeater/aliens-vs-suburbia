@@ -18,8 +18,11 @@ event, with slight pitch/volume jitter so repeats don't sound identical.
 | `fire`   | a fire field ignites (molotov)                  | `fire_whoosh.wav`          |
 | `shoot`  | a shot is fired                                 | `shoot_pistol.wav`         |
 | `bark`   | a one-liner caption appears                     | `bark1.wav` ... `bark9.wav`|
+| `heartbeat` | a player is bleeding out (quickens near death) | `heartbeat.wav`         |
 
-Anything that doesn't match a prefix is ignored.
+Anything that doesn't match a prefix is ignored. A single looping-style thud works well
+for `heartbeat` — the despair system re-triggers it on a tightening cadence, so keep the
+sample short (one beat).
 
 ## Format gotcha
 
