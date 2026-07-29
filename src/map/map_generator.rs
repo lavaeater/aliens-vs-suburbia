@@ -382,13 +382,20 @@ pub fn generate_suburb_map(seed: u64, width: usize, height: usize) -> MapFile {
         }).collect()
     }).collect();
 
+    // Dress the ruined suburb with ultraviolence props (reproducible from the seed).
+    let decorations = crate::map::scatter::scatter_decorations(
+        seed ^ 0x5CA77E4,
+        &grid,
+        crate::map::scatter::ScatterOptions::default(),
+    );
+
     MapFile {
         generated: false,
         seed,
         map_width: w,
         map_height: h,
         tiles: grid,
-        decorations: vec![],
+        decorations,
         ..Default::default()
     }
 }

@@ -58,6 +58,7 @@ force it (see the control plugin).
 | Map tiles / pathfinding / walls        | `src/map/`, `src/general/systems/map_systems.rs`          |
 | Procedural map generator               | `src/map/map_generator.rs`                                |
 | **Prefab chunks + stitcher**           | `src/map/chunks.rs`, `src/map/stitch.rs`                  |
+| **Map prop scatter / palette**         | `src/map/scatter.rs`                                      |
 | Health / death / touch damage          | `src/general/systems/*health*`, `*touch_damage*`          |
 | Economy (coins / wallet)               | `src/general/systems/coin_system.rs`                      |
 | Towers (shoot/slow/area)               | `src/towers/systems.rs`                                   |
@@ -300,6 +301,11 @@ Tweak wave composition: `MapFile.waves` in the map `.ron`, or the default in `wa
   / `filler_chunks` libraries in `stitch.rs`; author them with the `MapChunk::from_ascii`
   template (`'.'` floor, `'#'` wall, `' '` void). Exposed via the map editor's "Stitch
   Chunks" button. See `docs/ultraviolence.md` "Cool maps".
+- **Prop scatter** — `src/map/scatter.rs`: `scatter_decorations(seed, tiles, ScatterOptions)`
+  dresses walkable floor with the ultraviolence palette (ground / cover / landmark tiers of
+  city + post-apocalypse props). Called by both `stitch_map` and `generate_suburb_map`.
+  Decorations are collider-free, so scatter never affects pathing. Tune per-tier probability
+  in `ScatterOptions`; edit the `GROUND`/`COVER`/`LANDMARK` palettes to change the look.
 - **Economy** — `src/general/systems/coin_system.rs`: aliens drop `Coin` on death, players
   auto-collect into the shared `TeamWallet`.
 - **Towers** — `src/towers/systems.rs`: `shoot_alien_system`, `slow_alien_system`,

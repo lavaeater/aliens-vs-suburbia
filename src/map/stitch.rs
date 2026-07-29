@@ -13,6 +13,7 @@
 
 use crate::general::components::map_components::MapFile;
 use crate::map::chunks::{EdgeType, MapChunk, Side, CHUNK_SIZE};
+use crate::map::scatter::{scatter_decorations, ScatterOptions};
 use crate::map::MapFeatures;
 use enumflags2::BitFlags;
 
@@ -249,13 +250,17 @@ pub fn stitch_map(seed: u64, chunks_wide: usize, chunks_high: usize) -> MapFile 
     let player_col = (CHUNK_SIZE / 2).min(w - 2);
     tiles[spine_mid][player_col] = f(MapFeatures::Floor | MapFeatures::PlayerSpawn);
 
+    // Dress the ruined suburb. Derive the scatter seed from the map seed so the props
+    // are reproducible but distinct from the layout roll.
+    let decorations = scatter_decorations(seed ^ 0x5CA77E4, &tiles, ScatterOptions::default());
+
     MapFile {
         generated: false,
         seed,
         map_width: w,
         map_height: h,
         tiles,
-        decorations: vec![],
+        decorations,
         ..Default::default()
     }
 }
@@ -350,6 +355,21 @@ mod tests {
 
         let c = stitch_map(124, 4, 3);
         assert_ne!(a.tiles, c.tiles, "different seed -> different map");
+    }
+
+    #[test]
+    fn a_stitched_map_is_dressed_with_props_clear_of_spawn_and_goal() {
+        let map = stitch_map(11, 5, 3);
+        assert!(!map.decorations.is_empty(), "the suburb should be dressed");
+        let spawn = find(&map.tiles, MapFeatures::EnemySpawn).unwrap();
+        let goal = find(&map.tiles, MapFeatures::EnemyExit).unwrap();
+        let player = find(&map.tiles, MapFeatures::PlayerSpawn).unwrap();
+        for d in &map.decorations {
+            let cell = (d.y as usize, d.x as usize);
+            assert_ne!(cell, spawn, "no prop on the alien spawn");
+            assert_ne!(cell, goal, "no prop on the goal");
+            assert_ne!(cell, player, "no prop on the player spawn");
+        }
     }
 
     #[test]

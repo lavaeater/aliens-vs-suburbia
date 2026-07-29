@@ -7,6 +7,7 @@ pub mod map_plugins;
 pub mod map_generator;
 pub mod chunks;
 pub mod stitch;
+pub mod scatter;
 
 #[bitflags(default = Nothing)]
 #[repr(u64)]

@@ -338,6 +338,16 @@ per-chunk placements/decorations (currently tiles only); the ultraviolence prop 
 scatter pass. **11 unit tests** (connector logic + rotation; dimensions, spawn/goal presence,
 guaranteed connectivity, determinism, clamping).
 
+✅ **Ultraviolence prop scatter done.** `src/map/scatter.rs`: a curated palette (city +
+post-apocalypse + toon-shooter — burned cars, barricades, barrels, dumpsters, sandbags,
+debris, blood) split into ground / cover / landmark tiers, and `scatter_decorations(seed,
+tiles, opts)` that dresses dressable floor (skips void/walls/spawn/goal/player), one prop
+per tile with landmark>cover>ground precedence, deterministic per seed. Wired into **both**
+generators — `stitch_map` and the older `generate_suburb_map` (which previously emitted no
+decorations at all). Decorations are collider-free, so pathing is untouched. Tune density in
+`ScatterOptions`. 6 tests (determinism, placement legality, density monotonicity, palette
+sanity + a stitch integration check).
+
 Remaining effort: chunk `.ron` format + loader ~2 days; editor chunk
-stamp/save UX ~2–3 days; ultraviolence prop palette ~1 day. Sequenceable — the palette and a
+stamp/save UX ~2–3 days. Sequenceable — the palette and a
 couple of hand-authored full maps give "cool maps" immediately while the stitcher is built.
