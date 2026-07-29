@@ -1,0 +1,17 @@
+// A walled courtyard with gaps on each side you can slip through (filler).
+(
+    name: "courtyard",
+    rows: [
+        "##...##",
+        "#.....#",
+        ".......",
+        ".......",
+        ".......",
+        "#.....#",
+        "##...##",
+    ],
+    north: Open,
+    east: Open,
+    south: Open,
+    west: Open,
+)

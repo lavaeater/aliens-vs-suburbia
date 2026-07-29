@@ -1,0 +1,18 @@
+// A clear east-west road corridor (spine piece: Road on east+west).
+// rows: 7 strings of 7 chars each. '.' floor, '#' wall, ' ' void.
+(
+    name: "road_straight",
+    rows: [
+        ".......",
+        ".......",
+        ".......",
+        ".......",
+        ".......",
+        ".......",
+        ".......",
+    ],
+    north: Open,
+    east: Road,
+    south: Open,
+    west: Road,
+)

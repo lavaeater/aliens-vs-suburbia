@@ -58,6 +58,7 @@ force it (see the control plugin).
 | Map tiles / pathfinding / walls        | `src/map/`, `src/general/systems/map_systems.rs`          |
 | Procedural map generator               | `src/map/map_generator.rs`                                |
 | **Prefab chunks + stitcher**           | `src/map/chunks.rs`, `src/map/stitch.rs`                  |
+| **Chunk `.ron` loading**               | `src/map/chunk_loader.rs`, `assets/maps/chunks/*.ron`     |
 | **Map prop scatter / palette**         | `src/map/scatter.rs`                                      |
 | Health / death / touch damage          | `src/general/systems/*health*`, `*touch_damage*`          |
 | Economy (coins / wallet)               | `src/general/systems/coin_system.rs`                      |
@@ -300,7 +301,12 @@ Tweak wave composition: `MapFile.waves` in the map `.ron`, or the default in `wa
   spawn→goal route, then stamps border/spawn/goal). Add chunks to the built-in `spine_chunks`
   / `filler_chunks` libraries in `stitch.rs`; author them with the `MapChunk::from_ascii`
   template (`'.'` floor, `'#'` wall, `' '` void). Exposed via the map editor's "Stitch
-  Chunks" button. See `docs/ultraviolence.md` "Cool maps".
+  Chunks" button, which loads chunks from disk (`chunk_loader::stitch_map_from_dir`).
+- **Chunk `.ron` files** — `src/map/chunk_loader.rs` loads `assets/maps/chunks/*.ron` (a
+  `ChunkFile`: an ASCII `rows` template + four named edge connectors) into spine/filler
+  pools. To add a hand-authored chunk, drop a `.ron` in that folder — no rebuild. A chunk
+  with any `Road` edge joins the spine pool; a bad file is skipped with a warning (the
+  built-in library is the fallback). Shipped examples live alongside.
 - **Prop scatter** — `src/map/scatter.rs`: `scatter_decorations(seed, tiles, ScatterOptions)`
   dresses walkable floor with the ultraviolence palette (ground / cover / landmark tiers of
   city + post-apocalypse props). Called by both `stitch_map` and `generate_suburb_map`.

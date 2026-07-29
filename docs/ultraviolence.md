@@ -348,6 +348,16 @@ decorations at all). Decorations are collider-free, so pathing is untouched. Tun
 `ScatterOptions`. 6 tests (determinism, placement legality, density monotonicity, palette
 sanity + a stitch integration check).
 
-Remaining effort: chunk `.ron` format + loader ~2 days; editor chunk
-stamp/save UX ~2–3 days. Sequenceable — the palette and a
+✅ **`.ron` chunk loading done.** `MapChunk` is now serializable via `ChunkFile` (an
+ASCII `rows` template + four named edge connectors), `src/map/chunk_loader.rs` reads
+`assets/maps/chunks/*.ron` into spine/filler pools (a chunk with any `Road` edge is a
+spine piece), and the stitcher was refactored to take a caller-supplied library
+(`stitch_map_with_library`) with a built-in fallback so a missing/broken chunk dir can't
+break generation. Bad files are skipped with a warning, not a crash. The editor's "Stitch
+Chunks" button now loads from disk (`stitch_map_from_dir`), so hand-authored chunks show up
+without a rebuild. Shipped five example chunks under `assets/maps/chunks/` (roads, building,
+lot, courtyard). 7 tests incl. one that parses the actual shipped assets.
+
+Remaining effort: per-chunk placements/decorations (chunks are tiles-only today); editor
+chunk stamp/save UX ~2–3 days. Sequenceable — the palette and a
 couple of hand-authored full maps give "cool maps" immediately while the stitcher is built.

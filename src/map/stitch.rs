@@ -144,12 +144,15 @@ struct Layout {
 /// Choose and place chunks on the coarse grid, honouring connector matching against the
 /// already-placed West and North neighbours. The spine row is laid first with road
 /// pieces; other slots get a matching filler.
-fn build_layout(seed: u64, chunks_wide: usize, chunks_high: usize) -> Layout {
+fn build_layout(
+    seed: u64,
+    chunks_wide: usize,
+    chunks_high: usize,
+    spine: &[MapChunk],
+    fillers: &[MapChunk],
+) -> Layout {
     let mut rng = Rng::new(seed);
     let spine_row = if chunks_high <= 2 { chunks_high / 2 } else { rng.range(1, chunks_high - 1) };
-
-    let spine = spine_chunks();
-    let fillers = filler_chunks();
 
     // Placeholder grid; filled row by row, col by col.
     let mut grid: Vec<Vec<Option<MapChunk>>> = vec![vec![None; chunks_wide]; chunks_high];
@@ -160,7 +163,7 @@ fn build_layout(seed: u64, chunks_wide: usize, chunks_high: usize) -> Layout {
             let north = if cr > 0 { grid[cr - 1][cc].as_ref() } else { None };
 
             // Candidate pool: spine row uses road pieces, everything else fillers.
-            let pool = if cr == spine_row { &spine } else { &fillers };
+            let pool = if cr == spine_row { spine } else { fillers };
 
             let chosen = pick_matching(&mut rng, pool, west, north)
                 // Fillers are all-Open so this never trips in practice; fall back safely.
@@ -206,13 +209,36 @@ fn pick_matching(
     }
 }
 
-/// Stitch a full `MapFile` from prefab chunks. `chunks_wide`/`chunks_high` are in chunks
-/// (so the tile map is `chunks_wide*CHUNK_SIZE` × `chunks_high*CHUNK_SIZE`). Always yields
-/// a spawn→goal route via the road spine.
+/// Stitch a full `MapFile` from the built-in chunk library. `chunks_wide`/`chunks_high`
+/// are in chunks (so the tile map is `chunks_wide*CHUNK_SIZE` × `chunks_high*CHUNK_SIZE`).
+/// Always yields a spawn→goal route via the road spine. The editor loads chunks from disk
+/// via `chunk_loader::stitch_map_from_dir`; this built-in-only entry backs tests and any
+/// no-asset caller.
+#[allow(dead_code)]
 pub fn stitch_map(seed: u64, chunks_wide: usize, chunks_high: usize) -> MapFile {
+    stitch_map_with_library(seed, chunks_wide, chunks_high, &spine_chunks(), &filler_chunks())
+}
+
+/// As [`stitch_map`], but with a caller-supplied chunk library (e.g. loaded from
+/// `.ron`). `spine` must contain at least one Road-E/W piece; `fillers` must be
+/// non-empty. Falls back to sensible behaviour if a pool is thin.
+pub fn stitch_map_with_library(
+    seed: u64,
+    chunks_wide: usize,
+    chunks_high: usize,
+    spine: &[MapChunk],
+    fillers: &[MapChunk],
+) -> MapFile {
     let cw = chunks_wide.max(2);
     let ch = chunks_high.max(1);
-    let layout = build_layout(seed, cw, ch);
+
+    // Guard against empty pools so a bad/empty chunk dir can't panic the generator.
+    let builtin_spine = spine_chunks();
+    let builtin_fillers = filler_chunks();
+    let spine = if spine.is_empty() { &builtin_spine[..] } else { spine };
+    let fillers = if fillers.is_empty() { &builtin_fillers[..] } else { fillers };
+
+    let layout = build_layout(seed, cw, ch, spine, fillers);
 
     let w = cw * CHUNK_SIZE;
     let h = ch * CHUNK_SIZE;

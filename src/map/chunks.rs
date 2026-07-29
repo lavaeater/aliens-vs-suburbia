@@ -13,6 +13,7 @@
 
 use crate::map::MapFeatures;
 use enumflags2::BitFlags;
+use serde::{Deserialize, Serialize};
 
 /// Edge length of a chunk, in tiles. Uniform fixed size keeps the stitcher simple
 /// (every chunk mates any other on a shared coarse-grid edge).
@@ -48,11 +49,10 @@ impl Side {
 
 /// What a chunk edge offers a neighbour. Simple edge-type matching (see `mates_with`):
 /// two touching edges are compatible only if they present the same class.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub enum EdgeType {
     /// A wall / blocked edge — nothing crosses here. Part of the authoring vocabulary
     /// (`.ron` chunks / the tagging editor); the built-in library is all Road/Open.
-    #[allow(dead_code)]
     Wall,
     /// The main passable spine — roads line up spawn→goal.
     Road,
@@ -88,7 +88,7 @@ fn wall() -> u64 {
 /// A prefab chunk: a fixed-size tile block plus its four edge connectors.
 #[derive(Clone, Debug)]
 pub struct MapChunk {
-    pub name: &'static str,
+    pub name: String,
     /// `CHUNK_SIZE` rows of `CHUNK_SIZE` tile-flag values (row-major, `u64` bits).
     pub tiles: Vec<Vec<u64>>,
     /// Connectors indexed by `Side as usize`.
@@ -99,27 +99,34 @@ impl MapChunk {
     /// Build a chunk from an ASCII template — `CHUNK_SIZE` rows of `CHUNK_SIZE` chars:
     /// `'.'` = floor, `'#'` = wall, `' '`/`'x'` = void. Panics on the wrong shape, so
     /// malformed built-in chunks fail loudly at first use (and in tests).
-    pub fn from_ascii(name: &'static str, rows: &[&str], edges: [EdgeType; 4]) -> Self {
-        assert_eq!(rows.len(), CHUNK_SIZE, "chunk '{name}' must have {CHUNK_SIZE} rows");
-        let tiles = rows
-            .iter()
-            .map(|row| {
-                assert_eq!(
-                    row.chars().count(),
-                    CHUNK_SIZE,
-                    "chunk '{name}' rows must be {CHUNK_SIZE} wide"
-                );
-                row.chars()
-                    .map(|c| match c {
-                        '.' => floor(),
-                        '#' => wall(),
-                        ' ' | 'x' => 0,
-                        other => panic!("chunk '{name}': unknown tile char '{other}'"),
-                    })
-                    .collect()
-            })
-            .collect();
-        Self { name, tiles, edges }
+    pub fn from_ascii(name: &str, rows: &[&str], edges: [EdgeType; 4]) -> Self {
+        Self::try_from_ascii(name, rows.iter().map(|r| r.to_string()).collect(), edges)
+            .unwrap_or_else(|e| panic!("{e}"))
+    }
+
+    /// Fallible ASCII build (used by the `.ron` loader, where a bad file shouldn't crash
+    /// the game). Returns a human-readable error on the wrong shape or an unknown char.
+    pub fn try_from_ascii(name: &str, rows: Vec<String>, edges: [EdgeType; 4]) -> Result<Self, String> {
+        if rows.len() != CHUNK_SIZE {
+            return Err(format!("chunk '{name}': needs {CHUNK_SIZE} rows, got {}", rows.len()));
+        }
+        let mut tiles = Vec::with_capacity(CHUNK_SIZE);
+        for row in &rows {
+            if row.chars().count() != CHUNK_SIZE {
+                return Err(format!("chunk '{name}': rows must be {CHUNK_SIZE} wide"));
+            }
+            let mut tile_row = Vec::with_capacity(CHUNK_SIZE);
+            for c in row.chars() {
+                tile_row.push(match c {
+                    '.' => floor(),
+                    '#' => wall(),
+                    ' ' | 'x' => 0,
+                    other => return Err(format!("chunk '{name}': unknown tile char '{other}'")),
+                });
+            }
+            tiles.push(tile_row);
+        }
+        Ok(Self { name: name.to_string(), tiles, edges })
     }
 
     /// The connector on a given side.
@@ -152,7 +159,65 @@ impl MapChunk {
             e[Side::East as usize],  // South <- East
             e[Side::South as usize], // West  <- South
         ];
-        MapChunk { name: self.name, tiles, edges }
+        MapChunk { name: self.name.clone(), tiles, edges }
+    }
+}
+
+/// The on-disk chunk format (`assets/maps/chunks/*.ron`). Authored by hand or by the
+/// editor: an ASCII `rows` template (same chars as [`MapChunk::from_ascii`]) plus the
+/// four named edge connectors. Kept separate from `MapChunk` so the runtime type stays
+/// lean and the file stays human-friendly.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ChunkFile {
+    pub name: String,
+    /// `CHUNK_SIZE` strings of `CHUNK_SIZE` chars: `'.'` floor, `'#'` wall, `' '`/`'x'` void.
+    pub rows: Vec<String>,
+    pub north: EdgeType,
+    pub east: EdgeType,
+    pub south: EdgeType,
+    pub west: EdgeType,
+}
+
+impl ChunkFile {
+    /// Parse into a runtime [`MapChunk`], validating the grid shape.
+    pub fn into_chunk(self) -> Result<MapChunk, String> {
+        MapChunk::try_from_ascii(
+            &self.name,
+            self.rows,
+            [self.north, self.east, self.south, self.west],
+        )
+    }
+
+    /// Build the on-disk form from a runtime chunk (for the editor's save path / tests).
+    #[allow(dead_code)]
+    pub fn from_chunk(chunk: &MapChunk) -> Self {
+        let rows = chunk
+            .tiles
+            .iter()
+            .map(|row| {
+                row.iter()
+                    .map(|&bits| {
+                        if bits == 0 {
+                            ' '
+                        } else if BitFlags::<MapFeatures>::from_bits_truncate(bits)
+                            .contains(MapFeatures::ImpassableForEnemies)
+                        {
+                            '#'
+                        } else {
+                            '.'
+                        }
+                    })
+                    .collect()
+            })
+            .collect();
+        Self {
+            name: chunk.name.clone(),
+            rows,
+            north: chunk.edge(Side::North),
+            east: chunk.edge(Side::East),
+            south: chunk.edge(Side::South),
+            west: chunk.edge(Side::West),
+        }
     }
 }
 
