@@ -56,6 +56,8 @@ force it (see the control plugin).
 | Aliens spawning / waves                | `src/alien/`, `src/alien/wave_manager.rs`                 |
 | Enemy AI behaviors                     | `src/ai/systems/`                                         |
 | Map tiles / pathfinding / walls        | `src/map/`, `src/general/systems/map_systems.rs`          |
+| Procedural map generator               | `src/map/map_generator.rs`                                |
+| **Prefab chunks + stitcher**           | `src/map/chunks.rs`, `src/map/stitch.rs`                  |
 | Health / death / touch damage          | `src/general/systems/*health*`, `*touch_damage*`          |
 | Economy (coins / wallet)               | `src/general/systems/coin_system.rs`                      |
 | Towers (shoot/slow/area)               | `src/towers/systems.rs`                                   |
@@ -290,6 +292,14 @@ Tweak wave composition: `MapFile.waves` in the map `.ron`, or the default in `wa
   `src/map/map_generator.rs`.
 - **Pathfinding** — `MapGraph` (`src/general/resources/map_resources.rs`), A* via the
   `pathfinding` crate. `path_reopened` flag drives alien re-routing.
+- **Prefab chunk stitcher** — `src/map/chunks.rs` (the `MapChunk` data model: fixed
+  `CHUNK_SIZE`-square tile blocks + four `EdgeType` connectors, ASCII authoring, rotation)
+  and `src/map/stitch.rs` (`stitch_map(seed, chunks_wide, chunks_high)` lays chunks on a
+  coarse grid with connector matching + a forced east-west road spine that guarantees a
+  spawn→goal route, then stamps border/spawn/goal). Add chunks to the built-in `spine_chunks`
+  / `filler_chunks` libraries in `stitch.rs`; author them with the `MapChunk::from_ascii`
+  template (`'.'` floor, `'#'` wall, `' '` void). Exposed via the map editor's "Stitch
+  Chunks" button. See `docs/ultraviolence.md` "Cool maps".
 - **Economy** — `src/general/systems/coin_system.rs`: aliens drop `Coin` on death, players
   auto-collect into the shared `TeamWallet`.
 - **Towers** — `src/towers/systems.rs`: `shoot_alien_system`, `slow_alien_system`,

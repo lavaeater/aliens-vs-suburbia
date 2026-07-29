@@ -326,6 +326,18 @@ Recommendation: **build on our own format; do not adopt LDtk.**
   (b) editor UX (chunk stamp/save/load, connector tagging) instead. Same or better result, no
   new dependency, no format bridge to maintain.
 
-Effort: chunk format + loader ~2 days; connector-stitching generator ~4–5 days; editor chunk
+✅ **Stitcher done (first pass).** `src/map/chunks.rs` + `src/map/stitch.rs` implement the
+agreed design: uniform `CHUNK_SIZE`(7)-square chunks, `EdgeType` (Wall/Road/Open) connector
+matching, chunk rotation, and a `stitch_map(seed, chunks_wide, chunks_high)` that lays a
+coarse grid with a **forced east-west road spine** (guaranteeing a spawn→goal route — the
+connectivity is unit-tested over 40 seeds) and connector-matched fillers, then stamps the
+border + spawn/goal/player. Built-in chunks are authored in code via a readable ASCII
+template. Wired to a new **"Stitch Chunks"** button in the map editor. Still to do: author
+chunks as `.ron` under `assets/maps/chunks/` + load them; connector-tagging editor UX;
+per-chunk placements/decorations (currently tiles only); the ultraviolence prop palette +
+scatter pass. **11 unit tests** (connector logic + rotation; dimensions, spawn/goal presence,
+guaranteed connectivity, determinism, clamping).
+
+Remaining effort: chunk `.ron` format + loader ~2 days; editor chunk
 stamp/save UX ~2–3 days; ultraviolence prop palette ~1 day. Sequenceable — the palette and a
 couple of hand-authored full maps give "cool maps" immediately while the stitcher is built.
