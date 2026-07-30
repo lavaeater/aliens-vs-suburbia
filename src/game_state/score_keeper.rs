@@ -189,3 +189,54 @@ pub fn level_state_system(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{game_tracking_event_system, GameTrackingEvent, LevelTracker, Score};
+    use bevy::prelude::*;
+
+    fn test_app() -> App {
+        let mut app = App::new();
+        app.add_message::<GameTrackingEvent>();
+        app.init_resource::<LevelTracker>();
+        app.add_systems(Update, game_tracking_event_system);
+        app
+    }
+
+    fn send(app: &mut App, ev: GameTrackingEvent) {
+        app.world_mut().resource_mut::<Messages<GameTrackingEvent>>().write(ev);
+    }
+
+    #[test]
+    fn per_player_shot_and_kill_stats_accumulate_on_the_score_component() {
+        let mut app = test_app();
+        let player = app.world_mut().spawn(Score::new()).id();
+
+        send(&mut app, GameTrackingEvent::ShotFired(player));
+        send(&mut app, GameTrackingEvent::ShotFired(player));
+        send(&mut app, GameTrackingEvent::ShotHit(player));
+        send(&mut app, GameTrackingEvent::AlienKilled(player));
+        app.update();
+
+        let score = app.world().get::<Score>(player).unwrap();
+        assert_eq!(score.shots_fired, 2);
+        assert_eq!(score.shots_hit, 1);
+        assert_eq!(score.kills, 1);
+    }
+
+    #[test]
+    fn kills_and_spawns_and_escapes_update_the_level_tracker() {
+        let mut app = test_app();
+        let player = app.world_mut().spawn(Score::new()).id();
+
+        send(&mut app, GameTrackingEvent::AlienKilled(player));
+        send(&mut app, GameTrackingEvent::AlienSpawned);
+        send(&mut app, GameTrackingEvent::AlienReachedGoal);
+        app.update();
+
+        let t = app.world().resource::<LevelTracker>();
+        assert_eq!(t.aliens_killed, 1);
+        assert_eq!(t.aliens_left_to_spawn, 30 - 1, "one spawned off the default 30");
+        assert_eq!(t.aliens_reached_goal, 1);
+    }
+}

@@ -1,0 +1,17 @@
+// Road pinched by cover blocks on either side (spine piece).
+(
+    name: "road_cover",
+    rows: [
+        ".##...#",
+        ".##...#",
+        ".......",
+        ".......",
+        ".......",
+        "#...##.",
+        "#...##.",
+    ],
+    north: Open,
+    east: Road,
+    south: Open,
+    west: Road,
+)

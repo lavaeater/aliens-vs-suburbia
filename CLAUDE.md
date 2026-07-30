@@ -47,7 +47,7 @@ Most gameplay systems use `.run_if(in_state(InGame))`. Physics runs on a fixed t
 | `src/alien/` | Alien spawning (wave-based via `WaveManager`). `wave_manager.rs` drives wave progression; waves can come from `MapFile.waves` or fall back to hardcoded defaults. |
 | `src/player/` | Player character: physics, auto-aim, scene loading, outline rendering, death/revive, special abilities (`src/player/systems/abilities.rs`). |
 | `src/towers/` | Tower entities: shooting, slow, area-damage sensors and cooldown systems. |
-| `src/control/` | Input: keyboard (`keyboard_input.rs`), gamepad (`gamepad_input.rs`). `Q` key fires special ability via `AbilityInput` resource. |
+| `src/control/` | Input: keyboard (`keyboard_input.rs`), gamepad (`gamepad_input.rs`), mouse aim (`mouse_aim.rs`). `Q` key fires special ability via `AbilityInput` resource. The keyboard player aims with the mouse: `mouse_aim` projects the cursor onto the ground plane and sets `AutoAim`; `mouse_face` steers the body to face it (overriding A/D tank rotation). Gamepad players keep `auto_aim` (closest-in-FOV). |
 | `src/building/` | Build mode: enter/exit, tile placement preview, tower construction. Checks `TeamWallet` for cost. |
 | `src/map/` | Tile-based level: map generator, pathfinding grid (`MapGraph`), wall/floor/obstacle spawning. `map_loader` now also spawns editor `placements` from `MapFile`. |
 | `src/general/` | Core mechanics: collision, `Health`/health bars, `TouchDamage`, `Indestructible`, `Coin`/`TeamWallet` economy, physics throws, lighting, kinematic movement, tile tracking. |
@@ -56,7 +56,7 @@ Most gameplay systems use `.run_if(in_state(InGame))`. Physics runs on a fixed t
 | `src/music/` | Generative soundtrack via the `rusty_music` submodule (path dep). `GameMusicPlugin` spawns the band; `MusicMoods` holds two intensity measures (`combat`, `danger`) computed from game state, smoothed into the global `Intensity` and gating musician channels (`Ambient`/`Groove`/`Combat`/`Danger`) via `Muted` with hysteresis. Samples live in `assets/instruments/` (copied from `rusty_music/assets/samples/`). |
 | `src/camera/` | Isometric camera tracking with wall occlusion fading. |
 | `src/assets/` | `AssetDefinition` (`asset_definition.rs`) — the core per-model def type persisted to `assets/defs/*.ron`. |
-| `src/asset_browser/` | In-engine tool for importing models: browse GLB files, set scale/height, toggle hidden nodes, map animation clips to game states, add external animation sources, set `ModelType`. Press `I` to export `.ron`. |
+| `src/asset_browser/` | In-engine tool for importing models: browse GLB files, set scale/height, toggle hidden nodes, tag each animation clip with a free-form hierarchical path and bind game animation keys to those tag paths, add external animation sources, set `ModelType`, overlay the skinned skeleton (`B`), and attach weapon models to bones (sockets) with live numeric-nudge offset editing. Press `I` to export `.ron`. |
 | `src/player_setup/` | `GameState::PlayerSetup` screen. Keyboard (Enter) and gamepad (South) to join slots, arrow keys / d-pad to pick model. Writes `PlayerRoster` resource. |
 | `src/map_editor/` | `GameState::MapEditor`. Grid-based map layout tool. Palette sidebar filtered by `ModelType`. Left-click to place, right-click erase, `R` rotate, `S` save. Wave editor on right panel. |
 | `src/model_settings/` | Live model hot-reload, `build_player_anim_graph` — builds the player animation graph, resolves `stem|clip` values against external GLTF sources. |
@@ -67,10 +67,14 @@ Most gameplay systems use `.run_if(in_state(InGame))`. Physics runs on a fixed t
 Stored at `assets/defs/<model-stem>.ron`. Fields:
 - `model_path` — path relative to `assets/` folder (e.g. `"packs/toon-shooter/characters/Soldier.glb"`)
 - `scale` — uniform scale (computed as `target_height_m / mesh_aabb_height` in asset browser)
-- `model_type` — `Player(PlayerProps)`, `Tower(TowerProps)`, `Terrain(TerrainProps)`, `Item(ItemProps)`, or `Enemy(EnemyProps)`
+- `model_type` — `Player(PlayerProps)`, `Tower(TowerProps)`, `Terrain(TerrainProps)`, `Item(ItemProps)`, `Enemy(EnemyProps)`, or `Weapon(WeaponProps)`
 - `hidden_nodes` — node names to hide (e.g. weapon nodes)
-- `animation_mapping` — `HashMap<game_state_key, clip_fragment>`. Values may be plain (`"idle"`) or `"SourceStem|ClipName"` for external sources.
+- `clip_tags` — `HashMap<clip_name, tag_path>`. Free-form hierarchical tag per clip (e.g. `"CharacterArmature|Run_Shoot" -> "Combat/Ranged/RunShoot"`). Clip name is the model's own clip, or `"SourceStem|ClipName"` for external sources.
+- `animation_bindings` — `HashMap<game_state_key, tag_path>`. Binds a game key to a tag path; at runtime `AssetDefinition::resolved_clip` maps game key -> tag path -> the clip carrying that tag.
+- `animation_mapping` — **legacy** `HashMap<game_state_key, clip_fragment>`. Superseded by `clip_tags` + `animation_bindings`; still read at runtime as a fallback and auto-migrated into tags/bindings when an old def is loaded in the asset browser.
 - `animation_sources` — paths (relative to `assets/`) of external GLB/GLTF animation files. **No `assets/` prefix** — same convention as `model_path`.
+- `attachments` — `Vec<Attachment>` of models socketed to bones (e.g. a held rifle). Each has `bone` (bone entity name), `model_path`, and a local offset (`translation`, `rotation_euler_deg`, `scale`). Manual, fixed props; authored/previewed in the asset browser only.
+- `hardpoints` — `HashMap<String, Hardpoint>` of named connection frames (role -> frame) for dynamic weapon snapping, on both characters (`grip` anchored to a hand bone) and weapons (`grip`/`foregrip`/`stock`/`sight`, anchor `None` = model origin). `Hardpoint { anchor: Option<String>, translation, rotation_euler_deg }`. The snap math (`src/assets/hardpoint.rs`, unit-tested) makes a weapon's `grip` coincide with a character's `grip`. Authored + previewed in the asset browser (`H` toggles frame gizmos). Equipped in-game via `PlayerProps.weapon` (a weapon def path) — `src/player/systems/equip.rs` snaps it onto the character's `grip` bone once the skeleton spawns, using the same `hardpoint::snap_transform` as the browser preview. Two-bone IK for the support hand is a future stage. See `docs/inverse-kinematics-hardpoints.md`.
 
 ### Economy
 

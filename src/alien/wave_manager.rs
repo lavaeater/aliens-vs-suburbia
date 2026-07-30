@@ -113,3 +113,90 @@ pub fn count_wave_spawn(
         .iter().map(|w| w.alien_count).sum();
     manager.spawned_this_wave = (tracker.aliens_to_spawn - tracker.aliens_left_to_spawn - wave_offset).max(0);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::WaveManager;
+
+    #[test]
+    fn default_waves_sum_to_expected_total() {
+        // 1 + 15 + 20 in the hardcoded default schedule.
+        assert_eq!(WaveManager::default().total_aliens(), 36);
+    }
+
+    #[test]
+    fn waves_remaining_flips_when_the_last_wave_is_consumed() {
+        let mut wm = WaveManager::default();
+        assert!(wm.waves_remaining());
+        wm.current_wave = wm.waves.len();
+        assert!(!wm.waves_remaining());
+    }
+}
+
+#[cfg(test)]
+mod wave_system_tests {
+    use super::{wave_system, WaveManager};
+    use bevy::prelude::*;
+    use std::time::Duration;
+    use crate::alien::components::general::AlienCounter;
+    use crate::game_state::score_keeper::{LevelState, LevelTracker};
+    use crate::general::components::map_components::AlienSpawnPoint;
+
+    fn test_app(manager: WaveManager) -> App {
+        let mut app = App::new();
+        app.init_resource::<Time>();
+        let mut tracker = LevelTracker::default();
+        tracker.level_state = LevelState::InProgress;
+        app.insert_resource(tracker);
+        app.insert_resource(manager);
+        app.insert_resource(AlienCounter { count: 0, max_count: 100 });
+        app.add_systems(Update, wave_system);
+        app
+    }
+
+    #[test]
+    fn the_countdown_starts_the_wave_and_arms_the_spawn_points() {
+        let mut manager = WaveManager::default();
+        manager.wave_timer = 0.5; // about to start wave 0 (rate 6/min)
+        let mut app = test_app(manager);
+        let sp = app.world_mut().spawn(AlienSpawnPoint::new(0.0)).id();
+
+        // Advance past the remaining countdown.
+        app.world_mut().resource_mut::<Time>().advance_by(Duration::from_millis(600));
+        app.update();
+
+        assert!(app.world().resource::<WaveManager>().spawning, "the wave should be spawning");
+        let spawn_point = app.world().get::<AlienSpawnPoint>(sp).unwrap();
+        assert_eq!(spawn_point.spawn_rate_per_minute, 6.0, "spawn point armed with wave 0's rate");
+    }
+
+    #[test]
+    fn a_cleared_wave_advances_to_the_next_one() {
+        let mut manager = WaveManager::default();
+        manager.spawning = true;
+        manager.current_wave = 0;
+        manager.spawned_this_wave = manager.waves[0].alien_count; // all of wave 0 out
+        let mut app = test_app(manager);
+        // AlienCounter.count is 0 -> the field is clear.
+
+        app.update();
+
+        let m = app.world().resource::<WaveManager>();
+        assert_eq!(m.current_wave, 1, "advanced to wave 1");
+        assert!(!m.spawning, "between waves now");
+        assert_eq!(m.spawned_this_wave, 0, "reset for the next wave");
+    }
+
+    #[test]
+    fn a_wave_with_aliens_still_alive_does_not_advance() {
+        let mut manager = WaveManager::default();
+        manager.spawning = true;
+        manager.spawned_this_wave = manager.waves[0].alien_count;
+        let mut app = test_app(manager);
+        app.world_mut().resource_mut::<AlienCounter>().count = 3; // still fighting
+
+        app.update();
+
+        assert_eq!(app.world().resource::<WaveManager>().current_wave, 0, "wave not cleared yet");
+    }
+}

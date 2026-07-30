@@ -1,12 +1,13 @@
 use bevy::math::Vec3Swizzles;
-use bevy::prelude::{Color, Gizmos, GlobalTransform, Query, With};
+use bevy::prelude::{Color, Gizmos, GlobalTransform, Query, With, Without};
 use crate::alien::components::general::Alien;
 use crate::constants::PLAYER_FOV_DOT;
-use crate::control::components::{CharacterControl, ControlCommand};
+use crate::control::components::{CharacterControl, ControlCommand, InputKeyboard};
 use crate::player::components::{AutoAim, Player};
 
+// Keyboard players aim with the mouse (see control::mouse_aim); auto-aim is for gamepads.
 pub fn auto_aim(
-    mut player_query: Query<(&GlobalTransform, &mut AutoAim, &CharacterControl), With<Player>>,
+    mut player_query: Query<(&GlobalTransform, &mut AutoAim, &CharacterControl), (With<Player>, Without<InputKeyboard>)>,
     alien_query: Query<&GlobalTransform, With<Alien>>,
 ) {
     for (player_transform, mut auto_aim, character_control) in player_query.iter_mut() {

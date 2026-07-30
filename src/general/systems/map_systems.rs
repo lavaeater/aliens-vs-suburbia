@@ -401,8 +401,8 @@ pub fn map_loader(
                     map_graph.path_finding_grid.remove_vertex(tile_coord);
                     add_health_bar_mw.write(AddHealthBar { entity: ec.id(), name: "TOWER" });
                 }
-                ModelType::Item(_) | ModelType::Player(_) | ModelType::Enemy(_) => {
-                    // Items and decorative enemies just spawn as scenes.
+                ModelType::Item(_) | ModelType::Player(_) | ModelType::Enemy(_) | ModelType::Weapon(_) => {
+                    // Items, weapons and decorative enemies just spawn as scenes.
                     commands.spawn((
                         Name::from(format!("Item {}:{}", placement.x, placement.y)),
                         SceneRoot(scene_handle),

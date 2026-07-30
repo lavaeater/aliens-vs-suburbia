@@ -4,7 +4,9 @@ use bevy::asset::AssetServer;
 use bevy::gltf::GltfAssetLabel;
 use bevy::scene::SceneRoot;
 use avian3d::prelude::Collider;
+use crate::assets::asset_definition::{AssetDefinition, ModelType};
 use crate::assets::assets_plugin::GameAssets;
+use crate::player::systems::equip::PendingEquip;
 pub use crate::player::components::WeaponsHidden;
 use crate::character_creator::config::{CharacterConfig, ComposedSpriteSheet};
 use crate::game_state::score_keeper::GameTrackingEvent;
@@ -66,25 +68,35 @@ pub fn spawn_players(
             spawn_player.position.z,
         );
 
-        // Resolve per-player props from the roster def for this slot.
-        let (roster_ability, roster_throw_rate) = roster.as_ref()
+        // The roster def for this slot drives ability, throw rate, model and weapon.
+        let roster_def = roster.as_ref()
             .and_then(|r| r.def_paths.get(slot))
-            .and_then(|def_path| {
-                let text = std::fs::read_to_string(def_path).ok()?;
-                let def: crate::assets::asset_definition::AssetDefinition = ron::from_str(&text).ok()?;
-                if let crate::assets::asset_definition::ModelType::Player(props) = def.model_type {
-                    use crate::assets::asset_definition::PlayerAbility::*;
-                    use crate::player::systems::abilities::SpecialAbility;
-                    let ability = match props.ability {
-                        Bombardment => SpecialAbility::Bombardment,
-                        Healing     => SpecialAbility::Healing,
-                        Whirlwind   => SpecialAbility::Whirlwind,
-                        GoldDigger  => SpecialAbility::GoldDigger,
-                    };
-                    Some((ability, props.throw_rate_per_minute))
-                } else { None }
+            .and_then(|def_path| AssetDefinition::load_from_def_path(def_path));
+        let player_props = roster_def.as_ref().and_then(|def| match &def.model_type {
+            ModelType::Player(props) => Some(props.clone()),
+            _ => None,
+        });
+
+        let (roster_ability, roster_throw_rate) = player_props.as_ref()
+            .map(|props| {
+                use crate::assets::asset_definition::PlayerAbility::*;
+                use crate::player::systems::abilities::SpecialAbility;
+                let ability = match props.ability {
+                    Bombardment => SpecialAbility::Bombardment,
+                    Healing     => SpecialAbility::Healing,
+                    Whirlwind   => SpecialAbility::Whirlwind,
+                    GoldDigger  => SpecialAbility::GoldDigger,
+                    Molotov     => SpecialAbility::Molotov,
+                };
+                (ability, props.throw_rate_per_minute)
             })
             .unwrap_or_else(|| (ability_for_slot(slot), 60.0));
+
+        // Weapon to snap onto this character's `grip` hardpoint, if any.
+        let pending_equip = player_props.as_ref()
+            .and_then(|props| props.weapon.as_ref())
+            .zip(roster_def.as_ref())
+            .and_then(|(weapon_def_path, def)| PendingEquip::resolve(def, weapon_def_path));
 
         // Decide: use sprite billboard or 3D model?
         let use_billboard = config.as_ref()
@@ -139,26 +151,20 @@ pub fn spawn_players(
             let s = &*model_settings;
             // Load scene from roster def if available; also sync game_assets and
             // player_asset_def so build_player_anim_graph uses the right GLTF.
-            let scene = if let Some(ref r) = roster {
-                r.def_paths.get(slot)
-                    .and_then(|def_path| {
-                        let text = std::fs::read_to_string(def_path).ok()?;
-                        let def: crate::assets::asset_definition::AssetDefinition = ron::from_str(&text).ok()?;
-                        let scene = asset_server.load(GltfAssetLabel::Scene(0).from_asset(def.model_path.clone()));
-                        // Slot 0 drives the shared animation graph — keep game_assets in sync.
-                        if slot == 0 {
-                            game_assets.player_scene = scene.clone();
-                            game_assets.player_gltf = asset_server.load(def.model_path.clone());
-                            if matches!(def.model_type, crate::assets::asset_definition::ModelType::Player(_)) {
-                                player_asset_def.0 = Some(def);
-                            }
+            let scene = roster_def.clone()
+                .map(|def| {
+                    let scene = asset_server.load(GltfAssetLabel::Scene(0).from_asset(def.model_path.clone()));
+                    // Slot 0 drives the shared animation graph — keep game_assets in sync.
+                    if slot == 0 {
+                        game_assets.player_scene = scene.clone();
+                        game_assets.player_gltf = asset_server.load(def.model_path.clone());
+                        if matches!(def.model_type, ModelType::Player(_)) {
+                            player_asset_def.0 = Some(def);
                         }
-                        Some(scene)
-                    })
-                    .unwrap_or_else(|| game_assets.player_scene.clone())
-            } else {
-                game_assets.player_scene.clone()
-            };
+                    }
+                    scene
+                })
+                .unwrap_or_else(|| game_assets.player_scene.clone());
             commands.spawn((
                 FixSceneTransform::new(
                     Vec3::new(s.translation_x, s.translation_y, s.translation_z),
@@ -188,6 +194,10 @@ pub fn spawn_players(
 
         // Override ability from def / slot default.
         commands.entity(player).insert(roster_ability);
+        // The weapon is spawned later, once the skeleton exists (see `equip`).
+        if let Some(equip) = pending_equip {
+            commands.entity(player).insert(equip);
+        }
         add_health_bar_mw.write(AddHealthBar { entity: player, name: "PLAYER" });
         player_added_mw.write(GameTrackingEvent::PlayerAdded(player));
     }

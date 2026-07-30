@@ -5,6 +5,8 @@ use bevy::ui_widgets::Activate;
 use lava_ui_builder::{LavaTheme, UIBuilder, spawn_list_item};
 use crate::game_state::GameState;
 use crate::map::map_generator::generate_suburb_map;
+use crate::map::chunks::CHUNK_SIZE;
+use crate::map::chunk_loader::stitch_map_from_dir;
 use crate::map_editor::state::{MapEditorState, PaletteTab};
 use crate::ui::spawn_ui::StateMarker;
 
@@ -67,6 +69,21 @@ pub fn spawn_map_editor_ui(
                     .map(|d| d.as_nanos() as u64)
                     .unwrap_or(42);
                 let map = generate_suburb_map(seed, s.width, s.height);
+                s.load_from_map_file(map);
+                s.gen_seed = seed;
+                s.seed_label_dirty = true;
+            });
+        left.add_button_observe("Stitch Chunks", |b| { b.width(percent(100.0)).height(px(24.0)).font_size(12.0); },
+            |_: On<Activate>, mut s: ResMut<MapEditorState>| {
+                let seed = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_nanos() as u64)
+                    .unwrap_or(42);
+                // The editor sizes in tiles; the stitcher works in chunks. Authored
+                // chunks under assets/maps/chunks/ augment the built-in library.
+                let chunks_wide = (s.width / CHUNK_SIZE).max(2);
+                let chunks_high = (s.height / CHUNK_SIZE).max(1);
+                let map = stitch_map_from_dir(seed, chunks_wide, chunks_high, "assets/maps/chunks");
                 s.load_from_map_file(map);
                 s.gen_seed = seed;
                 s.seed_label_dirty = true;

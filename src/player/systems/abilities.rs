@@ -15,6 +15,8 @@ pub enum SpecialAbility {
     Healing,
     Whirlwind,
     GoldDigger,
+    /// Rain molotovs around the player, leaving burning ground.
+    Molotov,
 }
 
 impl SpecialAbility {
@@ -24,6 +26,7 @@ impl SpecialAbility {
             SpecialAbility::Healing     =>  6,
             SpecialAbility::Whirlwind   => 10,
             SpecialAbility::GoldDigger  =>  8,
+            SpecialAbility::Molotov     =>  8,
         }
     }
 
@@ -33,6 +36,7 @@ impl SpecialAbility {
             SpecialAbility::Healing     => "Healing",
             SpecialAbility::Whirlwind   => "Whirlwind",
             SpecialAbility::GoldDigger  => "Gold Digger",
+            SpecialAbility::Molotov     => "Molotov",
         }
     }
 }
@@ -97,6 +101,7 @@ pub fn activate_ability(
     mut coins: Query<(Entity, &Transform), With<Coin>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut fire_mw: MessageWriter<crate::gore::fire::SpawnFire>,
     ability_input: Res<AbilityInput>,
 ) {
     if !ability_input.pressed { return; }
@@ -141,6 +146,23 @@ pub fn activate_ability(
                 if let Some(ref mut w) = wallet {
                     w.coins += collected;
                 }
+            }
+
+            SpecialAbility::Molotov => {
+                // Rain fire in a ring around the player — burning ground that lingers.
+                let center = player_transform.translation;
+                let ring = 3.5;
+                for i in 0..5 {
+                    let a = i as f32 / 5.0 * std::f32::consts::TAU;
+                    let pos = center + Vec3::new(a.cos() * ring, 0.0, a.sin() * ring);
+                    fire_mw.write(crate::gore::fire::SpawnFire {
+                        position: pos,
+                        radius: 2.0,
+                        duration: 5.0,
+                        dps: 40.0,
+                    });
+                }
+                spawn_flash(&mut commands, center, &mut meshes, &mut materials);
             }
         }
     }
@@ -220,6 +242,55 @@ pub fn tick_ability_flash(
         }
         if flash.timer.just_finished() {
             commands.entity(entity).despawn();
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{AbilityCooldown, SpecialAbility};
+
+    #[test]
+    fn charge_fills_over_throws_and_reports_when_ready() {
+        let mut cd = AbilityCooldown::new(4);
+        assert!(!cd.ready());
+        for _ in 0..3 {
+            assert!(!cd.add_throw(), "not full yet");
+            assert!(!cd.ready());
+        }
+        assert!(cd.add_throw(), "the 4th throw tops it off");
+        assert!(cd.ready());
+    }
+
+    #[test]
+    fn extra_throws_after_full_do_nothing() {
+        let mut cd = AbilityCooldown::new(1);
+        assert!(cd.add_throw());
+        assert!(!cd.add_throw(), "already full");
+        assert!(cd.ready());
+    }
+
+    #[test]
+    fn reset_empties_the_meter() {
+        let mut cd = AbilityCooldown::new(2);
+        cd.add_throw();
+        cd.add_throw();
+        assert!(cd.ready());
+        cd.reset();
+        assert!(!cd.ready());
+        assert_eq!(cd.charge, 0.0);
+    }
+
+    #[test]
+    fn every_ability_has_a_positive_charge_cost() {
+        for a in [
+            SpecialAbility::Bombardment,
+            SpecialAbility::Healing,
+            SpecialAbility::Whirlwind,
+            SpecialAbility::GoldDigger,
+            SpecialAbility::Molotov,
+        ] {
+            assert!(a.throws_to_charge() > 0, "{} must cost something", a.label());
         }
     }
 }

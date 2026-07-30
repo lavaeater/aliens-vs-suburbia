@@ -83,3 +83,37 @@ pub struct Slowed {
     /// Refreshed each frame the alien is in range; removal when it expires.
     pub ttl: f32,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{TowerArea, TowerShooter};
+    use crate::general::components::map_components::{AlienSpawnPoint, CoolDown};
+
+    #[test]
+    fn shooter_fires_immediately_then_respects_its_interval() {
+        // 60 rpm -> one shot per second. cool_down starts at 0.0, so the first tick fires.
+        let mut shooter = TowerShooter::new(60.0);
+        assert!(shooter.cool_down(0.4), "starts charged: first tick fires");
+        // Now it must accumulate a full second before firing again.
+        assert!(!shooter.cool_down(0.4), "0.4s since: not ready");
+        assert!(!shooter.cool_down(0.4), "0.8s since: still not ready");
+        assert!(shooter.cool_down(0.4), "past 1.0s: fires again");
+    }
+
+    #[test]
+    fn area_tower_ticks_at_its_configured_rate() {
+        // 4 Hz -> a tick every 0.25s.
+        let mut area = TowerArea::new(10.0, 4.0);
+        assert!(!area.cool_down(0.2));
+        assert!(area.cool_down(0.2), "0.4s in crosses the 0.25s interval");
+    }
+
+    #[test]
+    fn spawn_point_cooldown_matches_its_rate() {
+        // 120 spawns/min -> one every 0.5s. Also starts charged (cool_down 0.0).
+        let mut sp = AlienSpawnPoint::new(120.0);
+        assert!(sp.cool_down(0.3), "starts charged: first tick spawns");
+        assert!(!sp.cool_down(0.3), "0.3s since: not ready");
+        assert!(sp.cool_down(0.3), "0.6s since: spawn, re-armed for the next 0.5s");
+    }
+}

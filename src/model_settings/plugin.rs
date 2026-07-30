@@ -195,7 +195,7 @@ fn build_player_anim_graph(
     let def = player_asset_def.as_ref().and_then(|r| r.0.as_ref());
 
     let def_sig = def
-        .map(|d| format!("{:?}|{:?}", d.animation_mapping, d.animation_sources))
+        .map(|d| format!("{:?}|{:?}|{:?}|{:?}", d.animation_bindings, d.clip_tags, d.animation_mapping, d.animation_sources))
         .unwrap_or_default();
 
     let sig = format!("{}|{:?}|{}", game_assets.player_gltf.id(), model_settings.anim_mapping, def_sig);
@@ -224,13 +224,14 @@ fn build_player_anim_graph(
 
     for &key in ANIM_KEYS {
         // Determine the search value: AssetDefinition first, then ModelSettings, then default.
+        // The def resolves a game key through clip tags + bindings (with a legacy
+        // animation_mapping fallback) into a concrete clip name.
         let def_mapped = def
-            .and_then(|d| d.animation_mapping.get(key.default_search()))
-            .map(|s| s.as_str())
-            .unwrap_or("");
+            .and_then(|d| d.resolved_clip(key.default_search()))
+            .unwrap_or_default();
         let settings_mapped = model_settings.anim_mapping.get(key);
         let search = if !def_mapped.is_empty() {
-            def_mapped
+            def_mapped.as_str()
         } else if !settings_mapped.is_empty() {
             settings_mapped
         } else {

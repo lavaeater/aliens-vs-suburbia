@@ -1,0 +1,17 @@
+// An empty lot — open ground (filler: Open all sides).
+(
+    name: "lot_open",
+    rows: [
+        ".......",
+        ".......",
+        ".......",
+        ".......",
+        ".......",
+        ".......",
+        ".......",
+    ],
+    north: Open,
+    east: Open,
+    south: Open,
+    west: Open,
+)

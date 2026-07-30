@@ -1,0 +1,17 @@
+// A hollow building — walls inside, passable border (filler: Open all sides).
+(
+    name: "building",
+    rows: [
+        ".......",
+        ".#####.",
+        ".#...#.",
+        ".#...#.",
+        ".#...#.",
+        ".#####.",
+        ".......",
+    ],
+    north: Open,
+    east: Open,
+    south: Open,
+    west: Open,
+)

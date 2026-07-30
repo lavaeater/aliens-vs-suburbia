@@ -4,7 +4,8 @@ use bevy::prelude::*;
 use std::collections::{HashMap, HashSet};
 
 // Re-export from shared location so asset browser code keeps using the same name.
-pub use crate::assets::asset_definition::{AssetDefinition, ModelType};
+pub use crate::assets::asset_definition::{Attachment, AssetDefinition, Hardpoint, ModelType};
+use bevy::prelude::Entity;
 
 const WINDOW_SIZE: usize = 36;
 pub const CHARACTER_NODE_PREFIX: &str = "Character_";
@@ -18,6 +19,11 @@ pub const ANIM_KEY_NAMES: &[&str] = &[
     "punch", "wave", "yes", "no",
     "death", "hitreact", "throwing", "building",
 ];
+
+/// Standard hardpoint role names, shared across characters and weapons so the snap
+/// can pair them (character `grip` <-> weapon `grip`, etc.). `muzzle` is weapon-only:
+/// the frame bullets leave from (see `src/player/systems/shoot.rs`).
+pub const HARDPOINT_ROLES: &[&str] = &["grip", "foregrip", "stock", "sight", "muzzle"];
 
 // ── Browser state ─────────────────────────────────────────────────────────────
 
@@ -59,10 +65,64 @@ pub struct AssetBrowserState {
     pub model_type: ModelType,
     pub type_dirty: bool,
 
-    // ── Animation mapping (for import) ─────────────────────────────────────────
-    /// Maps ANIM_KEY_NAMES strings → clip fragment (plain) or "SourceStem|ClipFragment".
-    pub anim_mapping: HashMap<String, String>,
-    pub mapping_dirty: bool,
+    // ── Clip tagging + game-key bindings (for import) ──────────────────────────
+    /// Free-form hierarchical tag per clip. Key = clip name as it appears in
+    /// `anim_names`, value = "/"-separated path (e.g. "Combat/Ranged/Shoot").
+    /// Tag paths are unique across clips (enforced in `tag_edit_commit`), so a
+    /// path maps to exactly one clip.
+    pub clip_tags: HashMap<String, String>,
+    /// Binds a game-state key (ANIM_KEY_NAMES entry) → a tag path from `clip_tags`.
+    pub animation_bindings: HashMap<String, String>,
+    /// Rebuild flag for the clip-tag list and the bindings list.
+    pub tags_dirty: bool,
+    /// While a tag text-box is open: the clip being edited and the current buffer.
+    pub tag_edit_clip: Option<String>,
+    pub tag_edit_buffer: String,
+
+    // ── Skeleton overlay ───────────────────────────────────────────────────────
+    /// Draw the skinned-mesh skeleton (bones) as a gizmo overlay on the model.
+    pub show_skeleton: bool,
+
+    // ── Weapon attachments (sockets) ─────────────────────────────────────────────
+    /// Bone names of the loaded model's skeleton, sorted. Populated once the scene
+    /// spawns (see `collect_bone_names`).
+    pub bone_names: Vec<String>,
+    pub bones_ui_dirty: bool,
+    /// Index into `bone_names` currently highlighted as the socket to attach to.
+    pub selected_bone: usize,
+    /// Working copy of the model's attachments (persisted to the def on import).
+    pub attachments: Vec<Attachment>,
+    /// Index of the attachment being edited by the nudge controls.
+    pub active_attachment: Option<usize>,
+    /// Preview weapon entities in the viewer, one per attachment (same order).
+    pub attachment_preview_entities: Vec<Option<Entity>>,
+    /// Set when an attachment's bone/model/count changed (needs respawn).
+    pub attachments_struct_dirty: bool,
+    /// Set when only an attachment's offset changed (update transform in place).
+    pub attachments_xform_dirty: bool,
+    /// Rebuild flag for the attachment UI panel.
+    pub attachment_ui_dirty: bool,
+
+    // ── Hardpoints (weapon snapping) ─────────────────────────────────────────────
+    /// Named connection frames authored for this model (role -> frame). Round-tripped
+    /// through the def.
+    pub hardpoints: std::collections::HashMap<String, Hardpoint>,
+    /// The role currently being edited by the nudge controls.
+    pub active_hardpoint_role: Option<String>,
+    pub hardpoints_ui_dirty: bool,
+    /// Draw hardpoint axis gizmos in the viewer.
+    pub show_hardpoints: bool,
+    /// A reference weapon (asset-relative path) snapped onto this character's `grip`
+    /// hardpoint as a live preview, plus its cached grip frame + scale from its def.
+    pub hardpoint_ref_weapon: Option<String>,
+    pub hardpoint_ref_grip: Option<Hardpoint>,
+    pub hardpoint_ref_scale: f32,
+    /// The bone-scale-corrected local scale for the preview weapon, computed on
+    /// rebuild and reused each frame (see `weapon_local_scale`).
+    pub hardpoint_preview_scale: f32,
+    pub hardpoint_preview_entity: Option<Entity>,
+    /// Respawn/reparent the preview weapon (ref weapon or grip bone changed).
+    pub hardpoint_preview_dirty: bool,
 
     // ── External animation sources ─────────────────────────────────────────────
     /// Paths of extra GLB/GLTF files whose clips supplement the model's own clips.
@@ -111,8 +171,31 @@ impl Default for AssetBrowserState {
             hidden_nodes: HashSet::new(),
             nodes_dirty: false,
             nodes_ui_dirty: false,
-            anim_mapping: HashMap::new(),
-            mapping_dirty: false,
+            clip_tags: HashMap::new(),
+            animation_bindings: HashMap::new(),
+            tags_dirty: false,
+            tag_edit_clip: None,
+            tag_edit_buffer: String::new(),
+            show_skeleton: false,
+            bone_names: Vec::new(),
+            bones_ui_dirty: false,
+            selected_bone: 0,
+            attachments: Vec::new(),
+            active_attachment: None,
+            attachment_preview_entities: Vec::new(),
+            attachments_struct_dirty: false,
+            attachments_xform_dirty: false,
+            attachment_ui_dirty: false,
+            hardpoints: HashMap::new(),
+            active_hardpoint_role: None,
+            hardpoints_ui_dirty: false,
+            show_hardpoints: true,
+            hardpoint_ref_weapon: None,
+            hardpoint_ref_grip: None,
+            hardpoint_ref_scale: 1.0,
+            hardpoint_preview_scale: 1.0,
+            hardpoint_preview_entity: None,
+            hardpoint_preview_dirty: false,
             animation_sources: Vec::new(),
             extra_gltf_handles: Vec::new(),
             sources_dirty: false,
@@ -134,6 +217,7 @@ impl AssetBrowserState {
         self.list_dirty = true;
         self.folder_list_dirty = true;
         self.type_dirty = true;
+        self.hardpoints_ui_dirty = true;
     }
 
     pub fn reset_anim(&mut self) {
@@ -158,6 +242,217 @@ impl AssetBrowserState {
         self.pending_scale = None;
         self.height_dirty = false;
         self.aabb_settle_frames = 0;
+        // Keep clip_tags / animation_bindings across loads (same-pack models share
+        // clip names, like the old anim_mapping did) but close any open text box.
+        self.tag_edit_clip = None;
+        self.tag_edit_buffer.clear();
+        // Bone list belongs to the old skeleton; the preview weapons died with the
+        // old scene. Attachments themselves are (re)populated by load_definition.
+        self.bone_names.clear();
+        self.bones_ui_dirty = true;
+        self.selected_bone = 0;
+        self.attachment_preview_entities.clear();
+        self.attachments_struct_dirty = true;
+        self.attachment_ui_dirty = true;
+        // Preview weapon died with the old scene; keep the chosen ref weapon so it
+        // re-snaps onto the newly loaded character.
+        self.active_hardpoint_role = None;
+        self.hardpoint_preview_entity = None;
+        self.hardpoint_preview_dirty = true;
+        self.hardpoints_ui_dirty = true;
+    }
+
+    pub fn toggle_skeleton(&mut self) {
+        self.show_skeleton = !self.show_skeleton;
+    }
+
+    // ── Weapon attachments ──────────────────────────────────────────────────────
+
+    pub fn selected_bone_name(&self) -> Option<&str> {
+        self.bone_names.get(self.selected_bone).map(|s| s.as_str())
+    }
+
+    /// Cycle the highlighted socket bone.
+    pub fn cycle_bone(&mut self, delta: i32) {
+        if self.bone_names.is_empty() { return; }
+        let n = self.bone_names.len() as i32;
+        self.selected_bone = (self.selected_bone as i32 + delta).rem_euclid(n) as usize;
+        self.bones_ui_dirty = true;
+    }
+
+    pub fn set_selected_bone(&mut self, idx: usize) {
+        if idx < self.bone_names.len() {
+            self.selected_bone = idx;
+            self.bones_ui_dirty = true;
+        }
+    }
+
+    /// Attach `model_path` to the currently highlighted bone and make it the active
+    /// (nudge-editable) attachment.
+    pub fn attach_selected_model(&mut self, model_path: String) {
+        let Some(bone) = self.selected_bone_name().map(|s| s.to_string()) else { return };
+        self.attachments.push(Attachment { bone, model_path, ..Default::default() });
+        self.active_attachment = Some(self.attachments.len() - 1);
+        self.attachments_struct_dirty = true;
+        self.attachment_ui_dirty = true;
+    }
+
+    pub fn select_attachment(&mut self, idx: usize) {
+        if idx < self.attachments.len() {
+            self.active_attachment = Some(idx);
+            if let Some(bone_idx) = self.bone_names.iter()
+                .position(|b| b == &self.attachments[idx].bone)
+            {
+                self.selected_bone = bone_idx;
+            }
+            self.bones_ui_dirty = true;
+            self.attachment_ui_dirty = true;
+        }
+    }
+
+    pub fn remove_active_attachment(&mut self) {
+        if let Some(idx) = self.active_attachment.take()
+            && idx < self.attachments.len()
+        {
+            self.attachments.remove(idx);
+            self.attachments_struct_dirty = true;
+            self.attachment_ui_dirty = true;
+        }
+    }
+
+    /// Re-parent the active attachment to the currently highlighted bone.
+    pub fn set_active_attachment_bone(&mut self) {
+        let Some(bone) = self.selected_bone_name().map(|s| s.to_string()) else { return };
+        if let Some(idx) = self.active_attachment
+            && let Some(a) = self.attachments.get_mut(idx)
+        {
+            a.bone = bone;
+            self.attachments_struct_dirty = true;
+            self.attachment_ui_dirty = true;
+        }
+    }
+
+    /// Nudge the active attachment's translation on `axis` (0=x,1=y,2=z) by `delta`.
+    pub fn nudge_translation(&mut self, axis: usize, delta: f32) {
+        if let Some(idx) = self.active_attachment
+            && let Some(a) = self.attachments.get_mut(idx)
+        {
+            a.translation[axis] += delta;
+            self.attachments_xform_dirty = true;
+            self.attachment_ui_dirty = true;
+        }
+    }
+
+    /// Nudge the active attachment's rotation (degrees) on `axis` by `delta`.
+    pub fn nudge_rotation(&mut self, axis: usize, delta: f32) {
+        if let Some(idx) = self.active_attachment
+            && let Some(a) = self.attachments.get_mut(idx)
+        {
+            a.rotation_euler_deg[axis] = (a.rotation_euler_deg[axis] + delta).rem_euclid(360.0);
+            self.attachments_xform_dirty = true;
+            self.attachment_ui_dirty = true;
+        }
+    }
+
+    /// Scale the active attachment by `factor` (multiplicative, so it reaches any
+    /// magnitude quickly — bone world-scale varies wildly between rigs).
+    pub fn nudge_scale(&mut self, factor: f32) {
+        if let Some(idx) = self.active_attachment
+            && let Some(a) = self.attachments.get_mut(idx)
+        {
+            a.scale = (a.scale * factor).clamp(0.0001, 10000.0);
+            self.attachments_xform_dirty = true;
+            self.attachment_ui_dirty = true;
+        }
+    }
+
+    pub fn active_attachment_ref(&self) -> Option<&Attachment> {
+        self.active_attachment.and_then(|i| self.attachments.get(i))
+    }
+
+    // ── Hardpoints ──────────────────────────────────────────────────────────────
+
+    pub fn toggle_hardpoints(&mut self) {
+        self.show_hardpoints = !self.show_hardpoints;
+    }
+
+    /// Characters anchor hardpoints to bones; weapons anchor to the model origin.
+    pub fn is_character_model(&self) -> bool {
+        matches!(self.model_type, ModelType::Player(_) | ModelType::Enemy(_))
+    }
+
+    /// Select a role for editing, creating it (with a sensible default anchor) if it
+    /// doesn't exist yet.
+    pub fn select_hardpoint_role(&mut self, role: &str) {
+        if !self.hardpoints.contains_key(role) {
+            let anchor = if self.is_character_model() {
+                self.selected_bone_name().map(|s| s.to_string())
+            } else {
+                None
+            };
+            self.hardpoints.insert(role.to_string(), Hardpoint { anchor, ..Default::default() });
+            if role == "grip" { self.hardpoint_preview_dirty = true; }
+        }
+        self.active_hardpoint_role = Some(role.to_string());
+        self.hardpoints_ui_dirty = true;
+    }
+
+    pub fn active_hardpoint(&self) -> Option<&Hardpoint> {
+        self.active_hardpoint_role.as_ref().and_then(|r| self.hardpoints.get(r))
+    }
+
+    /// Re-anchor the active hardpoint to the currently highlighted bone.
+    pub fn set_active_hardpoint_bone(&mut self) {
+        let bone = self.selected_bone_name().map(|s| s.to_string());
+        if let Some(role) = self.active_hardpoint_role.clone()
+            && let Some(h) = self.hardpoints.get_mut(&role)
+        {
+            h.anchor = bone;
+            self.hardpoints_ui_dirty = true;
+            if role == "grip" { self.hardpoint_preview_dirty = true; }
+        }
+    }
+
+    pub fn delete_active_hardpoint(&mut self) {
+        if let Some(role) = self.active_hardpoint_role.take() {
+            self.hardpoints.remove(&role);
+            if role == "grip" { self.hardpoint_preview_dirty = true; }
+        }
+        self.hardpoints_ui_dirty = true;
+    }
+
+    pub fn nudge_hardpoint_translation(&mut self, axis: usize, delta: f32) {
+        if let Some(role) = self.active_hardpoint_role.clone()
+            && let Some(h) = self.hardpoints.get_mut(&role)
+        {
+            h.translation[axis] += delta;
+            self.hardpoints_ui_dirty = true;
+        }
+    }
+
+    pub fn nudge_hardpoint_rotation(&mut self, axis: usize, delta: f32) {
+        if let Some(role) = self.active_hardpoint_role.clone()
+            && let Some(h) = self.hardpoints.get_mut(&role)
+        {
+            h.rotation_euler_deg[axis] = (h.rotation_euler_deg[axis] + delta).rem_euclid(360.0);
+            self.hardpoints_ui_dirty = true;
+        }
+    }
+
+    /// Choose a reference weapon to snap onto this character's `grip` for preview.
+    /// Caches the weapon's `grip` frame and scale from its saved def.
+    pub fn set_ref_weapon(&mut self, path: String) {
+        let def = AssetDefinition::load(&path);
+        self.hardpoint_ref_grip = def.as_ref().and_then(|d| d.hardpoints.get("grip").cloned());
+        self.hardpoint_ref_scale = def.map(|d| d.scale).unwrap_or(1.0);
+        self.hardpoint_ref_weapon = Some(path);
+        self.hardpoint_preview_dirty = true;
+    }
+
+    pub fn clear_ref_weapon(&mut self) {
+        self.hardpoint_ref_weapon = None;
+        self.hardpoint_ref_grip = None;
+        self.hardpoint_preview_dirty = true;
     }
 
     pub fn computed_scale(&self) -> f32 {
@@ -184,6 +479,12 @@ impl AssetBrowserState {
     }
 
     pub fn set_model_type(&mut self, label: &str) {
+        // Re-clicking the current type must not wipe its props (e.g. a Player's
+        // `weapon`/`ability`); only actually changing type resets to defaults.
+        if ModelType::from_label(label).same_variant(&self.model_type) {
+            self.type_dirty = true;
+            return;
+        }
         self.model_type = ModelType::from_label(label);
         self.type_dirty = true;
     }
@@ -238,18 +539,104 @@ impl AssetBrowserState {
         self.nodes_ui_dirty = true;
     }
 
-    pub fn cycle_mapping_next(&mut self, key: &str) {
-        let current = self.anim_mapping.get(key).cloned().unwrap_or_default();
-        let next = next_clip(&self.anim_names, &current, 1);
-        self.anim_mapping.insert(key.to_string(), next);
-        self.mapping_dirty = true;
+    // ── Clip tagging ────────────────────────────────────────────────────────
+
+    /// Distinct tag paths currently in use, sorted. Used for binding cycling and
+    /// as the autocomplete pool while typing a tag.
+    pub fn distinct_tag_paths(&self) -> Vec<String> {
+        let mut paths: Vec<String> = self.clip_tags.values()
+            .filter(|p| !p.is_empty())
+            .cloned()
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .collect();
+        paths.sort();
+        paths
     }
 
-    pub fn cycle_mapping_prev(&mut self, key: &str) {
-        let current = self.anim_mapping.get(key).cloned().unwrap_or_default();
-        let next = next_clip(&self.anim_names, &current, -1);
-        self.anim_mapping.insert(key.to_string(), next);
-        self.mapping_dirty = true;
+    /// Open the tag text-box for `clip`, seeded with its existing tag.
+    pub fn begin_tag_edit(&mut self, clip: &str) {
+        self.tag_edit_buffer = self.clip_tags.get(clip).cloned().unwrap_or_default();
+        self.tag_edit_clip = Some(clip.to_string());
+        self.tags_dirty = true;
+    }
+
+    pub fn tag_edit_push(&mut self, s: &str) {
+        if self.tag_edit_clip.is_some() {
+            self.tag_edit_buffer.push_str(s);
+            self.tags_dirty = true;
+        }
+    }
+
+    pub fn tag_edit_backspace(&mut self) {
+        if self.tag_edit_clip.is_some() {
+            self.tag_edit_buffer.pop();
+            self.tags_dirty = true;
+        }
+    }
+
+    pub fn tag_edit_cancel(&mut self) {
+        self.tag_edit_clip = None;
+        self.tag_edit_buffer.clear();
+        self.tags_dirty = true;
+    }
+
+    /// Commit the buffer as `clip`'s tag. Trims slashes/whitespace; an empty
+    /// result clears the tag. Tag paths are unique: assigning a path that another
+    /// clip already carries moves it off that clip, so each path maps to exactly
+    /// one clip and runtime resolution is deterministic.
+    pub fn tag_edit_commit(&mut self) {
+        if let Some(clip) = self.tag_edit_clip.take() {
+            let path = normalize_tag_path(&self.tag_edit_buffer);
+            if path.is_empty() {
+                self.clip_tags.remove(&clip);
+            } else {
+                // Steal the path from whatever other clip currently holds it.
+                self.clip_tags.retain(|c, t| c == &clip || t != &path);
+                self.clip_tags.insert(clip, path);
+            }
+        }
+        self.tag_edit_buffer.clear();
+        self.tags_dirty = true;
+    }
+
+    /// Fill the open text-box with an autocomplete suggestion.
+    pub fn tag_edit_accept_suggestion(&mut self, path: &str) {
+        if self.tag_edit_clip.is_some() {
+            self.tag_edit_buffer = path.to_string();
+            self.tags_dirty = true;
+        }
+    }
+
+    /// Existing tag paths matching the current buffer (case-insensitive substring),
+    /// excluding an exact match. Empty while the buffer is empty.
+    pub fn tag_suggestions(&self) -> Vec<String> {
+        let buf = self.tag_edit_buffer.trim().to_lowercase();
+        if buf.is_empty() { return Vec::new(); }
+        self.distinct_tag_paths().into_iter()
+            .filter(|p| {
+                let pl = p.to_lowercase();
+                pl != buf && pl.contains(&buf)
+            })
+            .take(6)
+            .collect()
+    }
+
+    // ── Game-key → tag bindings ─────────────────────────────────────────────
+
+    /// Cycle `key`'s binding through the in-use tag paths (plus an unbound slot).
+    pub fn cycle_binding(&mut self, key: &str, delta: i32) {
+        let mut options = self.distinct_tag_paths();
+        options.insert(0, String::new()); // unbound
+        let current = self.animation_bindings.get(key).cloned().unwrap_or_default();
+        let idx = options.iter().position(|o| o == &current).unwrap_or(0) as i32;
+        let next = options[(idx + delta).rem_euclid(options.len() as i32) as usize].clone();
+        if next.is_empty() {
+            self.animation_bindings.remove(key);
+        } else {
+            self.animation_bindings.insert(key.to_string(), next);
+        }
+        self.tags_dirty = true;
     }
 
     /// Write the current viewer state to `assets/defs/<model>.ron`.
@@ -260,8 +647,13 @@ impl AssetBrowserState {
             scale: self.computed_scale(),
             model_type: self.model_type.clone(),
             hidden_nodes: self.hidden_nodes.iter().cloned().collect(),
-            animation_mapping: self.anim_mapping.clone(),
+            // Legacy field retired in favour of clip_tags + animation_bindings.
+            animation_mapping: HashMap::new(),
+            clip_tags: self.clip_tags.clone(),
+            animation_bindings: self.animation_bindings.clone(),
             animation_sources: self.animation_sources.clone(),
+            attachments: self.attachments.clone(),
+            hardpoints: self.hardpoints.clone(),
         };
         def.save();
     }
@@ -271,7 +663,18 @@ impl AssetBrowserState {
         let Some(path) = self.selected_path() else { return };
         if let Some(def) = AssetDefinition::load(path) {
             self.hidden_nodes = def.hidden_nodes.into_iter().collect();
-            self.anim_mapping = def.animation_mapping;
+            self.clip_tags = def.clip_tags;
+            self.animation_bindings = def.animation_bindings;
+            // Migrate legacy flat mappings: each game-key → clip becomes a flat tag
+            // (named after the key) on that clip, plus a binding to it. Lossless and
+            // gives the user a starting point to reorganize hierarchically.
+            if self.animation_bindings.is_empty() && !def.animation_mapping.is_empty() {
+                for (key, clip) in &def.animation_mapping {
+                    if clip.is_empty() { continue; }
+                    self.clip_tags.entry(clip.clone()).or_insert_with(|| key.clone());
+                    self.animation_bindings.insert(key.clone(), self.clip_tags[clip].clone());
+                }
+            }
             // Normalize paths: strip leading "assets/" if present (legacy wrong prefix).
             self.animation_sources = def.animation_sources.into_iter()
                 .map(|p| p.strip_prefix("assets/").unwrap_or(&p).to_string())
@@ -279,29 +682,48 @@ impl AssetBrowserState {
             self.sources_dirty = true;
             self.model_type = def.model_type;
             self.type_dirty = true;
+            // Attachments and hardpoints are skeleton/model-specific — load fresh.
+            self.attachments = def.attachments;
+            self.hardpoints = def.hardpoints;
+            // Strip a stray "assets/" prefix on attachment model paths, same as sources.
+            for a in &mut self.attachments {
+                if let Some(stripped) = a.model_path.strip_prefix("assets/") {
+                    a.model_path = stripped.to_string();
+                }
+            }
             // Stash the stored scale; target_height_m is resolved once the mesh AABB is measured.
             self.pending_scale = Some(def.scale);
         } else {
-            // No def for this model. Clear node visibility but KEEP existing anim_mapping —
-            // same-pack models share clip names so the user's work carries over.
+            // No def for this model. Clear node visibility but KEEP existing clip_tags /
+            // bindings — same-pack models share clip names so the user's work carries over.
             self.hidden_nodes.clear();
             self.animation_sources.clear();
             self.sources_dirty = true;
+            self.attachments.clear();
+            self.hardpoints.clear();
         }
+        self.active_attachment = None;
+        self.attachments_struct_dirty = true;
+        self.attachment_ui_dirty = true;
+        self.tag_edit_clip = None;
+        self.tag_edit_buffer.clear();
         self.nodes_dirty = true;
         self.nodes_ui_dirty = true;
-        self.mapping_dirty = true;
+        self.tags_dirty = true;
     }
 
-    /// Reset mapping and hidden nodes back to a clean state.
+    /// Reset tags, bindings and hidden nodes back to a clean state.
     pub fn clear_all(&mut self) {
-        self.anim_mapping.clear();
+        self.clip_tags.clear();
+        self.animation_bindings.clear();
+        self.tag_edit_clip = None;
+        self.tag_edit_buffer.clear();
         self.hidden_nodes.clear();
         self.animation_sources.clear();
         self.sources_dirty = true;
         self.nodes_dirty = true;
         self.nodes_ui_dirty = true;
-        self.mapping_dirty = true;
+        self.tags_dirty = true;
     }
 
     pub fn anim_next(&mut self) {
@@ -406,9 +828,12 @@ pub fn scan_folder(folder: &str) -> (Vec<String>, Vec<String>) {
     (folders, files)
 }
 
-fn next_clip(clips: &[String], current: &str, delta: i32) -> String {
-    if clips.is_empty() { return current.to_string(); }
-    let idx = clips.iter().position(|c| c == current).map(|i| i as i32).unwrap_or(-1);
-    let next = (idx + delta).rem_euclid(clips.len() as i32) as usize;
-    clips[next].clone()
+/// Normalize a free-form tag path: split on '/', trim each segment, drop empties,
+/// rejoin with '/'. "  Combat // Ranged /Shoot " → "Combat/Ranged/Shoot".
+fn normalize_tag_path(raw: &str) -> String {
+    raw.split('/')
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join("/")
 }

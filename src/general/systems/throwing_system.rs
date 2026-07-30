@@ -11,12 +11,14 @@ use crate::game_state::score_keeper::GameTrackingEvent;
 use crate::general::components::{Ball, CollisionLayer};
 use crate::general::components::map_components::CoolDown;
 use crate::player::components::{AutoAim, Player, PlayerDead};
+use crate::player::systems::equip::EquippedWeapon;
 use crate::player::systems::abilities::AbilityCooldown;
 
 #[allow(clippy::type_complexity)]
 pub fn throwing(
     time_res: Res<Time>,
-    mut query: Query<(Entity, &Player, &Position, &AutoAim, &mut CharacterControl, &mut AbilityCooldown), Without<PlayerDead>>,
+    // Players holding a gun fire it (see shoot_weapons) instead of throwing balls.
+    mut query: Query<(Entity, &Player, &Position, &AutoAim, &mut CharacterControl, &mut AbilityCooldown), (Without<PlayerDead>, Without<EquippedWeapon>)>,
     mut commands: Commands,
     game_assets: Res<GameAssets>,
     mut game_mw: MessageWriter<GameTrackingEvent>,
