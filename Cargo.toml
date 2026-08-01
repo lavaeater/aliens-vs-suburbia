@@ -12,36 +12,38 @@ exclude = ["rusty_music"]
 resolver = "2"
 
 [dependencies]
-bevy = { version = "0.18", features = ["wayland", "3d", "ui", "experimental_bevy_feathers", "webp"] }
-avian3d = { version = "0.6", default-features = false, features = ["3d", "parry-f32", "debug-plugin", "collider-from-mesh", "simd", "parallel", "serialize", "bevy_scene", "bevy_picking", "xpbd_joints"] }
-flagset = "0.4.4"
+bevy = { version = "0.19.0", features = ["wayland", "3d", "ui", "bevy_feathers", "webp"] }
+avian3d = { version = "0.7.0", default-features = false, features = ["3d", "parry-f32", "debug-plugin", "collider-from-mesh", "simd", "parallel", "serialize", "bevy_scene", "bevy_picking", "xpbd_joints"] }
 pathfinding = "4.6"
-itertools = "0.14.0"
-bevy_mod_outline = "0.12"
-bevy-inspector-egui = "0.36"
+itertools = "0.15.0"
+bevy_mod_outline = "0.13.0"
+bevy-inspector-egui = "0.37.0"
 lava_ui_builder = { path = "lava_ui_builder" }
 turbofacts = { path = "turbofacts" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 ron = "0.12.1"
-ureq = { version = "2", features = ["json"] }
+ureq = { version = "3.3.0", features = ["json"] }
 dotenvy = "0.15"
 urlencoding = "2"
 bevy_wind_waker_shader = { path = "bevy_wind_waker_shader" }
 image = { version = "0.25", default-features = false, features = ["png"] }
-bevy_skein = "0.5.0"
-bonsai-bt = "*"
+bevy_skein = "0.6.0"
 ratatui   = { version = "0.30", optional = true }
 crossterm = { version = "0.29", optional = true }
 enumflags2 = { version = "0.7.12",  features = ["serde"] }
-strum = "0.28.0"
 # Use the submodule checkout so local edits to rusty_music take effect immediately.
 rusty_music = { path = "rusty_music" }
-bevy_seedling = { version = "0.7.2", default-features = false, features = ["wav"] }
+bevy_seedling = { version = "0.8.0", default-features = false, features = ["wav"] }
 
 [features]
 map-editor = ["dep:ratatui", "dep:crossterm"]
 
-# Enable max optimizations for dependencies, but not for our code:h
+# bevy_seedling has no crates.io release targeting Bevy 0.19; its `master` (0.8.0) does.
+# Pinned to a rev so builds stay reproducible. Drop this once 0.8 is published.
+[patch.crates-io]
+bevy_seedling = { git = "https://github.com/corvusprudens/bevy_seedling", rev = "9db62d12daa11a2ffbd9da1565154127eac0a241" }
+
+# Enable max optimisations for dependencies, but not for our code:h
 [profile.dev.package."*"]
 opt-level = 3

@@ -42,7 +42,7 @@ pub fn tick_death_effects(
         effect.timer.tick(time.delta());
         let t = effect.timer.fraction();
         transform.scale = Vec3::splat(1.0 + t * 4.0);
-        if let Some(mat) = materials.get_mut(&mat_handle.0) {
+        if let Some(mut mat) = materials.get_mut(&mat_handle.0) {
             let c = mat.base_color.to_srgba();
             mat.base_color = bevy::prelude::Color::srgba(c.red, c.green, c.blue, 1.0 - t);
         }

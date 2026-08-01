@@ -86,13 +86,13 @@ Stored at `assets/defs/<model-stem>.ron`. Fields:
 
 ### Physics & Collision
 
-Uses **avian3d 0.6**. Collision layers in `src/general/components/mod.rs`: `ImpassableAll`, `Floor`, `Ball`, `Alien`, `Player`, `BuildIndicator`, `Sensor`, `PlayerAimSensor`, `AlienSpawnPoint`, `AlienGoal`.
+Uses **avian3d 0.7**. Collision layers in `src/general/components/mod.rs`: `ImpassableAll`, `Floor`, `Ball`, `Alien`, `Player`, `BuildIndicator`, `Sensor`, `PlayerAimSensor`, `AlienSpawnPoint`, `AlienGoal`.
 
 ### AI Pattern
 
 Each behavior has its own submodule under `src/ai/`. When aliens can't find a path, `MustDestroyTheMap` is inserted. When a tile is re-opened (`path_reopened` flag on `MapGraph`), `recheck_path_after_tile_opened` clears destroy-behavior from all aliens if a normal path now exists.
 
-### Bevy 0.18 Patterns
+### Bevy 0.19 Patterns
 
 - **Messages not Events**: Custom event types derive `Message` and use `MessageReader`/`MessageWriter`. `add_message::<T>()` registers them.
 - **`IntoScheduleConfigs`** must be explicitly imported when using `.run_if()`, `.after()`, `.before()`.
@@ -105,13 +105,13 @@ Each behavior has its own submodule under `src/ai/`. When aliens can't find a pa
 
 ### Key Dependencies
 
-- `bevy 0.18` — game engine
-- `avian3d 0.6` — 3D physics (`parry-f32` feature required)
+- `bevy 0.19` — game engine
+- `avian3d 0.7` — 3D physics (`parry-f32` feature required)
 - `pathfinding 4.6.0` — A* grid navigation
-- `bevy_mod_outline 0.12` — entity outlines
-- `bevy-inspector-egui 0.36` — runtime debug inspector
+- `bevy_mod_outline 0.13` — entity outlines
+- `bevy-inspector-egui 0.37` — runtime debug inspector
 - `lava_ui_builder` — local UI helper crate used throughout for panels and buttons
-- `rusty_music` — local submodule (path dep, excluded from the workspace): generative music plugin built on `bevy_seedling 0.7`
+- `rusty_music` — local submodule (path dep, excluded from the workspace): generative music plugin built on `bevy_seedling 0.8` (pinned to a git rev; no 0.19 crates.io release yet)
 - `ron` — serialization for all `.ron` files
 
 ### Assets

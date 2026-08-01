@@ -28,7 +28,7 @@ impl Plugin for StatefulCameraPlugin {
             Update,
             apply_camera_settings
                 .run_if(resource_changed::<GameSettings>)
-                .run_if(in_state(GameState::InGame).or(in_state(GameState::ModelShowcase))),
+                .run_if(in_state(GameState::InGame).or_else(in_state(GameState::ModelShowcase))),
         );
     }
 }

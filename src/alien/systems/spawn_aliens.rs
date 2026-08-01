@@ -10,7 +10,7 @@ use bevy::math::{Quat, Vec3};
 use bevy::prelude::{
     Commands, MessageReader, MessageWriter, Query, Res, ResMut, Time, Transform,
 };
-use bevy::scene::SceneRoot;
+use bevy::world_serialization::WorldAssetRoot;
 use std::f32::consts::PI;
 use avian3d::prelude::Position;
 
@@ -101,7 +101,7 @@ pub fn spawn_aliens(
         let id = commands.spawn((
             Alien::default(),
             alien_transform,
-            SceneRoot(game_assets.alien_scene.clone()),
+            WorldAssetRoot(game_assets.alien_scene.clone()),
             // WindWakerShaderBuilder::default().build(),
             // PixelShaderBuilder::default()
             //     .pixel_density(1.0)   // lower = blockier

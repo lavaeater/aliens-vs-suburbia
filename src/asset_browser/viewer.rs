@@ -150,10 +150,10 @@ pub fn rebuild_attachment_scenes(
             continue;
         }
         if let Some(&bone_ent) = bone_map.get(&a.bone) {
-            let scene: Handle<Scene> = asset_server.load(
+            let scene: Handle<WorldAsset> = asset_server.load(
                 GltfAssetLabel::Scene(0).from_asset(a.model_path.clone()),
             );
-            let e = commands.spawn((SceneRoot(scene), attachment_transform(a), StateMarker)).id();
+            let e = commands.spawn((WorldAssetRoot(scene), attachment_transform(a), StateMarker)).id();
             commands.entity(bone_ent).add_child(e);
             preview.push(Some(e));
         } else {
@@ -272,7 +272,7 @@ pub fn rebuild_hardpoint_preview(
         return; // skeleton not ready yet — retry next frame (keep dirty)
     };
 
-    let scene: Handle<Scene> = asset_server.load(GltfAssetLabel::Scene(0).from_asset(ref_path));
+    let scene: Handle<WorldAsset> = asset_server.load(GltfAssetLabel::Scene(0).from_asset(ref_path));
     // Cancel the rig's baked bone scale and track the character's rendered scale, so
     // the weapon isn't collapsed by a tiny bone world scale (mesh2motion bakes ~0.0136).
     let bone_scale = global_transforms.get(bone_ent).map(|gt| gt.scale().x).unwrap_or(1.0);
@@ -280,7 +280,7 @@ pub fn rebuild_hardpoint_preview(
     let effective = weapon_local_scale(state.hardpoint_ref_scale, root_scale, bone_scale);
     state.hardpoint_preview_scale = effective;
     let t = snap_transform(&char_grip, &ref_grip, effective);
-    let e = commands.spawn((SceneRoot(scene), t, StateMarker)).id();
+    let e = commands.spawn((WorldAssetRoot(scene), t, StateMarker)).id();
     commands.entity(bone_ent).add_child(e);
     state.hardpoint_preview_entity = Some(e);
     state.hardpoint_preview_dirty = false;
@@ -329,7 +329,7 @@ pub fn spawn_asset_browser_cameras(mut commands: Commands) {
     commands.spawn((
         DirectionalLight {
             illuminance: 8000.0,
-            shadows_enabled: false,
+            shadow_maps_enabled: false,
             ..Default::default()
         },
         Transform::from_xyz(4.0, 8.0, 4.0).looking_at(Vec3::ZERO, Vec3::Y),
@@ -352,7 +352,7 @@ pub fn handle_model_load(
     if let Some(path) = state.selected_path().map(|s| s.to_string()) {
         // Pre-populate hidden_nodes and anim_mapping from existing definition.
         state.load_definition();
-        let handle: Handle<Scene> = asset_server.load(
+        let handle: Handle<WorldAsset> = asset_server.load(
             GltfAssetLabel::Scene(0).from_asset(path.clone()),
         );
         let entity = spawn_viewer_model(&mut commands, handle);
@@ -362,9 +362,9 @@ pub fn handle_model_load(
     }
 }
 
-fn spawn_viewer_model(commands: &mut Commands, handle: Handle<Scene>) -> Entity {
+fn spawn_viewer_model(commands: &mut Commands, handle: Handle<WorldAsset>) -> Entity {
     commands.spawn((
-        SceneRoot(handle),
+        WorldAssetRoot(handle),
         Transform::from_xyz(0.0, 0.0, 0.0),
         AssetBrowserViewerModel,
         StateMarker,
@@ -525,7 +525,7 @@ pub fn merge_extra_anim_clips(
 ) {
     // Only run after the main model graph has been built.
     let Some(graph_handle) = state.viewer_graph_handle.clone() else { return };
-    let Some(graph) = animation_graphs.get_mut(&graph_handle) else { return };
+    let Some(mut graph) = animation_graphs.get_mut(&graph_handle) else { return };
 
     let mut any_new = false;
 
@@ -549,7 +549,8 @@ pub fn merge_extra_anim_clips(
 
     for clip in new_clips {
         let prefixed = format!("{}|{}", clip.stem, clip.name);
-        let node_idx = graph.add_clip(clip.handle, 1.0, graph.root);
+        let graph_root = graph.root;
+        let node_idx = graph.add_clip(clip.handle, 1.0, graph_root);
         state.anim_names.push(prefixed);
         state.anim_node_indices.push(node_idx);
         state.anim_count += 1;

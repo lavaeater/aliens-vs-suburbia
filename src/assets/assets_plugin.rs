@@ -2,7 +2,7 @@ use bevy::app::{App, Plugin, Startup};
 use bevy::asset::{AssetServer, Handle};
 use bevy::gltf::{Gltf, GltfAssetLabel};
 use bevy::prelude::{Res, ResMut, Resource};
-use bevy::scene::Scene;
+use bevy::world_serialization::WorldAsset;
 use crate::model_settings::resources::{CharacterFolder, ModelSettings};
 
 pub struct AssetsPlugin;
@@ -16,10 +16,10 @@ impl Plugin for AssetsPlugin {
 
 #[derive(Resource, Default)]
 pub struct GameAssets {
-    pub player_scene: Handle<Scene>,
-    pub ball_scene: Handle<Scene>,
-    pub alien_scene: Handle<Scene>,
-    pub alien_construct: Handle<Scene>,
+    pub player_scene: Handle<WorldAsset>,
+    pub ball_scene: Handle<WorldAsset>,
+    pub alien_scene: Handle<WorldAsset>,
+    pub alien_construct: Handle<WorldAsset>,
     pub player_gltf: Handle<Gltf>,
     pub alien_gltf: Handle<Gltf>,
 }

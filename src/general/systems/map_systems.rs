@@ -4,7 +4,7 @@ use bevy::asset::RenderAssetUsages;
 use bevy::pbr::StandardMaterial;
 use bevy::prelude::{Assets, Color, Commands, Has, Mesh, Mesh3d, MeshMaterial3d, MessageReader, MessageWriter, Name, Query, Res, ResMut, Resource, Transform};
 use bevy::mesh::{Indices, PrimitiveTopology};
-use bevy::scene::SceneRoot;
+use bevy::world_serialization::WorldAssetRoot;
 use avian3d::prelude::{Collider, CollisionLayers, Position, RigidBody};
 use pathfinding::grid::Grid;
 use std::collections::HashSet;
@@ -155,7 +155,7 @@ pub fn map_loader(
                     commands.spawn((
                         Name::from(format!("Alien Spawn Point {}:{}", col, row)),
                         AlienSpawnPoint::new(2.0),
-                        SceneRoot(game_assets.alien_construct.clone()),
+                        WorldAssetRoot(game_assets.alien_construct.clone()),
                         RigidBody::Static,
                         WindWakerShaderBuilder::default().build(),
                         Collider::cuboid(0.5, 0.5, 0.45),
@@ -168,7 +168,7 @@ pub fn map_loader(
                     commands.spawn((
                         Name::from(format!("Alien Goal {}:{}", col, row)),
                         AlienGoal,
-                        SceneRoot(game_assets.alien_construct.clone()),
+                        WorldAssetRoot(game_assets.alien_construct.clone()),
                         RigidBody::Static,
                         WindWakerShaderBuilder::default().build(),
                         Collider::cuboid(0.5, 0.5, 0.45),
@@ -351,7 +351,7 @@ pub fn map_loader(
                 ModelType::Terrain(props) => {
                     let mut ec = commands.spawn((
                         Name::from(format!("Placement {}:{}", placement.x, placement.y)),
-                        SceneRoot(scene_handle),
+                        WorldAssetRoot(scene_handle),
                         Transform::from_translation(pos).with_rotation(rot).with_scale(scale),
                         CurrentTile { tile: tile_coord },
                         RigidBody::Static,
@@ -379,7 +379,7 @@ pub fn map_loader(
                     let mut ec = commands.spawn((
                         Name::from(format!("Tower {}:{}", placement.x, placement.y)),
                         IsObstacle,
-                        SceneRoot(scene_handle),
+                        WorldAssetRoot(scene_handle),
                         Transform::from_translation(pos).with_rotation(rot).with_scale(scale),
                         tile_defs.create_collider(16.0, 8.0, 16.0),
                         CollisionLayers::new([CollisionLayer::ImpassableAll], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
@@ -405,7 +405,7 @@ pub fn map_loader(
                     // Items, weapons and decorative enemies just spawn as scenes.
                     commands.spawn((
                         Name::from(format!("Item {}:{}", placement.x, placement.y)),
-                        SceneRoot(scene_handle),
+                        WorldAssetRoot(scene_handle),
                         Transform::from_translation(pos).with_rotation(rot).with_scale(scale),
                     ));
                 }
@@ -422,7 +422,7 @@ pub fn map_loader(
             let world_scale = dec.scale * game_settings.player_unit;
             commands.spawn((
                 Name::from(format!("Decoration {}:{} {}", dec.x, dec.y, dec.model)),
-                SceneRoot(asset_server.load(format!("{}#Scene0", dec.model))),
+                WorldAssetRoot(asset_server.load(format!("{}#Scene0", dec.model))),
                 Transform::from_translation(pos)
                     .with_rotation(Quat::from_rotation_y(dec.rotation_y.to_radians()))
                     .with_scale(bevy::math::Vec3::splat(world_scale)),

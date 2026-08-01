@@ -1,6 +1,6 @@
 use bevy::math::Vec3;
 use bevy::prelude::{Commands, Entity, MessageWriter, Query, Res, Transform, Without};
-use bevy::scene::SceneRoot;
+use bevy::world_serialization::WorldAssetRoot;
 use bevy::time::Time;
 use avian3d::prelude::{Collider, CollisionEventsEnabled, CollisionLayers, LinearVelocity, Position, RigidBody};
 use bevy_wind_waker_shader::WindWakerShaderBuilder;
@@ -33,7 +33,7 @@ pub fn throwing(
                 meter.add_throw();
                 commands.spawn((
                     Ball::new(entity),
-                    SceneRoot(game_assets.ball_scene.clone()),
+                    WorldAssetRoot(game_assets.ball_scene.clone()),
                     Transform::from_xyz(launch_p.x, launch_p.y, launch_p.z),
                     RigidBody::Dynamic,
                     Collider::sphere(1.0 / 16.0),

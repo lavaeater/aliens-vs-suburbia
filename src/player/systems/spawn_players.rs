@@ -2,7 +2,7 @@ use bevy::math::{Quat, Vec3};
 use bevy::prelude::*;
 use bevy::asset::AssetServer;
 use bevy::gltf::GltfAssetLabel;
-use bevy::scene::SceneRoot;
+use bevy::world_serialization::WorldAssetRoot;
 use avian3d::prelude::Collider;
 use crate::assets::asset_definition::{AssetDefinition, ModelType};
 use crate::assets::assets_plugin::GameAssets;
@@ -171,7 +171,7 @@ pub fn spawn_players(
                     Quat::from_rotation_y(s.rotation_y_degrees.to_radians()),
                     Vec3::splat(s.scale),
                 ),
-                SceneRoot(scene),
+                WorldAssetRoot(scene),
                 pos,
                 Collider::cuboid(0.5, 0.5, 0.45),
                 PlayerBundle::with_throw_rate(

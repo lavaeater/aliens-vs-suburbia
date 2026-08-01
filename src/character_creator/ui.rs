@@ -209,7 +209,7 @@ fn spawn_group(
                         .insert(Text::new("None"))
                         .insert(TextFont::default().with_font_size(11.0))
                         .insert(TextColor(Color::WHITE))
-                        .insert(TextLayout::new_with_justify(bevy::text::Justify::Center))
+                        .insert(TextLayout { justify: bevy::text::Justify::Center, ..default() })
                         .insert(CategoryLabel(cat_idx));
                 });
 

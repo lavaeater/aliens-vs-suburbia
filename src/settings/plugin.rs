@@ -11,7 +11,7 @@ impl Plugin for SettingsPlugin {
             .add_systems(
                 Update,
                 settings_keyboard_system
-                    .run_if(in_state(GameState::InGame).or(in_state(GameState::ModelShowcase))),
+                    .run_if(in_state(GameState::InGame).or_else(in_state(GameState::ModelShowcase))),
             );
     }
 }

@@ -15,7 +15,7 @@ use crate::model_settings::resources::{
     MODEL_SETTINGS_PATH, scan_character_folder,
 };
 use crate::player::components::Player;
-use bevy_mod_outline::AsyncSceneInheritOutline;
+use bevy_mod_outline::AsyncWorldInheritOutline;
 use crate::player::systems::spawn_players::{
     FixSceneTransform, WeaponsHidden, apply_model_settings_live,
 };
@@ -132,7 +132,7 @@ fn reload_player_model(
         matches!(d.model_type, crate::assets::asset_definition::ModelType::Player(_))
     });
 
-    let scene: Handle<Scene> =
+    let scene: Handle<WorldAsset> =
         asset_server.load(GltfAssetLabel::Scene(0).from_asset(path.clone()));
     game_assets.player_scene = scene.clone();
     game_assets.player_gltf = asset_server.load(path);
@@ -140,14 +140,14 @@ fn reload_player_model(
     let s = &*model_settings;
     for player_entity in player_query.iter() {
         commands.entity(player_entity)
-            .insert(SceneRoot(scene.clone()))
+            .insert(WorldAssetRoot(scene.clone()))
             .insert(FixSceneTransform::new(
                 Vec3::new(s.translation_x, s.translation_y, s.translation_z),
                 Quat::from_rotation_y(s.rotation_y_degrees.to_radians()),
                 Vec3::splat(s.scale),
             ))
             .remove::<WeaponsHidden>()
-            .remove::<AsyncSceneInheritOutline>();
+            .remove::<AsyncWorldInheritOutline>();
     }
 }
 
