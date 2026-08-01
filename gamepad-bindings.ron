@@ -1,0 +1,20 @@
+// Gamepad button map. Names are Bevy `GamepadButton` variants, which are layout
+// neutral -- DualShock equivalents in the comments. Delete this file to get the
+// defaults back; every field is optional.
+(
+    // R2
+    fire: RightTrigger2,
+    // Square
+    build_mode: West,
+    // Cross
+    execute_build: South,
+    // Circle
+    exit_build: East,
+    // Triangle
+    ability: North,
+    next_build_item: DPadRight,
+    prev_build_item: DPadLeft,
+
+    stick_dead_zone: 0.2,
+    trigger_threshold: 0.3,
+)

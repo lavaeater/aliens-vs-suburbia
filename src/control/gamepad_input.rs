@@ -8,8 +8,11 @@
 //! turns to face it; when it is released the character faces the way it walks, and the
 //! closest-in-FOV `auto_aim` system takes over again while firing.
 //!
-//! R2 (`RightTrigger2`) fires — it sets `ControlCommand::Throw`, the same trigger the
-//! keyboard's Space uses, so both throwing and equipped-weapon shooting pick it up.
+//! Buttons (fire, build, ability, ...) are remappable — see `control::bindings` and
+//! `gamepad-bindings.ron`. Firing sets `ControlCommand::Throw`, the same trigger the
+//! keyboard's Space uses, so both throwing and equipped-weapon shooting pick it up; the
+//! build buttons write the same `EnterBuildMode`/`ExecuteBuild`/... messages as B/Space/
+//! Escape/arrows do.
 
 use avian3d::prelude::AngularVelocity;
 use bevy::app::{App, Plugin, PreUpdate};
@@ -17,15 +20,15 @@ use bevy::input::gamepad::Gamepad;
 use bevy::prelude::*;
 
 use crate::animation::animation_plugin::{AnimationEvent, AnimationEventType, AnimationKey};
+use crate::control::bindings::GamepadBindings;
 use crate::control::components::{CharacterControl, ControlCommand, InputKeyboard};
 use crate::game_state::GameState;
 use crate::player::components::{AutoAim, Player, PlayerDead};
+use crate::player::events::building_events::{
+    ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode,
+};
+use crate::player::systems::abilities::AbilityInput;
 use crate::settings::resources::GameSettings;
-
-/// Sticks are considered idle below this deflection (on top of Bevy's own dead zone).
-const STICK_DEAD_ZONE: f32 = 0.2;
-/// R2 counts as pressed above this pull.
-const TRIGGER_THRESHOLD: f32 = 0.3;
 
 /// Marker component for entities controlled by a gamepad.
 #[derive(Component, Reflect, Default)]
@@ -48,7 +51,8 @@ pub struct GamepadPlugin;
 
 impl Plugin for GamepadPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<InputGamepad>()
+        app.insert_resource(GamepadBindings::load_or_write_default())
+            .register_type::<InputGamepad>()
             .register_type::<WantsGamepad>()
             .add_systems(
             PreUpdate,
@@ -115,10 +119,20 @@ fn stick_to_world(stick: Vec2, camera_yaw_degrees: f32) -> Vec3 {
     Quat::from_rotation_y(camera_yaw_degrees.to_radians()) * Vec3::new(stick.x, 0.0, -stick.y)
 }
 
-#[allow(clippy::type_complexity)]
+/// Is an analog button pulled far enough to count as held? Triggers report a value in
+/// [0, 1]; anything digital falls back to its pressed state.
+fn is_held(gamepad: &Gamepad, button: GamepadButton, threshold: f32) -> bool {
+    match gamepad.get(button) {
+        Some(value) => value > threshold,
+        None => gamepad.pressed(button),
+    }
+}
+
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn gamepad_game_input(
     gamepads: Query<&Gamepad>,
     settings: Res<GameSettings>,
+    bindings: Res<GamepadBindings>,
     mut player_query: Query<
         (
             Entity,
@@ -131,8 +145,14 @@ pub fn gamepad_game_input(
         (With<Player>, Without<PlayerDead>),
     >,
     mut anim_ew: MessageWriter<AnimationEvent>,
+    mut enter_build_ew: MessageWriter<EnterBuildMode>,
+    mut exit_build_ew: MessageWriter<ExitBuildMode>,
+    mut execute_build_ew: MessageWriter<ExecuteBuild>,
+    mut change_build_indicator_ew: MessageWriter<ChangeBuildIndicator>,
+    mut ability_input: Option<ResMut<AbilityInput>>,
 ) {
     let yaw = settings.yaw_degrees;
+    let dead_zone = bindings.stick_dead_zone;
 
     for (entity, mut controller, mut input_gamepad, mut aim, transform, mut angular) in
         player_query.iter_mut()
@@ -142,7 +162,7 @@ pub fn gamepad_game_input(
 
         // ── Movement: world-space, camera relative ──────────────────────────
         let left = gamepad.left_stick();
-        let moving = left.length() > STICK_DEAD_ZONE;
+        let moving = left.length() > dead_zone;
         let was_moving = controller.walk_direction.length_squared() > 0.01;
 
         let move_dir = if moving { stick_to_world(left, yaw) } else { Vec3::ZERO };
@@ -158,7 +178,7 @@ pub fn gamepad_game_input(
 
         // ── Aim: right stick if deflected, else follow the walk direction ───
         let right = gamepad.right_stick();
-        input_gamepad.aim_active = right.length() > STICK_DEAD_ZONE;
+        input_gamepad.aim_active = right.length() > dead_zone;
         if input_gamepad.aim_active {
             aim.0 = stick_to_world(right, yaw).normalize();
         } else if moving {
@@ -175,9 +195,47 @@ pub fn gamepad_game_input(
             angular.0.y = (cross_y * 12.0).clamp(-max, max);
         }
 
-        // ── Fire: R2 ────────────────────────────────────────────────────────
-        let firing = gamepad.get(GamepadButton::RightTrigger2).unwrap_or(0.0) > TRIGGER_THRESHOLD
-            || gamepad.pressed(GamepadButton::RightTrigger2);
+        // ── Build mode ──────────────────────────────────────────────────────
+        // The one-shot actions use the digital edge, so a button bound to a trigger
+        // still fires once per pull rather than every frame it is held.
+        let in_build_mode = controller.triggers.contains(&ControlCommand::Build);
+
+        if gamepad.just_pressed(bindings.build_mode) {
+            if in_build_mode {
+                anim_ew.write(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Building));
+                exit_build_ew.write(ExitBuildMode(entity));
+            } else {
+                controller.triggers.insert(ControlCommand::Build);
+                anim_ew.write(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Building));
+                enter_build_ew.write(EnterBuildMode(entity));
+            }
+        } else if in_build_mode {
+            if gamepad.just_pressed(bindings.exit_build) {
+                anim_ew.write(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Building));
+                exit_build_ew.write(ExitBuildMode(entity));
+            } else if gamepad.just_pressed(bindings.execute_build) {
+                execute_build_ew.write(ExecuteBuild(entity));
+            }
+
+            if gamepad.just_pressed(bindings.next_build_item) {
+                change_build_indicator_ew.write(ChangeBuildIndicator(entity, 1));
+            }
+            if gamepad.just_pressed(bindings.prev_build_item) {
+                change_build_indicator_ew.write(ChangeBuildIndicator(entity, -1));
+            }
+        }
+
+        // ── Ability ─────────────────────────────────────────────────────────
+        if gamepad.just_pressed(bindings.ability)
+            && let Some(ref mut ai) = ability_input
+        {
+            ai.pressed = true;
+        }
+
+        // ── Fire ────────────────────────────────────────────────────────────
+        // Suppressed while building, matching the keyboard, where Space places a tile
+        // instead of throwing.
+        let firing = !in_build_mode && is_held(gamepad, bindings.fire, bindings.trigger_threshold);
         if firing {
             controller.triggers.insert(ControlCommand::Throw);
         } else {
