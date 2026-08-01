@@ -268,7 +268,7 @@ pub fn spawn_camera_panel(commands: Commands, theme: &LavaTheme) {
         |s| s.player_speed_multiplier = (s.player_speed_multiplier + 0.05).min(5.0),
         |s| s.player_speed_multiplier = (s.player_speed_multiplier + 0.25).min(5.0));
 
-    ui.label("- Ortho -", 12.0, Color::srgb(0.4, 0.65, 0.5));
+    ui.label("-- Ortho --", 12.0, Color::srgb(0.4, 0.65, 0.5));
     cam_row(&mut ui, "V.Height", &t, CameraSetting::OrthoVH,
         |s| s.ortho_viewport_height = (s.ortho_viewport_height - 0.25).max(0.25),
         |s| s.ortho_viewport_height = (s.ortho_viewport_height - 0.05).max(0.05),
@@ -285,7 +285,7 @@ pub fn spawn_camera_panel(commands: Commands, theme: &LavaTheme) {
         |s| s.ortho_far += 1.0,
         |s| s.ortho_far += 100.0);
 
-    ui.label("- Persp -", 12.0, Color::srgb(0.4, 0.65, 0.5));
+    ui.label("-- Persp --", 12.0, Color::srgb(0.4, 0.65, 0.5));
     cam_row(&mut ui, "FOV", &t, CameraSetting::PerspFOV,
         |s| s.persp_fov = (s.persp_fov - 5.0).max(10.0),
         |s| s.persp_fov = (s.persp_fov - 1.0).max(10.0),
@@ -340,7 +340,7 @@ pub fn spawn_model_panel(commands: Commands, theme: &LavaTheme) {
     });
 
     // Transform
-    ui.label("- Transform -", 12.0, Color::srgb(0.4, 0.65, 0.5));
+    ui.label("-- Transform --", 12.0, Color::srgb(0.4, 0.65, 0.5));
     mdl_row(&mut ui, "Scale",    &t, ModelSetting::Scale,
         |s| s.scale = (s.scale - 0.1).max(0.01),
         |s| s.scale = (s.scale - 0.01).max(0.01),
@@ -358,7 +358,7 @@ pub fn spawn_model_panel(commands: Commands, theme: &LavaTheme) {
         |s| s.rotation_y_degrees = (s.rotation_y_degrees + 15.0).rem_euclid(360.0));
 
     // Animation mapping
-    ui.label("- Animation Mapping -", 12.0, Color::srgb(0.4, 0.65, 0.5));
+    ui.label("-- Animation Mapping --", 12.0, Color::srgb(0.4, 0.65, 0.5));
     for key in ANIM_KEYS {
         anim_mapping_row(&mut ui, key_label(*key), &t, *key);
     }
@@ -643,7 +643,7 @@ pub fn update_hud(
             ProjectionMode::Perspective => "Persp",
         };
         **t = format!(
-            "{proj_name} zoom:{:.0} pitch:{:.0}deg yaw:{:.0}deg  [P]/[Z,X]/[C,V]/[N,M]",
+            "{proj_name} zoom:{:.0} pitch:{:.0}deg yaw:{:.0}deg  [P]/[Z,X]/[,.]/[C,V]/[N,M]",
             settings.zoom, settings.pitch_degrees, settings.yaw_degrees
         );
     }

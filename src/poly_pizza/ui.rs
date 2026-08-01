@@ -344,7 +344,7 @@ pub fn spawn_polypizza_screen(
 
             // Save / update button — always upserts with current tags
             row.add_button_observe(
-                "* Save",
+                "[ ] Save",
                 |b| { b.size_px(80.0, 28.0).font_size(13.0).insert(SaveButton); },
                 |_: On<Activate>,
                  mut state: ResMut<PolyPizzaState>,
@@ -578,7 +578,7 @@ pub fn rebuild_results_ui(
 
     commands.entity(container).with_children(|parent| {
         for card in cards {
-            let anim_tag = if card.animated { " *" } else { "" };
+            let anim_tag = if card.animated { " (anim)" } else { "" };
             let saved_tag = if card.saved { "* " } else { "" };
             let detail = format!("{saved_tag}{}{anim_tag}\n  {} - {}t",
                 card.title, card.creator, card.tri_count);
@@ -804,7 +804,7 @@ pub fn update_save_button_label(
     let is_saved = state.selected_model.as_ref()
         .map(|m| library.is_saved(&m.id))
         .unwrap_or(false);
-    let label = if is_saved { "* Update" } else { "* Save" };
+    let label = if is_saved { "[*] Update" } else { "[ ] Save" };
     for children in buttons.iter() {
         for child in children.iter() {
             if let Ok(mut text) = texts.get_mut(child) {
