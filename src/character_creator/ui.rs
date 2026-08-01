@@ -194,7 +194,7 @@ fn spawn_group(
                 });
 
                 row.add_button_observe(
-                    "◀",
+                    "<",
                     |btn| { btn.size_px(28.0, 28.0).font_size(14.0); },
                     move |_: On<Activate>,
                           mut sel: ResMut<CreatorSelections>,
@@ -214,7 +214,7 @@ fn spawn_group(
                 });
 
                 row.add_button_observe(
-                    "▶",
+                    ">",
                     |btn| { btn.size_px(28.0, 28.0).font_size(14.0); },
                     move |_: On<Activate>,
                           mut sel: ResMut<CreatorSelections>,
