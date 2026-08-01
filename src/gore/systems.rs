@@ -27,7 +27,7 @@ pub fn tick_ephemeral(
 
         if eph.fade
             && let Some(mat_handle) = material
-            && let Some(mat) = materials.get_mut(&mat_handle.0)
+            && let Some(mut mat) = materials.get_mut(&mat_handle.0)
         {
             let c = mat.base_color.to_srgba();
             mat.base_color = Color::srgba(c.red, c.green, c.blue, 1.0 - t);

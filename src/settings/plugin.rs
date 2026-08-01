@@ -11,20 +11,25 @@ impl Plugin for SettingsPlugin {
             .add_systems(
                 Update,
                 settings_keyboard_system
-                    .run_if(in_state(GameState::InGame).or(in_state(GameState::ModelShowcase))),
+                    .run_if(in_state(GameState::InGame).or_else(in_state(GameState::ModelShowcase))),
             );
     }
 }
 
 /// Keyboard shortcuts for tweaking settings at runtime:
 ///   F2          — save settings to disk
-///   Z / X       — decrease / increase zoom
+///   Z / X       — decrease / increase zoom (ortho scale) or FOV (perspective)
+///   , / .       — decrease / increase camera distance, in both projections
 ///   C / V       — decrease / increase camera pitch
 ///   N / M       — rotate camera left / right (yaw)
 ///   P           — toggle Orthographic ↔ Perspective
 ///   [ / ]       — decrease / increase ortho viewport height
 ///   F3 / F4     — decrease / increase near clip (0.05 steps for persp, 50 for ortho)
 ///   F5 / F6     — decrease / increase far clip (100 steps)
+///
+/// In perspective mode Z/X are given over to FOV, so `,`/`.` are the only way to
+/// pull the camera in or out from the keyboard. Narrow FOV plus a long distance is
+/// what produces a near-orthographic look, so the two need tuning against each other.
 fn settings_keyboard_system(
     keys: Res<ButtonInput<KeyCode>>,
     mut settings: ResMut<GameSettings>,
@@ -53,6 +58,18 @@ fn settings_keyboard_system(
             ProjectionMode::Orthographic => settings.zoom = (settings.zoom + 1.0).min(60.0),
             ProjectionMode::Perspective  => settings.persp_fov = (settings.persp_fov + 5.0).min(170.0),
         }
+        changed = true;
+    }
+
+    // Camera distance. `zoom` drives `offset_dist` in both projections (and doubles as
+    // the ortho scale), so these work everywhere — but they matter most in perspective,
+    // where Z/X are bound to FOV instead.
+    if keys.just_pressed(KeyCode::Comma) {
+        settings.zoom = (settings.zoom - 1.0).max(1.0);
+        changed = true;
+    }
+    if keys.just_pressed(KeyCode::Period) {
+        settings.zoom = (settings.zoom + 1.0).min(60.0);
         changed = true;
     }
 

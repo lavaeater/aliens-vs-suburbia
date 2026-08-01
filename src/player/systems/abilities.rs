@@ -236,7 +236,7 @@ pub fn tick_ability_flash(
         flash.timer.tick(time.delta());
         let t = flash.timer.fraction();
         transform.scale = Vec3::splat(1.0 + t * 16.0);
-        if let Some(mat) = materials.get_mut(&mat_handle.0) {
+        if let Some(mut mat) = materials.get_mut(&mat_handle.0) {
             let c = mat.base_color.to_srgba();
             mat.base_color = Color::srgba(c.red, c.green, c.blue, 1.0 - t);
         }

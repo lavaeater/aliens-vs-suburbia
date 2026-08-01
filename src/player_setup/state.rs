@@ -80,7 +80,7 @@ impl PlayerSetupState {
                 let name = self.player_defs.get(*def_index)
                     .map(|p| def_stem(p))
                     .unwrap_or("(no models)");
-                format!("Player {}  ◀  {}  ▶  [Enter] confirm", slot + 1, name)
+                format!("Player {}  <  {}  >  [Enter] confirm", slot + 1, name)
             }
             SlotState::Confirmed { def_path } => {
                 format!("Player {}  [OK]  {}", slot + 1, def_stem(def_path))

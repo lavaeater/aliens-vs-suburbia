@@ -87,7 +87,7 @@ pub fn billboard_system(
         }
 
         // Update material UV.
-        if let Some(mat) = materials.get_mut(&mat_handle.0) {
+        if let Some(mut mat) = materials.get_mut(&mat_handle.0) {
             mat.uv_rect = bb.uv_rect();
         }
 

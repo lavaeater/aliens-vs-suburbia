@@ -32,48 +32,48 @@ fn build_filter_params(filters: &SearchFilters) -> Vec<(&'static str, String)> {
 pub fn search_keyword(api_key: &str, keyword: &str, filters: &SearchFilters) -> Result<SearchResponse, BoxError> {
     let encoded = urlencoding::encode(keyword);
     let url = format!("{BASE}/search/{encoded}");
-    let mut req = ureq::get(&url).set("x-auth-token", api_key);
+    let mut req = ureq::get(&url).header("x-auth-token", api_key);
     for (k, v) in build_filter_params(filters) {
         req = req.query(k, &v);
     }
-    let resp: SearchResponse = req.call()?.into_json()?;
+    let resp: SearchResponse = req.call()?.into_body().read_json()?;
     Ok(resp)
 }
 
 pub fn search_filters(api_key: &str, filters: &SearchFilters) -> Result<SearchResponse, BoxError> {
     let url = format!("{BASE}/search");
-    let mut req = ureq::get(&url).set("x-auth-token", api_key);
+    let mut req = ureq::get(&url).header("x-auth-token", api_key);
     for (k, v) in build_filter_params(filters) {
         req = req.query(k, &v);
     }
-    let resp: SearchResponse = req.call()?.into_json()?;
+    let resp: SearchResponse = req.call()?.into_body().read_json()?;
     Ok(resp)
 }
 #[allow(dead_code)]
 pub fn get_model(api_key: &str, id: &str) -> Result<PizzaModel, BoxError> {
     let url = format!("{BASE}/model/{id}");
     let resp: PizzaModel = ureq::get(&url)
-        .set("x-auth-token", api_key)
+        .header("x-auth-token", api_key)
         .call()?
-        .into_json()?;
+        .into_body().read_json()?;
     Ok(resp)
 }
 
 pub fn get_list(api_key: &str, list_id: &str) -> Result<ListResponse, BoxError> {
     let url = format!("{BASE}/list/{list_id}");
     let resp: ListResponse = ureq::get(&url)
-        .set("x-auth-token", api_key)
+        .header("x-auth-token", api_key)
         .call()?
-        .into_json()?;
+        .into_body().read_json()?;
     Ok(resp)
 }
 
 pub fn get_user(api_key: &str, username: &str) -> Result<UserResponse, BoxError> {
     let url = format!("{BASE}/user/{username}");
     let resp: UserResponse = ureq::get(&url)
-        .set("x-auth-token", api_key)
+        .header("x-auth-token", api_key)
         .call()?
-        .into_json()?;
+        .into_body().read_json()?;
     Ok(resp)
 }
 
@@ -91,9 +91,9 @@ fn download_file_with_auth(url: &str, dest: &Path, auth: Option<&str>) -> Result
     }
     let mut req = ureq::get(url);
     if let Some(key) = auth {
-        req = req.set("x-auth-token", key);
+        req = req.header("x-auth-token", key);
     }
-    let mut reader = req.call()?.into_reader();
+    let mut reader = req.call()?.into_body().into_reader();
     let mut file = std::fs::File::create(dest)?;
     std::io::copy(&mut reader, &mut file)?;
     Ok(())

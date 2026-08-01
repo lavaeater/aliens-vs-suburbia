@@ -197,7 +197,7 @@ pub fn spawn_ui(mut commands: Commands, theme: Res<LavaTheme>) {
 
         ui.with_child(|c| { c.with_text("Aliens: 0", Some(TextStyle::size_color(theme.text.label_size, theme.text.label_color))).insert(HudAlienCount); });
         ui.with_child(|c| { c.with_text("Coins: 0",  Some(TextStyle::size_color(14.0, Color::srgb(1.0, 0.85, 0.1)))).insert(HudCoins); });
-        ui.with_child(|c| { c.with_text("[Q] Ability — ready", Some(TextStyle::size_color(13.0, Color::srgb(0.5, 0.9, 1.0)))).insert(HudAbility); });
+        ui.with_child(|c| { c.with_text("[Q] Ability - ready", Some(TextStyle::size_color(13.0, Color::srgb(0.5, 0.9, 1.0)))).insert(HudAbility); });
         ui.with_child(|c| { c.with_text("Wave 1 / 3 in 5s",   Some(TextStyle::size_color(13.0, Color::srgb(0.5, 0.8, 1.0)))).insert(HudWaveInfo); });
         ui.with_child(|c| { c.with_text("", Some(TextStyle::size_color(theme.text.label_size, Color::srgb(1.0, 0.8, 0.2)))).insert(HudBuildMode); });
         ui.with_child(|c| { c.with_text("", Some(TextStyle::size_color(13.0, Color::srgb(0.8, 0.8, 0.2)))).insert(HudBuildCost); });
@@ -268,7 +268,7 @@ pub fn spawn_camera_panel(commands: Commands, theme: &LavaTheme) {
         |s| s.player_speed_multiplier = (s.player_speed_multiplier + 0.05).min(5.0),
         |s| s.player_speed_multiplier = (s.player_speed_multiplier + 0.25).min(5.0));
 
-    ui.label("— Ortho —", 12.0, Color::srgb(0.4, 0.65, 0.5));
+    ui.label("-- Ortho --", 12.0, Color::srgb(0.4, 0.65, 0.5));
     cam_row(&mut ui, "V.Height", &t, CameraSetting::OrthoVH,
         |s| s.ortho_viewport_height = (s.ortho_viewport_height - 0.25).max(0.25),
         |s| s.ortho_viewport_height = (s.ortho_viewport_height - 0.05).max(0.05),
@@ -285,7 +285,7 @@ pub fn spawn_camera_panel(commands: Commands, theme: &LavaTheme) {
         |s| s.ortho_far += 1.0,
         |s| s.ortho_far += 100.0);
 
-    ui.label("— Persp —", 12.0, Color::srgb(0.4, 0.65, 0.5));
+    ui.label("-- Persp --", 12.0, Color::srgb(0.4, 0.65, 0.5));
     cam_row(&mut ui, "FOV", &t, CameraSetting::PerspFOV,
         |s| s.persp_fov = (s.persp_fov - 5.0).max(10.0),
         |s| s.persp_fov = (s.persp_fov - 1.0).max(10.0),
@@ -340,7 +340,7 @@ pub fn spawn_model_panel(commands: Commands, theme: &LavaTheme) {
     });
 
     // Transform
-    ui.label("— Transform —", 12.0, Color::srgb(0.4, 0.65, 0.5));
+    ui.label("-- Transform --", 12.0, Color::srgb(0.4, 0.65, 0.5));
     mdl_row(&mut ui, "Scale",    &t, ModelSetting::Scale,
         |s| s.scale = (s.scale - 0.1).max(0.01),
         |s| s.scale = (s.scale - 0.01).max(0.01),
@@ -358,7 +358,7 @@ pub fn spawn_model_panel(commands: Commands, theme: &LavaTheme) {
         |s| s.rotation_y_degrees = (s.rotation_y_degrees + 15.0).rem_euclid(360.0));
 
     // Animation mapping
-    ui.label("— Animation Mapping —", 12.0, Color::srgb(0.4, 0.65, 0.5));
+    ui.label("-- Animation Mapping --", 12.0, Color::srgb(0.4, 0.65, 0.5));
     for key in ANIM_KEYS {
         anim_mapping_row(&mut ui, key_label(*key), &t, *key);
     }
@@ -404,7 +404,7 @@ fn anim_mapping_row(ui: &mut UIBuilder, label: &str, t: &TextTheme, key: Animati
                 s.save();
             });
         row.with_child(|v| {
-            v.with_text("—", Some(TextStyle::size(11.0))).insert(AnimMappingLabel(key));
+            v.with_text("-", Some(TextStyle::size(11.0))).insert(AnimMappingLabel(key));
         });
         row.add_button_observe(">", |b| { b.size_px(28.0, 28.0); },
             move |_: On<Activate>, mut s: ResMut<ModelSettings>, clips: Res<PlayerAnimClips>| {
@@ -550,13 +550,13 @@ pub fn update_camera_panel(
     for (setting, mut text) in labels.iter_mut() {
         **text = match setting {
             CameraSetting::Zoom      => format!("{:.0}",  settings.zoom),
-            CameraSetting::Pitch     => format!("{:.0}°", settings.pitch_degrees),
-            CameraSetting::Yaw       => format!("{:.0}°", settings.yaw_degrees),
-            CameraSetting::Speed     => format!("{:.2}×", settings.player_speed_multiplier),
+            CameraSetting::Pitch     => format!("{:.0}deg", settings.pitch_degrees),
+            CameraSetting::Yaw       => format!("{:.0}deg", settings.yaw_degrees),
+            CameraSetting::Speed     => format!("{:.2}x", settings.player_speed_multiplier),
             CameraSetting::OrthoVH   => format!("{:.2}",  settings.ortho_viewport_height),
             CameraSetting::OrthoNear => format!("{:.0}",  settings.ortho_near),
             CameraSetting::OrthoFar  => format!("{:.0}",  settings.ortho_far),
-            CameraSetting::PerspFOV  => format!("{:.0}°", settings.persp_fov),
+            CameraSetting::PerspFOV  => format!("{:.0}deg", settings.persp_fov),
             CameraSetting::PerspNear => format!("{:.2}",  settings.persp_near),
             CameraSetting::PerspFar  => format!("{:.0}",  settings.persp_far),
         };
@@ -574,10 +574,10 @@ pub fn update_model_labels(
             ModelSetting::CharacterName => folder.files
                 .get(settings.character_index)
                 .map(|f| CharacterFolder::display_name(f).to_string())
-                .unwrap_or_else(|| "—".to_string()),
+                .unwrap_or_else(|| "-".to_string()),
             ModelSetting::Scale   => format!("{:.2}",  settings.scale),
             ModelSetting::OffsetY => format!("{:.2}",  settings.translation_y),
-            ModelSetting::RotY    => format!("{:.0}°", settings.rotation_y_degrees),
+            ModelSetting::RotY    => format!("{:.0}deg", settings.rotation_y_degrees),
         };
     }
 }
@@ -589,7 +589,7 @@ pub fn update_anim_mapping_labels(
     if !settings.is_changed() { return; }
     for (label, mut text) in labels.iter_mut() {
         let name = settings.anim_mapping.get(label.0);
-        **text = if name.is_empty() { "—".to_string() } else { name.to_string() };
+        **text = if name.is_empty() { "-".to_string() } else { name.to_string() };
     }
 }
 
@@ -643,7 +643,7 @@ pub fn update_hud(
             ProjectionMode::Perspective => "Persp",
         };
         **t = format!(
-            "{proj_name} zoom:{:.0} pitch:{:.0}° yaw:{:.0}°  [P]/[Z,X]/[C,V]/[N,M]",
+            "{proj_name} zoom:{:.0} pitch:{:.0}deg yaw:{:.0}deg  [P]/[Z,X]/[,.]/[C,V]/[N,M]",
             settings.zoom, settings.pitch_degrees, settings.yaw_degrees
         );
     }
@@ -733,10 +733,10 @@ pub fn update_ability_hud(
     let Ok(mut t) = label.single_mut() else { return };
     let Ok((ability, meter)) = players.single() else { return };
     if meter.ready() {
-        **t = format!("[Q] {} — READY", ability.label());
+        **t = format!("[Q] {} - READY", ability.label());
     } else {
         let pct = (meter.charge * 100.0) as u32;
-        **t = format!("[Q] {} — {}%", ability.label(), pct);
+        **t = format!("[Q] {} - {}%", ability.label(), pct);
     }
 }
 

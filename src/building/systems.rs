@@ -2,7 +2,7 @@ use bevy::asset::AssetServer;
 use bevy::log::info;
 use bevy::math::{Vec2, Vec3, Vec3Swizzles};
 use bevy::prelude::{AlphaMode, Assets, Children, Color, Commands, Component, Entity, MeshMaterial3d, MessageReader, MessageWriter, Name, Query, Res, ResMut, StandardMaterial, With, Without};
-use bevy::scene::{SceneRoot, SceneInstance, SceneSpawner};
+use bevy::world_serialization::{WorldAssetRoot, WorldInstance, WorldInstanceSpawner};
 use avian3d::prelude::{Collider, CollisionLayers, LockedAxes, Position, RigidBody, Rotation, Sensor};
 use bevy_wind_waker_shader::WindWakerShaderBuilder;
 use crate::control::components::{ControlCommand, CharacterControl};
@@ -62,7 +62,7 @@ pub fn spawn_building_indicator(
         Name::from("BuildingIndicator"),
         IsBuildIndicator {},
         BuildIndicatorTint::default(),
-        SceneRoot(asset_server.load(file)),
+        WorldAssetRoot(asset_server.load(file)),
         RigidBody::Kinematic,
         tile_definitions.create_collider(16.0, 4.0, 16.0),
         Position::from(*position),
@@ -84,8 +84,8 @@ fn collect_descendants(entity: Entity, children_q: &Query<&Children>, out: &mut 
 /// On first frame after the scene is ready, clone each mesh's material with alpha blending
 /// and a green tint. Stores the handles so `update_build_indicator_tint` can change the color.
 pub fn init_build_indicator_tint(
-    mut indicators: Query<(Entity, &SceneInstance, &mut BuildIndicatorTint), With<IsBuildIndicator>>,
-    scene_spawner: Res<SceneSpawner>,
+    mut indicators: Query<(Entity, &WorldInstance, &mut BuildIndicatorTint), With<IsBuildIndicator>>,
+    scene_spawner: Res<WorldInstanceSpawner>,
     children_q: Query<&Children>,
     mut mat_q: Query<&mut MeshMaterial3d<StandardMaterial>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -126,7 +126,7 @@ pub fn update_build_indicator_tint(
             Color::srgba(0.2, 1.0, 0.2, 0.55)
         };
         for handle in &tint.handles {
-            if let Some(mat) = materials.get_mut(handle) {
+            if let Some(mut mat) = materials.get_mut(handle) {
                 mat.base_color = color;
             }
         }
@@ -196,7 +196,7 @@ pub fn execute_build(
 
 pub fn building_mode(
     builder_query: Query<(&CurrentTile, &Rotation, &BuildingIndicator), With<IsBuilding>>,
-    mut building_indicator_query: Query<(&CurrentTile, &Rotation, &mut Position, &SceneInstance), With<IsBuildIndicator>>,
+    mut building_indicator_query: Query<(&CurrentTile, &Rotation, &mut Position, &WorldInstance), With<IsBuildIndicator>>,
     tile_definitions: Res<TileDefinitions>,
 ) {
     for (current_tile, rotation, building_indicator) in builder_query.iter() {
@@ -312,7 +312,7 @@ pub fn build_tower_system(
         let mut ec = commands.spawn((
             Name::from(model_def.name),
             IsObstacle {},
-            SceneRoot(asset_server.load(model_def.file)),
+            WorldAssetRoot(asset_server.load(model_def.file)),
             model_def.rigid_body,
             tile_defs.create_collider(model_def.width, model_def.height, model_def.depth),
             Position::from(build_tower.position),

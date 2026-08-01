@@ -10,7 +10,7 @@
 
 use bevy::prelude::*;
 use bevy::gltf::GltfAssetLabel;
-use bevy::scene::SceneRoot;
+use bevy::world_serialization::WorldAssetRoot;
 
 use crate::assets::asset_definition::{AssetDefinition, Hardpoint, ModelType, WeaponProps};
 use crate::assets::hardpoint::{snap_transform, weapon_local_scale};
@@ -178,7 +178,7 @@ pub fn equip_pending_weapons(
         // next frame from settled GlobalTransforms.
         let weapon = commands
             .spawn((
-                SceneRoot(scene),
+                WorldAssetRoot(scene),
                 Transform::default(),
                 WeaponModel {
                     char_grip: equip.char_grip.clone(),

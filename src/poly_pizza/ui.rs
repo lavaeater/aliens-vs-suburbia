@@ -185,7 +185,7 @@ pub fn spawn_polypizza_screen(
 
         // ── User search ───────────────────────────────────────────────────────
         left.with_child(|sep| {
-            sep.insert_bundle(lava_ui_builder::label("── By creator ──", &TextTheme {
+            sep.insert_bundle(lava_ui_builder::label("-- By creator --", &TextTheme {
                 label_size: 11.0,
                 label_color: Color::srgb(0.4, 0.6, 0.4),
                 ..text_theme.clone()
@@ -260,7 +260,7 @@ pub fn spawn_polypizza_screen(
             spacer.with_flex_grow(1.0);
         });
         left.add_button_observe(
-            "← Back to Menu",
+            "<- Back to Menu",
             |b| { b.size_px(240.0, 40.0).font_size(14.0); },
             |_: On<Activate>, mut next: ResMut<NextState<GameState>>| {
                 next.set(GameState::Menu);
@@ -331,7 +331,7 @@ pub fn spawn_polypizza_screen(
 
             row.with_child(|hint| {
                 hint.insert_bundle(lava_ui_builder::label(
-                    "[drag to rotate · T = toon shader]",
+                    "[drag to rotate - T = toon shader]",
                     &lava_ui_builder::TextTheme {
                         label_size: 11.0,
                         label_color: Color::srgba(0.7, 0.8, 0.7, 0.5),
@@ -344,7 +344,7 @@ pub fn spawn_polypizza_screen(
 
             // Save / update button — always upserts with current tags
             row.add_button_observe(
-                "☆ Save",
+                "[ ] Save",
                 |b| { b.size_px(80.0, 28.0).font_size(13.0).insert(SaveButton); },
                 |_: On<Activate>,
                  mut state: ResMut<PolyPizzaState>,
@@ -364,7 +364,7 @@ pub fn spawn_polypizza_screen(
 
             // Remove button — only meaningful when saved, but always present
             row.add_button_observe(
-                "✕",
+                "X",
                 |b| { b.size_px(28.0, 28.0).font_size(13.0).insert(RemoveButton); },
                 |_: On<Activate>,
                  mut state: ResMut<PolyPizzaState>,
@@ -442,7 +442,7 @@ pub fn handle_search_submit(
     if !state.search_requested || state.pending { return; }
     state.search_requested = false;
     state.pending = true;
-    state.status = "Searching…".to_string();
+    state.status = "Searching...".to_string();
 
     let filters = SearchFilters {
         category: state.category_filter,
@@ -578,9 +578,9 @@ pub fn rebuild_results_ui(
 
     commands.entity(container).with_children(|parent| {
         for card in cards {
-            let anim_tag = if card.animated { " ★" } else { "" };
-            let saved_tag = if card.saved { "♥ " } else { "" };
-            let detail = format!("{saved_tag}{}{anim_tag}\n  {} · {}t",
+            let anim_tag = if card.animated { " (anim)" } else { "" };
+            let saved_tag = if card.saved { "* " } else { "" };
+            let detail = format!("{saved_tag}{}{anim_tag}\n  {} - {}t",
                 card.title, card.creator, card.tri_count);
 
             let card_entity = parent.spawn((
@@ -672,7 +672,7 @@ fn result_card_clicked(
     let dest = state.glb_cache_path(&id);
     if !dest.exists() {
         state.viewer_downloading = true;
-        state.status = "Downloading model…".to_string();
+        state.status = "Downloading model...".to_string();
         channels.tx.send(ApiRequest::DownloadGlb { id, url: download_url, dest }).ok();
     }
 }
@@ -688,7 +688,7 @@ pub fn handle_user_search_submit(
     if username.is_empty() { state.user_search_requested = false; return; }
     state.user_search_requested = false;
     state.pending = true;
-    state.status = format!("Loading models by {username}…");
+    state.status = format!("Loading models by {username}...");
     channels.tx.send(ApiRequest::GetUser(username)).ok();
 }
 
@@ -700,7 +700,7 @@ pub fn update_search_label(
 ) {
     use crate::poly_pizza::state::InputFocus;
     if !state.is_changed() { return; }
-    let cursor = if state.input_focus == InputFocus::Keyword { "█" } else { "_" };
+    let cursor = if state.input_focus == InputFocus::Keyword { "|" } else { "_" };
     for mut text in labels.iter_mut() {
         **text = format!("> {}{}", state.search_term, cursor);
     }
@@ -712,7 +712,7 @@ pub fn update_username_label(
 ) {
     use crate::poly_pizza::state::InputFocus;
     if !state.is_changed() { return; }
-    let cursor = if state.input_focus == InputFocus::Username { "█" } else { "_" };
+    let cursor = if state.input_focus == InputFocus::Username { "|" } else { "_" };
     for mut text in labels.iter_mut() {
         **text = format!("user: {}{}", state.username_term, cursor);
     }
@@ -783,7 +783,7 @@ pub fn update_tag_input_label(
 ) {
     if !state.is_changed() { return; }
     use crate::poly_pizza::state::InputFocus;
-    let cursor = if state.input_focus == InputFocus::Tags { "█" } else { "_" };
+    let cursor = if state.input_focus == InputFocus::Tags { "|" } else { "_" };
     let display = if state.tag_input.is_empty() {
         cursor.to_string()
     } else {
@@ -804,7 +804,7 @@ pub fn update_save_button_label(
     let is_saved = state.selected_model.as_ref()
         .map(|m| library.is_saved(&m.id))
         .unwrap_or(false);
-    let label = if is_saved { "★ Update" } else { "☆ Save" };
+    let label = if is_saved { "[*] Update" } else { "[ ] Save" };
     for children in buttons.iter() {
         for child in children.iter() {
             if let Ok(mut text) = texts.get_mut(child) {

@@ -1,6 +1,6 @@
 //! Prop scatter — dresses a tile grid with decoration models so generated maps read as
 //! a ruined, ultraviolent suburb instead of bare floor. Decorations are collider-free
-//! (`SceneRoot` only, see `map_systems`), so scattering them on walkable floor never
+//! (`WorldAssetRoot` only, see `map_systems`), so scattering them on walkable floor never
 //! breaks pathfinding.
 //!
 //! The `ULTRAVIOLENCE` palette leans on the `city` + `post-apocalypse` + `toon-shooter`

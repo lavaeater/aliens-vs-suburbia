@@ -120,7 +120,7 @@ pub fn recompose_character_system(
 
     // Replace or insert handles.
     if let Some(h) = &sheet.billboard_handle {
-        if let Some(img) = images.get_mut(h) {
+        if let Some(mut img) = images.get_mut(h) {
             *img = to_bevy_image(combined);
         } else {
             sheet.billboard_handle = Some(images.add(to_bevy_image(combined)));
@@ -130,7 +130,7 @@ pub fn recompose_character_system(
     }
 
     if let Some(h) = &sheet.portrait_handle {
-        if let Some(img) = images.get_mut(h) {
+        if let Some(mut img) = images.get_mut(h) {
             *img = to_bevy_image(portrait);
         } else {
             sheet.portrait_handle = Some(images.add(to_bevy_image(portrait)));

@@ -305,7 +305,7 @@ pub fn rebuild_folder_list(
     state.folder_list_dirty = false;
 
     if let Ok(mut t) = path_label_q.single_mut() {
-        **t = format!("📁 {}", state.current_folder);
+        **t = format!("[dir] {}", state.current_folder);
     }
 
     let Ok(container) = container_q.single() else { return };
@@ -326,7 +326,7 @@ pub fn rebuild_folder_list(
                 bevy::ui_widgets::Button,
             ))
             .with_child((
-                Text::new(format!("📁 {name}")),
+                Text::new(format!("[dir] {name}")),
                 TextFont::default().with_font_size(11.0),
                 TextColor(Color::srgb(0.75, 0.88, 1.0)),
             ))

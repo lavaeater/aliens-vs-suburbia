@@ -59,7 +59,7 @@ pub fn spawn_map_editor_ui(
 
         // Generate section
         left.with_child(|c| {
-            c.with_text("seed: —", Some(lava_ui_builder::TextStyle::size_color(11.0, Color::srgba(0.5, 0.7, 0.5, 0.7))))
+            c.with_text("seed: -", Some(lava_ui_builder::TextStyle::size_color(11.0, Color::srgba(0.5, 0.7, 0.5, 0.7))))
              .insert(GenSeedLabel);
         });
         left.add_button_observe("Generate Map", |b| { b.width(percent(100.0)).height(px(24.0)).font_size(12.0); },
@@ -109,7 +109,7 @@ pub fn spawn_map_editor_ui(
         });
 
         left.with_child(|c| {
-            c.with_text("Brush: —", Some(lava_ui_builder::TextStyle::size_color(11.0, Color::srgb(0.9, 1.0, 0.6))))
+            c.with_text("Brush: -", Some(lava_ui_builder::TextStyle::size_color(11.0, Color::srgb(0.9, 1.0, 0.6))))
              .insert(ActiveBrushLabel);
         });
 
@@ -151,7 +151,7 @@ pub fn rebuild_palette(
     state.palette_dirty = false;
 
     if let Ok(mut t) = brush_label_q.single_mut() {
-        let name = state.selected_item().map(|i| i.display_name()).unwrap_or("—");
+        let name = state.selected_item().map(|i| i.display_name()).unwrap_or("-");
         let rot = state.rotation_steps;
         **t = if rot == 0 {
             format!("Brush: {name}")

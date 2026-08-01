@@ -14,7 +14,7 @@ pub fn spawn_lights(
         Name::from("Directional Light"),
         DirectionalLight {
             illuminance: 5000.0,
-            shadows_enabled: true,
+            shadow_maps_enabled: true,
             ..default()
         },
         Transform {

@@ -1,7 +1,7 @@
 use bevy::prelude::Name;
 use bevy::math::Vec3;
 use bevy::prelude::{Commands, Entity, Query, Res, Transform, With};
-use bevy::scene::SceneRoot;
+use bevy::world_serialization::WorldAssetRoot;
 use bevy::time::Time;
 use avian3d::prelude::{Collider, CollidingEntities, CollisionLayers, LinearVelocity, Position, RigidBody};
 use bevy_wind_waker_shader::WindWakerShaderBuilder;
@@ -100,7 +100,7 @@ pub fn shoot_alien_system(
 
                 let entity = commands.spawn((
                     Name::from("Ball"),
-                    SceneRoot(game_assets.ball_scene.clone()),
+                    WorldAssetRoot(game_assets.ball_scene.clone()),
                     Transform::from_xyz(launch_p.x, launch_p.y, launch_p.z),
                     RigidBody::Dynamic,
                     Collider::sphere(1.0 / 16.0),

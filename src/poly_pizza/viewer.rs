@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy::scene::SceneRoot;
+use bevy::world_serialization::WorldAssetRoot;
 use bevy_wind_waker_shader::WindWakerShaderBuilder;
 use crate::poly_pizza::state::PolyPizzaState;
 use crate::ui::spawn_ui::StateMarker;
@@ -46,7 +46,7 @@ fn spawn_viewer_camera_inner(commands: &mut Commands) {
     commands.spawn((
         DirectionalLight {
             illuminance: 8000.0,
-            shadows_enabled: false,
+            shadow_maps_enabled: false,
             ..Default::default()
         },
         Transform::from_xyz(4.0, 8.0, 4.0).looking_at(Vec3::ZERO, Vec3::Y),
@@ -84,11 +84,11 @@ pub fn handle_viewer_load(
 
 pub fn spawn_viewer_model(
     commands: &mut Commands,
-    scene_handle: Handle<Scene>,
+    scene_handle: Handle<WorldAsset>,
     toon: bool,
 ) -> Entity {
     let mut ec = commands.spawn((
-        SceneRoot(scene_handle),
+        WorldAssetRoot(scene_handle),
         Transform::from_xyz(0.0, 0.0, 0.0),
         ViewerModel,
         StateMarker,

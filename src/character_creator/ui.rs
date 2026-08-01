@@ -194,7 +194,7 @@ fn spawn_group(
                 });
 
                 row.add_button_observe(
-                    "◀",
+                    "<",
                     |btn| { btn.size_px(28.0, 28.0).font_size(14.0); },
                     move |_: On<Activate>,
                           mut sel: ResMut<CreatorSelections>,
@@ -209,12 +209,12 @@ fn spawn_group(
                         .insert(Text::new("None"))
                         .insert(TextFont::default().with_font_size(11.0))
                         .insert(TextColor(Color::WHITE))
-                        .insert(TextLayout::new_with_justify(bevy::text::Justify::Center))
+                        .insert(TextLayout { justify: bevy::text::Justify::Center, ..default() })
                         .insert(CategoryLabel(cat_idx));
                 });
 
                 row.add_button_observe(
-                    "▶",
+                    ">",
                     |btn| { btn.size_px(28.0, 28.0).font_size(14.0); },
                     move |_: On<Activate>,
                           mut sel: ResMut<CreatorSelections>,

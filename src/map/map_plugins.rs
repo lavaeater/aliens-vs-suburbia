@@ -107,7 +107,7 @@ impl Plugin for StatefulMapPlugin {
                     update_current_tile_system,
                     map_loader,
                 )
-                    .run_if(in_state(GameState::InGame).or(in_state(GameState::ModelShowcase))),
+                    .run_if(in_state(GameState::InGame).or_else(in_state(GameState::ModelShowcase))),
             );
     }
 }

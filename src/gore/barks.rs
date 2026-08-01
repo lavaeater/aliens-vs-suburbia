@@ -138,9 +138,9 @@ pub fn setup_bark_caption(mut commands: Commands, existing: Query<Entity, With<B
                     fade: Timer::from_seconds(1.0, TimerMode::Once),
                 },
                 Text::new(""),
-                TextFont { font_size: 30.0, ..default() },
+                TextFont { font_size: FontSize::Px(30.0), ..default() },
                 TextColor(Color::srgba(1.0, 0.9, 0.85, 0.0)),
-                TextLayout::new_with_justify(Justify::Center),
+                TextLayout { justify: Justify::Center, ..default() },
             ));
         });
 }

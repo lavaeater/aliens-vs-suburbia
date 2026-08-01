@@ -9,8 +9,8 @@ use crate::player::systems::abilities::{AbilityInput, activate_ability, tick_abi
 use crate::player::systems::equip::{equip_pending_weapons, keep_weapons_snapped};
 use crate::player::systems::shoot::shoot_weapons;
 use bevy::prelude::*;
-use bevy::scene::{SceneInstance, SceneRoot};
-use bevy_mod_outline::{AsyncSceneInheritOutline, AutoGenerateOutlineNormalsPlugin, InheritOutline, OutlinePlugin, OutlineVolume};
+use bevy::world_serialization::{WorldInstance, WorldAssetRoot};
+use bevy_mod_outline::{AsyncWorldInheritOutline, AutoGenerateOutlineNormalsPlugin, InheritOutline, OutlinePlugin, OutlineVolume};
 
 #[derive(Default)]
 pub struct PlayerPlugin {
@@ -23,7 +23,7 @@ impl Plugin for PlayerPlugin {
             app.add_systems(Update, debug_gizmos.run_if(in_state(GameState::InGame)));
         }
         app.init_resource::<AbilityInput>()
-            .add_plugins((OutlinePlugin, AutoGenerateOutlineNormalsPlugin::default()))
+            .add_plugins((OutlinePlugin::EXTRUDE_VERTEX, AutoGenerateOutlineNormalsPlugin::default()))
             .add_systems(Update, (auto_outline_scenes, sync_outline_with_visibility))
             .add_systems(
                 Update,
@@ -55,7 +55,7 @@ fn reset_ability_input(mut input: ResMut<AbilityInput>) {
 #[allow(clippy::type_complexity)]
 fn auto_outline_scenes(
     mut commands: Commands,
-    query: Query<Entity, (With<SceneRoot>, Without<AsyncSceneInheritOutline>, Without<Floor>)>,
+    query: Query<Entity, (With<WorldAssetRoot>, Without<AsyncWorldInheritOutline>, Without<Floor>)>,
 ) {
     for entity in query.iter() {
         commands.entity(entity).insert((
@@ -64,7 +64,7 @@ fn auto_outline_scenes(
                 width: 2.0,
                 colour: Color::BLACK,
             },
-            AsyncSceneInheritOutline::default(),
+            AsyncWorldInheritOutline::default(),
         ));
     }
 }
@@ -72,7 +72,7 @@ fn auto_outline_scenes(
 /// Keeps outline rendering in sync with Visibility.
 ///
 /// Two races to handle:
-/// 1. Visibility::Hidden set first, InheritOutline added later by AsyncSceneInheritOutline.
+/// 1. Visibility::Hidden set first, InheritOutline added later by AsyncWorldInheritOutline.
 /// 2. InheritOutline already present, Visibility::Hidden set later.
 ///
 /// When a weapon is later made visible again, re-insert InheritOutline alongside Visibility::Visible.
@@ -106,8 +106,8 @@ fn sync_outline_with_visibility(
 #[allow(clippy::type_complexity)]
 fn hide_player_weapon_nodes(
     mut commands: Commands,
-    player_query: Query<(Entity, &SceneInstance), (With<crate::player::components::Player>, Without<WeaponsHidden>)>,
-    scene_spawner: Res<SceneSpawner>,
+    player_query: Query<(Entity, &WorldInstance), (With<crate::player::components::Player>, Without<WeaponsHidden>)>,
+    scene_spawner: Res<WorldInstanceSpawner>,
     named_query: Query<(Entity, &Name)>,
     player_asset_def: Option<Res<PlayerAssetDef>>,
 ) {
