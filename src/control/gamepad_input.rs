@@ -2,11 +2,12 @@
 //!
 //! Left stick = movement in *world* space relative to the camera: pushing the stick up
 //! walks the character up the screen, regardless of which way it is facing. This is
-//! deliberately different from the keyboard's tank controls (rotate, then walk forward).
+//! the same scheme the keyboard's WASD now uses.
 //!
-//! Right stick = aiming. While it is deflected it drives `AutoAim` directly and the body
-//! turns to face it; when it is released the character faces the way it walks, and the
-//! closest-in-FOV `auto_aim` system takes over again while firing.
+//! Right stick = aiming. While it is deflected it drives `AutoAim` directly; when it is
+//! released the closest-in-FOV `auto_aim` system takes over again while firing. The body
+//! itself follows the direction of travel and the torso twists toward the aim -- see
+//! `player::systems::torso_twist`.
 //!
 //! Buttons (fire, build, ability, ...) are remappable — see `control::bindings` and
 //! `gamepad-bindings.ron`. Firing sets `ControlCommand::Throw`, the same trigger the
@@ -14,7 +15,6 @@
 //! build buttons write the same `EnterBuildMode`/`ExecuteBuild`/... messages as B/Space/
 //! Escape/arrows do.
 
-use avian3d::prelude::AngularVelocity;
 use bevy::app::{App, Plugin, PreUpdate};
 use bevy::input::gamepad::Gamepad;
 use bevy::prelude::*;
@@ -115,7 +115,7 @@ fn assign_gamepads(
 
 /// Map a left/right stick deflection into world space, using the camera yaw so that
 /// "stick up" is always "up the screen".
-fn stick_to_world(stick: Vec2, camera_yaw_degrees: f32) -> Vec3 {
+pub fn stick_to_world(stick: Vec2, camera_yaw_degrees: f32) -> Vec3 {
     Quat::from_rotation_y(camera_yaw_degrees.to_radians()) * Vec3::new(stick.x, 0.0, -stick.y)
 }
 
@@ -139,8 +139,6 @@ pub fn gamepad_game_input(
             &mut CharacterControl,
             &mut InputGamepad,
             &mut AutoAim,
-            &Transform,
-            &mut AngularVelocity,
         ),
         (With<Player>, Without<PlayerDead>),
     >,
@@ -154,8 +152,7 @@ pub fn gamepad_game_input(
     let yaw = settings.yaw_degrees;
     let dead_zone = bindings.stick_dead_zone;
 
-    for (entity, mut controller, mut input_gamepad, mut aim, transform, mut angular) in
-        player_query.iter_mut()
+    for (entity, mut controller, mut input_gamepad, mut aim) in player_query.iter_mut()
     {
         let Some(pad_entity) = input_gamepad.gamepad else { continue };
         let Ok(gamepad) = gamepads.get(pad_entity) else { continue };
@@ -167,7 +164,7 @@ pub fn gamepad_game_input(
 
         let move_dir = if moving { stick_to_world(left, yaw) } else { Vec3::ZERO };
         controller.walk_direction = move_dir;
-        // The body is steered toward the aim instead (below), so no tank torque.
+        // The body is steered separately (see face_movement_direction), so no torque.
         controller.torque = Vec3::ZERO;
 
         if moving && !was_moving {
@@ -185,15 +182,9 @@ pub fn gamepad_game_input(
             aim.0 = move_dir.normalize();
         }
 
-        // Turn the body toward the aim by steering yaw angular velocity (self-damping:
-        // zero once aligned), the same way `mouse_face` does for the keyboard player.
-        if aim.0.length_squared() > 1e-4 {
-            let forward = transform.rotation * Vec3::NEG_Z;
-            // y of cross(forward, aim): sign is which way to turn, magnitude is sin(error).
-            let cross_y = forward.z * aim.0.x - forward.x * aim.0.z;
-            let max = controller.max_turn_speed.max(1.0);
-            angular.0.y = (cross_y * 12.0).clamp(-max, max);
-        }
+        // Body facing is handled uniformly for every player by
+        // `torso_twist::face_movement_direction`, which steers the hips toward the
+        // direction of travel and lets the spine cover the rest of the way to the aim.
 
         // ── Build mode ──────────────────────────────────────────────────────
         // The one-shot actions use the digital edge, so a button bound to a trigger

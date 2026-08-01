@@ -45,9 +45,9 @@ Most gameplay systems use `.run_if(in_state(InGame))`. Physics runs on a fixed t
 |--------|---------------|
 | `src/ai/` | Enemy AI behaviors: `ApproachAndAttackPlayer`, `AvoidWalls`, `MoveTowardsGoal`, `DestroyTheMap`. `recheck_path_after_tile_opened` clears stale destroy-behavior when a tile opens. |
 | `src/alien/` | Alien spawning (wave-based via `WaveManager`). `wave_manager.rs` drives wave progression; waves can come from `MapFile.waves` or fall back to hardcoded defaults. |
-| `src/player/` | Player character: physics, auto-aim, scene loading, outline rendering, death/revive, special abilities (`src/player/systems/abilities.rs`). |
+| `src/player/` | Player character: physics, auto-aim, scene loading, outline rendering, death/revive, special abilities (`src/player/systems/abilities.rs`), torso twist (`systems/torso_twist.rs`). |
 | `src/towers/` | Tower entities: shooting, slow, area-damage sensors and cooldown systems. |
-| `src/control/` | Input: keyboard (`keyboard_input.rs`), gamepad (`gamepad_input.rs`), mouse aim (`mouse_aim.rs`). `Q` key fires special ability via `AbilityInput` resource. The keyboard player aims with the mouse: `mouse_aim` projects the cursor onto the ground plane and sets `AutoAim`; `mouse_face` steers the body to face it (overriding A/D tank rotation). Gamepads are twin-stick: left stick walks in *world* space relative to the camera yaw (stick up = up the screen, no tank rotation), right stick aims and turns the body. Buttons are remappable via `GamepadBindings` (`bindings.rs`), loaded from `gamepad-bindings.ron` at the project root with the same `load`/`save` pattern as `GameSettings` — defaults are R2 fire, Square build mode, Cross place, Circle cancel, Triangle ability, d-pad to cycle the build item. Firing sets `ControlCommand::Throw` and the build buttons write the same messages the keyboard's B/Space/Escape/arrows do. With the right stick released the body faces the walk direction and `auto_aim` (closest-in-FOV) takes over while firing. Pads are bound to players by `assign_gamepads` from `PlayerRoster::devices` (slot 0 = keyboard, slot N = pad N-1), with a fallback that hands a connected pad to the lone keyboard player when the setup screen was skipped. |
+| `src/control/` | Input: keyboard (`keyboard_input.rs`), gamepad (`gamepad_input.rs`), mouse aim (`mouse_aim.rs`). `Q` key fires special ability via `AbilityInput` resource. **Both schemes are twin-stick and camera-relative**: WASD / the left stick walk in *world* space rotated by `GameSettings::yaw_degrees` (W or stick-up = up the screen, A/D strafe rather than rotate); the mouse / right stick sets `AutoAim`. Movement and facing are decoupled — `torso_twist::face_movement_direction` steers the body toward the direction of travel and the spine twists the rest of the way to the aim. Buttons are remappable via `GamepadBindings` (`bindings.rs`), loaded from `gamepad-bindings.ron` at the project root with the same `load`/`save` pattern as `GameSettings` — defaults are R2 fire, Square build mode, Cross place, Circle cancel, Triangle ability, d-pad to cycle the build item. Firing sets `ControlCommand::Throw` and the build buttons write the same messages the keyboard's B/Space/Escape/arrows do. With the right stick released, `auto_aim` (closest-in-FOV) takes over while firing. Pads are bound to players by `assign_gamepads` from `PlayerRoster::devices` (slot 0 = keyboard, slot N = pad N-1), with a fallback that hands a connected pad to the lone keyboard player when the setup screen was skipped. |
 | `src/building/` | Build mode: enter/exit, tile placement preview, tower construction. Checks `TeamWallet` for cost. |
 | `src/map/` | Tile-based level: map generator, pathfinding grid (`MapGraph`), wall/floor/obstacle spawning. `map_loader` now also spawns editor `placements` from `MapFile`. |
 | `src/general/` | Core mechanics: collision, `Health`/health bars, `TouchDamage`, `Indestructible`, `Coin`/`TeamWallet` economy, physics throws, lighting, kinematic movement, tile tracking. |
@@ -83,6 +83,25 @@ Stored at `assets/defs/<model-stem>.ron`. Fields:
 ### Special Abilities
 
 `SpecialAbility` enum on players: `Bombardment`, `Healing`, `Whirlwind`, `GoldDigger`. Activated with `Q` key. Cooldowns via `AbilityCooldown` component. Assigned from `PlayerProps.ability` in the def, or cycled by slot index.
+
+### Torso Twist (aim offset)
+
+`src/player/systems/torso_twist.rs` — the legs face the direction of travel while the
+upper body (and the weapon parented to the grip bone) faces `AutoAim`. This is **forward**
+kinematics, not IK: a per-spine-bone rotation, no solver. Two invariants keep it working:
+
+- **Rotate about world up, not the bone's own axis.** `twisted_local` conjugates the world
+  yaw by the parent's world rotation and pre-multiplies the *animated local* pose. Working
+  from the bone's `GlobalTransform` instead would reuse last frame's already-twisted pose
+  and wind the torso further every frame.
+- **Ordering.** `apply_torso_twist` runs in `PostUpdate`, `.after(AnimationSystems)` and
+  `.before(TransformSystems::Propagate)` — earlier and `animate_targets` stomps it, later
+  and it never propagates.
+
+The chain comes from `AssetDefinition.aim_bones` (bone name + weight), defaulting to the
+mixamo `Spine`/`Spine1`/`Spine2` chain with rising weights. Twist is clamped to
+`TWIST_LIMIT_DEGREES` (60); past that the body turns to absorb the excess. **F7 toggles it**
+at runtime for A/B comparison.
 
 ### Physics & Collision
 

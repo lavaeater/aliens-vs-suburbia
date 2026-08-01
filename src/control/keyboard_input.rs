@@ -1,9 +1,11 @@
 use bevy::input::ButtonState;
 use bevy::input::keyboard::KeyboardInput;
-use bevy::math::Vec3;
-use bevy::prelude::{Entity, MessageReader, MessageWriter, KeyCode, Query, ResMut, With, Without};
+use bevy::math::{Vec2, Vec3};
+use bevy::prelude::{Entity, MessageReader, MessageWriter, KeyCode, Query, Res, ResMut, With, Without};
 use crate::animation::animation_plugin::{AnimationEvent, AnimationEventType, AnimationKey};
-use crate::control::components::{CharacterControl, ControlCommand, ControlDirection, ControlRotation, InputKeyboard};
+use crate::control::components::{CharacterControl, ControlCommand, ControlDirection, InputKeyboard};
+use crate::control::gamepad_input::stick_to_world;
+use crate::settings::resources::GameSettings;
 use crate::player::components::PlayerDead;
 use crate::player::events::building_events::{ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode};
 use crate::player::systems::abilities::AbilityInput;
@@ -12,6 +14,7 @@ use crate::player::systems::abilities::AbilityInput;
 pub fn keyboard_input(
     mut key_evr: MessageReader<KeyboardInput>,
     mut query: Query<(Entity, &mut CharacterControl), (With<InputKeyboard>, Without<PlayerDead>)>,
+    settings: Res<GameSettings>,
     mut start_build_ew: MessageWriter<EnterBuildMode>,
     mut execute_build: MessageWriter<ExecuteBuild>,
     mut exit_build: MessageWriter<ExitBuildMode>,
@@ -40,11 +43,11 @@ pub fn keyboard_input(
                         }
                     KeyCode::KeyA => {
                         animation_ew.write(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walk));
-                        controller.rotations.insert(ControlRotation::Left);
+                        controller.directions.insert(ControlDirection::Left);
                     }
                     KeyCode::KeyD => {
                         animation_ew.write(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walk));
-                        controller.rotations.insert(ControlRotation::Right);
+                        controller.directions.insert(ControlDirection::Right);
                     }
                     KeyCode::KeyW => {
                         animation_ew.write(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walk));
@@ -70,10 +73,10 @@ pub fn keyboard_input(
                 },
                 ButtonState::Released => match ev.key_code {
                     KeyCode::KeyA => {
-                        controller.rotations.remove(&ControlRotation::Left);
+                        controller.directions.remove(&ControlDirection::Left);
                     }
                     KeyCode::KeyD => {
-                        controller.rotations.remove(&ControlRotation::Right);
+                        controller.directions.remove(&ControlDirection::Right);
                     }
                     KeyCode::KeyW => {
                         controller.directions.remove(&ControlDirection::Forward);
@@ -97,21 +100,25 @@ pub fn keyboard_input(
                 animation_ew.write(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Walk));
             }
 
-            controller.walk_direction = Vec3::ZERO;
-            controller.torque = Vec3::ZERO;
-
+            // WASD is camera-relative, like the gamepad's left stick: W walks up the
+            // screen whichever way the character is facing. The body is steered by
+            // `face_movement_direction` and the torso twists to the mouse on top of
+            // that, so A/D strafe rather than rotate.
+            let mut stick = Vec2::ZERO;
             if controller.directions.contains(&ControlDirection::Forward) {
-                controller.walk_direction.z = -1.0;
+                stick.y += 1.0;
             }
             if controller.directions.contains(&ControlDirection::Backward) {
-                controller.walk_direction.z = 1.0;
+                stick.y -= 1.0;
             }
-            if controller.rotations.contains(&ControlRotation::Left) {
-                controller.torque.y = 1.0;
+            if controller.directions.contains(&ControlDirection::Left) {
+                stick.x -= 1.0;
             }
-            if controller.rotations.contains(&ControlRotation::Right) {
-                controller.torque.y = -1.0;
+            if controller.directions.contains(&ControlDirection::Right) {
+                stick.x += 1.0;
             }
+            controller.walk_direction = stick_to_world(stick.normalize_or_zero(), settings.yaw_degrees);
+            controller.torque = Vec3::ZERO;
         }
     }
 }

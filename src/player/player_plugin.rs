@@ -8,6 +8,10 @@ use crate::player::systems::spawn_players::{fix_scene_transform, spawn_players};
 use crate::player::systems::abilities::{AbilityInput, activate_ability, tick_ability_flash, tick_cooldowns, tick_whirlwind};
 use crate::player::systems::equip::{equip_pending_weapons, keep_weapons_snapped};
 use crate::player::systems::shoot::shoot_weapons;
+use crate::player::systems::torso_twist::{
+    apply_torso_twist, resolve_twist_bones, toggle_torso_twist, TorsoTwistEnabled,
+};
+use bevy::transform::TransformSystems;
 use bevy::prelude::*;
 use bevy::world_serialization::{WorldInstance, WorldAssetRoot};
 use bevy_mod_outline::{AsyncWorldInheritOutline, AutoGenerateOutlineNormalsPlugin, InheritOutline, OutlinePlugin, OutlineVolume};
@@ -23,6 +27,16 @@ impl Plugin for PlayerPlugin {
             app.add_systems(Update, debug_gizmos.run_if(in_state(GameState::InGame)));
         }
         app.init_resource::<AbilityInput>()
+            .init_resource::<TorsoTwistEnabled>()
+            // The twist must land after the animation has posed the skeleton and before
+            // the pose is propagated -- see torso_twist.rs.
+            .add_systems(
+                PostUpdate,
+                apply_torso_twist
+                    .after(bevy::app::AnimationSystems)
+                    .before(TransformSystems::Propagate)
+                    .run_if(in_state(GameState::InGame)),
+            )
             .add_plugins((OutlinePlugin::EXTRUDE_VERTEX, AutoGenerateOutlineNormalsPlugin::default()))
             .add_systems(Update, (auto_outline_scenes, sync_outline_with_visibility))
             .add_systems(
@@ -42,6 +56,8 @@ impl Plugin for PlayerPlugin {
                     tick_whirlwind,
                     tick_ability_flash,
                     reset_ability_input,
+                    resolve_twist_bones,
+                    toggle_torso_twist,
                 )
                 .run_if(in_state(GameState::InGame)),
             );

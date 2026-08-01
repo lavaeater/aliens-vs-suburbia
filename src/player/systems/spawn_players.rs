@@ -8,6 +8,7 @@ use crate::assets::asset_definition::{AssetDefinition, ModelType};
 use crate::assets::assets_plugin::GameAssets;
 use crate::control::gamepad_input::WantsGamepad;
 use crate::player::systems::equip::PendingEquip;
+use crate::player::systems::torso_twist::PendingTorsoTwist;
 use crate::player_setup::state::InputDevice;
 pub use crate::player::components::WeaponsHidden;
 use crate::character_creator::config::{CharacterConfig, ComposedSpriteSheet};
@@ -196,6 +197,11 @@ pub fn spawn_players(
 
         // Override ability from def / slot default.
         commands.entity(player).insert(roster_ability);
+        // Torso twist: resolved to bone entities once the skeleton spawns. Defs that
+        // don't list `aim_bones` fall back to the default mixamo spine chain.
+        commands.entity(player).insert(PendingTorsoTwist::new(
+            roster_def.as_ref().map(|def| def.aim_bones.clone()).unwrap_or_default(),
+        ));
         // Players who joined on a gamepad drop the keyboard component; `assign_gamepads`
         // resolves the pad index to the actual gamepad entity once it sees this.
         if let Some(InputDevice::Gamepad(pad_index)) =

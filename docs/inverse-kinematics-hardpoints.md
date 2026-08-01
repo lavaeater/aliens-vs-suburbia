@@ -249,6 +249,9 @@ useful even if IK is deprioritized (one-handed weapons just work).
   character*, and spawns the weapon as its child using the shared
   `hardpoint::snap_transform`. Browser preview and in-game equip call the same
   function, so they can't drift apart.
+- ✅ **Torso twist / aim offset** (`src/player/systems/torso_twist.rs`) — see §15. Not on
+  the original staging plan, and deliberately jumped ahead of stage 2: it is FK rather
+  than IK, so it is much cheaper, and it buys more visible payoff than the support hand.
 - ⏳ **Stage 2**: two-bone analytic IK for the support hand onto the rifle `foregrip`.
   Needs a `foregrip` on the weapon and the arm chain (shoulder/elbow/hand bones) on
   the character — currently only `grip` is authored.
@@ -268,3 +271,84 @@ useful even if IK is deprioritized (one-handed weapons just work).
   follows. What animation clips do.
 - **IK (inverse kinematics)**: the end drives the bones — put the hand *here*, and
   solve what the shoulder/elbow must do.
+
+---
+
+## 15. Torso twist (aim offset) — built
+
+The legs face where you walk; the upper body — and therefore the arms, hands and the
+weapon parented to the grip bone — faces where you aim.
+
+**This is not IK.** IK is end-driven: you know where the hand must land and solve
+backwards. Here we set one rotation per spine bone and everything above rides along as
+children. No solver, no law of cosines, no pole vector. The support-hand problem in §9
+stays exactly as hard as it was; this is a different, much cheaper thing that happens to
+deliver most of the "the character is aiming at that" feeling.
+
+Causality runs **aim → spine → hand → gun**, not gun → spine. Solving backwards from the
+muzzle would reintroduce the IK problem for no benefit.
+
+### The two things that actually matter
+
+**1. Rotate about world up, not the bone's own long axis.** Mixamo-style rigs give every
+bone an arbitrary local orientation, so "twist around the bone's length" leans and rolls
+differently depending on the animated pose. Build the rotation in world space and
+conjugate it into the parent's frame:
+
+```rust
+pub fn twisted_local(parent_world: Quat, local_anim: Quat, yaw: f32) -> Quat {
+    let twist_in_parent_space = parent_world.inverse() * Quat::from_rotation_y(yaw) * parent_world;
+    (twist_in_parent_space * local_anim).normalize()
+}
+```
+
+Note it modifies `local_anim` — the local rotation the animation *just* wrote — rather than
+deriving from the bone's `GlobalTransform`. That distinction is the whole correctness
+argument, because when this system runs the `GlobalTransform`s are still last frame's:
+
+- Reading the bone's stale world rotation would discard this frame's animation *and*
+  re-apply the twist on top of last frame's twist, winding the torso further every frame.
+- Reading the *parent's* stale world rotation is harmless: a parent carrying last frame's
+  offset differs only by a rotation about the same Y axis, and rotations about a shared
+  axis commute, so it cancels in the conjugation. Only a one-frame lag in the basis
+  remains, and it does not accumulate.
+
+`holding_a_steady_twist_does_not_accumulate_over_frames` pins this down.
+
+**2. Ordering.** Clip-driven bones are overwritten every frame by `animate_targets`, which
+lives in `PostUpdate` inside `bevy_app::AnimationSystems`:
+
+```rust
+app.add_systems(PostUpdate, apply_torso_twist
+    .after(bevy::app::AnimationSystems)
+    .before(TransformSystems::Propagate));
+```
+
+Earlier and the animation stomps it; after propagation and it never reaches
+`GlobalTransform`.
+
+### Data & tuning
+
+- `AssetDefinition.aim_bones: Vec<AimBone { bone, weight }>` — the chain and each bone's
+  share of the twist. Weights are normalized at use, so any proportions work. Empty falls
+  back to the mixamo `Spine`/`Spine1`/`Spine2` chain at 0.2/0.35/0.45.
+- Spreading across bones matters: the whole angle on one waist joint tears the skinning
+  and reads as a broken doll.
+- `TWIST_LIMIT_DEGREES` (60) clamps how far the torso may lead the hips.
+  `face_movement_direction` turns the body to absorb anything past that, so you can't wind
+  the torso around backwards. Standing still, the body holds and only the torso moves.
+- Exponential smoothing at `TWIST_RESPONSIVENESS` (18/s) so the torso eases instead of
+  snapping when the aim jumps across the character.
+- **F7** toggles the effect at runtime for A/B comparison.
+
+### Consequence for shooting
+
+`shoot.rs` already spawns bullets from the muzzle hardpoint's world position but takes
+direction from `AutoAim`. With the twist the muzzle actually swings to where you're
+aiming, so the visual and the hitscan stop disagreeing.
+
+### Known gap
+
+The legs keep playing a forward-walk clip while strafing. It reads acceptably at this
+camera distance, but the real fix is directional blending (walk fwd/back/left/right blended
+by the movement-vs-facing angle) in `AnimationStore` — a separate, bigger job.

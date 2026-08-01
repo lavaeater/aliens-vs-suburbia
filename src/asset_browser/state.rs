@@ -107,6 +107,8 @@ pub struct AssetBrowserState {
     /// Named connection frames authored for this model (role -> frame). Round-tripped
     /// through the def.
     pub hardpoints: std::collections::HashMap<String, Hardpoint>,
+    /// Torso-twist chain from the def. No browser UI yet; kept so export round-trips it.
+    pub aim_bones: Vec<crate::assets::asset_definition::AimBone>,
     /// The role currently being edited by the nudge controls.
     pub active_hardpoint_role: Option<String>,
     pub hardpoints_ui_dirty: bool,
@@ -187,6 +189,7 @@ impl Default for AssetBrowserState {
             attachments_xform_dirty: false,
             attachment_ui_dirty: false,
             hardpoints: HashMap::new(),
+            aim_bones: Vec::new(),
             active_hardpoint_role: None,
             hardpoints_ui_dirty: false,
             show_hardpoints: true,
@@ -654,6 +657,9 @@ impl AssetBrowserState {
             animation_sources: self.animation_sources.clone(),
             attachments: self.attachments.clone(),
             hardpoints: self.hardpoints.clone(),
+            // Not authored in the browser (yet) — carried through so re-exporting a def
+            // doesn't drop a hand-written torso-twist chain.
+            aim_bones: self.aim_bones.clone(),
         };
         def.save();
     }
@@ -685,6 +691,7 @@ impl AssetBrowserState {
             // Attachments and hardpoints are skeleton/model-specific — load fresh.
             self.attachments = def.attachments;
             self.hardpoints = def.hardpoints;
+            self.aim_bones = def.aim_bones;
             // Strip a stray "assets/" prefix on attachment model paths, same as sources.
             for a in &mut self.attachments {
                 if let Some(stripped) = a.model_path.strip_prefix("assets/") {
