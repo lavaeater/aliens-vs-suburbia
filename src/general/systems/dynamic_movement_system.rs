@@ -1,5 +1,4 @@
 #![allow(clippy::type_complexity)]
-use bevy::math::{EulerRot, Quat};
 use bevy::prelude::{Query, Transform, With};
 use avian3d::prelude::{AngularVelocity, LinearVelocity};
 use crate::control::components::{CharacterControl, DynamicMovement, InputKeyboard};
@@ -17,14 +16,14 @@ pub fn dynamic_movement_keyboard(
 }
 
 
+/// Gamepad players move in world space: `walk_direction` is already camera-relative
+/// (see `control::gamepad_input`), so it is applied as-is rather than rotated by the
+/// body's facing. That way the character can strafe while aiming somewhere else.
 pub fn dynamic_movement_gamepad(
     mut query: Query<(&mut LinearVelocity, &mut AngularVelocity, &mut Transform, &CharacterControl), (With<DynamicMovement>, With<InputGamepad>)>,
 ) {
     for (mut linear_velocity, _, _, controller) in query.iter_mut() {
-        linear_velocity.x = 0.0;
-        linear_velocity.z = 0.0;
-        let direction = Quat::from_euler(EulerRot::YXZ, 45.0f32.to_radians(), 0.0, 0.0).mul_vec3(controller.walk_direction);
-        linear_velocity.x = direction.x * controller.speed;
-        linear_velocity.z = direction.z * controller.speed;
+        linear_velocity.x = controller.walk_direction.x * controller.speed;
+        linear_velocity.z = controller.walk_direction.z * controller.speed;
     }
 }

@@ -6,7 +6,9 @@ use bevy::world_serialization::WorldAssetRoot;
 use avian3d::prelude::Collider;
 use crate::assets::asset_definition::{AssetDefinition, ModelType};
 use crate::assets::assets_plugin::GameAssets;
+use crate::control::gamepad_input::WantsGamepad;
 use crate::player::systems::equip::PendingEquip;
+use crate::player_setup::state::InputDevice;
 pub use crate::player::components::WeaponsHidden;
 use crate::character_creator::config::{CharacterConfig, ComposedSpriteSheet};
 use crate::game_state::score_keeper::GameTrackingEvent;
@@ -194,6 +196,16 @@ pub fn spawn_players(
 
         // Override ability from def / slot default.
         commands.entity(player).insert(roster_ability);
+        // Players who joined on a gamepad drop the keyboard component; `assign_gamepads`
+        // resolves the pad index to the actual gamepad entity once it sees this.
+        if let Some(InputDevice::Gamepad(pad_index)) =
+            roster.as_ref().and_then(|r| r.devices.get(slot)).copied()
+        {
+            commands
+                .entity(player)
+                .remove::<crate::control::components::InputKeyboard>()
+                .insert(WantsGamepad(pad_index));
+        }
         // The weapon is spawned later, once the skeleton exists (see `equip`).
         if let Some(equip) = pending_equip {
             commands.entity(player).insert(equip);
