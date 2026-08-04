@@ -217,8 +217,19 @@ bound but plays nothing, which is the failure worth surfacing.
   at `scale` times their intended position — dragged toward the top-left corner in *any*
   window narrower than `LavaTheme::ui_width` (1920). Confirmed by probe: a button authored
   `size_px(160, 40)` computes to `[105, 26]` at scale 0.66.
-- **The default player model has no torso twist.** Without a roster the playground spawns
-  `Character Soldier`, whose rig has no mixamo spine bones, so the twist logs
-  "bones never appeared on this rig" and disables itself. Picking `amy` from the model list
-  fixes it for the session; making the playground *default* to the last model used is a
-  small follow-up.
+- ~~**The default player model has no torso twist.**~~ **Fixed** — the playground now
+  remembers the last model worn in `playground-prefs.ron` (gitignored: it is per-developer
+  scratch state, not project config) and comes back wearing it. Verified across two runs:
+  the first picked `amy` and wrote the prefs file, the second booted straight into
+  `packs/mesh2motion/amy.glb` with no torso-twist warning.
+
+  Two details this needed:
+
+  - **The remembered def is dropped if its file is gone.** A def can be renamed or deleted
+    between sessions; without the check the playground would set a roster pointing at a
+    missing file and spawn a player with no model.
+  - **The swap waits for a player to exist.** The remembered model is queued on entry,
+    before the map has spawned anyone, and `PlayerRoster` is inserted through `Commands` —
+    so a swap firing immediately could race the map's own spawn and leave the default model
+    on screen with the swap already consumed. `decide_swap` waits (bounded, then spawns one
+    itself), which also means startup and a click take the same path.

@@ -15,5 +15,6 @@ pub mod dummies;
 pub mod hardpoints;
 pub mod models;
 pub mod plugin;
+pub mod prefs;
 pub mod state;
 pub mod ui;

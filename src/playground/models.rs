@@ -19,6 +19,7 @@ use crate::general::events::map_events::SpawnPlayer;
 use crate::general::systems::map_systems::TileDefinitions;
 use crate::player::components::Player;
 use crate::player_setup::state::{InputDevice, PlayerRoster};
+use crate::playground::prefs::PlaygroundPrefs;
 
 /// Tile the arena's `PlayerSpawn` sits on, in padded map space — where a swapped-in model
 /// appears if there is no live player to inherit a position from.
@@ -52,6 +53,13 @@ impl PlaygroundModels {
         let mut models = Self { browse_folder: "packs".to_string(), ..Default::default() };
         models.refresh_defs();
         models.refresh_browser();
+        // Come back wearing whatever you last wore, so the session starts on a rig you
+        // were actually working on rather than on whatever `ModelSettings` points at.
+        if let Some(def_path) =
+            PlaygroundPrefs::load().resolve_last_model(|path| std::path::Path::new(path).exists())
+        {
+            models.select(&def_path);
+        }
         models
     }
 
@@ -81,6 +89,12 @@ impl PlaygroundModels {
     pub fn select(&mut self, def_path: &str) {
         self.pending_def = Some(def_path.to_string());
         self.list_dirty = true;
+    }
+
+    /// Remember this model for next time. Called once the swap is actually applied, so a
+    /// def that fails to load is not the one you come back to.
+    fn remember(&self, def_path: &str) {
+        PlaygroundPrefs { last_model_def: Some(def_path.to_string()) }.save();
     }
 
     /// Write a minimal def for `model_path` so the model becomes selectable.
@@ -138,6 +152,37 @@ pub fn def_stem(path: &str) -> String {
         .to_string()
 }
 
+/// How many frames the swap waits for a player to exist before spawning one itself.
+/// Long enough to cover the map's own spawn on session entry, short enough that a swap
+/// requested with no player around still happens promptly.
+const SWAP_WAIT_FRAMES: u32 = 120;
+
+/// What [`swap_player_model`] should do this frame.
+#[derive(Debug, PartialEq)]
+pub enum SwapStep {
+    /// A player exists: replace it, keeping its position.
+    Replace(Vec3),
+    /// No player yet — give the map's own spawn a chance to land first.
+    Wait,
+    /// Waited long enough; spawn one at the arena's spawn tile.
+    SpawnFresh,
+}
+
+/// Decide the swap step.
+///
+/// The wait matters on session entry: the remembered model is queued before the map has
+/// spawned anyone, and `PlayerRoster` is inserted through `Commands`, so a swap that fired
+/// immediately could race the map's spawn and leave the default model on screen with the
+/// pending swap already consumed. Waiting for a player means the swap always takes the same
+/// path it takes for a click.
+pub fn decide_swap(player_position: Option<Vec3>, frames_waited: u32) -> SwapStep {
+    match player_position {
+        Some(position) => SwapStep::Replace(position),
+        None if frames_waited < SWAP_WAIT_FRAMES => SwapStep::Wait,
+        None => SwapStep::SpawnFresh,
+    }
+}
+
 /// Apply a queued swap: despawn the current player, then spawn a replacement from the
 /// chosen def once it is actually gone.
 ///
@@ -150,17 +195,28 @@ pub fn swap_player_model(
     players: Query<(Entity, &Position), With<Player>>,
     tile_defs: Res<TileDefinitions>,
     mut spawn_player_mw: MessageWriter<SpawnPlayer>,
+    mut frames_waited: Local<u32>,
 ) {
-    if let Some(def_path) = models.pending_def.take() {
-        // Respawn where the player is standing, so a swap does not teleport you.
-        let position = players
-            .iter()
-            .next()
-            .map(|(entity, position)| {
-                commands.entity(entity).despawn();
-                position.0
-            })
-            .unwrap_or_else(|| SPAWN_TILE.to_world_coords(&tile_defs) + Vec3::new(0.0, 1.0, 0.0));
+    if let Some(def_path) = models.pending_def.clone() {
+        let existing = players.iter().next();
+        let position = match decide_swap(existing.map(|(_, p)| p.0), *frames_waited) {
+            SwapStep::Wait => {
+                *frames_waited += 1;
+                return;
+            }
+            SwapStep::Replace(position) => {
+                if let Some((entity, _)) = existing {
+                    commands.entity(entity).despawn();
+                }
+                position
+            }
+            SwapStep::SpawnFresh => {
+                SPAWN_TILE.to_world_coords(&tile_defs) + Vec3::new(0.0, 1.0, 0.0)
+            }
+        };
+
+        models.pending_def = None;
+        *frames_waited = 0;
 
         // `spawn_players` reads the roster for slot 0, which is how the def reaches the
         // scene, the animation graph and the equipped weapon.
@@ -168,6 +224,7 @@ pub fn swap_player_model(
             def_paths: vec![def_path.clone()],
             devices: vec![InputDevice::Keyboard],
         });
+        models.remember(&def_path);
         models.selected = Some(def_path);
         models.pending_position = Some(position);
         return;
@@ -214,6 +271,32 @@ mod tests {
         assert_eq!(
             AssetDefinition::def_path("packs/toon-shooter/characters/Soldier.glb"),
             std::path::PathBuf::from("assets/defs/Soldier.ron")
+        );
+    }
+
+    /// On session entry the remembered model is queued before the map has spawned
+    /// anyone. Swapping right then would race the map's own spawn and leave the default
+    /// model on screen with the swap already consumed.
+    #[test]
+    fn a_swap_with_nobody_around_yet_waits_for_the_maps_spawn() {
+        assert_eq!(decide_swap(None, 0), SwapStep::Wait);
+        assert_eq!(decide_swap(None, 5), SwapStep::Wait);
+    }
+
+    /// ...but not forever: a swap requested when no player is coming still has to happen.
+    #[test]
+    fn a_swap_that_waited_long_enough_spawns_one_itself() {
+        assert_eq!(decide_swap(None, SWAP_WAIT_FRAMES), SwapStep::SpawnFresh);
+    }
+
+    #[test]
+    fn a_swap_with_a_live_player_replaces_it_where_it_stands() {
+        let standing = Vec3::new(3.0, 1.0, -2.0);
+        assert_eq!(decide_swap(Some(standing), 0), SwapStep::Replace(standing));
+        assert_eq!(
+            decide_swap(Some(standing), SWAP_WAIT_FRAMES + 99),
+            SwapStep::Replace(standing),
+            "a live player always wins over the timeout",
         );
     }
 
