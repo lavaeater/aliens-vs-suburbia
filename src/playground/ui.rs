@@ -20,6 +20,10 @@ use lava_ui_builder::InteractionPalette;
 use crate::model_settings::plugin::PlayerAssetDef;
 use crate::player::components::Player;
 use crate::playground::debug::{toggle_physics_gizmos, PlaygroundDebug};
+use crate::animation::animation_plugin::{AnimationEvent, AnimationEventType, AnimationKey};
+use crate::playground::animation::{
+    bind, resolution_label, tag_paths, unbind, AnimationEditor, PLAYABLE_KEYS,
+};
 use crate::playground::hardpoints::{
     ensure_role, nudge_rotation, nudge_translation, save_player_def, HardpointEditor,
     COARSE_ROTATION, COARSE_TRANSLATION, FINE_ROTATION, FINE_TRANSLATION, ROLES,
@@ -58,6 +62,10 @@ pub struct DebugTogglesContainer;
 /// Holds the hardpoint role chips, nudge rows and bone picker.
 #[derive(Component)]
 pub struct HardpointContainer;
+
+/// Holds the animation key list and tag-binding picker.
+#[derive(Component)]
+pub struct AnimationContainer;
 
 pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
     let mut ui = UIBuilder::new(commands, Some(theme.clone()));
@@ -153,7 +161,25 @@ pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
              });
         });
 
-        // Filled in by later stages (animation, settings).
+        // ── Animation ────────────────────────────────────────────────────
+        left.with_child(|c| { c.insert_bundle(lava_ui_builder::label("ANIMATION", &section)); });
+        left.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label(
+                "click a key to play it   [F1] camera  [F2] model",
+                &hint,
+            ));
+        });
+        left.with_child(|c| {
+            c.display_flex().flex_column().gap_px(2.0)
+             .insert(AnimationContainer).insert(ScrollPosition::default())
+             .modify_node(|mut n| {
+                 n.align_self = AlignSelf::Stretch;
+                 n.max_height = Val::Px(260.0);
+                 n.overflow = Overflow::scroll_y();
+             });
+        });
+
+        // Spare room for whatever comes next.
         left.with_child(|c| {
             c.display_flex().flex_column().gap_px(6.0).insert(PlaygroundPanel)
              .modify_node(|mut n| n.align_self = AlignSelf::Stretch);
@@ -556,6 +582,169 @@ pub fn rebuild_hardpoint_panel(
             );
         }
     });
+}
+
+/// Rebuild the animation panel: every key, what it resolves to, and — once a key is
+/// picked — the tag paths it can be bound to.
+pub fn rebuild_animation_panel(
+    mut editor: ResMut<AnimationEditor>,
+    player_def: Res<PlayerAssetDef>,
+    mut commands: Commands,
+    container_q: Query<Entity, With<AnimationContainer>>,
+    mut last_def: Local<Option<String>>,
+) {
+    // Follow model swaps, and redraw when a binding edit changes what keys resolve to.
+    let current = player_def.0.as_ref().map(|d| d.model_path.clone());
+    if *last_def != current {
+        *last_def = current;
+        editor.selected_key = None;
+        editor.status.clear();
+        editor.ui_dirty = true;
+    }
+    if !editor.ui_dirty {
+        return;
+    }
+    editor.ui_dirty = false;
+
+    let Ok(container) = container_q.single() else { return };
+    commands.entity(container).despawn_related::<Children>();
+
+    let Some(def) = player_def.0.as_ref() else {
+        commands.entity(container).with_children(|parent| {
+            parent.spawn((
+                Text::new("no player def loaded"),
+                TextFont::default().with_font_size(11.0),
+                TextColor(Color::srgb(0.6, 0.5, 0.4)),
+            ));
+        });
+        return;
+    };
+
+    let selected = editor.selected_key;
+    let labels: Vec<(AnimationKey, String, String)> = PLAYABLE_KEYS
+        .iter()
+        .map(|&key| (key, key.default_search().to_string(), resolution_label(def, key)))
+        .collect();
+    let tags = tag_paths(def);
+    let bound_tag = selected.and_then(|key| {
+        def.animation_bindings.get(key.default_search()).cloned()
+    });
+    let status = editor.status.clone();
+    let dirty = editor.dirty;
+
+    commands.entity(container).with_children(|parent| {
+        for (key, name, resolves_to) in labels {
+            let is_selected = selected == Some(key);
+            let marker = if is_selected { "*" } else { " " };
+            row(
+                parent,
+                format!("{marker} {name}  ->  {resolves_to}"),
+                is_selected,
+                Color::srgb(0.85, 0.9, 0.85),
+            )
+            .observe(
+                move |_: On<Activate>,
+                      mut editor: ResMut<AnimationEditor>,
+                      mut anim_mw: MessageWriter<AnimationEvent>,
+                      players: Query<Entity, With<Player>>| {
+                    editor.select(key);
+                    // Play it on whoever is standing in the arena.
+                    for player in players.iter() {
+                        anim_mw.write(AnimationEvent(
+                            AnimationEventType::GotoAnimState,
+                            player,
+                            key,
+                        ));
+                    }
+                },
+            );
+        }
+
+        row(parent, "back to idle".to_string(), false, Color::srgb(0.7, 0.8, 0.9)).observe(
+            |_: On<Activate>,
+             editor: Res<AnimationEditor>,
+             mut anim_mw: MessageWriter<AnimationEvent>,
+             players: Query<Entity, With<Player>>| {
+                let Some(key) = editor.selected_key else { return };
+                for player in players.iter() {
+                    anim_mw.write(AnimationEvent(AnimationEventType::LeaveAnimState, player, key));
+                }
+            },
+        );
+
+        let Some(key) = selected else { return };
+
+        parent.spawn((
+            Text::new(format!("bind '{}' to:", key.default_search())),
+            TextFont::default().with_font_size(10.0),
+            TextColor(Color::srgb(0.55, 0.7, 0.8)),
+        ));
+
+        if tags.is_empty() {
+            parent.spawn((
+                Text::new("this def tags no clips - tag them in the asset browser"),
+                TextFont::default().with_font_size(10.0),
+                TextColor(Color::srgb(0.7, 0.6, 0.45)),
+            ));
+        }
+
+        for tag in tags {
+            let is_bound = bound_tag.as_deref() == Some(tag.as_str());
+            let chosen = tag.clone();
+            row(parent, tag, is_bound, Color::srgb(0.8, 0.85, 0.95)).observe(
+                move |_: On<Activate>,
+                      mut editor: ResMut<AnimationEditor>,
+                      mut player_def: ResMut<PlayerAssetDef>| {
+                    if let Some(def) = player_def.0.as_mut() {
+                        bind(def, key, &chosen);
+                    }
+                    editor.touch();
+                },
+            );
+        }
+
+        row(parent, "clear binding".to_string(), false, Color::srgb(0.95, 0.8, 0.6)).observe(
+            move |_: On<Activate>,
+                  mut editor: ResMut<AnimationEditor>,
+                  mut player_def: ResMut<PlayerAssetDef>| {
+                if let Some(def) = player_def.0.as_mut() {
+                    unbind(def, key);
+                }
+                editor.touch();
+            },
+        );
+
+        let save_label = if dirty { "SAVE def (unsaved edits)" } else { "SAVE def" };
+        row(parent, save_label.to_string(), dirty, Color::srgb(0.7, 0.95, 0.75)).observe(
+            |_: On<Activate>,
+             mut editor: ResMut<AnimationEditor>,
+             player_def: Res<PlayerAssetDef>| {
+                if let Some(def) = player_def.0.as_ref() {
+                    editor.status = save_player_def(def);
+                    editor.dirty = false;
+                    editor.ui_dirty = true;
+                }
+            },
+        );
+
+        if !status.is_empty() {
+            parent.spawn((
+                Text::new(status),
+                TextFont::default().with_font_size(10.0),
+                TextColor(Color::srgb(0.6, 0.85, 0.6)),
+            ));
+        }
+    });
+}
+
+/// A binding edit changes what every key resolves to, so the list has to be redrawn.
+pub fn refresh_animation_panel_on_def_change(
+    player_def: Res<PlayerAssetDef>,
+    mut editor: ResMut<AnimationEditor>,
+) {
+    if player_def.is_changed() {
+        editor.ui_dirty = true;
+    }
 }
 
 pub fn rebuild_model_list(

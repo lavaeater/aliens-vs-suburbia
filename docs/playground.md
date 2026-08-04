@@ -177,6 +177,30 @@ spin a hardpoint round — identical on screen, nonsense in the saved `.ron`.
 A new role inherits an existing role's anchor bone rather than defaulting to the model
 origin, which would drop the gizmo at the character's feet and read as a bug.
 
+### Stage 5 — built
+
+**Settings: reused, not rebuilt.** The HUD already carries `spawn_camera_panel` and
+`spawn_model_panel` (F1 / F2), and their update systems already run for the whole of
+`InGame` — only `spawn_ui` was gated out of the playground. So the playground spawns those
+two panels and gets live camera yaw/pitch/zoom, projection, player speed and the model
+transform sliders for four lines of code instead of a duplicate set that would drift.
+
+**Animation:** `src/playground/animation.rs` plus a panel listing every key, what it
+currently resolves to, and the tag paths it can be re-bound to. Clicking a key plays it on
+the character standing in the arena — the quickest way to find out that a rig's "wave" is
+a T-pose.
+
+Re-binding takes effect with no respawn: `build_player_anim_graph` folds
+`animation_bindings` and `clip_tags` into the signature it compares against `last_sig`, so
+mutating `PlayerAssetDef` makes it rebuild the graph on the next frame. Verified: amy's
+`wave` resolved to `Greeting RT`; re-binding it to the `building` tag re-resolved to
+`Interact RT` within three seconds, with the `AnimationStore` rebuilt.
+
+The key strings are `AnimationKey::default_search()`, which is what `resolved_clip` is
+called with at runtime — so what you bind is exactly what the game looks up. A binding
+whose tag matches no clip is called out explicitly rather than shown as unbound; it looks
+bound but plays nothing, which is the failure worth surfacing.
+
 ### Known issues
 
 - **Health bars are offset by the width of the left pane.** ~~Fixed~~ — see below. `lava_ui_builder`'s

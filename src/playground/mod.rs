@@ -9,6 +9,7 @@
 //! Only the handful of things that genuinely differ between a real match and a sandbox are
 //! gated, via [`state::in_playground`] / [`state::in_normal_game`].
 
+pub mod animation;
 pub mod debug;
 pub mod dummies;
 pub mod hardpoints;

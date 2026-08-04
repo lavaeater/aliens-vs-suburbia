@@ -16,12 +16,14 @@ use crate::playground::debug::{
     bias_gizmos_over_mesh, draw_player_overlays, reset_gizmo_bias, sync_physics_toggle,
     PlaygroundDebug,
 };
+use crate::playground::animation::AnimationEditor;
 use crate::playground::hardpoints::{apply_grip_to_equipped_weapon, HardpointEditor};
 use crate::playground::models::{swap_player_model, PlaygroundModels};
 use crate::playground::state::in_playground;
 use crate::playground::ui::{
     clear_playground_viewport, end_playground_session, rebuild_debug_toggles,
-    rebuild_import_browser, rebuild_hardpoint_panel, rebuild_model_list, spawn_playground_ui,
+    rebuild_animation_panel, rebuild_import_browser, rebuild_hardpoint_panel,
+    rebuild_model_list, refresh_animation_panel_on_def_change, spawn_playground_ui,
     sync_playground_viewport,
 };
 
@@ -37,6 +39,7 @@ impl Plugin for PlaygroundPlugin {
                 load_playground_map,
                 silence_waves,
                 spawn_playground_ui,
+                spawn_settings_panels,
                 spawn_dummy_posts,
                 init_model_list,
                 bias_gizmos_over_mesh,
@@ -61,6 +64,8 @@ impl Plugin for PlaygroundPlugin {
                 draw_player_overlays,
                 rebuild_hardpoint_panel,
                 apply_grip_to_equipped_weapon,
+                refresh_animation_panel_on_def_change,
+                rebuild_animation_panel,
             )
                 .run_if(in_state(GameState::InGame))
                 .run_if(in_playground),
@@ -83,12 +88,21 @@ fn load_playground_map(mut load_map_mw: MessageWriter<LoadMap>) {
     }
 }
 
+/// The camera and model tweak panels the normal HUD carries, toggled with F1 / F2. They
+/// are self-contained and their update systems already run for the whole of `InGame`, so
+/// the playground just needs to spawn them — no duplicate sliders.
+fn spawn_settings_panels(mut commands: Commands, theme: Res<lava_ui_builder::LavaTheme>) {
+    crate::ui::spawn_ui::spawn_camera_panel(commands.reborrow(), &theme);
+    crate::ui::spawn_ui::spawn_model_panel(commands, &theme);
+}
+
 /// Scan `assets/defs` and the model folders fresh on every entry, so a def written by the
 /// asset browser in between sessions shows up without a restart.
 fn init_model_list(mut commands: Commands) {
     commands.insert_resource(PlaygroundModels::fresh());
     commands.insert_resource(PlaygroundDebug::default());
     commands.insert_resource(HardpointEditor { ui_dirty: true, ..Default::default() });
+    commands.insert_resource(AnimationEditor { ui_dirty: true, ..Default::default() });
 }
 
 /// `WaveManager::default()` ships a full set of hardcoded waves, and `map_loader` only
@@ -99,6 +113,7 @@ fn silence_waves(mut waves: ResMut<WaveManager>) {
     waves.current_wave = 0;
     waves.spawning = false;
 }
+
 
 
 
