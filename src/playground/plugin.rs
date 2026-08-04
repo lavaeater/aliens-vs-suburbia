@@ -40,7 +40,7 @@ impl Plugin for PlaygroundPlugin {
         )
         .add_systems(
             Update,
-            (sync_playground_viewport, respawn_dummies, __probe)
+            (sync_playground_viewport, respawn_dummies)
                 .run_if(in_state(GameState::InGame))
                 .run_if(in_playground),
         );
@@ -69,18 +69,4 @@ fn silence_waves(mut waves: ResMut<WaveManager>) {
     waves.waves.clear();
     waves.current_wave = 0;
     waves.spawning = false;
-}
-
-
-fn __probe(
-    time: Res<Time>,
-    mut done: Local<bool>,
-    bars: Query<&Node, With<lava_ui_builder::WorldFollower>>,
-    cams: Query<&Camera, With<crate::camera::components::GameCamera>>,
-) {
-    if *done || time.elapsed_secs() < 6.0 { return; }
-    *done = true;
-    let origin = cams.single().ok().and_then(|c| c.logical_viewport_rect()).map(|r| r.min);
-    let lefts: Vec<_> = bars.iter().map(|n| n.left).collect();
-    info!("PROBE viewport_origin={origin:?} bar_lefts={lefts:?}");
 }
