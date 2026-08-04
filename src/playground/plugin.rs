@@ -16,11 +16,13 @@ use crate::playground::debug::{
     bias_gizmos_over_mesh, draw_player_overlays, reset_gizmo_bias, sync_physics_toggle,
     PlaygroundDebug,
 };
+use crate::playground::hardpoints::{apply_grip_to_equipped_weapon, HardpointEditor};
 use crate::playground::models::{swap_player_model, PlaygroundModels};
 use crate::playground::state::in_playground;
 use crate::playground::ui::{
     clear_playground_viewport, end_playground_session, rebuild_debug_toggles,
-    rebuild_import_browser, rebuild_model_list, spawn_playground_ui, sync_playground_viewport,
+    rebuild_import_browser, rebuild_hardpoint_panel, rebuild_model_list, spawn_playground_ui,
+    sync_playground_viewport,
 };
 
 const PLAYGROUND_MAP: &str = "assets/maps/playground.ron";
@@ -57,6 +59,8 @@ impl Plugin for PlaygroundPlugin {
                 sync_physics_toggle,
                 rebuild_debug_toggles,
                 draw_player_overlays,
+                rebuild_hardpoint_panel,
+                apply_grip_to_equipped_weapon,
             )
                 .run_if(in_state(GameState::InGame))
                 .run_if(in_playground),
@@ -84,6 +88,7 @@ fn load_playground_map(mut load_map_mw: MessageWriter<LoadMap>) {
 fn init_model_list(mut commands: Commands) {
     commands.insert_resource(PlaygroundModels::fresh());
     commands.insert_resource(PlaygroundDebug::default());
+    commands.insert_resource(HardpointEditor { ui_dirty: true, ..Default::default() });
 }
 
 /// `WaveManager::default()` ships a full set of hardcoded waves, and `map_loader` only
@@ -94,5 +99,6 @@ fn silence_waves(mut waves: ResMut<WaveManager>) {
     waves.current_wave = 0;
     waves.spawning = false;
 }
+
 
 

@@ -154,6 +154,29 @@ Hardpoints come from `PlayerAssetDef`, which `spawn_players` already populates f
 so no extra plumbing was needed. Only the *character's* hardpoints are drawn; the equipped
 weapon's own frames need its def at hand, which is stage 4's job anyway.
 
+### Stage 4 — built
+
+`src/playground/hardpoints.rs` plus a panel section: role chips, translation and rotation
+nudge rows (coarse/fine, `<< < > >>`), an anchor-bone picker built from the *live* rig, a
+remove button, and Save.
+
+Edits go into `PlayerAssetDef` — the def resource `spawn_players` already populates — and
+two things then follow without extra plumbing:
+
+- the hardpoint overlay reads that resource, so the gizmo moves as you nudge;
+- `keep_weapons_snapped` rebuilds the weapon's transform *every frame* from
+  `WeaponModel::char_grip`, so pushing the edited grip into that component is all it takes
+  for the held weapon to follow. That is why `WeaponModel` gained a `set_char_grip`.
+
+Nothing touches disk until Save. Verified end-to-end: nudging the grip +0.5 on Y moved the
+equipped pistol exactly 0.5, and turning it +45 from 180 stored -135 rather than 225.
+
+**Rotation is wrapped to (-180, 180].** Without it the numbers grow without bound as you
+spin a hardpoint round — identical on screen, nonsense in the saved `.ron`.
+
+A new role inherits an existing role's anchor bone rather than defaulting to the model
+origin, which would drop the gizmo at the character's feet and read as a bug.
+
 ### Known issues
 
 - **Health bars are offset by the width of the left pane.** ~~Fixed~~ — see below. `lava_ui_builder`'s

@@ -11,6 +11,7 @@
 
 pub mod debug;
 pub mod dummies;
+pub mod hardpoints;
 pub mod models;
 pub mod plugin;
 pub mod state;

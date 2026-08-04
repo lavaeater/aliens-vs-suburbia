@@ -17,7 +17,13 @@ use bevy::ecs::relationship::RelatedSpawnerCommands;
 use bevy::ecs::system::EntityCommands;
 use lava_ui_builder::InteractionPalette;
 
+use crate::model_settings::plugin::PlayerAssetDef;
+use crate::player::components::Player;
 use crate::playground::debug::{toggle_physics_gizmos, PlaygroundDebug};
+use crate::playground::hardpoints::{
+    ensure_role, nudge_rotation, nudge_translation, save_player_def, HardpointEditor,
+    COARSE_ROTATION, COARSE_TRANSLATION, FINE_ROTATION, FINE_TRANSLATION, ROLES,
+};
 use crate::playground::models::{def_stem, PlaygroundModels};
 use crate::playground::state::PlaygroundSession;
 use crate::ui::spawn_ui::StateMarker;
@@ -48,6 +54,10 @@ pub struct ImportStatusLabel;
 /// Holds the debug-overlay toggle rows.
 #[derive(Component)]
 pub struct DebugTogglesContainer;
+
+/// Holds the hardpoint role chips, nudge rows and bone picker.
+#[derive(Component)]
+pub struct HardpointContainer;
 
 pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
     let mut ui = UIBuilder::new(commands, Some(theme.clone()));
@@ -131,7 +141,19 @@ pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
             c.insert_bundle(lava_ui_builder::label("", &hint)).insert(ImportStatusLabel);
         });
 
-        // Filled in by later stages (hardpoints, animation, settings).
+        // ── Hardpoints ───────────────────────────────────────────────────
+        left.with_child(|c| { c.insert_bundle(lava_ui_builder::label("HARDPOINTS", &section)); });
+        left.with_child(|c| {
+            c.display_flex().flex_column().gap_px(2.0)
+             .insert(HardpointContainer).insert(ScrollPosition::default())
+             .modify_node(|mut n| {
+                 n.align_self = AlignSelf::Stretch;
+                 n.max_height = Val::Px(260.0);
+                 n.overflow = Overflow::scroll_y();
+             });
+        });
+
+        // Filled in by later stages (animation, settings).
         left.with_child(|c| {
             c.display_flex().flex_column().gap_px(6.0).insert(PlaygroundPanel)
              .modify_node(|mut n| n.align_self = AlignSelf::Stretch);
@@ -305,6 +327,231 @@ pub fn rebuild_debug_toggles(
                         1 => debug.toggle_skeleton(),
                         _ => debug.toggle_hardpoints(),
                     }
+                },
+            );
+        }
+    });
+}
+
+/// A left-to-right strip of small buttons sharing one label.
+fn nudge_row(
+    parent: &mut RelatedSpawnerCommands<ChildOf>,
+    label: String,
+    axis: usize,
+    coarse: f32,
+    fine: f32,
+    rotation: bool,
+) {
+    parent
+        .spawn((
+            Node {
+                display: Display::Flex,
+                flex_direction: FlexDirection::Row,
+                align_items: AlignItems::Center,
+                column_gap: Val::Px(2.0),
+                ..Default::default()
+            },
+        ))
+        .with_children(|strip| {
+            strip.spawn((
+                Node { width: Val::Px(86.0), ..Default::default() },
+                Text::new(label),
+                TextFont::default().with_font_size(11.0),
+                TextColor(Color::srgb(0.8, 0.85, 0.9)),
+            ));
+            for (text, delta) in [
+                ("<<", -coarse), ("<", -fine), (">", fine), (">>", coarse),
+            ] {
+                let bg = Color::srgba(0.09, 0.16, 0.22, 0.95);
+                strip
+                    .spawn((
+                        Node {
+                            width: Val::Px(24.0),
+                            justify_content: JustifyContent::Center,
+                            border_radius: BorderRadius::all(Val::Px(3.0)),
+                            ..Default::default()
+                        },
+                        BackgroundColor(bg),
+                        InteractionPalette {
+                            none: bg,
+                            hovered: Color::srgba(0.18, 0.35, 0.45, 0.95),
+                            pressed: Color::srgba(0.10, 0.25, 0.35, 1.0),
+                        },
+                        bevy::picking::hover::Hovered::default(),
+                        bevy::ui_widgets::Button,
+                    ))
+                    .with_child((
+                        Text::new(text),
+                        TextFont::default().with_font_size(11.0),
+                        TextColor(Color::srgb(0.85, 0.92, 0.95)),
+                    ))
+                    .observe(
+                        move |_: On<Activate>,
+                              mut editor: ResMut<HardpointEditor>,
+                              mut player_def: ResMut<PlayerAssetDef>| {
+                            let Some(role) = editor.active_role.clone() else { return };
+                            let Some(def) = player_def.0.as_mut() else { return };
+                            let hardpoint = ensure_role(def, &role);
+                            if rotation {
+                                nudge_rotation(hardpoint, axis, delta);
+                            } else {
+                                nudge_translation(hardpoint, axis, delta);
+                            }
+                            editor.touch();
+                        },
+                    );
+            }
+        });
+}
+
+/// Rebuild the hardpoint editor. Driven by `ui_dirty` rather than every frame because it
+/// spawns a row per bone, and a rig has dozens.
+#[allow(clippy::too_many_arguments)]
+pub fn rebuild_hardpoint_panel(
+    mut editor: ResMut<HardpointEditor>,
+    mut player_def: ResMut<PlayerAssetDef>,
+    mut commands: Commands,
+    container_q: Query<Entity, With<HardpointContainer>>,
+    players: Query<Entity, With<Player>>,
+    children_q: Query<&Children>,
+    skinned_q: Query<&bevy::mesh::skinning::SkinnedMesh>,
+    names: Query<&Name>,
+    mut last_def: Local<Option<String>>,
+) {
+    // A model swap replaces the def, so the panel has to follow it.
+    let current = player_def.0.as_ref().map(|d| d.model_path.clone());
+    if *last_def != current {
+        *last_def = current;
+        editor.active_role = None;
+        editor.dirty = false;
+        editor.status.clear();
+        editor.ui_dirty = true;
+    }
+    if !editor.ui_dirty {
+        return;
+    }
+    editor.ui_dirty = false;
+
+    let Ok(container) = container_q.single() else { return };
+    commands.entity(container).despawn_related::<Children>();
+
+    let Some(def) = player_def.0.as_mut() else {
+        commands.entity(container).with_children(|parent| {
+            parent.spawn((
+                Text::new("no player def loaded"),
+                TextFont::default().with_font_size(11.0),
+                TextColor(Color::srgb(0.6, 0.5, 0.4)),
+            ));
+        });
+        return;
+    };
+
+    let active = editor.active_role.clone();
+    let present: Vec<String> = def.hardpoints.keys().cloned().collect();
+    let hardpoint = active.as_ref().and_then(|role| def.hardpoints.get(role)).cloned();
+    let status = editor.status.clone();
+    let dirty = editor.dirty;
+
+    // Bone names of the live rig, so the anchor picker offers what actually exists.
+    let bones: Vec<String> = players
+        .iter()
+        .next()
+        .map(|player| {
+            let joints = crate::assets::gizmos::joints_under(player, &children_q, &skinned_q);
+            let mut names: Vec<String> = crate::assets::gizmos::bone_map(&joints, &names)
+                .into_keys()
+                .collect();
+            names.sort();
+            names
+        })
+        .unwrap_or_default();
+
+    commands.entity(container).with_children(|parent| {
+        // Role chips.
+        for role in ROLES {
+            let exists = present.iter().any(|r| r == role);
+            let is_active = active.as_deref() == Some(role);
+            let marker = if is_active { "*" } else if exists { "-" } else { "+" };
+            let clicked = role.to_string();
+            row(parent, format!("{marker} {role}"), is_active, Color::srgb(0.85, 0.92, 0.85))
+                .observe(move |_: On<Activate>, mut editor: ResMut<HardpointEditor>| {
+                    editor.select_role(&clicked);
+                });
+        }
+
+        let Some(hardpoint) = hardpoint else { return };
+        let role = active.clone().unwrap_or_default();
+
+        parent.spawn((
+            Text::new(format!(
+                "anchor: {}\nT {:.3} {:.3} {:.3}\nR {:.1} {:.1} {:.1}",
+                hardpoint.anchor.as_deref().unwrap_or("(model origin)"),
+                hardpoint.translation[0], hardpoint.translation[1], hardpoint.translation[2],
+                hardpoint.rotation_euler_deg[0],
+                hardpoint.rotation_euler_deg[1],
+                hardpoint.rotation_euler_deg[2],
+            )),
+            TextFont::default().with_font_size(10.0),
+            TextColor(Color::srgb(0.6, 0.8, 0.95)),
+        ));
+
+        for (axis, name) in ["move X", "move Y", "move Z"].into_iter().enumerate() {
+            nudge_row(parent, name.to_string(), axis, COARSE_TRANSLATION, FINE_TRANSLATION, false);
+        }
+        for (axis, name) in ["turn X", "turn Y", "turn Z"].into_iter().enumerate() {
+            nudge_row(parent, name.to_string(), axis, COARSE_ROTATION, FINE_ROTATION, true);
+        }
+
+        let removed = role.clone();
+        row(parent, "remove this hardpoint".to_string(), false, Color::srgb(0.95, 0.7, 0.6))
+            .observe(move |_: On<Activate>,
+                           mut editor: ResMut<HardpointEditor>,
+                           mut player_def: ResMut<PlayerAssetDef>| {
+                if let Some(def) = player_def.0.as_mut() {
+                    def.hardpoints.remove(&removed);
+                }
+                editor.active_role = None;
+                editor.touch();
+            });
+
+        let save_label = if dirty { "SAVE def (unsaved edits)" } else { "SAVE def" };
+        row(parent, save_label.to_string(), dirty, Color::srgb(0.7, 0.95, 0.75))
+            .observe(|_: On<Activate>,
+                      mut editor: ResMut<HardpointEditor>,
+                      player_def: Res<PlayerAssetDef>| {
+                if let Some(def) = player_def.0.as_ref() {
+                    editor.status = save_player_def(def);
+                    editor.dirty = false;
+                    editor.ui_dirty = true;
+                }
+            });
+
+        if !status.is_empty() {
+            parent.spawn((
+                Text::new(status),
+                TextFont::default().with_font_size(10.0),
+                TextColor(Color::srgb(0.6, 0.85, 0.6)),
+            ));
+        }
+
+        // Anchor picker: the bones of the rig currently on screen.
+        parent.spawn((
+            Text::new("anchor bone:"),
+            TextFont::default().with_font_size(10.0),
+            TextColor(Color::srgb(0.55, 0.7, 0.8)),
+        ));
+        for bone in bones {
+            let is_anchor = hardpoint.anchor.as_deref() == Some(bone.as_str());
+            let chosen = bone.clone();
+            let for_role = role.clone();
+            row(parent, bone, is_anchor, Color::srgb(0.8, 0.8, 0.9)).observe(
+                move |_: On<Activate>,
+                      mut editor: ResMut<HardpointEditor>,
+                      mut player_def: ResMut<PlayerAssetDef>| {
+                    if let Some(def) = player_def.0.as_mut() {
+                        ensure_role(def, &for_role).anchor = Some(chosen.clone());
+                    }
+                    editor.touch();
                 },
             );
         }

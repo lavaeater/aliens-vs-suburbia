@@ -95,6 +95,15 @@ pub struct WeaponModel {
     root: Entity,
 }
 
+impl WeaponModel {
+    /// Replace the character-side grip frame. The playground's hardpoint editor calls this
+    /// so a nudge shows up on the held weapon immediately — `keep_weapons_snapped` rebuilds
+    /// the transform from this field every frame, so nothing else has to be touched.
+    pub fn set_char_grip(&mut self, grip: Hardpoint) {
+        self.char_grip = grip;
+    }
+}
+
 /// Breadth-first search for a named entity under `root`, so we only ever match bones
 /// belonging to *this* character (several players may share a skeleton's bone names).
 fn find_descendant_named(
