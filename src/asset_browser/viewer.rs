@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use bevy::camera::primitives::Aabb;
 use crate::animation::animation_plugin::get_child_with_component_recursive;
 use crate::asset_browser::state::{AssetBrowserState, CHARACTER_NODE_PREFIX};
-use crate::assets::hardpoint::{frame_from_euler, snap_transform, weapon_local_scale};
+use crate::assets::hardpoint::{snap_transform, weapon_local_scale};
 use crate::asset_browser::ui::{AssetAnimLabel, HeightDisplay};
 use crate::ui::spawn_ui::StateMarker;
 
@@ -42,42 +42,17 @@ pub fn draw_skeleton_gizmos(
     parents: Query<&ChildOf>,
 ) {
     if !state.show_skeleton { return; }
-
-    // Union of all joints across the model's skinned meshes (asset browser only
-    // ever shows one model at a time).
-    let mut joints: std::collections::HashSet<Entity> = std::collections::HashSet::new();
-    for sm in skinned_q.iter() {
-        joints.extend(sm.joints.iter().copied());
-    }
+    // Only one model is ever loaded here, so every skinned mesh in the world is part of it.
+    let joints = crate::assets::gizmos::all_joints(&skinned_q);
     if joints.is_empty() { return; }
-
-    let selected_bone = state.selected_bone_name();
-    let bone_color = Color::srgb(0.2, 1.0, 0.5);
-    let joint_color = Color::srgb(1.0, 0.85, 0.2);
-    let socket_color = Color::srgb(1.0, 0.3, 0.9);
-    for &joint in &joints {
-        let Ok(jt) = transforms.get(joint) else { continue };
-        let p = jt.translation();
-
-        // Highlight the joint currently chosen as the attachment socket.
-        let is_socket = selected_bone.is_some()
-            && names.get(joint).map(|n| Some(n.as_str()) == selected_bone).unwrap_or(false);
-        let (mark_color, s) = if is_socket { (socket_color, 0.03) } else { (joint_color, 0.012) };
-
-        // Joint marker: a small 3-axis cross scaled to the model.
-        gizmos.line(p - Vec3::X * s, p + Vec3::X * s, mark_color);
-        gizmos.line(p - Vec3::Y * s, p + Vec3::Y * s, mark_color);
-        gizmos.line(p - Vec3::Z * s, p + Vec3::Z * s, mark_color);
-
-        // Bone segment to the parent joint (skip the skeleton root, whose parent
-        // is a non-joint scene node).
-        if let Ok(child_of) = parents.get(joint)
-            && joints.contains(&child_of.parent())
-            && let Ok(pt) = transforms.get(child_of.parent())
-        {
-            gizmos.line(pt.translation(), p, bone_color);
-        }
-    }
+    crate::assets::gizmos::draw_skeleton(
+        &mut gizmos,
+        &joints,
+        state.selected_bone_name(),
+        &transforms,
+        &names,
+        &parents,
+    );
 }
 
 /// Build a local Transform from an attachment's stored offset (Euler degrees).
@@ -214,26 +189,19 @@ pub fn draw_hardpoint_gizmos(
 ) {
     if !state.show_hardpoints || state.hardpoints.is_empty() { return; }
     let Some(viewer) = state.viewer_entity else { return };
-    let bone_map = bone_entity_map(&skinned_q, &names);
-    let active = state.active_hardpoint_role.as_deref();
-
-    for (role, hp) in &state.hardpoints {
+    let joints = crate::assets::gizmos::all_joints(&skinned_q);
+    let bones = crate::assets::gizmos::bone_map(&joints, &names);
+    crate::assets::gizmos::draw_hardpoints(
+        &mut gizmos,
+        &state.hardpoints,
+        state.active_hardpoint_role.as_deref(),
+        &transforms,
         // Weapon hardpoints anchor to the model root; character ones to a bone.
-        let anchor_ent = match &hp.anchor {
-            Some(bone) => bone_map.get(bone).copied(),
+        |anchor| match anchor {
+            Some(bone) => bones.get(bone).copied(),
             None => Some(viewer),
-        };
-        let Some(ent) = anchor_ent else { continue };
-        let Ok(gt) = transforms.get(ent) else { continue };
-
-        let frame = frame_from_euler(hp.translation, hp.rotation_euler_deg);
-        let pos = gt.transform_point(Vec3::from(frame.translation));
-        let rot = gt.rotation() * frame.rotation;
-        let size = if Some(role.as_str()) == active { 0.09 } else { 0.055 };
-        gizmos.line(pos, pos + rot * Vec3::X * size, Color::srgb(1.0, 0.25, 0.25));
-        gizmos.line(pos, pos + rot * Vec3::Y * size, Color::srgb(0.25, 1.0, 0.25));
-        gizmos.line(pos, pos + rot * Vec3::Z * size, Color::srgb(0.35, 0.55, 1.0));
-    }
+        },
+    );
 }
 
 /// Spawn/despawn the reference-weapon preview, parented to the character's `grip`

@@ -131,6 +131,29 @@ Verified end-to-end with a probe: 4 player defs found, 15 folders under `assets/
 and selecting `amy.ron` respawned the player with `packs/mesh2motion/amy.glb` loaded — with
 no torso-twist warning, i.e. the spine chain resolved on the new rig.
 
+### Stage 3 — built
+
+`src/assets/gizmos.rs` now holds the skeleton and hardpoint drawing, called by both the
+asset browser and `src/playground/debug.rs`. Three panel toggles: physics colliders,
+skeleton, hardpoint frames.
+
+**The joint selection, not the drawing, is what differs between the two screens.** The
+browser has one model in an empty scene, so `all_joints` — every skinned mesh in the world
+— is correct there. The playground has the player *and* three skinned dummies: a probe
+found 16 skinned meshes in the scene, of which 65 joints belong to the player. Using the
+browser's approach would have drawn all four skeletons on top of each other. Hence
+`joints_under(root)`, which walks *down* from the character: a joint's `ChildOf` chain leads
+through the armature, but the `SkinnedMesh` component sits on the mesh entity, which is a
+sibling of the armature rather than an ancestor of the joints.
+
+The physics toggle writes avian's `PhysicsGizmos` config directly and `sync_physics_toggle`
+reads it back, so the button and `F3` cannot disagree — there is one source of truth rather
+than a mirrored flag that drifts.
+
+Hardpoints come from `PlayerAssetDef`, which `spawn_players` already populates for slot 0,
+so no extra plumbing was needed. Only the *character's* hardpoints are drawn; the equipped
+weapon's own frames need its def at hand, which is stage 4's job anyway.
+
 ### Known issues
 
 - **Health bars are offset by the width of the left pane.** ~~Fixed~~ — see below. `lava_ui_builder`'s

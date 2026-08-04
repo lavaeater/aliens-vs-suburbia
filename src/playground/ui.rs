@@ -6,6 +6,7 @@
 //! `asset_browser::viewer::sync_viewer_viewport`. That keeps every gameplay system,
 //! including the camera follow, working exactly as it does full-screen.
 
+use bevy::gizmos::config::GizmoConfigStore;
 use bevy::prelude::*;
 use bevy::ui_widgets::Activate;
 use lava_ui_builder::{LavaTheme, TextTheme, UIBuilder};
@@ -16,6 +17,7 @@ use bevy::ecs::relationship::RelatedSpawnerCommands;
 use bevy::ecs::system::EntityCommands;
 use lava_ui_builder::InteractionPalette;
 
+use crate::playground::debug::{toggle_physics_gizmos, PlaygroundDebug};
 use crate::playground::models::{def_stem, PlaygroundModels};
 use crate::playground::state::PlaygroundSession;
 use crate::ui::spawn_ui::StateMarker;
@@ -42,6 +44,10 @@ pub struct ImportPathLabel;
 
 #[derive(Component)]
 pub struct ImportStatusLabel;
+
+/// Holds the debug-overlay toggle rows.
+#[derive(Component)]
+pub struct DebugTogglesContainer;
 
 pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
     let mut ui = UIBuilder::new(commands, Some(theme.clone()));
@@ -80,6 +86,14 @@ pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
                 "[F3] physics debug   [F7] torso twist",
                 &hint,
             ));
+        });
+
+        // ── Debug overlays ───────────────────────────────────────────────
+        left.with_child(|c| { c.insert_bundle(lava_ui_builder::label("DEBUG VIEW", &section)); });
+        left.with_child(|c| {
+            c.display_flex().flex_column().gap_px(2.0)
+             .insert(DebugTogglesContainer)
+             .modify_node(|mut n| n.align_self = AlignSelf::Stretch);
         });
 
         // ── Imported models ──────────────────────────────────────────────
@@ -248,6 +262,53 @@ fn row<'a>(
         TextColor(color),
     ));
     cmds
+}
+
+/// Rebuild the debug toggle rows. Cheap: three rows, only on change.
+pub fn rebuild_debug_toggles(
+    mut debug: ResMut<PlaygroundDebug>,
+    mut commands: Commands,
+    container_q: Query<Entity, With<DebugTogglesContainer>>,
+    mut spawned: Local<bool>,
+) {
+    if !debug.ui_dirty && *spawned {
+        return;
+    }
+    debug.ui_dirty = false;
+    *spawned = true;
+
+    let Ok(container) = container_q.single() else {
+        // The panel has not been built yet; try again next frame.
+        *spawned = false;
+        return;
+    };
+    commands.entity(container).despawn_related::<Children>();
+
+    let rows = [
+        (debug.physics, "physics colliders  [F3]"),
+        (debug.skeleton, "skeleton"),
+        (debug.hardpoints, "hardpoint frames"),
+    ];
+    commands.entity(container).with_children(|parent| {
+        for (index, (on, label)) in rows.into_iter().enumerate() {
+            let text = format!("[{}] {label}", if on { "x" } else { " " });
+            row(parent, text, on, Color::srgb(0.85, 0.9, 0.95)).observe(
+                move |_: On<Activate>,
+                      mut debug: ResMut<PlaygroundDebug>,
+                      mut store: ResMut<GizmoConfigStore>| {
+                    match index {
+                        0 => {
+                            toggle_physics_gizmos(&mut store);
+                            // `sync_physics_toggle` picks the new value up and marks the
+                            // panel dirty, so there is one source of truth.
+                        }
+                        1 => debug.toggle_skeleton(),
+                        _ => debug.toggle_hardpoints(),
+                    }
+                },
+            );
+        }
+    });
 }
 
 pub fn rebuild_model_list(
