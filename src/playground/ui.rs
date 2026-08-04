@@ -12,6 +12,11 @@ use lava_ui_builder::{LavaTheme, TextTheme, UIBuilder};
 
 use crate::camera::components::GameCamera;
 use crate::game_state::GameState;
+use bevy::ecs::relationship::RelatedSpawnerCommands;
+use bevy::ecs::system::EntityCommands;
+use lava_ui_builder::InteractionPalette;
+
+use crate::playground::models::{def_stem, PlaygroundModels};
 use crate::playground::state::PlaygroundSession;
 use crate::ui::spawn_ui::StateMarker;
 
@@ -24,6 +29,20 @@ pub struct PlaygroundViewportPane;
 #[derive(Component)]
 pub struct PlaygroundPanel;
 
+/// Holds one clickable row per imported player def.
+#[derive(Component)]
+pub struct ModelListContainer;
+
+/// Holds the import browser's folder and file rows.
+#[derive(Component)]
+pub struct ImportBrowserContainer;
+
+#[derive(Component)]
+pub struct ImportPathLabel;
+
+#[derive(Component)]
+pub struct ImportStatusLabel;
+
 pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
     let mut ui = UIBuilder::new(commands, Some(theme.clone()));
 
@@ -34,6 +53,7 @@ pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
 
     let t = theme.text.clone();
     let hint = TextTheme { label_size: 11.0, label_color: Color::srgb(0.45, 0.6, 0.5), ..t.clone() };
+    let section = TextTheme { label_size: 12.0, label_color: Color::srgb(0.55, 0.8, 0.65), ..t.clone() };
 
     ui.with_child(|left| {
         left.modify_node(|mut n| {
@@ -62,13 +82,45 @@ pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
             ));
         });
 
-        // Filled in by later stages (model list, hardpoints, animation, settings).
+        // ── Imported models ──────────────────────────────────────────────
+        left.with_child(|c| { c.insert_bundle(lava_ui_builder::label("MODEL", &section)); });
+        left.with_child(|c| {
+            c.display_flex().flex_column().gap_px(2.0)
+             .insert(ModelListContainer).insert(ScrollPosition::default())
+             .modify_node(|mut n| {
+                 n.align_self = AlignSelf::Stretch;
+                 n.max_height = Val::Px(220.0);
+                 n.overflow = Overflow::scroll_y();
+             });
+        });
+
+        // ── Import browser ───────────────────────────────────────────────
+        left.with_child(|c| { c.insert_bundle(lava_ui_builder::label("IMPORT", &section)); });
+        left.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label("", &TextTheme {
+                label_size: 10.0, label_color: Color::srgb(0.5, 0.7, 0.9), ..t.clone()
+            }))
+            .insert(ImportPathLabel)
+            .modify_node(|mut n| n.overflow = Overflow::clip());
+        });
+        left.with_child(|c| {
+            c.display_flex().flex_column().gap_px(2.0)
+             .insert(ImportBrowserContainer).insert(ScrollPosition::default())
+             .modify_node(|mut n| {
+                 n.align_self = AlignSelf::Stretch;
+                 n.flex_grow = 1.0;
+                 n.min_height = Val::Px(120.0);
+                 n.overflow = Overflow::scroll_y();
+             });
+        });
+        left.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label("", &hint)).insert(ImportStatusLabel);
+        });
+
+        // Filled in by later stages (hardpoints, animation, settings).
         left.with_child(|c| {
             c.display_flex().flex_column().gap_px(6.0).insert(PlaygroundPanel)
-             .modify_node(|mut n| {
-                 n.flex_grow = 1.0;
-                 n.align_self = AlignSelf::Stretch;
-             });
+             .modify_node(|mut n| n.align_self = AlignSelf::Stretch);
         });
 
         left.add_button_observe(
@@ -156,6 +208,131 @@ pub fn clear_playground_viewport(mut cameras: Query<&mut Camera, With<GameCamera
 /// real match and quietly suppress the HUD and the map.
 pub fn end_playground_session(mut commands: Commands) {
     commands.remove_resource::<PlaygroundSession>();
+}
+
+// ── List rebuilding ───────────────────────────────────────────────────────────
+//
+// Both lists are mouse-driven rather than keyboard-driven: the keyboard is busy walking
+// the character around, so binding Up/Down/Enter here would fight the game.
+
+/// One clickable row. `selected` gives it the highlight colour.
+fn row<'a>(
+    parent: &'a mut RelatedSpawnerCommands<ChildOf>,
+    text: String,
+    selected: bool,
+    color: Color,
+) -> EntityCommands<'a> {
+    let bg = if selected {
+        Color::srgba(0.12, 0.32, 0.20, 0.95)
+    } else {
+        Color::srgba(0.09, 0.13, 0.18, 0.90)
+    };
+    let mut cmds = parent.spawn((
+        Node {
+            padding: UiRect::axes(Val::Px(6.0), Val::Px(3.0)),
+            border_radius: BorderRadius::all(Val::Px(3.0)),
+            ..Default::default()
+        },
+        BackgroundColor(bg),
+        InteractionPalette {
+            none: bg,
+            hovered: Color::srgba(0.18, 0.35, 0.45, 0.95),
+            pressed: Color::srgba(0.10, 0.25, 0.35, 1.0),
+        },
+        bevy::picking::hover::Hovered::default(),
+        bevy::ui_widgets::Button,
+    ));
+    cmds.with_child((
+        Text::new(text),
+        TextFont::default().with_font_size(11.0),
+        TextColor(color),
+    ));
+    cmds
+}
+
+pub fn rebuild_model_list(
+    mut models: ResMut<PlaygroundModels>,
+    mut commands: Commands,
+    container_q: Query<Entity, With<ModelListContainer>>,
+) {
+    if !models.list_dirty {
+        return;
+    }
+    models.list_dirty = false;
+
+    let Ok(container) = container_q.single() else { return };
+    commands.entity(container).despawn_related::<Children>();
+
+    let defs = models.defs.clone();
+    let selected = models.selected.clone();
+    commands.entity(container).with_children(|parent| {
+        if defs.is_empty() {
+            parent.spawn((
+                Text::new("no player defs in assets/defs"),
+                TextFont::default().with_font_size(11.0),
+                TextColor(Color::srgb(0.6, 0.5, 0.4)),
+            ));
+            return;
+        }
+        for def_path in defs {
+            let is_selected = selected.as_deref() == Some(def_path.as_str());
+            let label = format!("{} {}", if is_selected { "*" } else { " " }, def_stem(&def_path));
+            let clicked = def_path.clone();
+            row(parent, label, is_selected, Color::srgb(0.85, 0.92, 0.85))
+                .observe(move |_: On<Activate>, mut m: ResMut<PlaygroundModels>| {
+                    m.select(&clicked);
+                });
+        }
+    });
+}
+
+pub fn rebuild_import_browser(
+    mut models: ResMut<PlaygroundModels>,
+    mut commands: Commands,
+    container_q: Query<Entity, With<ImportBrowserContainer>>,
+    mut path_label_q: Query<&mut Text, (With<ImportPathLabel>, Without<ImportStatusLabel>)>,
+    mut status_label_q: Query<&mut Text, With<ImportStatusLabel>>,
+) {
+    if !models.browser_dirty {
+        return;
+    }
+    models.browser_dirty = false;
+
+    if let Ok(mut text) = path_label_q.single_mut() {
+        **text = format!("assets/{}", models.browse_folder);
+    }
+    if let Ok(mut text) = status_label_q.single_mut() {
+        **text = models.status.clone();
+    }
+
+    let Ok(container) = container_q.single() else { return };
+    commands.entity(container).despawn_related::<Children>();
+
+    let at_root = models.browse_folder.is_empty();
+    let folders = models.folders.clone();
+    let files = models.files.clone();
+    commands.entity(container).with_children(|parent| {
+        if !at_root {
+            row(parent, "[..]".to_string(), false, Color::srgb(0.75, 0.88, 1.0))
+                .observe(|_: On<Activate>, mut m: ResMut<PlaygroundModels>| m.leave_folder());
+        }
+        for name in folders {
+            let entered = name.clone();
+            row(parent, format!("[dir] {name}"), false, Color::srgb(0.75, 0.88, 1.0))
+                .observe(move |_: On<Activate>, mut m: ResMut<PlaygroundModels>| {
+                    m.enter_folder(&entered);
+                });
+        }
+        for file in files {
+            let imported = file.clone();
+            let name = file.rsplit('/').next().unwrap_or(&file).to_string();
+            row(parent, format!("+ {name}"), false, Color::srgb(0.9, 0.85, 0.7))
+                .observe(move |_: On<Activate>, mut m: ResMut<PlaygroundModels>| {
+                    m.import(&imported);
+                    m.browser_dirty = true;
+                });
+        }
+    });
 }
 
 #[cfg(test)]

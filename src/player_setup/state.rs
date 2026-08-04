@@ -125,7 +125,7 @@ fn def_stem(path: &str) -> &str {
 }
 
 /// Returns paths of all defs in assets/defs/ whose ModelType is Player.
-fn scan_player_defs() -> Vec<String> {
+pub(crate) fn scan_player_defs() -> Vec<String> {
     let dir = std::path::Path::new("assets/defs");
     let Ok(entries) = std::fs::read_dir(dir) else { return vec![] };
     let mut paths: Vec<String> = entries.flatten()

@@ -10,6 +10,7 @@
 //! gated, via [`state::in_playground`] / [`state::in_normal_game`].
 
 pub mod dummies;
+pub mod models;
 pub mod plugin;
 pub mod state;
 pub mod ui;

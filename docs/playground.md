@@ -104,9 +104,36 @@ Three things worth recording:
 - **`AlienCounter` must be incremented on spawn.** `collision_handling_system` decrements it
   on every alien death; a dummy that was never counted underflows the `u32`.
 
+### Stage 2 — built
+
+`src/playground/models.rs`: `PlaygroundModels` holds the imported-def list, the import
+browser's folder state, and the pending swap. Two mouse-driven lists in the left pane —
+the keyboard is busy walking the character, so binding Up/Down/Enter there would fight the
+game.
+
+Selecting a def goes through `PlayerRoster` rather than poking the player entity, so the
+swap takes exactly the path a real match takes: `spawn_players` derives scene, ability,
+throw rate, animation graph and equipped weapon from the def.
+
+**The swap needs two frames.** `spawn_players` skips its `SpawnPlayer` event while a player
+still exists, and the despawn only lands when commands are applied — so `swap_player_model`
+parks the position in `pending_position` and finishes on a later frame once the old player
+is actually gone. Respawning at the old player's `Position` means a swap does not teleport
+you.
+
+Import writes a minimal def (`model_path` + `ModelType::Player`, nothing else) and refuses
+to overwrite an existing one — re-importing a model you had already tuned would silently
+reset its scale, hardpoints and animation bindings. Scale stays at the default because
+computing it needs the mesh AABB, which needs the model loaded; the asset browser is still
+the place for that.
+
+Verified end-to-end with a probe: 4 player defs found, 15 folders under `assets/packs`,
+and selecting `amy.ron` respawned the player with `packs/mesh2motion/amy.glb` loaded — with
+no torso-twist warning, i.e. the spine chain resolved on the new rig.
+
 ### Known issues
 
-- **Health bars are offset by the width of the left pane.** `lava_ui_builder`'s
+- **Health bars are offset by the width of the left pane.** ~~Fixed~~ — see below. `lava_ui_builder`'s
   `world_follower_system` positions UI nodes from `Camera::world_to_viewport`, which returns
   *viewport*-relative coordinates, while the node itself is laid out in window space. With a
   full-screen camera the two agree; with the playground's clipped viewport they differ by the
@@ -114,6 +141,14 @@ Three things worth recording:
   `camera.logical_viewport_rect().map(|r| r.min).unwrap_or(Vec2::ZERO)` to `pos` — but
   `lava_ui_builder` is a separate repo, so that is a deliberate call to make rather than a
   drive-by edit.
+
+  **Fixed** in `lava_ui_builder` 39ebfae, along with a second bug in the same function that
+  was never playground-specific: `UiScale` multiplies every `Val::Px`, so followers rendered
+  at `scale` times their intended position — dragged toward the top-left corner in *any*
+  window narrower than `LavaTheme::ui_width` (1920). Confirmed by probe: a button authored
+  `size_px(160, 40)` computes to `[105, 26]` at scale 0.66.
 - **The default player model has no torso twist.** Without a roster the playground spawns
   `Character Soldier`, whose rig has no mixamo spine bones, so the twist logs
-  "bones never appeared on this rig" and disables itself. Stage 2's model picker is the fix.
+  "bones never appeared on this rig" and disables itself. Picking `amy` from the model list
+  fixes it for the session; making the playground *default* to the last model used is a
+  small follow-up.
