@@ -100,7 +100,7 @@ impl Plugin for StatefulMapPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_plugins(NonStateMapStuff)
-            .add_systems(OnEnter(GameState::InGame), load_map_one)
+            .add_systems(OnEnter(GameState::InGame), load_map_one.run_if(crate::playground::state::in_normal_game))
             .add_systems(OnEnter(GameState::ModelShowcase), load_map_showcase)
             .add_systems(
                 Update, (

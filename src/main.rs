@@ -38,6 +38,7 @@ pub(crate) mod sprite_billboard;
 pub(crate) mod asset_browser;
 pub(crate) mod player_setup;
 pub(crate) mod map_editor;
+pub(crate) mod playground;
 pub mod behavior;
 pub(crate) mod music;
 #[cfg(feature = "map-editor")]
@@ -100,6 +101,7 @@ fn print_help() {
     println!("Aliens vs Suburbia\n");
     println!("USAGE:");
     println!("  cargo run                                  Launch the game");
+    println!("  cargo run -- --playground                  Launch straight into the playground");
     println!("  cargo run --features map-editor -- --map-editor [--file <path>]");
     println!("                                             Launch the map editor TUI");
     println!("  cargo run -- --create-map [OPTIONS]        Generate a map file\n");
@@ -134,7 +136,12 @@ fn main() {
         return;
     }
 
-    App::new()
+    // Boot straight into the playground, skipping the menu. Handy when iterating on the
+    // playground itself; the menu button does the same two things.
+    let straight_to_playground = args.iter().any(|a| a == "--playground");
+
+    let mut app = App::new();
+    app
         .register_type::<CameraOffset>()
         .register_type::<CurrentTile>()
         .register_type::<CharacterControl>()
@@ -154,6 +161,15 @@ fn main() {
         .insert_gizmo_config(PhysicsGizmos::default(), GizmoConfig { enabled: false, ..Default::default() })
         .add_plugins(FlatShaderPlugin::global())
         // .add_plugins(PixelShaderPlugin::default())
-        .add_plugins(GamePlugin)
-        .run();
+        .add_plugins(GamePlugin);
+
+    if straight_to_playground {
+        app.add_systems(bevy::app::Startup, |mut commands: bevy::prelude::Commands,
+                                             mut next: bevy::prelude::ResMut<bevy::prelude::NextState<game_state::GameState>>| {
+            commands.init_resource::<playground::state::PlaygroundSession>();
+            next.set(game_state::GameState::InGame);
+        });
+    }
+
+    app.run();
 }
