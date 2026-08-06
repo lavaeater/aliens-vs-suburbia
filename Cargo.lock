@@ -132,7 +132,6 @@ dependencies = [
  "crossterm",
  "dotenvy",
  "enumflags2",
- "image",
  "itertools 0.15.0",
  "lava_ui_builder",
  "pathfinding",
@@ -1450,6 +1449,13 @@ name = "bevy_mikktspace"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bff34eb29ff4b8a8688bc7299f14fb6b597461ca80fec03ed7d22939ab33e48f"
+
+[[package]]
+name = "bevy_mod_inverse_kinematics"
+version = "0.11.0"
+dependencies = [
+ "bevy",
+]
 
 [[package]]
 name = "bevy_mod_outline"

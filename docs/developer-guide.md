@@ -17,7 +17,7 @@ Companion docs: `CLAUDE.md` (architecture summary + gotchas), `docs/ultraviolenc
 - **Entry point:** `src/main.rs` — module list + `App` construction, adds `GamePlugin`,
   `SkeinPlugin`, inspector, etc.
 - **States:** `GameState` in `src/game_state/mod.rs`:
-  `Menu, PlayerSetup, InGame, ModelShowcase, CharacterCreator, PolyPizza, AssetBrowser,
+  `Menu, PlayerSetup, InGame, ModelShowcase, PolyPizza, AssetBrowser,
   MapEditor`. Gameplay systems run `.run_if(in_state(GameState::InGame))`.
 - **Message bus:** custom events derive `Message` and use `MessageReader`/`MessageWriter`,
   registered with `app.add_message::<T>()`. (Bevy 0.18 renamed Event→Message.)

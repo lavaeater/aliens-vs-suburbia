@@ -31,13 +31,11 @@ use crate::model_settings::plugin::ModelSettingsPlugin;
 use crate::towers::systems::{area_damage_system, shoot_alien_system, slow_alien_system};
 use crate::ui::ui_plugin::UiPlugin;
 use crate::poly_pizza::plugin::PolyPizzaPlugin;
-use crate::character_creator::plugin::CharacterCreatorPlugin;
 use crate::asset_browser::plugin::AssetBrowserPlugin;
 use crate::player_setup::plugin::PlayerSetupPlugin;
 use crate::map_editor::plugin::MapEditorPlugin;
 use crate::playground::plugin::PlaygroundPlugin;
 use crate::music::game_music_plugin::GameMusicPlugin;
-use crate::sprite_billboard::plugin::SpriteBillboardPlugin;
 use crate::gore::plugin::GorePlugin;
 
 fn toggle_physics_debug(
@@ -77,8 +75,6 @@ impl Plugin for GamePlugin {
                 SettingsPlugin,
                 ModelSettingsPlugin,
                 PolyPizzaPlugin,
-                CharacterCreatorPlugin,
-                SpriteBillboardPlugin,
                 AssetBrowserPlugin,
                 PlayerSetupPlugin,
                 MapEditorPlugin,

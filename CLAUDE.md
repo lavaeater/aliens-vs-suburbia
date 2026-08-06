@@ -34,7 +34,7 @@ The game follows Bevy's **plugin-based ECS architecture**. Each subsystem lives 
 Menu → PlayerSetup → InGame
 Menu → AssetBrowser
 Menu → MapEditor
-Menu → ModelShowcase / CharacterCreator / PolyPizza
+Menu → ModelShowcase / PolyPizza
 ```
 
 Most gameplay systems use `.run_if(in_state(InGame))`. Physics runs on a fixed timestep of 0.05s.

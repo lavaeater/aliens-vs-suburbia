@@ -23,7 +23,6 @@ mod assets;
 pub mod behavior;
 mod building;
 pub(crate) mod camera;
-pub(crate) mod character_creator;
 mod constants;
 mod control;
 pub(crate) mod facts;
@@ -41,7 +40,6 @@ pub(crate) mod player_setup;
 pub(crate) mod playground;
 pub(crate) mod poly_pizza;
 pub(crate) mod settings;
-pub(crate) mod sprite_billboard;
 pub(crate) mod towers;
 pub(crate) mod ui;
 

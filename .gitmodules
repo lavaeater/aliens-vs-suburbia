@@ -2,9 +2,6 @@
 	path = lava_ui_builder
 	url = git@github.com:lavaeater/lava_ui_builder.git
 	branch = main
-[submodule "lpc"]
-	path = lpc
-	url = git@github.com:LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator.git
 [submodule "bevy_wind_waker_shader"]
 	path = bevy_wind_waker_shader
 	url = git@github.com:lavaeater/bevy_wind_waker_shader.git
