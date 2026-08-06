@@ -11,6 +11,7 @@ use bevy::log::LogPlugin;
 use bevy::{DefaultPlugins, log};
 use bevy_skein::SkeinPlugin;
 use bevy_wind_waker_shader::flat::FlatShaderPlugin;
+use bevy_wind_waker_shader::pixelate::PixelShaderPlugin;
 use camera::components::CameraOffset;
 use control::components::CharacterControl;
 
@@ -179,7 +180,7 @@ fn main() {
             },
         )
         .add_plugins(FlatShaderPlugin::global())
-        // .add_plugins(PixelShaderPlugin::default())
+        .add_plugins(PixelShaderPlugin::default())
         .add_plugins(GamePlugin);
 
     if straight_to_playground {
