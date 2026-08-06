@@ -11,3 +11,6 @@
 [submodule "rusty_music"]
 	path = rusty_music
 	url = git@github.com:lavaeater/rusty_music.git
+[submodule "bevy_mod_inverse_kinematics"]
+	path = bevy_mod_inverse_kinematics
+	url = git@github.com:lavaeater/bevy_mod_inverse_kinematics.git
