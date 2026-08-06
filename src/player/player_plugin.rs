@@ -74,7 +74,11 @@ fn auto_outline_scenes(
     query: Query<Entity, (With<WorldAssetRoot>, Without<AsyncWorldInheritOutline>, Without<Floor>)>,
 ) {
     for entity in query.iter() {
-        commands.entity(entity).insert((
+        // `try_insert`, not `insert`: a scene root can be despawned between this system
+        // queueing the command and the buffers being applied — the playground's model swap
+        // does exactly that on the frame it changes character — and a plain `insert` on a
+        // despawned entity is a hard error that takes the app down.
+        commands.entity(entity).try_insert((
             OutlineVolume {
                 visible: true,
                 width: 2.0,

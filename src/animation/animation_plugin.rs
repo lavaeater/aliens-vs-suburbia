@@ -325,9 +325,12 @@ pub fn start_some_animations(
             && let Ok(anim_key) = anim_key_query.get(super_ent)
             && let Some(graph_handle) = anim_store.graphs.get(&anim_key.group)
         {
+            // `try_insert`: the character owning this animation player may be despawned
+            // between here and the buffers being applied (a playground model swap does
+            // this), and a plain `insert` on a dead entity aborts the app.
             commands
                 .entity(entity)
-                .insert(AnimationGraphHandle(graph_handle.clone()));
+                .try_insert(AnimationGraphHandle(graph_handle.clone()));
 
             anim_thingie(
                 &anim_store,

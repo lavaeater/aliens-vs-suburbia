@@ -299,7 +299,8 @@ fn build_player_anim_graph(
             player_entity, &child_query, &anim_player_query,
         ) else { continue };
         let Ok(mut anim_player) = anim_player_query.get_mut(anim_entity) else { continue };
-        commands.entity(anim_entity).insert(AnimationGraphHandle(graph_handle.clone()));
+        // `try_insert`: a rebuild can land on the frame a character is being swapped out.
+        commands.entity(anim_entity).try_insert(AnimationGraphHandle(graph_handle.clone()));
         if let Some(&idx) = store.anims.get("players").and_then(|m| m.get(&anim_key.key)) {
             let active = anim_player.play(idx);
             if anim_key.key.loops() {

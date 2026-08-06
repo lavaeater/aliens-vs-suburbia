@@ -25,8 +25,9 @@ use crate::playground::animation::{
     bind, resolution_label, tag_paths, unbind, AnimationEditor, PLAYABLE_KEYS,
 };
 use crate::playground::hardpoints::{
-    ensure_role, nudge_rotation, nudge_translation, save_player_def, HardpointEditor,
-    COARSE_ROTATION, COARSE_TRANSLATION, FINE_ROTATION, FINE_TRANSLATION, ROLES,
+    ensure_role, nudge_rotation, nudge_translation, save_player_def, save_weapon_def,
+    HardpointEditor, HardpointSide, PlaygroundWeaponDef, COARSE_ROTATION, COARSE_TRANSLATION,
+    FINE_ROTATION, FINE_TRANSLATION,
 };
 use crate::playground::models::{def_stem, PlaygroundModels};
 use crate::playground::state::PlaygroundSession;
@@ -414,9 +415,18 @@ fn nudge_row(
                     .observe(
                         move |_: On<Activate>,
                               mut editor: ResMut<HardpointEditor>,
-                              mut player_def: ResMut<PlayerAssetDef>| {
+                              mut player_def: ResMut<PlayerAssetDef>,
+                              mut weapon_def: ResMut<PlaygroundWeaponDef>| {
                             let Some(role) = editor.active_role.clone() else { return };
-                            let Some(def) = player_def.0.as_mut() else { return };
+                            let side = editor.side;
+                            // Only reach for the side being edited: `as_mut()` on the other
+                            // would mark it changed and re-push an unedited def at the live
+                            // weapon every click.
+                            let def = match side {
+                                HardpointSide::Character => player_def.0.as_mut(),
+                                HardpointSide::Weapon => weapon_def.def.as_mut(),
+                            };
+                            let Some(def) = def else { return };
                             let hardpoint = ensure_role(def, &role);
                             if rotation {
                                 nudge_rotation(hardpoint, axis, delta);
@@ -430,12 +440,41 @@ fn nudge_row(
         });
 }
 
+/// The character/weapon switch at the top of the hardpoint panel.
+///
+/// Spawned even when the chosen side has no def, so you can always get back to the one
+/// that does.
+fn side_chips(
+    parent: &mut RelatedSpawnerCommands<ChildOf>,
+    side: HardpointSide,
+    weapon_name: Option<&str>,
+) {
+    let weapon_label = format!(
+        "{}: {}",
+        HardpointSide::Weapon.label(),
+        weapon_name.unwrap_or("(none)")
+    );
+    for (which, label) in [
+        (HardpointSide::Character, HardpointSide::Character.label().to_string()),
+        (HardpointSide::Weapon, weapon_label),
+    ] {
+        let is_active = which == side;
+        let marker = if is_active { "*" } else { " " };
+        row(parent, format!("{marker} {label}"), is_active, Color::srgb(0.9, 0.85, 0.7)).observe(
+            move |_: On<Activate>, mut editor: ResMut<HardpointEditor>| {
+                editor.select_side(which);
+            },
+        );
+    }
+}
+
 /// Rebuild the hardpoint editor. Driven by `ui_dirty` rather than every frame because it
 /// spawns a row per bone, and a rig has dozens.
 #[allow(clippy::too_many_arguments)]
 pub fn rebuild_hardpoint_panel(
     mut editor: ResMut<HardpointEditor>,
-    mut player_def: ResMut<PlayerAssetDef>,
+    player_def: Res<PlayerAssetDef>,
+    weapon_def: Res<PlaygroundWeaponDef>,
     mut commands: Commands,
     container_q: Query<Entity, With<HardpointContainer>>,
     players: Query<Entity, With<Player>>,
@@ -444,12 +483,15 @@ pub fn rebuild_hardpoint_panel(
     names: Query<&Name>,
     mut last_def: Local<Option<String>>,
 ) {
-    // A model swap replaces the def, so the panel has to follow it.
+    // A model swap replaces the def, so the panel has to follow it. The weapon def is
+    // reloaded by `sync_weapon_def` in the same breath, so both sides reset together.
     let current = player_def.0.as_ref().map(|d| d.model_path.clone());
     if *last_def != current {
         *last_def = current;
         editor.active_role = None;
-        editor.dirty = false;
+        editor.side = HardpointSide::Character;
+        editor.character_dirty = false;
+        editor.weapon_dirty = false;
         editor.status.clear();
         editor.ui_dirty = true;
     }
@@ -461,10 +503,22 @@ pub fn rebuild_hardpoint_panel(
     let Ok(container) = container_q.single() else { return };
     commands.entity(container).despawn_related::<Children>();
 
-    let Some(def) = player_def.0.as_mut() else {
+    let side = editor.side;
+    let weapon_name = weapon_def.name().map(str::to_string);
+    let def = match side {
+        HardpointSide::Character => player_def.0.as_ref(),
+        HardpointSide::Weapon => weapon_def.def.as_ref(),
+    };
+
+    let Some(def) = def else {
+        let message = match side {
+            HardpointSide::Character => "no player def loaded",
+            HardpointSide::Weapon => "no weapon equipped (set PlayerProps.weapon)",
+        };
         commands.entity(container).with_children(|parent| {
+            side_chips(parent, side, weapon_name.as_deref());
             parent.spawn((
-                Text::new("no player def loaded"),
+                Text::new(message),
                 TextFont::default().with_font_size(11.0),
                 TextColor(Color::srgb(0.6, 0.5, 0.4)),
             ));
@@ -476,12 +530,24 @@ pub fn rebuild_hardpoint_panel(
     let present: Vec<String> = def.hardpoints.keys().cloned().collect();
     let hardpoint = active.as_ref().and_then(|role| def.hardpoints.get(role)).cloned();
     let status = editor.status.clone();
-    let dirty = editor.dirty;
+    let dirty = editor.dirty(side);
+    // Which file the Save button writes. Worth spelling out: the two sides write different
+    // files, and the weapon's is reached by an explicit path rather than its model stem.
+    let save_target = match side {
+        HardpointSide::Character => crate::assets::asset_definition::AssetDefinition::def_path(
+            &def.model_path,
+        )
+        .display()
+        .to_string(),
+        HardpointSide::Weapon => weapon_def.def_path.clone().unwrap_or_default(),
+    };
 
     // Bone names of the live rig, so the anchor picker offers what actually exists.
+    // Weapon frames are model-origin relative, so the picker is character-side only.
     let bones: Vec<String> = players
         .iter()
         .next()
+        .filter(|_| side == HardpointSide::Character)
         .map(|player| {
             let joints = crate::assets::gizmos::joints_under(player, &children_q, &skinned_q);
             let mut names: Vec<String> = crate::assets::gizmos::bone_map(&joints, &names)
@@ -493,8 +559,10 @@ pub fn rebuild_hardpoint_panel(
         .unwrap_or_default();
 
     commands.entity(container).with_children(|parent| {
+        side_chips(parent, side, weapon_name.as_deref());
+
         // Role chips.
-        for role in ROLES {
+        for role in side.roles().iter().copied() {
             let exists = present.iter().any(|r| r == role);
             let is_active = active.as_deref() == Some(role);
             let marker = if is_active { "*" } else if exists { "-" } else { "+" };
@@ -532,25 +600,55 @@ pub fn rebuild_hardpoint_panel(
         row(parent, "remove this hardpoint".to_string(), false, Color::srgb(0.95, 0.7, 0.6))
             .observe(move |_: On<Activate>,
                            mut editor: ResMut<HardpointEditor>,
-                           mut player_def: ResMut<PlayerAssetDef>| {
-                if let Some(def) = player_def.0.as_mut() {
+                           mut player_def: ResMut<PlayerAssetDef>,
+                           mut weapon_def: ResMut<PlaygroundWeaponDef>| {
+                let def = match editor.side {
+                    HardpointSide::Character => player_def.0.as_mut(),
+                    HardpointSide::Weapon => weapon_def.def.as_mut(),
+                };
+                if let Some(def) = def {
                     def.hardpoints.remove(&removed);
                 }
                 editor.active_role = None;
                 editor.touch();
             });
 
-        let save_label = if dirty { "SAVE def (unsaved edits)" } else { "SAVE def" };
+        let save_label = match (side, dirty) {
+            (HardpointSide::Character, true) => "SAVE character def (unsaved edits)",
+            (HardpointSide::Character, false) => "SAVE character def",
+            (HardpointSide::Weapon, true) => "SAVE weapon def (unsaved edits)",
+            (HardpointSide::Weapon, false) => "SAVE weapon def",
+        };
         row(parent, save_label.to_string(), dirty, Color::srgb(0.7, 0.95, 0.75))
-            .observe(|_: On<Activate>,
+            .observe(move |_: On<Activate>,
                       mut editor: ResMut<HardpointEditor>,
-                      player_def: Res<PlayerAssetDef>| {
-                if let Some(def) = player_def.0.as_ref() {
-                    editor.status = save_player_def(def);
-                    editor.dirty = false;
+                      player_def: Res<PlayerAssetDef>,
+                      weapon_def: Res<PlaygroundWeaponDef>| {
+                let side = editor.side;
+                let saved = match side {
+                    HardpointSide::Character => {
+                        player_def.0.as_ref().map(save_player_def)
+                    }
+                    HardpointSide::Weapon => weapon_def
+                        .def
+                        .as_ref()
+                        .zip(weapon_def.def_path.as_deref())
+                        .map(|(def, path)| save_weapon_def(def, path)),
+                };
+                if let Some(status) = saved {
+                    editor.status = status;
+                    editor.set_dirty(side, false);
                     editor.ui_dirty = true;
                 }
             });
+
+        if !save_target.is_empty() {
+            parent.spawn((
+                Text::new(format!("-> {save_target}")),
+                TextFont::default().with_font_size(9.0),
+                TextColor(Color::srgb(0.45, 0.55, 0.6)),
+            ));
+        }
 
         if !status.is_empty() {
             parent.spawn((
@@ -558,6 +656,35 @@ pub fn rebuild_hardpoint_panel(
                 TextFont::default().with_font_size(10.0),
                 TextColor(Color::srgb(0.6, 0.85, 0.6)),
             ));
+        }
+
+        if side == HardpointSide::Weapon {
+            parent.spawn((
+                Text::new("weapon frames are relative to the model origin"),
+                TextFont::default().with_font_size(10.0),
+                TextColor(Color::srgb(0.55, 0.7, 0.8)),
+            ));
+            // A weapon frame that picked up a bone anchor (defs written against a
+            // character carry this) resolves to nothing and draws nothing, which reads as
+            // the frame being missing. This is the way back.
+            if hardpoint.anchor.is_some() {
+                let for_role = role.clone();
+                row(
+                    parent,
+                    "clear anchor (use model origin)".to_string(),
+                    false,
+                    Color::srgb(0.95, 0.85, 0.6),
+                )
+                .observe(move |_: On<Activate>,
+                               mut editor: ResMut<HardpointEditor>,
+                               mut weapon_def: ResMut<PlaygroundWeaponDef>| {
+                    if let Some(def) = weapon_def.def.as_mut() {
+                        ensure_role(def, &for_role).anchor = None;
+                    }
+                    editor.touch();
+                });
+            }
+            return;
         }
 
         // Anchor picker: the bones of the rig currently on screen.

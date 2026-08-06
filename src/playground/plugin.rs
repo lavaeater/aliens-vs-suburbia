@@ -17,7 +17,10 @@ use crate::playground::debug::{
     PlaygroundDebug,
 };
 use crate::playground::animation::AnimationEditor;
-use crate::playground::hardpoints::{apply_grip_to_equipped_weapon, HardpointEditor};
+use crate::playground::hardpoints::{
+    apply_grip_to_equipped_weapon, apply_weapon_def_to_equipped_weapon, sync_weapon_def,
+    HardpointEditor, PlaygroundWeaponDef,
+};
 use crate::playground::models::{swap_player_model, PlaygroundModels};
 use crate::playground::state::in_playground;
 use crate::playground::ui::{
@@ -33,7 +36,8 @@ pub struct PlaygroundPlugin;
 
 impl Plugin for PlaygroundPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
+        app.init_resource::<PlaygroundWeaponDef>()
+        .add_systems(
             OnEnter(GameState::InGame),
             (
                 load_playground_map,
@@ -62,8 +66,12 @@ impl Plugin for PlaygroundPlugin {
                 sync_physics_toggle,
                 rebuild_debug_toggles,
                 draw_player_overlays,
+                // Ordered: load the weapon def before the panel that draws it and the
+                // system that pushes it at the live weapon.
+                sync_weapon_def,
                 rebuild_hardpoint_panel,
                 apply_grip_to_equipped_weapon,
+                apply_weapon_def_to_equipped_weapon,
                 refresh_animation_panel_on_def_change,
                 rebuild_animation_panel,
             )
@@ -102,6 +110,9 @@ fn init_model_list(mut commands: Commands) {
     commands.insert_resource(PlaygroundModels::fresh());
     commands.insert_resource(PlaygroundDebug::default());
     commands.insert_resource(HardpointEditor { ui_dirty: true, ..Default::default() });
+    // Cleared rather than left over: `sync_weapon_def` compares paths, so a stale one from
+    // a previous session would suppress the reload of an edited-then-abandoned def.
+    commands.insert_resource(PlaygroundWeaponDef::default());
     commands.insert_resource(AnimationEditor { ui_dirty: true, ..Default::default() });
 }
 
@@ -113,8 +124,3 @@ fn silence_waves(mut waves: ResMut<WaveManager>) {
     waves.current_wave = 0;
     waves.spawning = false;
 }
-
-
-
-
-

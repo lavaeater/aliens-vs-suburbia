@@ -233,3 +233,44 @@ bound but plays nothing, which is the failure worth surfacing.
     so a swap firing immediately could race the map's own spawn and leave the default model
     on screen with the swap already consumed. `decide_swap` waits (bounded, then spawns one
     itself), which also means startup and a click take the same path.
+
+### Stage 6 — weapon-side hardpoints (built)
+
+Until now the panel only edited the *character's* frames, so the one thing you could not
+tune was where bullets leave the barrel. The panel now has a character/weapon switch at the
+top; the weapon side edits the def named by `PlayerProps::weapon`, offers the weapon-only
+`muzzle` role, and saves to its own file.
+
+- **The weapon def is loaded on the path, not on change.** `sync_weapon_def` compares the
+  wanted def path against the loaded one. Keying it on `PlayerAssetDef::is_changed()`
+  instead would look right and quietly discard every weapon edit made since the last Save,
+  because each hardpoint nudge marks that resource changed.
+- **Unsaved edits are tracked per side.** Two defs, two files, two Save buttons; one dirty
+  flag would lie about whichever side you were not looking at. Switching sides also drops
+  the selected role — `grip` exists on both, and carrying it over would silently edit the
+  other def while the panel looked unchanged.
+- **Edits reach the live gun through two components.** The grip goes into
+  `WeaponModel::weapon_grip` (`keep_weapons_snapped` rebuilds the transform from it every
+  frame) and the muzzle into `Weapon::muzzle`, which is where `shoot_weapons` takes the
+  tracer origin from — so you can hold fire while nudging and watch the streak line up with
+  the barrel.
+- **The weapon overlay only resolves `anchor: None`.** Weapon frames are relative to the
+  model origin. A weapon def that picked up a bone anchor (`Pistol.ron`'s `foregrip` has
+  `mixamorigHead`) resolves to nothing and draws nothing, which reads as a missing frame —
+  hence the "clear anchor" row on the weapon side.
+- **Saving goes to the path the def came from**, not `AssetDefinition::save`, which derives
+  the filename from the model stem. A weapon is reached by the explicit path in
+  `PlayerProps::weapon` and the two need not agree.
+
+Three `insert`s became `try_insert` along the way (`auto_outline_scenes`,
+`animation_plugin`'s graph-handle insert, `model_settings`' rebuild). All three run over
+entities that a model swap can despawn between the system queueing the command and the
+buffers being applied. This was a live crash: adding systems to the playground's `Update`
+tuple shifted the ordering enough that `auto_outline_scenes` landed on the despawned side
+of the race, and an `insert` on a dead entity is a hard error that takes the app down. It
+was already a warning-level near-miss on the same frame before the change.
+
+**Not verified in-window.** The game does not tick in this environment at the moment — it
+stalls a few frames after the window opens, before any playground system runs, on the
+pre-change baseline too — so this stage rests on the type checker, the unit tests, and the
+crash disappearing from the startup log. Worth a look at the panel before trusting it.

@@ -102,6 +102,15 @@ impl WeaponModel {
     pub fn set_char_grip(&mut self, grip: Hardpoint) {
         self.char_grip = grip;
     }
+
+    /// Replace the weapon-side grip frame — the counterpart of [`Self::set_char_grip`],
+    /// used when the playground edits the *weapon's* def rather than the character's.
+    /// Moving this frame slides the gun through the hand; moving the character grip moves
+    /// the hand's attachment point. Either can get a gun sitting right, and which one you
+    /// want depends on whether the fault is the rig or the model.
+    pub fn set_weapon_grip(&mut self, grip: Hardpoint) {
+        self.weapon_grip = grip;
+    }
 }
 
 /// Breadth-first search for a named entity under `root`, so we only ever match bones

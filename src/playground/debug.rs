@@ -17,6 +17,8 @@ use bevy::prelude::*;
 use crate::assets::gizmos::{bone_map, draw_hardpoints, draw_skeleton, joints_under};
 use crate::model_settings::plugin::PlayerAssetDef;
 use crate::player::components::Player;
+use crate::player::systems::equip::EquippedWeapon;
+use crate::playground::hardpoints::PlaygroundWeaponDef;
 
 #[derive(Resource, Default)]
 pub struct PlaygroundDebug {
@@ -79,8 +81,9 @@ pub fn reset_gizmo_bias(mut store: ResMut<GizmoConfigStore>) {
 pub fn draw_player_overlays(
     debug: Res<PlaygroundDebug>,
     player_def: Res<PlayerAssetDef>,
+    weapon_def: Res<PlaygroundWeaponDef>,
     mut gizmos: Gizmos,
-    players: Query<Entity, With<Player>>,
+    players: Query<(Entity, Option<&EquippedWeapon>), With<Player>>,
     children_q: Query<&Children>,
     skinned_q: Query<&SkinnedMesh>,
     transforms: Query<&GlobalTransform>,
@@ -91,7 +94,20 @@ pub fn draw_player_overlays(
         return;
     }
 
-    for player in players.iter() {
+    for (player, equipped) in players.iter() {
+        // The weapon hangs off a bone, so its frames are drawable whether or not the
+        // character's own skeleton resolved.
+        if debug.hardpoints
+            && let Some(equipped) = equipped
+            && let Some(def) = weapon_def.def.as_ref()
+        {
+            // Weapon hardpoints are authored against the model origin (`anchor: None`),
+            // which for a spawned weapon is the weapon entity itself.
+            draw_hardpoints(&mut gizmos, &def.hardpoints, None, &transforms, |anchor| {
+                anchor.is_none().then_some(equipped.0)
+            });
+        }
+
         let joints = joints_under(player, &children_q, &skinned_q);
         if joints.is_empty() {
             continue;
