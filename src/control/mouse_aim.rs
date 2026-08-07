@@ -15,6 +15,7 @@ use crate::player::components::{AutoAim, Player, PlayerDead};
 
 /// Project the cursor onto the ground plane and point the keyboard player's `AutoAim`
 /// from the player toward it.
+#[allow(clippy::type_complexity)]
 pub fn mouse_aim(
     windows: Query<&Window, With<PrimaryWindow>>,
     cameras: Query<(&Camera, &GlobalTransform), With<GameCamera>>,

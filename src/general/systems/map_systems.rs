@@ -204,6 +204,7 @@ pub fn map_loader(
                         }
                         max_row += 1;
                     }
+                    
                     for r in row..=max_row { for c in col..=max_col { covered[r][c] = true; } }
                     let w = (max_col - col + 1) as f32;
                     let h = (max_row - row + 1) as f32;
