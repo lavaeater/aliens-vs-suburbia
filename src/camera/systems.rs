@@ -2,7 +2,6 @@ use crate::camera::components::{CameraOffset, GameCamera, PixelCanvas};
 use crate::player::components::Player;
 use crate::settings::resources::{GameSettings, ProjectionMode};
 use avian3d::interpolation::TransformInterpolation;
-use avian3d::physics_transform::PhysicsTransformSystems::TransformToPosition;
 use avian3d::prelude::Position;
 use bevy::camera::visibility::RenderLayers;
 use bevy::camera::{ImageRenderTarget, Projection, RenderTarget, ScalingMode};
@@ -13,7 +12,6 @@ use bevy::prelude::{
     PerspectiveProjection, Query, Res, ResMut, Sprite, Transform, Window, With, default,
 };
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages};
-use bevy::time::Time;
 use bevy::window::PrimaryWindow;
 use std::f32::consts::PI;
 
@@ -158,13 +156,10 @@ pub fn resize_pixel_canvas(
 pub fn camera_follow(
     mut camera_query: Query<(&mut Transform, &CameraOffset), With<GameCamera>>,
     player_position: Query<&Position, With<Player>>,
-    time: Res<Time>,
 ) {
     for (mut camera_transform, offset) in camera_query.iter_mut() {
         for player_position in player_position.iter() {
-            // let follow_speed = 10.0;
             camera_transform.translation = player_position.0 + offset.0;
-            // camera_transform.translation = player_position.0 + offset.0;
             camera_transform.look_at(player_position.0, Vec3::Y);
         }
     }
