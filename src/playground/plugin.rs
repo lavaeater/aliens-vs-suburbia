@@ -27,7 +27,7 @@ use crate::playground::ui::{
     clear_playground_viewport, end_playground_session, rebuild_debug_toggles,
     rebuild_animation_panel, rebuild_import_browser, rebuild_hardpoint_panel,
     rebuild_model_list, refresh_animation_panel_on_def_change, spawn_playground_ui,
-    sync_playground_viewport,
+    sync_playground_viewport, sync_section_collapse, CollapsedSections,
 };
 
 const PLAYGROUND_MAP: &str = "assets/maps/playground.ron";
@@ -37,6 +37,7 @@ pub struct PlaygroundPlugin;
 impl Plugin for PlaygroundPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PlaygroundWeaponDef>()
+            .init_resource::<CollapsedSections>()
         .add_systems(
             OnEnter(GameState::InGame),
             (
@@ -59,6 +60,7 @@ impl Plugin for PlaygroundPlugin {
             Update,
             (
                 sync_playground_viewport,
+                sync_section_collapse,
                 respawn_dummies,
                 swap_player_model,
                 rebuild_model_list,
@@ -113,6 +115,9 @@ fn init_model_list(mut commands: Commands) {
     // Cleared rather than left over: `sync_weapon_def` compares paths, so a stale one from
     // a previous session would suppress the reload of an edited-then-abandoned def.
     commands.insert_resource(PlaygroundWeaponDef::default());
+    // Every section open on entry: the fold state is a working preference, not something
+    // to inherit from whatever you were doing last session.
+    commands.insert_resource(CollapsedSections::default());
     commands.insert_resource(AnimationEditor { ui_dirty: true, ..Default::default() });
 }
 

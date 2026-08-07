@@ -177,7 +177,7 @@ fn main() {
                 ..Default::default()
             },
         )
-        .add_plugins(FlatShaderPlugin::global())
+        // .add_plugins(FlatShaderPlugin::global())
         .add_plugins(PixelShaderPlugin::default())
         .add_plugins(GamePlugin);
 

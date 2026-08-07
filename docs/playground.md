@@ -274,3 +274,44 @@ was already a warning-level near-miss on the same frame before the change.
 stalls a few frames after the window opens, before any playground system runs, on the
 pre-change baseline too — so this stage rests on the type checker, the unit tests, and the
 crash disappearing from the startup log. Worth a look at the panel before trusting it.
+
+### Stage 7 — foldable sections, and the invisible-model trap (built)
+
+Two problems, one session.
+
+**The lists were too small.** Five stacked lists in one column left the model list about four
+rows tall. Each section title is now a button that folds its bodies away
+(`CollapsedSections`, `SectionHeader`, `SectionBody`), the left pane scrolls as a whole, and
+the per-list cap went from 220px to 420px. Folding beats picking fixed heights: which list
+needs the room depends on what you are doing. A section can own several bodies — IMPORT is a
+path label, a list and a status line — which is why `SectionBody` is a component rather than
+a field on the container.
+
+**Newly added models did not render, and could not.** `models/male-anims.glb` and
+`female-anims.glb` are animation libraries: 162 clips, 66 bones, **zero meshes**. Imported as
+player models they wrote perfectly valid defs, spawned perfectly valid characters, and drew
+nothing — indistinguishable from a load failure. `gltf_info` now reads the glTF JSON chunk
+straight off the file (synchronously, without `AssetServer`, because the answer is needed
+while building a list) and:
+
+- the import browser labels such files `(anims only -> add as source)` and, on click, adds
+  them to the worn character's `animation_sources` instead of writing a dead def;
+- clips are tagged `<stem>/<clip>` as they are added, because the animation panel binds keys
+  to *tag paths* — a source added without tags contributes 162 clips nothing can bind to;
+- the model list marks existing mesh-less defs `(no mesh)` and refuses to wear them, which
+  covers the two already on disk;
+- an unreadable file is *not* a verdict — it stays importable, so an inspector bug can never
+  lock a real model out of the list.
+
+No respawn is needed when a source is added: `build_player_anim_graph` folds
+`animation_sources` into its signature and waits for the extra GLTFs to load before
+committing, so the clips arrive on the live character by themselves.
+
+Verified in-window this time (the game ticks again): 6 player defs with both libraries
+flagged; folding MODEL sets its body to `Display::None` and its header to `[+] MODEL` while
+every other section stays `Flex`; the weapon side loads `Pistol.ron` with roles
+`["foregrip", "grip", "muzzle"]` and the live `Weapon::muzzle` matches the def.
+
+That last check turned up a real data bug to fix in the panel: `Pistol.ron`'s muzzle sits at
+local `(0, 0, -2)`, which resolves to a world point *below the floor* — tracers currently
+start under the player's feet.

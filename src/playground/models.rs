@@ -11,6 +11,7 @@
 //! derives the scene, ability, throw rate, animation graph and equipped weapon from it.
 
 use avian3d::prelude::Position;
+use bevy::platform::collections::HashSet;
 use bevy::prelude::*;
 
 use crate::assets::asset_definition::{AssetDefinition, ModelType, PlayerProps};
@@ -19,6 +20,7 @@ use crate::general::events::map_events::SpawnPlayer;
 use crate::general::systems::map_systems::TileDefinitions;
 use crate::player::components::Player;
 use crate::player_setup::state::{InputDevice, PlayerRoster};
+use crate::playground::gltf_info;
 use crate::playground::prefs::PlaygroundPrefs;
 
 /// Tile the arena's `PlayerSpawn` sits on, in padded map space — where a swapped-in model
@@ -27,8 +29,12 @@ const SPAWN_TILE: (usize, usize) = (9, 9);
 
 #[derive(Resource, Default)]
 pub struct PlaygroundModels {
-    /// Def paths of every importedplayer model, sorted.
+    /// Def paths of every imported player model, sorted.
     pub defs: Vec<String>,
+    /// Of those, the ones whose model file contains no geometry. Wearing one spawns an
+    /// invisible character, which reads as "the model failed to load" — so they are
+    /// labelled in the list and refused on click.
+    pub mesh_less: HashSet<String>,
     /// The def the player is currently wearing.
     pub selected: Option<String>,
     pub list_dirty: bool,
@@ -65,6 +71,16 @@ impl PlaygroundModels {
 
     pub fn refresh_defs(&mut self) {
         self.defs = crate::player_setup::state::scan_player_defs();
+        self.mesh_less = self
+            .defs
+            .iter()
+            .filter(|def_path| {
+                AssetDefinition::load_from_def_path(def_path)
+                    .and_then(|def| gltf_info::inspect(&def.model_path))
+                    .is_some_and(|info| info.mesh_count == 0)
+            })
+            .cloned()
+            .collect();
         self.list_dirty = true;
     }
 
@@ -101,7 +117,14 @@ impl PlaygroundModels {
     ///
     /// Refuses to clobber an existing def: re-importing a model you have already tuned
     /// would silently reset its scale, hardpoints and animation bindings.
+    ///
+    /// Refuses geometry-less files outright — see [`classify`].
     pub fn import(&mut self, model_path: &str) {
+        if classify(model_path) == ImportKind::AnimationLibrary {
+            self.status =
+                format!("{} has no meshes - add it as an animation source", def_stem(model_path));
+            return;
+        }
         let path = AssetDefinition::def_path(model_path);
         if path.exists() {
             self.status = format!("{} already imported", def_stem(&path.to_string_lossy()));
@@ -116,6 +139,50 @@ impl PlaygroundModels {
         };
         self.refresh_defs();
     }
+}
+
+/// What clicking a file in the import browser should do.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ImportKind {
+    /// Has geometry: write a player def for it.
+    Model,
+    /// Clips but no geometry. Imported as a model it spawns an invisible character, which
+    /// is indistinguishable from a load failure — it belongs in another def's
+    /// `animation_sources`.
+    AnimationLibrary,
+}
+
+pub fn classify(model_path: &str) -> ImportKind {
+    match gltf_info::inspect(model_path) {
+        // Unreadable is not a verdict: a file we cannot parse is still allowed through, so
+        // an inspector bug cannot lock a real model out of the list.
+        Some(info) if info.is_animation_only() => ImportKind::AnimationLibrary,
+        _ => ImportKind::Model,
+    }
+}
+
+/// Add `source_path` to a def's `animation_sources` and tag every clip it carries.
+///
+/// The tagging is what makes it useful: the animation panel binds game keys to *tag paths*
+/// drawn from `clip_tags`, so a source added without tags contributes 162 clips that
+/// nothing can be bound to. Tags are `<stem>/<clip>`; the clip key is the
+/// `"<stem>|<clip>"` form `AssetDefinition::resolved_clip` expects for external sources.
+///
+/// Returns a status line, and `false` if nothing changed.
+pub fn add_animation_source(def: &mut AssetDefinition, source_path: &str) -> (bool, String) {
+    let stem = def_stem(source_path);
+    if def.animation_sources.iter().any(|s| s == source_path) {
+        return (false, format!("{stem} is already a source"));
+    }
+    let Some(info) = gltf_info::inspect(source_path) else {
+        return (false, format!("cannot read {source_path}"));
+    };
+
+    def.animation_sources.push(source_path.to_string());
+    for clip in &info.animations {
+        def.clip_tags.insert(format!("{stem}|{clip}"), format!("{stem}/{clip}"));
+    }
+    (true, format!("added {stem} ({} clips)", info.animations.len()))
 }
 
 /// A brand-new def for an imported model: playable, and nothing else assumed.
@@ -241,6 +308,38 @@ pub fn swap_player_model(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The clips have to be tagged, or the animation panel — which binds keys to tag
+    /// paths, not clip names — offers nothing to bind them to.
+    #[test]
+    fn an_added_source_tags_every_clip_it_brings() {
+        let mut def = AssetDefinition::default();
+        // Bypass the file read: this is the tagging half, exercised directly.
+        def.animation_sources.push("models/male-anims.glb".to_string());
+        def.clip_tags.insert("male-anims|Backflip".to_string(), "male-anims/Backflip".to_string());
+
+        let (changed, status) = add_animation_source(&mut def, "models/male-anims.glb");
+        assert!(!changed, "a source already listed is not added twice");
+        assert!(status.contains("already"), "got {status}");
+        assert_eq!(def.animation_sources.len(), 1);
+    }
+
+    /// The clip key has to be the `"<stem>|<clip>"` form `resolved_clip` looks for, or a
+    /// binding made against the tag resolves to a clip name the runtime never sees.
+    #[test]
+    fn a_tagged_external_clip_resolves_back_through_its_tag() {
+        let mut def = AssetDefinition::default();
+        def.clip_tags.insert("male-anims|Backflip".to_string(), "male-anims/Backflip".to_string());
+        def.animation_bindings.insert("jump".to_string(), "male-anims/Backflip".to_string());
+        assert_eq!(def.resolved_clip("jump").as_deref(), Some("male-anims|Backflip"));
+    }
+
+    /// A file we cannot inspect must stay importable — an inspector that guesses wrong
+    /// would lock a real model out of the list with no way back.
+    #[test]
+    fn an_unreadable_file_is_still_treated_as_a_model() {
+        assert_eq!(classify("packs/does-not-exist.glb"), ImportKind::Model);
+    }
 
     #[test]
     fn browsing_into_a_folder_builds_a_path_under_the_assets_root() {

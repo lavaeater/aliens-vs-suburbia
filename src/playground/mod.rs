@@ -12,6 +12,7 @@
 pub mod animation;
 pub mod debug;
 pub mod dummies;
+pub mod gltf_info;
 pub mod hardpoints;
 pub mod models;
 pub mod plugin;
