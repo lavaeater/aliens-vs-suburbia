@@ -1,3 +1,4 @@
+use avian3d::prelude::{PhysicsSet, PhysicsSystems};
 use bevy::app::{App, Plugin, PostUpdate, Update};
 use bevy::ecs::schedule::SystemCondition;
 use bevy::prelude::{in_state, resource_changed, IntoScheduleConfigs, OnEnter};
@@ -21,7 +22,7 @@ impl Plugin for StatefulCameraPlugin {
         .add_systems(
             PostUpdate,
             camera_follow
-                .before(TransformSystems::Propagate)
+                .after(PhysicsSystems::Writeback)
                 .run_if(in_state(GameState::InGame)),
         )
         .add_systems(

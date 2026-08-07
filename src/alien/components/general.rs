@@ -9,7 +9,7 @@ use crate::general::components::{Attack, CollisionLayer, Health, HittableTarget,
 use crate::player::systems::spawn_players::FixSceneTransform;
 use avian3d::prelude::{
     AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes,
-    RigidBody,
+    RigidBody
 };
 use crate::CurrentTile;
 

@@ -11,7 +11,6 @@ use bevy::log::LogPlugin;
 use bevy::{DefaultPlugins, log};
 use bevy_skein::SkeinPlugin;
 use bevy_wind_waker_shader::flat::FlatShaderPlugin;
-use bevy_wind_waker_shader::pixelate::PixelShaderPlugin;
 use camera::components::CameraOffset;
 use control::components::CharacterControl;
 
@@ -63,7 +62,7 @@ fn create_map(seed: Option<u64>, width: usize, height: usize, output: Option<Str
             .into_owned()
     });
 
-    let map = crate::map::map_generator::generate_suburb_map(seed, width, height);
+    let map = map::map_generator::generate_suburb_map(seed, width, height);
 
     let pretty = ron::ser::PrettyConfig::new().depth_limit(4);
     let out = ron::ser::to_string_pretty(&map, pretty)
@@ -177,8 +176,8 @@ fn main() {
                 ..Default::default()
             },
         )
-        // .add_plugins(FlatShaderPlugin::global())
-        .add_plugins(PixelShaderPlugin::default())
+        .add_plugins(FlatShaderPlugin::global())
+        // .add_plugins(PixelShaderPlugin::default())
         .add_plugins(GamePlugin);
 
     if straight_to_playground {

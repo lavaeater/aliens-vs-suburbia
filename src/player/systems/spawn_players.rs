@@ -1,3 +1,4 @@
+use avian3d::interpolation::TransformInterpolation;
 use bevy::math::{Quat, Vec3};
 use bevy::prelude::*;
 use bevy::asset::AssetServer;
@@ -122,6 +123,7 @@ pub fn spawn_players(
                 WorldAssetRoot(scene),
                 pos,
                 Collider::cuboid(0.5, 0.5, 0.45),
+                // TransformInterpolation,
                 PlayerBundle::with_throw_rate(
                     "player",
                     [CollisionLayer::Player],
