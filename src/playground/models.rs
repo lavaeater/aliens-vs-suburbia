@@ -39,6 +39,10 @@ pub struct PlaygroundModels {
     pub selected: Option<String>,
     pub list_dirty: bool,
 
+    /// Def paths of every weapon, sorted. Any of them can be handed to any character —
+    /// that is the whole promise of hardpoints, and this is where it gets tried.
+    pub weapon_defs: Vec<String>,
+
     /// Folder the import browser is showing, relative to `assets/`.
     pub browse_folder: String,
     pub folders: Vec<String>,
@@ -71,6 +75,7 @@ impl PlaygroundModels {
 
     pub fn refresh_defs(&mut self) {
         self.defs = crate::player_setup::state::scan_player_defs();
+        self.weapon_defs = scan_weapon_defs();
         self.mesh_less = self
             .defs
             .iter()
@@ -139,6 +144,38 @@ impl PlaygroundModels {
         };
         self.refresh_defs();
     }
+}
+
+/// Every `assets/defs/*.ron` whose `model_type` is `Weapon`, sorted.
+///
+/// The counterpart of `scan_player_defs`, kept here rather than beside it because the
+/// player-setup screen has no use for weapons — only the playground hands them out.
+pub fn scan_weapon_defs() -> Vec<String> {
+    let Ok(entries) = std::fs::read_dir("assets/defs") else { return vec![] };
+    let mut paths: Vec<String> = entries
+        .flatten()
+        .filter_map(|entry| {
+            let path = entry.path();
+            if path.extension()?.to_str()? != "ron" {
+                return None;
+            }
+            let def = AssetDefinition::load_from_def_path(path.to_str()?)?;
+            matches!(def.model_type, ModelType::Weapon(_))
+                .then(|| path.to_string_lossy().replace('\\', "/"))
+        })
+        .collect();
+    paths.sort();
+    paths
+}
+
+/// Point a character def at a weapon def.
+///
+/// Returns `false` for a def that is not a character — `PlayerProps` is where the weapon
+/// lives, and there is nowhere to put it on a tower or an alien.
+pub fn set_weapon(def: &mut AssetDefinition, weapon_def_path: Option<&str>) -> bool {
+    let ModelType::Player(props) = &mut def.model_type else { return false };
+    props.weapon = weapon_def_path.map(str::to_string);
+    true
 }
 
 /// What clicking a file in the import browser should do.

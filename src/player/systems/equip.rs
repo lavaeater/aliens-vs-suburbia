@@ -12,10 +12,13 @@ use bevy::prelude::*;
 use bevy::gltf::GltfAssetLabel;
 use bevy::world_serialization::WorldAssetRoot;
 
-use crate::assets::asset_definition::{AssetDefinition, Hardpoint, ModelType, WeaponProps};
+use crate::assets::asset_definition::{
+    AssetDefinition, Hardpoint, ModelType, WeaponHands, WeaponProps,
+};
 use crate::assets::hardpoint::{snap_transform, weapon_local_scale};
 use crate::player::systems::shoot::Weapon;
 use crate::player::systems::spawn_players::PlayerModelRoot;
+use crate::player::systems::weapon_aim::{self, AimedWeapon};
 
 /// The role both sides use to attach a one-handed weapon to a hand.
 pub const GRIP_ROLE: &str = "grip";
@@ -44,7 +47,26 @@ pub struct PendingEquip {
     pub muzzle: Option<Hardpoint>,
     /// Combat stats resolved from the weapon def.
     pub weapon_props: WeaponProps,
+    /// Set when this pairing is flown from the aim instead of parented to a hand.
+    pub aimed: Option<AimedPlan>,
     tries: u32,
+}
+
+/// Everything the aim-driven path needs, resolved from the two defs at spawn time.
+///
+/// Present only for weapons that can actually be flown from the aim: two-handed, with a
+/// muzzle to point, and a hardpoint role both sides carry to pin them together. Anything
+/// else keeps the hand-parented snap, which is right for a pistol anyway.
+#[derive(Clone)]
+pub struct AimedPlan {
+    /// Role pinning weapon to character — `stock` for a shouldered rifle, else `grip`.
+    pub role: String,
+    /// The character's frame for that role (its `anchor` names the bone).
+    pub char_anchor: Hardpoint,
+    /// The weapon-local point pinned to it.
+    pub weapon_anchor: Vec3,
+    /// Weapon-local anchor-to-muzzle direction.
+    pub weapon_axis: Vec3,
 }
 
 impl PendingEquip {
@@ -60,6 +82,7 @@ impl PendingEquip {
         let weapon_props = props.clone();
         let weapon_grip = weapon.hardpoints.get(GRIP_ROLE)?.clone();
         let muzzle = weapon.hardpoints.get(MUZZLE_ROLE).cloned();
+        let aimed = plan_aimed(character, &weapon, &weapon_props, muzzle.as_ref());
         Some(Self {
             bone: char_grip.anchor.clone(),
             char_grip,
@@ -68,9 +91,41 @@ impl PendingEquip {
             weapon_scale: weapon.scale,
             muzzle,
             weapon_props,
+            aimed,
             tries: 0,
         })
     }
+}
+
+/// Decide whether this pairing can be flown from the aim, and with what.
+fn plan_aimed(
+    character: &AssetDefinition,
+    weapon: &AssetDefinition,
+    props: &WeaponProps,
+    muzzle: Option<&Hardpoint>,
+) -> Option<AimedPlan> {
+    if props.hands != WeaponHands::TwoHanded {
+        return None;
+    }
+    // No muzzle, no axis to point: there is nothing to aim along.
+    let muzzle = muzzle?;
+    let role = weapon_aim::anchor_role(
+        |role| character.hardpoints.contains_key(role),
+        |role| weapon.hardpoints.contains_key(role),
+        &weapon_aim::ANCHOR_ROLES,
+    )?;
+
+    let char_anchor = character.hardpoints.get(role)?.clone();
+    let weapon_anchor = weapon_aim::hardpoint_point(weapon.hardpoints.get(role)?);
+    Some(AimedPlan {
+        role: role.to_string(),
+        char_anchor,
+        weapon_anchor,
+        weapon_axis: weapon_aim::weapon_axis(
+            weapon_anchor,
+            weapon_aim::hardpoint_point(muzzle),
+        ),
+    })
 }
 
 /// The weapon entity currently held by this character. Also the "already equipped"
@@ -163,6 +218,66 @@ pub fn equip_pending_weapons(
     root_q: Query<(), With<PlayerModelRoot>>,
 ) {
     for (character, mut equip) in pending.iter_mut() {
+        // The aim-driven path wants a different bone (the anchor role's, which may be a
+        // shoulder rather than a hand) and a different parent (the character root, so the
+        // arm IK cannot move the very thing it is reaching for).
+        let aim_bone = match equip.aimed.as_ref().map(|plan| plan.char_anchor.anchor.clone()) {
+            None => None,
+            Some(None) => Some(character),
+            Some(Some(bone)) => match find_descendant_named(character, &bone, &children, &names) {
+                Some(entity) => Some(entity),
+                None => {
+                    equip.tries += 1;
+                    if equip.tries >= EQUIP_MAX_TRIES {
+                        warn!(
+                            "anchor bone '{bone}' never appeared under the character; \
+                             not equipping {}",
+                            equip.weapon_model_path
+                        );
+                        commands.entity(character).remove::<PendingEquip>();
+                    }
+                    continue;
+                }
+            },
+        };
+
+        if let (Some(plan), Some(anchor_bone)) = (equip.aimed.clone(), aim_bone) {
+            let Some(root) = find_descendant_root(character, &children, &root_q) else {
+                equip.tries += 1;
+                continue;
+            };
+            let scene = asset_server
+                .load(GltfAssetLabel::Scene(0).from_asset(equip.weapon_model_path.clone()));
+            let weapon = commands
+                .spawn((
+                    WorldAssetRoot(scene),
+                    Transform::default(),
+                    AimedWeapon {
+                        owner: character,
+                        anchor_bone,
+                        anchor_offset: Vec3::from(plan.char_anchor.translation),
+                        weapon_anchor: plan.weapon_anchor,
+                        weapon_axis: plan.weapon_axis,
+                        model_root: root,
+                        def_scale: equip.weapon_scale,
+                    },
+                    Weapon::from_props(&equip.weapon_props, equip.muzzle.clone()),
+                ))
+                .id();
+            commands.entity(character).add_child(weapon);
+            commands
+                .entity(character)
+                .insert(EquippedWeapon(weapon))
+                .remove::<PendingEquip>();
+            // Which role won says a lot about how it will look: `stock` is shouldered,
+            // `grip` pivots about the trigger hand because the weapon has no stock frame.
+            info!(
+                "aim-driven weapon {} anchored at '{}'",
+                equip.weapon_model_path, plan.role
+            );
+            continue;
+        }
+
         let anchor = match equip.bone.clone() {
             None => character,
             Some(bone) => match find_descendant_named(character, &bone, &children, &names) {

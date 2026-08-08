@@ -26,7 +26,8 @@ use crate::playground::state::in_playground;
 use crate::playground::ui::{
     clear_playground_viewport, end_playground_session, rebuild_debug_toggles,
     rebuild_animation_panel, rebuild_import_browser, rebuild_hardpoint_panel,
-    rebuild_model_list, refresh_animation_panel_on_def_change, spawn_playground_ui,
+    rebuild_model_list, rebuild_weapon_list, refresh_animation_panel_on_def_change,
+    spawn_playground_ui,
     sync_playground_viewport, sync_section_collapse, CollapsedSections,
 };
 
@@ -64,6 +65,7 @@ impl Plugin for PlaygroundPlugin {
                 respawn_dummies,
                 swap_player_model,
                 rebuild_model_list,
+                rebuild_weapon_list,
                 rebuild_import_browser,
                 sync_physics_toggle,
                 rebuild_debug_toggles,

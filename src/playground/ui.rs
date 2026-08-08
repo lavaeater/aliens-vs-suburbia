@@ -30,7 +30,7 @@ use crate::playground::hardpoints::{
     FINE_ROTATION, FINE_TRANSLATION,
 };
 use crate::playground::models::{
-    add_animation_source, classify, def_stem, ImportKind, PlaygroundModels,
+    add_animation_source, classify, def_stem, set_weapon, ImportKind, PlaygroundModels,
 };
 use crate::playground::state::PlaygroundSession;
 use crate::ui::spawn_ui::StateMarker;
@@ -48,6 +48,7 @@ pub struct PlaygroundViewportPane;
 pub enum Section {
     Debug,
     Model,
+    Weapon,
     Import,
     Hardpoints,
     Animation,
@@ -58,6 +59,7 @@ impl Section {
         match self {
             Section::Debug => "DEBUG VIEW",
             Section::Model => "MODEL",
+            Section::Weapon => "WEAPON",
             Section::Import => "IMPORT",
             Section::Hardpoints => "HARDPOINTS",
             Section::Animation => "ANIMATION",
@@ -102,6 +104,10 @@ pub struct PlaygroundPanel;
 /// Holds one clickable row per imported player def.
 #[derive(Component)]
 pub struct ModelListContainer;
+
+/// Holds one clickable row per weapon def.
+#[derive(Component)]
+pub struct WeaponListContainer;
 
 /// Holds the import browser's folder and file rows.
 #[derive(Component)]
@@ -242,6 +248,19 @@ pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
             c.display_flex().flex_column().gap_px(2.0)
              .insert(ModelListContainer).insert(ScrollPosition::default())
              .insert(SectionBody(Section::Model))
+             .modify_node(|mut n| {
+                 n.align_self = AlignSelf::Stretch;
+                 n.max_height = Val::Px(LIST_MAX_HEIGHT);
+                 n.overflow = Overflow::scroll_y();
+             });
+        });
+
+        // ── Weapon ───────────────────────────────────────────────────────
+        section_header(left, Section::Weapon, &section);
+        left.with_child(|c| {
+            c.display_flex().flex_column().gap_px(2.0)
+             .insert(WeaponListContainer).insert(ScrollPosition::default())
+             .insert(SectionBody(Section::Weapon))
              .modify_node(|mut n| {
                  n.align_self = AlignSelf::Stretch;
                  n.max_height = Val::Px(LIST_MAX_HEIGHT);
@@ -1087,6 +1106,96 @@ fn attach_animation_source(
 
     def.save();
     animation.ui_dirty = true;
+}
+
+/// Rebuild the weapon list: every weapon def, with the one the worn character carries
+/// marked.
+///
+/// Picking one writes `PlayerProps.weapon`, saves, and re-selects the model — the weapon
+/// is resolved by `PendingEquip` at spawn time, so it takes a respawn to change, and the
+/// respawn reads the def from disk, which is why the save has to come first.
+pub fn rebuild_weapon_list(
+    mut models: ResMut<PlaygroundModels>,
+    player_def: Res<PlayerAssetDef>,
+    mut commands: Commands,
+    container_q: Query<Entity, With<WeaponListContainer>>,
+    mut last: Local<Option<String>>,
+) {
+    let equipped = player_def.0.as_ref().and_then(|def| match &def.model_type {
+        crate::assets::asset_definition::ModelType::Player(props) => props.weapon.clone(),
+        _ => None,
+    });
+    // Follows both a model swap (which changes what is equipped) and the list itself.
+    let changed = *last != equipped;
+    if !models.list_dirty && !changed {
+        return;
+    }
+    *last = equipped.clone();
+
+    let Ok(container) = container_q.single() else { return };
+    commands.entity(container).despawn_related::<Children>();
+
+    let weapons = models.weapon_defs.clone();
+    let is_character = player_def
+        .0
+        .as_ref()
+        .is_some_and(|def| matches!(def.model_type, crate::assets::asset_definition::ModelType::Player(_)));
+    models.list_dirty = false;
+
+    commands.entity(container).with_children(|parent| {
+        if !is_character {
+            parent.spawn((
+                Text::new("no character worn"),
+                TextFont::default().with_font_size(11.0),
+                TextColor(Color::srgb(0.6, 0.5, 0.4)),
+            ));
+            return;
+        }
+
+        let none_selected = equipped.is_none();
+        row(parent, format!("{} (none)", if none_selected { "*" } else { " " }),
+            none_selected, Color::srgb(0.8, 0.8, 0.85))
+            .observe(|_: On<Activate>,
+                      mut models: ResMut<PlaygroundModels>,
+                      mut player_def: ResMut<PlayerAssetDef>| {
+                equip_weapon(None, &mut models, &mut player_def);
+            });
+
+        for weapon_path in weapons {
+            let is_equipped = equipped.as_deref() == Some(weapon_path.as_str());
+            let label =
+                format!("{} {}", if is_equipped { "*" } else { " " }, def_stem(&weapon_path));
+            let chosen = weapon_path.clone();
+            row(parent, label, is_equipped, Color::srgb(0.9, 0.88, 0.75)).observe(
+                move |_: On<Activate>,
+                      mut models: ResMut<PlaygroundModels>,
+                      mut player_def: ResMut<PlayerAssetDef>| {
+                    equip_weapon(Some(&chosen), &mut models, &mut player_def);
+                },
+            );
+        }
+    });
+}
+
+fn equip_weapon(
+    weapon_def_path: Option<&str>,
+    models: &mut PlaygroundModels,
+    player_def: &mut PlayerAssetDef,
+) {
+    let Some(def) = player_def.0.as_mut() else { return };
+    if !set_weapon(def, weapon_def_path) {
+        models.status = "the worn def is not a character".to_string();
+        return;
+    }
+    def.save();
+    models.status = match weapon_def_path {
+        Some(path) => format!("equipped {}", def_stem(path)),
+        None => "unequipped".to_string(),
+    };
+    models.list_dirty = true;
+    if let Some(worn) = models.selected.clone() {
+        models.select(&worn);
+    }
 }
 
 pub fn rebuild_import_browser(
