@@ -1,10 +1,10 @@
 (
     model_path: "packs/mesh2motion/swat-2.glb",
-    scale: 1.455408,
+    scale: 1.3098671,
     model_type: Player((
         ability: Bombardment,
         throw_rate_per_minute: 60.0,
-        weapon: None,
+        weapon: Some("assets/defs/Pistol.ron"),
     )),
     hidden_nodes: [],
     animation_mapping: {},
@@ -12,6 +12,22 @@
     animation_bindings: {},
     animation_sources: [],
     attachments: [],
-    hardpoints: {},
+    hardpoints: {
+        "foregrip": (
+            anchor: Some("thumb_02_r"),
+            translation: (0.0, 0.0, 0.0),
+            rotation_euler_deg: (0.0, 0.0, 0.0),
+        ),
+        "grip": (
+            anchor: Some("index_02_l"),
+            translation: (0.0, 0.0, 0.0),
+            rotation_euler_deg: (0.0, 0.0, 0.0),
+        ),
+        "stock": (
+            anchor: Some("upperarm_r"),
+            translation: (0.0, 0.0, 0.0),
+            rotation_euler_deg: (0.0, 0.0, 0.0),
+        ),
+    },
     aim_bones: [],
 )
