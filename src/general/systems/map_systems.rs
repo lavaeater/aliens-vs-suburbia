@@ -208,9 +208,13 @@ pub fn map_loader(
                     for r in row..=max_row { for c in col..=max_col { covered[r][c] = true; } }
                     let w = (max_col - col + 1) as f32;
                     let h = (max_row - row + 1) as f32;
+                    // Sunk by its own half-height so the slab's *top* is the visual floor
+                    // plane, which is drawn flat at `floor_level`. Centred on that plane
+                    // instead, the collider's surface sat half a slab above the floor you
+                    // can see, and everything that walks on it stood that far in the air.
                     let center = Vec3::new(
                         tile_defs.tile_width * (col + max_col) as f32 / 2.0,
-                        tile_defs.floor_level,
+                        tile_defs.floor_level - floor_model_def.height * tile_defs.tile_unit,
                         tile_defs.tile_width * (row + max_row) as f32 / 2.0,
                     );
                     commands.spawn((

@@ -32,6 +32,13 @@ const RESPAWN_DELAY: f32 = 3.0;
 /// The player spawns at the centre of the 16x16 arena, padded (9, 9).
 const POST_TILES: [(usize, usize); 3] = [(5, 5), (9, 4), (13, 5)];
 
+/// Half-height of the alien capsule (radius 1.0 plus half of its 1.0 length), in the
+/// entity's own space — see `alien::components::general`.
+const ALIEN_CAPSULE_HALF_HEIGHT: f32 = 1.5;
+
+/// The scale dummies are spawned at.
+const DUMMY_SCALE: f32 = 0.25;
+
 /// A fixed spot in the arena that keeps a dummy standing on it.
 #[derive(Component)]
 pub struct DummyPost {
@@ -50,7 +57,12 @@ pub struct TargetDummy;
 /// frame, which keeps the spawn logic in exactly one place.
 pub fn spawn_dummy_posts(mut commands: Commands, tile_defs: Res<TileDefinitions>) {
     for (col, row) in POST_TILES {
-        let position = (col, row).to_world_coords(&tile_defs) + Vec3::new(0.0, 1.0, 0.0);
+        // `to_world_coords` gives y = 0, which is well above the floor, and a dummy is a
+        // *static* body — it never falls to correct that the way a real alien does. So the
+        // standing height is worked out here: the floor plane plus the capsule's
+        // half-height at the dummy's scale, which puts its feet on the ground.
+        let position = (col, row).to_world_coords(&tile_defs)
+            + Vec3::Y * (tile_defs.floor_level + ALIEN_CAPSULE_HALF_HEIGHT * DUMMY_SCALE);
         commands.spawn((
             Name::from("Dummy Post"),
             DummyPost { position, occupant: None, respawn_in: 0.0 },
@@ -92,7 +104,7 @@ pub fn respawn_dummies(
                 RigidBody::Static,
                 TouchDamage { dps: 0.0 },
                 Position::from(post.position),
-                Transform::from_translation(post.position).with_scale(Vec3::splat(0.25)),
+                Transform::from_translation(post.position).with_scale(Vec3::splat(DUMMY_SCALE)),
                 bevy::world_serialization::WorldAssetRoot(game_assets.alien_scene.clone()),
                 StateMarker,
             ))
