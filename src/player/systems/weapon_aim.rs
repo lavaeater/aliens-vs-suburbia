@@ -153,6 +153,34 @@ pub fn hardpoint_point(hardpoint: &Hardpoint) -> Vec3 {
     Vec3::from(hardpoint.translation)
 }
 
+/// How far off horizontal the weapon is allowed to point.
+///
+/// The camera is isometric and everything worth shooting stands on the same floor, so a
+/// steeply pitched weapon is nearly always `AutoAim` picking up a height difference that
+/// does not matter — and it costs a lot: pitching the gun swings the grip and foregrip
+/// through a long arc away from the shoulder, which drags the arms to the edge of their
+/// reach and reads as flailing. Kept level, the hands stay in a band the arms cover
+/// comfortably.
+pub const MAX_AIM_PITCH_DEGREES: f32 = 15.0;
+
+/// Flatten an aim direction toward horizontal, keeping at most `max_pitch` of tilt.
+///
+/// A clamp rather than a hard flatten, so shooting slightly up or down still shows.
+/// Straight up or down has no heading to preserve, so it is passed through untouched:
+/// inventing one would swing the weapon to an arbitrary compass direction.
+pub fn level_aim(aim: Vec3, max_pitch: f32) -> Vec3 {
+    let horizontal = Vec3::new(aim.x, 0.0, aim.z);
+    let Some(heading) = horizontal.try_normalize() else { return aim };
+    let Some(aim) = aim.try_normalize() else { return aim };
+
+    let pitch = aim.y.clamp(-1.0, 1.0).asin();
+    if pitch.abs() <= max_pitch {
+        return aim;
+    }
+    let clamped = pitch.clamp(-max_pitch, max_pitch);
+    heading * clamped.cos() + Vec3::Y * clamped.sin()
+}
+
 /// Place every aimed weapon for this frame.
 pub fn aim_weapons(
     time: Res<Time>,
@@ -180,7 +208,7 @@ pub fn aim_weapons(
             aimed.weapon_axis,
             world_scale,
             anchor_world,
-            aim.0,
+            level_aim(aim.0, MAX_AIM_PITCH_DEGREES.to_radians()),
         );
 
         // Expressed in the owner's frame, since that is what the weapon is parented to.
@@ -252,6 +280,38 @@ mod tests {
         let rotation = aimed_rotation(Vec3::X, Vec3::Y, Vec3::Y);
         assert!(rotation.is_finite());
         assert!(close(rotation * Vec3::X, Vec3::Y));
+    }
+
+    /// The isometric camera means aim pitch is nearly always an accident of target
+    /// heights; letting it through swings the grips out of the arms' reach.
+    #[test]
+    fn a_steeply_pitched_aim_is_brought_back_toward_horizontal() {
+        let steep = Vec3::new(0.0, 1.0, 1.0).normalize(); // 45 degrees up
+        let levelled = level_aim(steep, 15f32.to_radians());
+        assert!((levelled.y.asin().to_degrees() - 15.0).abs() < 1e-3, "got {levelled:?}");
+        // Heading is what the player actually meant; only the tilt is overruled.
+        assert!(levelled.z > 0.0 && levelled.x.abs() < 1e-4, "heading changed: {levelled:?}");
+    }
+
+    #[test]
+    fn a_gentle_aim_is_left_exactly_as_it_is() {
+        let gentle = Vec3::new(1.0, 0.1, 0.0).normalize(); // under 6 degrees
+        assert!((level_aim(gentle, 15f32.to_radians()) - gentle).length() < 1e-5);
+    }
+
+    #[test]
+    fn aiming_down_is_clamped_the_same_way() {
+        let steep = Vec3::new(1.0, -3.0, 0.0);
+        let levelled = level_aim(steep, 15f32.to_radians());
+        assert!((levelled.y.asin().to_degrees() + 15.0).abs() < 1e-3, "got {levelled:?}");
+    }
+
+    /// Straight up has no heading to keep. Inventing one would swing the weapon to an
+    /// arbitrary compass direction, which is worse than leaving the pitch alone.
+    #[test]
+    fn a_vertical_aim_is_passed_through_rather_than_guessed_at() {
+        assert_eq!(level_aim(Vec3::Y, 15f32.to_radians()), Vec3::Y);
+        assert_eq!(level_aim(Vec3::ZERO, 15f32.to_radians()), Vec3::ZERO);
     }
 
     #[test]

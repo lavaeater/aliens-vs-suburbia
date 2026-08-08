@@ -415,6 +415,27 @@ swat-2 holding the Assault Rifle: barrel-to-aim dot `1.0000`, anchor error `0.00
 both arms landing their hardpoints at `err=0.0000` — the support arm genuinely bent
 (reach 0.126 against 0.133 of arm length), not merely straightened.
 
+### Shouldered, and kept level
+
+`Assault Rifle.ron` now carries a `stock` frame, so the anchor pairing picks `stock` over
+`grip` and the rifle hangs off the shoulder as intended — both arms then do real work
+instead of the trigger arm being a no-op. The frame sits at the rear of the mesh
+(`x = -1.5`, against an AABB running `-1.6 .. 3.8` in def space) on the bore line through
+`foregrip` and `muzzle`, so `stock -> muzzle` is the sight line the aim points along.
+
+The aim is clamped to `MAX_AIM_PITCH_DEGREES` (15) before the weapon is placed. With an
+isometric camera and everything worth shooting standing on the same floor, pitch is nearly
+always `AutoAim` picking up a height difference that does not matter, and it is expensive:
+pitching the weapon swings the grip and foregrip through a long arc away from the shoulder
+and drags the arms to the edge of their reach. Clamped rather than flattened, so shooting
+slightly up or down still reads. Shooting itself still uses the true aim — the bullet
+leaves the (level) muzzle along the real direction.
+
+Measured on swat-2 with the rifle shouldered: anchor error 0.0013, hand errors 0.0004 and
+0.0020 world units against ~0.12 of arm length, the trigger arm at 38% of its reach and the
+support arm at 82%. The residuals are the one-frame lag between the propagated pose the
+probe reads and the placement composed this frame, not solve error.
+
 ### Still open
 
 - **Hand orientation.** Position only, as designed: the hands reach the right points but
@@ -424,3 +445,6 @@ both arms landing their hardpoints at `err=0.0000` — the support arm genuinely
   on it, and probably a per-character override.
 - **Live re-equip.** Editing a hardpoint in the playground does not move an aimed weapon;
   the plan is resolved at equip time. Changing the weapon respawns and therefore does.
+- **The butt sits in the shoulder joint.** swat-2's `stock` hardpoint has a zero offset on
+  `upperarm_r`, so the rifle's rear end is pinned inside the shoulder rather than against
+  the front of it. A nudge on the character side in the playground is all it needs.
