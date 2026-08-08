@@ -14,12 +14,12 @@
     attachments: [],
     hardpoints: {
         "foregrip": (
-            anchor: Some("thumb_02_r"),
+            anchor: Some("index_02_l"),
             translation: (0.0, 0.0, 0.0),
             rotation_euler_deg: (0.0, 0.0, 0.0),
         ),
         "grip": (
-            anchor: Some("index_02_l"),
+            anchor: Some("thumb_02_r"),
             translation: (0.0, 0.0, 0.0),
             rotation_euler_deg: (0.0, 0.0, 0.0),
         ),

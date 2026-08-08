@@ -1,6 +1,6 @@
 (
     model_path: "packs/mesh2motion/Pistol.glb",
-    scale: 1.7218288,
+    scale: 0.125,
     model_type: Weapon((
         hands: OneHanded,
         damage: 20,
