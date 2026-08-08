@@ -1,0 +1,33 @@
+(
+    model_path: "packs/mesh2motion/woman-adventurer.glb",
+    scale: 0.92993546,
+    model_type: Player((
+        ability: Bombardment,
+        throw_rate_per_minute: 60.0,
+        weapon: None,
+    )),
+    hidden_nodes: [],
+    animation_mapping: {},
+    clip_tags: {},
+    animation_bindings: {},
+    animation_sources: [],
+    attachments: [],
+    hardpoints: {
+        "foregrip": (
+            anchor: Some("ball_l"),
+            translation: (0.0, 0.0, 0.0),
+            rotation_euler_deg: (0.0, 0.0, 0.0),
+        ),
+        "stock": (
+            anchor: Some("ball_l"),
+            translation: (0.0, 0.0, 0.0),
+            rotation_euler_deg: (0.0, 0.0, 0.0),
+        ),
+        "grip": (
+            anchor: Some("ball_l"),
+            translation: (0.0, 0.0, 0.0),
+            rotation_euler_deg: (0.0, 0.0, 0.0),
+        ),
+    },
+    aim_bones: [],
+)
