@@ -1,6 +1,6 @@
 (
     model_path: "packs/guns/rifles/Assault Rifle.glb",
-    scale: 0.24978724,
+    scale: 0.125,
     model_type: Weapon((
         hands: TwoHanded,
         damage: 50,
