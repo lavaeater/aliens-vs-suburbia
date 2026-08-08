@@ -352,3 +352,75 @@ aiming, so the visual and the hitscan stop disagreeing.
 The legs keep playing a forward-walk clip while strafing. It reads acceptably at this
 camera distance, but the real fix is directional blending (walk fwd/back/left/right blended
 by the movement-vs-facing angle) in `AnimationStore` — a separate, bigger job.
+
+---
+
+## 16. Stage 2 built: aim-driven weapons and two-bone arm IK
+
+The staging in §11 assumed the weapon stays in the hand and the support arm reaches for it.
+Built the other way round, on the observation that what a rifle actually needs is for the
+*barrel* to point where you aim:
+
+> **aim -> weapon -> hands.** The weapon's pose comes from the aim; the arms are solved to
+> reach whatever hardpoints the weapon ended up presenting.
+
+### Placing the weapon (`src/player/systems/weapon_aim.rs`)
+
+Two steps, because an aim direction only pins two of three degrees of freedom:
+
+1. `from_rotation_arc` lands the weapon's anchor-to-muzzle axis on the aim direction;
+2. a roll about the aim itself brings the weapon's up as close to world up as it can —
+   without it the gun points correctly but banks arbitrarily, which is exactly the
+   "aligned by one vector" mistake §3 warns about.
+
+Then the weapon is slid so its anchor hardpoint sits on the character's matching one. The
+anchor role is whichever of `stock`, `grip`, `foregrip` **both** defs carry, in that order:
+a rifle with an authored stock hangs off the shoulder, one without pivots about the trigger
+hand. `Assault Rifle.ron` has no stock frame today, so it takes the grip fallback — author
+one and it switches to shouldered with no code change.
+
+The weapon parents to the **character root**, not to a bone. Parenting it to a bone the arm
+IK is about to rotate would have the weapon ride the correction meant to reach it, and the
+two would chase each other.
+
+### Solving the arms (`src/player/systems/arm_ik.rs`)
+
+Analytic two-bone, law of cosines. An arm is two bones and one target; that has a closed
+form, so there is nothing to iterate and nothing to converge. `bevy_mod_inverse_kinematics`
+stays available for longer chains where a general solver earns its keep.
+
+Three things that had to be right:
+
+- **Forward kinematics by hand.** Every `GlobalTransform` is a frame stale in this slot, and
+  worse, carries the correction this system itself wrote last frame — reading the arm's pose
+  from them would compound. The chain is re-composed from this frame's animated *local*
+  transforms, starting at the shoulder's parent, which no solver touches. The weapon's world
+  transform is composed the same way rather than read, since `aim_weapons` has only just
+  written its `Transform`.
+- **Clamped reach.** `acos` of an out-of-range cosine is NaN and a NaN bone rotation blanks
+  the character. The target distance is clamped into `[|upper - lower|, upper + lower]`, so
+  an unreachable target extends the arm instead.
+- **Aim the bone, don't set it.** Rigs bake arbitrary bone orientations, so the solve never
+  needs to know what a bone's rest pose meant — only where it currently points and where it
+  should (`from_rotation_arc` on top of the current world rotation).
+
+The chain is *found*, not assumed: the number of bones between a hardpoint and the arm
+depends on where it was anchored (swat-2's grip is on `thumb_02_r`, four below the
+shoulder). `arm_chain` walks up from the effector to the first ancestor that looks like a
+hand and takes the two bones above it, which resolves mesh2motion and mixamo alike.
+
+### Measured
+
+swat-2 holding the Assault Rifle: barrel-to-aim dot `1.0000`, anchor error `0.0000`, and
+both arms landing their hardpoints at `err=0.0000` — the support arm genuinely bent
+(reach 0.126 against 0.133 of arm length), not merely straightened.
+
+### Still open
+
+- **Hand orientation.** Position only, as designed: the hands reach the right points but
+  keep their animated roll. Matching the hand's grip *frame* to the weapon's is the next
+  increment.
+- **Pole tuning.** Elbows bend down-and-back (`DEFAULT_POLE`) for both arms. It wants eyes
+  on it, and probably a per-character override.
+- **Live re-equip.** Editing a hardpoint in the playground does not move an aimed weapon;
+  the plan is resolved at equip time. Changing the weapon respawns and therefore does.

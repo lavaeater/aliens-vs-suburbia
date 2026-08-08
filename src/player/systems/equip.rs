@@ -18,6 +18,7 @@ use crate::assets::asset_definition::{
 use crate::assets::hardpoint::{snap_transform, weapon_local_scale};
 use crate::player::systems::shoot::Weapon;
 use crate::player::systems::spawn_players::PlayerModelRoot;
+use crate::player::systems::arm_ik::{self, WeaponArm, WeaponArms};
 use crate::player::systems::weapon_aim::{self, AimedWeapon};
 
 /// The role both sides use to attach a one-handed weapon to a hand.
@@ -52,6 +53,12 @@ pub struct PendingEquip {
     tries: u32,
 }
 
+/// Roles whose hardpoints an arm is solved onto, and which hand each belongs to.
+///
+/// Both are optional: a weapon with only a `grip` gets one solved arm, and a character
+/// missing a `foregrip` simply keeps its animated support arm.
+pub const ARM_ROLES: [&str; 2] = [GRIP_ROLE, "foregrip"];
+
 /// Everything the aim-driven path needs, resolved from the two defs at spawn time.
 ///
 /// Present only for weapons that can actually be flown from the aim: two-handed, with a
@@ -67,6 +74,8 @@ pub struct AimedPlan {
     pub weapon_anchor: Vec3,
     /// Weapon-local anchor-to-muzzle direction.
     pub weapon_axis: Vec3,
+    /// Character hardpoint and matching weapon-local point per arm role, for the IK.
+    pub arm_targets: Vec<(Hardpoint, Vec3)>,
 }
 
 impl PendingEquip {
@@ -117,6 +126,19 @@ fn plan_aimed(
 
     let char_anchor = character.hardpoints.get(role)?.clone();
     let weapon_anchor = weapon_aim::hardpoint_point(weapon.hardpoints.get(role)?);
+
+    // Only roles both sides carry can be solved for: a hand has nowhere to go without a
+    // point on the weapon, and a point on the weapon has no hand without an anchor bone.
+    let arm_targets = ARM_ROLES
+        .iter()
+        .filter_map(|role| {
+            let char_point = character.hardpoints.get(*role)?;
+            char_point.anchor.as_ref()?;
+            let weapon_point = weapon.hardpoints.get(*role)?;
+            Some((char_point.clone(), weapon_aim::hardpoint_point(weapon_point)))
+        })
+        .collect();
+
     Some(AimedPlan {
         role: role.to_string(),
         char_anchor,
@@ -125,7 +147,69 @@ fn plan_aimed(
             weapon_anchor,
             weapon_aim::hardpoint_point(muzzle),
         ),
+        arm_targets,
     })
+}
+
+/// Turn the plan's authored roles into live bone entities for the arm solver.
+///
+/// Anything that does not resolve — a bone the rig does not have, a hardpoint anchored
+/// outside an arm — is dropped rather than guessed at, leaving that arm on its animation.
+fn resolve_arms(
+    character: Entity,
+    weapon: Entity,
+    plan: &AimedPlan,
+    children: &Query<&Children>,
+    names: &Query<&Name>,
+    parents: &Query<&ChildOf>,
+) -> WeaponArms {
+    let arms = plan
+        .arm_targets
+        .iter()
+        .filter_map(|(char_point, weapon_point)| {
+            let bone_name = char_point.anchor.as_ref()?;
+            let effector = find_descendant_named(character, bone_name, children, names)?;
+
+            // The chain is found by name from the effector upward, because how many bones
+            // sit between a hardpoint and the arm depends on where it was anchored.
+            let ancestors = ancestor_names(effector, parents, names);
+            let (upper_index, lower_index) =
+                arm_ik::arm_chain(&ancestors.iter().map(String::as_str).collect::<Vec<_>>())?;
+            let chain = ancestor_entities(effector, parents);
+
+            Some(WeaponArm {
+                upper: *chain.get(upper_index)?,
+                lower: *chain.get(lower_index)?,
+                effector,
+                effector_offset: Vec3::from(char_point.translation),
+                weapon_point: *weapon_point,
+                pole: arm_ik::DEFAULT_POLE,
+            })
+        })
+        .collect();
+    WeaponArms { weapon, arms }
+}
+
+/// The entity's ancestors, nearest first. Bounded because a cycle in the hierarchy would
+/// otherwise hang the frame.
+fn ancestor_entities(entity: Entity, parents: &Query<&ChildOf>) -> Vec<Entity> {
+    let mut chain = Vec::new();
+    let mut current = entity;
+    while let Ok(parent) = parents.get(current) {
+        chain.push(parent.parent());
+        current = parent.parent();
+        if chain.len() >= 32 {
+            break;
+        }
+    }
+    chain
+}
+
+fn ancestor_names(entity: Entity, parents: &Query<&ChildOf>, names: &Query<&Name>) -> Vec<String> {
+    ancestor_entities(entity, parents)
+        .into_iter()
+        .map(|e| names.get(e).map(|n| n.to_string()).unwrap_or_default())
+        .collect()
 }
 
 /// The weapon entity currently held by this character. Also the "already equipped"
@@ -216,6 +300,7 @@ pub fn equip_pending_weapons(
     children: Query<&Children>,
     names: Query<&Name>,
     root_q: Query<(), With<PlayerModelRoot>>,
+    parents: Query<&ChildOf>,
 ) {
     for (character, mut equip) in pending.iter_mut() {
         // The aim-driven path wants a different bone (the anchor role's, which may be a
@@ -265,14 +350,17 @@ pub fn equip_pending_weapons(
                 ))
                 .id();
             commands.entity(character).add_child(weapon);
+            let arms = resolve_arms(character, weapon, &plan, &children, &names, &parents);
+            let solved = arms.arms.len();
             commands
                 .entity(character)
                 .insert(EquippedWeapon(weapon))
+                .insert(arms)
                 .remove::<PendingEquip>();
             // Which role won says a lot about how it will look: `stock` is shouldered,
             // `grip` pivots about the trigger hand because the weapon has no stock frame.
             info!(
-                "aim-driven weapon {} anchored at '{}'",
+                "aim-driven weapon {} anchored at '{}', {solved} arm(s) solved",
                 equip.weapon_model_path, plan.role
             );
             continue;

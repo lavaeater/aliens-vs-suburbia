@@ -12,6 +12,7 @@ use crate::player::systems::torso_twist::{
     apply_torso_twist, resolve_twist_bones, toggle_torso_twist, TorsoTwistEnabled,
 };
 use bevy::transform::TransformSystems;
+use crate::player::systems::arm_ik::solve_weapon_arms;
 use crate::player::systems::weapon_aim::aim_weapons;
 use bevy::prelude::*;
 use bevy::world_serialization::{WorldInstance, WorldAssetRoot};
@@ -33,9 +34,9 @@ impl Plugin for PlayerPlugin {
             // the pose is propagated -- see torso_twist.rs.
             .add_systems(
                 PostUpdate,
-                // `aim_weapons` follows the twist: the anchor bone it reads is a shoulder,
-                // which the twist has just moved.
-                (apply_torso_twist, aim_weapons)
+                // Strictly ordered: the twist poses the shoulders, `aim_weapons` places the
+                // gun from one of them, and the arms are then solved onto the placed gun.
+                (apply_torso_twist, aim_weapons, solve_weapon_arms)
                     .chain()
                     .after(bevy::app::AnimationSystems)
                     .before(TransformSystems::Propagate)
