@@ -1,0 +1,17 @@
+(
+    model_path: "packs/mesh2motion/swat-2.glb",
+    scale: 1.455408,
+    model_type: Player((
+        ability: Bombardment,
+        throw_rate_per_minute: 60.0,
+        weapon: None,
+    )),
+    hidden_nodes: [],
+    animation_mapping: {},
+    clip_tags: {},
+    animation_bindings: {},
+    animation_sources: [],
+    attachments: [],
+    hardpoints: {},
+    aim_bones: [],
+)
