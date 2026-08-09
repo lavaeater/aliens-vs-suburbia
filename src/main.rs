@@ -119,6 +119,7 @@ fn print_help() {
     println!("USAGE:");
     println!("  cargo run                                  Launch the game");
     println!("  cargo run -- --playground                  Launch straight into the playground");
+    println!("  cargo run -- --asset-browser               Launch straight into the asset browser");
     println!("  cargo run --features map-editor -- --map-editor [--file <path>]");
     println!("                                             Launch the map editor TUI");
     println!("  cargo run -- --create-map [OPTIONS]        Generate a map file\n");
@@ -153,6 +154,8 @@ fn main() {
     // Boot straight into the playground, skipping the menu. Handy when iterating on the
     // playground itself; the menu button does the same two things.
     let straight_to_playground = args.iter().any(|a| a == "--playground");
+    // Same idea for the asset browser: it is a tool screen you open, tweak in, and reload.
+    let straight_to_asset_browser = args.iter().any(|a| a == "--asset-browser");
 
     let mut app = App::new();
     app.register_type::<CameraOffset>()
@@ -179,6 +182,12 @@ fn main() {
         .add_plugins(FlatShaderPlugin::global())
         // .add_plugins(PixelShaderPlugin::default())
         .add_plugins(GamePlugin);
+
+    if straight_to_asset_browser {
+        app.add_systems(bevy::app::Startup, |mut next: bevy::prelude::ResMut<bevy::prelude::NextState<game_state::GameState>>| {
+            next.set(game_state::GameState::AssetBrowser);
+        });
+    }
 
     if straight_to_playground {
         app.add_systems(bevy::app::Startup, |mut commands: bevy::prelude::Commands,

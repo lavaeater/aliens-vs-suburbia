@@ -1,7 +1,8 @@
 use bevy::app::{App, Plugin, Update};
 use bevy::prelude::{IntoScheduleConfigs, OnEnter, OnExit, in_state};
 use crate::asset_browser::state::AssetBrowserState;
-use crate::asset_browser::ui::{handle_key_input, rebuild_attachment_panel, rebuild_bone_list, rebuild_clip_tag_list, rebuild_folder_list, rebuild_hardpoint_panel, rebuild_list, rebuild_node_list, rebuild_sources_list, rebuild_type_picker, scroll_clip_tag_list, scroll_to_selection, spawn_asset_browser_ui};
+use crate::asset_browser::ui::{handle_key_input, rebuild_attachment_panel, rebuild_bone_list, rebuild_clip_tag_list, rebuild_folder_list, rebuild_hardpoint_panel, rebuild_list, rebuild_node_list, rebuild_sources_list, rebuild_type_picker, scroll_clip_tag_list, scroll_to_selection, spawn_asset_browser_ui,
+    update_selected_bone_label};
 use crate::asset_browser::viewer::{
     apply_attachment_transforms, apply_hardpoint_preview_transform, apply_node_visibility,
     apply_viewer_animation, apply_viewer_scale,
@@ -12,16 +13,29 @@ use crate::asset_browser::viewer::{
     sync_viewer_viewport, zoom_viewer,
 };
 use crate::game_state::GameState;
+use crate::ui::collapse::{sync_section_collapse, CollapsedSections};
 use crate::ui::spawn_ui::cleanup_state;
 
 pub struct AssetBrowserPlugin;
 
+/// Every section open on entry. The fold state is a working preference for the session
+/// you are in, not something to inherit from whatever you were doing last time.
+fn reset_sections(mut collapsed: bevy::prelude::ResMut<CollapsedSections>) {
+    collapsed.0.clear();
+}
+
 impl Plugin for AssetBrowserPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<AssetBrowserState>()
+            .init_resource::<CollapsedSections>()
             .add_systems(
                 OnEnter(GameState::AssetBrowser),
-                (spawn_asset_browser_ui, spawn_asset_browser_cameras, setup_skeleton_gizmo_config),
+                (
+                    reset_sections,
+                    spawn_asset_browser_ui,
+                    spawn_asset_browser_cameras,
+                    setup_skeleton_gizmo_config,
+                ),
             )
             .add_systems(OnExit(GameState::AssetBrowser), (cleanup_state, reset_skeleton_gizmo_config))
             .add_systems(
@@ -63,6 +77,8 @@ impl Plugin for AssetBrowserPlugin {
                     rebuild_hardpoint_preview,
                     apply_hardpoint_preview_transform,
                     rebuild_hardpoint_panel,
+                    sync_section_collapse,
+                    update_selected_bone_label,
                 )
                     .run_if(in_state(GameState::AssetBrowser)),
             );

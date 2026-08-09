@@ -33,68 +33,12 @@ use crate::playground::models::{
     add_animation_source, classify, def_stem, set_weapon, ImportKind, PlaygroundModels,
 };
 use crate::playground::state::PlaygroundSession;
+use crate::ui::collapse::{section_header, SectionBody};
 use crate::ui::spawn_ui::StateMarker;
 
 /// The right-hand pane. Its computed rectangle drives the game camera's viewport.
 #[derive(Component)]
 pub struct PlaygroundViewportPane;
-
-/// A foldable block of the left pane.
-///
-/// Five lists in one column is more than fits: something has to give, and which something
-/// depends on what you are working on. Folding the ones you are not using gives the rest
-/// the whole pane, which beats picking fixed heights that suit nobody.
-#[derive(Component, Clone, Copy, PartialEq, Eq, Hash, Debug)]
-pub enum Section {
-    Debug,
-    Model,
-    Weapon,
-    Import,
-    Hardpoints,
-    Animation,
-}
-
-impl Section {
-    pub fn title(self) -> &'static str {
-        match self {
-            Section::Debug => "DEBUG VIEW",
-            Section::Model => "MODEL",
-            Section::Weapon => "WEAPON",
-            Section::Import => "IMPORT",
-            Section::Hardpoints => "HARDPOINTS",
-            Section::Animation => "ANIMATION",
-        }
-    }
-}
-
-/// The clickable title row. Carries the text that shows the fold state.
-#[derive(Component)]
-pub struct SectionHeader(pub Section);
-
-/// Anything that folds away with its section. A section can own several of these — the
-/// import block is a path label, a list and a status line.
-#[derive(Component)]
-pub struct SectionBody(pub Section);
-
-#[derive(Resource, Default)]
-pub struct CollapsedSections(pub bevy::platform::collections::HashSet<Section>);
-
-impl CollapsedSections {
-    pub fn toggle(&mut self, section: Section) {
-        if !self.0.remove(&section) {
-            self.0.insert(section);
-        }
-    }
-
-    pub fn is_collapsed(&self, section: Section) -> bool {
-        self.0.contains(&section)
-    }
-
-    /// Marker shown in the header. ASCII only — Bevy's embedded font has nothing else.
-    pub fn marker(&self, section: Section) -> &'static str {
-        if self.is_collapsed(section) { "[+]" } else { "[-]" }
-    }
-}
 
 /// Container for the tweak controls, so later stages can refill it without rebuilding
 /// the whole screen.
@@ -136,60 +80,6 @@ pub struct AnimationContainer;
 /// Generous on purpose: the left pane scrolls as a whole, so a long list costs nothing but
 /// a scroll, and the old 220px cut the model list to about four rows.
 const LIST_MAX_HEIGHT: f32 = 420.0;
-
-/// A clickable section title. Clicking folds the section's bodies away.
-fn section_header(builder: &mut UIBuilder, section: Section, theme: &TextTheme) {
-    let idle = Color::srgba(0.06, 0.11, 0.15, 0.9);
-    builder.with_child(|c| {
-        c.insert_bundle(lava_ui_builder::label(
-            format!("[-] {}", section.title()),
-            theme,
-        ))
-        .insert(SectionHeader(section))
-        .insert(BackgroundColor(idle))
-        .insert(InteractionPalette {
-            none: idle,
-            hovered: Color::srgba(0.14, 0.28, 0.35, 0.95),
-            pressed: Color::srgba(0.10, 0.22, 0.30, 1.0),
-        })
-        .insert(bevy::picking::hover::Hovered::default())
-        .insert(bevy::ui_widgets::Button)
-        .observe(move |_: On<Activate>, mut collapsed: ResMut<CollapsedSections>| {
-            collapsed.toggle(section);
-        })
-        .modify_node(|mut n| {
-            n.align_self = AlignSelf::Stretch;
-            n.padding = UiRect::axes(Val::Px(4.0), Val::Px(3.0));
-            n.margin = UiRect::top(Val::Px(4.0));
-        });
-    });
-}
-
-/// Fold and unfold sections, and keep the header markers honest.
-///
-/// Runs on change (plus once at startup, which is what `synced` is for) rather than every
-/// frame: it walks every body node, and nothing here moves on its own.
-pub fn sync_section_collapse(
-    collapsed: Res<CollapsedSections>,
-    mut bodies: Query<(&SectionBody, &mut Node)>,
-    mut headers: Query<(&SectionHeader, &mut Text)>,
-    mut synced: Local<bool>,
-) {
-    if !collapsed.is_changed() && *synced {
-        return;
-    }
-    *synced = true;
-
-    for (body, mut node) in bodies.iter_mut() {
-        let wanted = if collapsed.is_collapsed(body.0) { Display::None } else { Display::Flex };
-        if node.display != wanted {
-            node.display = wanted;
-        }
-    }
-    for (header, mut text) in headers.iter_mut() {
-        **text = format!("{} {}", collapsed.marker(header.0), header.0.title());
-    }
-}
 
 pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
     let mut ui = UIBuilder::new(commands, Some(theme.clone()));
@@ -235,19 +125,19 @@ pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
         });
 
         // ── Debug overlays ───────────────────────────────────────────────
-        section_header(left, Section::Debug, &section);
+        section_header(left, "DEBUG VIEW", &section);
         left.with_child(|c| {
             c.display_flex().flex_column().gap_px(2.0)
-             .insert(DebugTogglesContainer).insert(SectionBody(Section::Debug))
+             .insert(DebugTogglesContainer).insert(SectionBody("DEBUG VIEW"))
              .modify_node(|mut n| n.align_self = AlignSelf::Stretch);
         });
 
         // ── Imported models ──────────────────────────────────────────────
-        section_header(left, Section::Model, &section);
+        section_header(left, "MODEL", &section);
         left.with_child(|c| {
             c.display_flex().flex_column().gap_px(2.0)
              .insert(ModelListContainer).insert(ScrollPosition::default())
-             .insert(SectionBody(Section::Model))
+             .insert(SectionBody("MODEL"))
              .modify_node(|mut n| {
                  n.align_self = AlignSelf::Stretch;
                  n.max_height = Val::Px(LIST_MAX_HEIGHT);
@@ -256,11 +146,11 @@ pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
         });
 
         // ── Weapon ───────────────────────────────────────────────────────
-        section_header(left, Section::Weapon, &section);
+        section_header(left, "WEAPON", &section);
         left.with_child(|c| {
             c.display_flex().flex_column().gap_px(2.0)
              .insert(WeaponListContainer).insert(ScrollPosition::default())
-             .insert(SectionBody(Section::Weapon))
+             .insert(SectionBody("WEAPON"))
              .modify_node(|mut n| {
                  n.align_self = AlignSelf::Stretch;
                  n.max_height = Val::Px(LIST_MAX_HEIGHT);
@@ -269,19 +159,19 @@ pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
         });
 
         // ── Import browser ───────────────────────────────────────────────
-        section_header(left, Section::Import, &section);
+        section_header(left, "IMPORT", &section);
         left.with_child(|c| {
             c.insert_bundle(lava_ui_builder::label("", &TextTheme {
                 label_size: 10.0, label_color: Color::srgb(0.5, 0.7, 0.9), ..t.clone()
             }))
             .insert(ImportPathLabel)
-            .insert(SectionBody(Section::Import))
+            .insert(SectionBody("IMPORT"))
             .modify_node(|mut n| n.overflow = Overflow::clip());
         });
         left.with_child(|c| {
             c.display_flex().flex_column().gap_px(2.0)
              .insert(ImportBrowserContainer).insert(ScrollPosition::default())
-             .insert(SectionBody(Section::Import))
+             .insert(SectionBody("IMPORT"))
              .modify_node(|mut n| {
                  n.align_self = AlignSelf::Stretch;
                  n.max_height = Val::Px(LIST_MAX_HEIGHT);
@@ -292,15 +182,15 @@ pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
         left.with_child(|c| {
             c.insert_bundle(lava_ui_builder::label("", &hint))
              .insert(ImportStatusLabel)
-             .insert(SectionBody(Section::Import));
+             .insert(SectionBody("IMPORT"));
         });
 
         // ── Hardpoints ───────────────────────────────────────────────────
-        section_header(left, Section::Hardpoints, &section);
+        section_header(left, "HARDPOINTS", &section);
         left.with_child(|c| {
             c.display_flex().flex_column().gap_px(2.0)
              .insert(HardpointContainer).insert(ScrollPosition::default())
-             .insert(SectionBody(Section::Hardpoints))
+             .insert(SectionBody("HARDPOINTS"))
              .modify_node(|mut n| {
                  n.align_self = AlignSelf::Stretch;
                  n.max_height = Val::Px(LIST_MAX_HEIGHT);
@@ -309,18 +199,18 @@ pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
         });
 
         // ── Animation ────────────────────────────────────────────────────
-        section_header(left, Section::Animation, &section);
+        section_header(left, "ANIMATION", &section);
         left.with_child(|c| {
             c.insert_bundle(lava_ui_builder::label(
                 "click a key to play it   [F1] camera  [F2] model",
                 &hint,
             ))
-            .insert(SectionBody(Section::Animation));
+            .insert(SectionBody("ANIMATION"));
         });
         left.with_child(|c| {
             c.display_flex().flex_column().gap_px(2.0)
              .insert(AnimationContainer).insert(ScrollPosition::default())
-             .insert(SectionBody(Section::Animation))
+             .insert(SectionBody("ANIMATION"))
              .modify_node(|mut n| {
                  n.align_self = AlignSelf::Stretch;
                  n.max_height = Val::Px(LIST_MAX_HEIGHT);
@@ -1269,34 +1159,7 @@ pub fn rebuild_import_browser(
 
 #[cfg(test)]
 mod tests {
-    use super::{pane_viewport, CollapsedSections, Section};
-
-    #[test]
-    fn a_section_folds_and_unfolds_on_repeated_clicks() {
-        let mut collapsed = CollapsedSections::default();
-        assert!(!collapsed.is_collapsed(Section::Model), "everything starts open");
-        collapsed.toggle(Section::Model);
-        assert!(collapsed.is_collapsed(Section::Model));
-        collapsed.toggle(Section::Model);
-        assert!(!collapsed.is_collapsed(Section::Model));
-    }
-
-    #[test]
-    fn folding_one_section_leaves_the_others_alone() {
-        let mut collapsed = CollapsedSections::default();
-        collapsed.toggle(Section::Import);
-        assert!(collapsed.is_collapsed(Section::Import));
-        assert!(!collapsed.is_collapsed(Section::Animation));
-    }
-
-    /// The marker is the only affordance saying a folded section is still there.
-    #[test]
-    fn the_header_marker_says_which_way_a_click_goes() {
-        let mut collapsed = CollapsedSections::default();
-        assert_eq!(collapsed.marker(Section::Debug), "[-]");
-        collapsed.toggle(Section::Debug);
-        assert_eq!(collapsed.marker(Section::Debug), "[+]");
-    }
+    use super::pane_viewport;
 
     #[test]
     fn a_pane_becomes_the_matching_viewport_rect() {

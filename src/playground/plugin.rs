@@ -23,12 +23,13 @@ use crate::playground::hardpoints::{
 };
 use crate::playground::models::{swap_player_model, PlaygroundModels};
 use crate::playground::state::in_playground;
+use crate::ui::collapse::{sync_section_collapse, CollapsedSections};
 use crate::playground::ui::{
     clear_playground_viewport, end_playground_session, rebuild_debug_toggles,
     rebuild_animation_panel, rebuild_import_browser, rebuild_hardpoint_panel,
     rebuild_model_list, rebuild_weapon_list, refresh_animation_panel_on_def_change,
     spawn_playground_ui,
-    sync_playground_viewport, sync_section_collapse, CollapsedSections,
+    sync_playground_viewport,
 };
 
 const PLAYGROUND_MAP: &str = "assets/maps/playground.ron";

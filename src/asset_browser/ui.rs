@@ -7,6 +7,7 @@ use lava_ui_builder::{InteractionPalette, LavaTheme, TextTheme, UIBuilder};
 use crate::asset_browser::state::{ANIM_KEY_NAMES, AssetBrowserState, CHARACTER_NODE_PREFIX, HARDPOINT_ROLES, ModelType};
 use crate::asset_browser::viewer::AssetBrowserViewerPanel;
 use crate::game_state::GameState;
+use crate::ui::collapse::{section_header, SectionBody};
 use crate::ui::spawn_ui::StateMarker;
 
 // ── Marker components ─────────────────────────────────────────────────────────
@@ -32,6 +33,10 @@ use crate::ui::spawn_ui::StateMarker;
 
 #[derive(Component)] pub struct ListItem(pub usize);
 
+/// The always-visible "bone: <name>" line.
+#[derive(Component)]
+pub struct SelectedBoneLabel;
+
 // ── Spawn ─────────────────────────────────────────────────────────────────────
 
 pub fn spawn_asset_browser_ui(
@@ -50,6 +55,8 @@ pub fn spawn_asset_browser_ui(
 
     let t = theme.text.clone();
     let hint = TextTheme { label_size: 11.0, label_color: Color::srgb(0.4, 0.55, 0.4), ..t.clone() };
+    let section_theme =
+        TextTheme { label_size: 11.0, label_color: Color::srgb(0.5, 0.8, 0.6), ..t.clone() };
 
     ui.with_child(|left| {
         left.modify_node(|mut n| {
@@ -57,7 +64,11 @@ pub fn spawn_asset_browser_ui(
             n.min_width = Val::Px(240.0);
             n.max_width = Val::Px(500.0);
             n.height = Val::Percent(100.0);
+            // The pane scrolls as a whole, so an open section can be taller than the
+            // window without pushing everything below it out of reach.
+            n.overflow = Overflow::scroll_y();
         })
+        .insert(ScrollPosition::default())
         .display_flex().flex_column().gap_px(4.0).padding_all_px(8.0)
         .bg_color(Color::srgba(0.04, 0.07, 0.10, 0.97));
 
@@ -65,6 +76,16 @@ pub fn spawn_asset_browser_ui(
         left.with_child(|c| { c.insert_bundle(lava_ui_builder::label("[Up/Dn] navigate  [Enter] load  [I] import", &hint)); });
         left.with_child(|c| { c.insert_bundle(lava_ui_builder::label("[Bksp] up folder  [[ ]] anim  [= / -] height", &hint)); });
         left.with_child(|c| { c.insert_bundle(lava_ui_builder::label("[B] toggle skeleton overlay", &hint)); });
+
+        // Which bone the socket/anchor buttons will use. Deliberately outside every
+        // foldable section: it is what you check before pressing Attach or anchoring a
+        // hardpoint, and hunting for it inside a folded list is how you attach to the
+        // wrong bone.
+        left.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label("bone: (none)", &TextTheme {
+                label_size: 11.0, label_color: Color::srgb(1.0, 0.85, 0.5), ..t.clone()
+            })).insert(SelectedBoneLabel);
+        });
 
         // Current folder path
         left.with_child(|c| {
@@ -102,32 +123,28 @@ pub fn spawn_asset_browser_ui(
         });
 
         // Clip tags section — tag each of the model's clips with a free-form path.
+        section_header(left, "CLIP TAGS", &section_theme);
         left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label("-- Clip Tags --", &TextTheme {
-                label_size: 11.0, label_color: Color::srgb(0.5, 0.8, 0.6), ..t.clone()
-            }));
+            c.insert_bundle(lava_ui_builder::label("click a clip, type a path e.g. Combat/Ranged/Shoot", &hint))
+             .insert(SectionBody("CLIP TAGS"));
         });
         left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label("click a clip, type a path e.g. Combat/Ranged/Shoot", &hint));
-        });
-        left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label("scroll wheel over the list to see more", &hint));
+            c.insert_bundle(lava_ui_builder::label("scroll wheel over the list to see more", &hint))
+             .insert(SectionBody("CLIP TAGS"));
         });
         left.with_child(|c| {
             c.display_flex().flex_column().gap_px(2.0)
              .overflow_scroll_y()
              .modify_node(|mut n| { n.align_self = AlignSelf::Stretch; n.max_height = Val::Px(180.0); })
-             .insert(ClipTagContainer).insert(ScrollPosition::default());
+             .insert(ClipTagContainer).insert(ScrollPosition::default())
+             .insert(SectionBody("CLIP TAGS"));
         });
 
         // Height section
-        left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label("-- Height --", &TextTheme {
-                label_size: 11.0, label_color: Color::srgb(0.5, 0.8, 0.6), ..t.clone()
-            }));
-        });
+        section_header(left, "HEIGHT", &section_theme);
         left.with_child(|row| {
             row.display_flex().flex_row().gap_px(4.0)
+               .insert(SectionBody("HEIGHT"))
                .modify_node(|mut n| { n.align_items = AlignItems::Center; n.align_self = AlignSelf::Stretch; });
 
             row.add_button_observe("-", |b| { b.width(px(20.0)).height(px(20.0)).font_size(14.0); },
@@ -145,82 +162,82 @@ pub fn spawn_asset_browser_ui(
         });
 
         // Model type section
-        left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label("-- Model Type --", &TextTheme {
-                label_size: 11.0, label_color: Color::srgb(0.5, 0.8, 0.6), ..t.clone()
-            }));
-        });
+        section_header(left, "MODEL TYPE", &section_theme);
         left.with_child(|c| {
             c.display_flex().flex_wrap().gap_px(3.0)
              .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
-             .insert(TypeContainer);
+             .insert(TypeContainer)
+             .insert(SectionBody("MODEL TYPE"));
         });
         left.with_child(|c| {
             c.display_flex().flex_column().gap_px(2.0)
              .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
-             .insert(TypePropsContainer);
+             .insert(TypePropsContainer)
+             .insert(SectionBody("MODEL TYPE"));
         });
 
         // Animation sources section
-        left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label("-- Anim Sources --", &TextTheme {
-                label_size: 11.0, label_color: Color::srgb(0.5, 0.8, 0.6), ..t.clone()
-            }));
-        });
+        section_header(left, "ANIM SOURCES", &section_theme);
         left.with_child(|c| {
             c.display_flex().flex_wrap().gap_px(3.0)
              .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
-             .insert(SourcesContainer);
+             .insert(SourcesContainer)
+             .insert(SectionBody("ANIM SOURCES"));
         });
-        left.add_button_observe("+ Add selected as source", |b| { b.width(percent(100.0)).height(px(22.0)).font_size(11.0); },
-            |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
-                if let Some(path) = s.selected_path().map(|p| p.to_string()) {
-                    s.add_animation_source(path);
-                }
-            });
+        left.with_child(|c| {
+            c.display_flex().flex_column().insert(SectionBody("ANIM SOURCES"))
+             .modify_node(|mut n| n.align_self = AlignSelf::Stretch);
+            c.add_button_observe("+ Add selected as source", |b| { b.width(percent(100.0)).height(px(22.0)).font_size(11.0); },
+                |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                    if let Some(path) = s.selected_path().map(|p| p.to_string()) {
+                        s.add_animation_source(path);
+                    }
+                });
+        });
 
         // Weapon attachment section
+        section_header(left, "WEAPON ATTACH", &section_theme);
         left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label("-- Weapon Attach --", &TextTheme {
-                label_size: 11.0, label_color: Color::srgb(0.5, 0.8, 0.6), ..t.clone()
-            }));
-        });
-        left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label("[B] skeleton  [, .] cycle bone  then Attach", &hint));
+            c.insert_bundle(lava_ui_builder::label("[B] skeleton  [, .] cycle bone  then Attach", &hint))
+             .insert(SectionBody("WEAPON ATTACH"));
         });
         // Bone list (click to pick the socket)
         left.with_child(|c| {
             c.display_flex().flex_column().gap_px(1.0)
              .overflow_scroll_y()
              .modify_node(|mut n| { n.align_self = AlignSelf::Stretch; n.max_height = Val::Px(110.0); })
-             .insert(BoneListContainer).insert(ScrollPosition::default());
+             .insert(BoneListContainer).insert(ScrollPosition::default())
+             .insert(SectionBody("WEAPON ATTACH"));
         });
-        left.add_button_observe("Attach selected file to bone", |b| { b.width(percent(100.0)).height(px(22.0)).font_size(11.0); },
-            |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
-                if let Some(path) = s.selected_path().map(|p| p.to_string()) {
-                    s.attach_selected_model(path);
-                }
-            });
+        left.with_child(|c| {
+            c.display_flex().flex_column().insert(SectionBody("WEAPON ATTACH"))
+             .modify_node(|mut n| n.align_self = AlignSelf::Stretch);
+            c.add_button_observe("Attach selected file to bone", |b| { b.width(percent(100.0)).height(px(22.0)).font_size(11.0); },
+                |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                    if let Some(path) = s.selected_path().map(|p| p.to_string()) {
+                        s.attach_selected_model(path);
+                    }
+                });
+        });
         // Attachment editor (socket info + offset nudge controls)
         left.with_child(|c| {
             c.display_flex().flex_column().gap_px(2.0)
              .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
-             .insert(AttachmentContainer);
+             .insert(AttachmentContainer)
+             .insert(SectionBody("WEAPON ATTACH"));
         });
 
         // Hardpoints section (dynamic weapon snapping)
+        section_header(left, "HARDPOINTS", &section_theme);
         left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label("-- Hardpoints --", &TextTheme {
-                label_size: 11.0, label_color: Color::srgb(0.5, 0.8, 0.6), ..t.clone()
-            }));
-        });
-        left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label("[H] show frames. char: anchor grip to a bone", &hint));
+            c.insert_bundle(lava_ui_builder::label("[H] show frames. char: anchor grip to a bone", &hint))
+             .insert(SectionBody("HARDPOINTS"));
         });
         left.with_child(|c| {
             c.display_flex().flex_column().gap_px(2.0)
              .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
-             .insert(HardpointContainer);
+             .insert(HardpointContainer)
+             .insert(SectionBody("HARDPOINTS"));
         });
 
         // File list
@@ -246,6 +263,27 @@ pub fn spawn_asset_browser_ui(
     });
 
     ui.build();
+}
+
+/// Keep the selected-bone line current.
+///
+/// Reads the same `selected_bone_name` the Attach button and the hardpoint anchor use, so
+/// the label cannot disagree with what a click would do.
+pub fn update_selected_bone_label(
+    state: Res<AssetBrowserState>,
+    mut labels: Query<&mut Text, With<SelectedBoneLabel>>,
+) {
+    if !state.is_changed() {
+        return;
+    }
+    let Ok(mut text) = labels.single_mut() else { return };
+    let wanted = match state.selected_bone_name() {
+        Some(bone) => format!("bone: {bone}  ({}/{})", state.selected_bone + 1, state.bone_names.len()),
+        None => "bone: (load a model with a skeleton)".to_string(),
+    };
+    if **text != wanted {
+        **text = wanted;
+    }
 }
 
 // ── Key input ─────────────────────────────────────────────────────────────────
