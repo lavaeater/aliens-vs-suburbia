@@ -12,7 +12,7 @@ use crate::player::systems::torso_twist::{
     apply_torso_twist, resolve_twist_bones, toggle_torso_twist, TorsoTwistEnabled,
 };
 use bevy::transform::TransformSystems;
-use crate::player::systems::arm_ik::solve_weapon_arms;
+use crate::player::systems::arm_ik::{align_sights, solve_weapon_arms, toggle_hand_align, HandAlignEnabled};
 use crate::player::systems::weapon_aim::aim_weapons;
 use bevy::prelude::*;
 use bevy::world_serialization::{WorldInstance, WorldAssetRoot};
@@ -30,13 +30,14 @@ impl Plugin for PlayerPlugin {
         }
         app.init_resource::<AbilityInput>()
             .init_resource::<TorsoTwistEnabled>()
+            .init_resource::<HandAlignEnabled>()
             // The twist must land after the animation has posed the skeleton and before
             // the pose is propagated -- see torso_twist.rs.
             .add_systems(
                 PostUpdate,
                 // Strictly ordered: the twist poses the shoulders, `aim_weapons` places the
                 // gun from one of them, and the arms are then solved onto the placed gun.
-                (apply_torso_twist, aim_weapons, solve_weapon_arms)
+                (apply_torso_twist, aim_weapons, solve_weapon_arms, align_sights)
                     .chain()
                     .after(bevy::app::AnimationSystems)
                     .before(TransformSystems::Propagate)
@@ -63,6 +64,7 @@ impl Plugin for PlayerPlugin {
                     reset_ability_input,
                     resolve_twist_bones,
                     toggle_torso_twist,
+                    toggle_hand_align,
                 )
                 .run_if(in_state(GameState::InGame)),
             );

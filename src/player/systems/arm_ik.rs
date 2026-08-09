@@ -32,19 +32,22 @@ use bevy::prelude::*;
 /// How far the elbow is pushed toward the pole hint, as a fraction of the arm's length.
 const POLE_STRENGTH: f32 = 1.0;
 
-/// One arm to be solved onto a point on the weapon.
+/// One arm to be solved onto a hardpoint on the weapon.
 #[derive(Clone)]
 pub struct WeaponArm {
     /// Upper arm — the bone that swings from the shoulder.
     pub upper: Entity,
     /// Forearm — its parent is `upper`.
     pub lower: Entity,
-    /// Bone carrying the character-side hardpoint (often a finger, not the hand).
+    /// Wrist. Rotating this is what orients the grip; the fingers below it ride along.
+    pub hand: Entity,
+    /// Bone the character-side hardpoint is anchored to. Often a finger rather than the
+    /// hand itself, which is why it is tracked separately from `hand`.
     pub effector: Entity,
-    /// The hardpoint's offset within `effector`.
-    pub effector_offset: Vec3,
-    /// The weapon-local point this arm must reach.
-    pub weapon_point: Vec3,
+    /// The character-side hardpoint frame, local to `effector`.
+    pub effector_frame: Transform,
+    /// The weapon-side hardpoint frame, local to the weapon.
+    pub weapon_frame: Transform,
     /// Which way the elbow bends, in the character's local space.
     pub pole: Vec3,
 }
@@ -164,6 +167,7 @@ fn path_down(effector: Entity, stop: Entity, parents: &Query<&ChildOf>) -> Optio
 
 /// Solve both arms onto the weapon.
 pub fn solve_weapon_arms(
+    hand_align: Res<HandAlignEnabled>,
     characters: Query<(&WeaponArms, &GlobalTransform)>,
     parents: Query<&ChildOf>,
     globals: Query<&GlobalTransform>,
@@ -178,8 +182,37 @@ pub fn solve_weapon_arms(
         let weapon_world = owner.mul_transform(weapon_local);
 
         for arm in &arms.arms {
-            solve_arm(arm, &weapon_world, owner, &parents, &globals, &mut transforms);
+            solve_arm(
+                arm,
+                &weapon_world,
+                owner,
+                hand_align.0,
+                &parents,
+                &globals,
+                &mut transforms,
+            );
         }
+    }
+}
+
+/// Whether hands are rotated to match the weapon's grip frame. `F8` toggles it, the same
+/// A/B affordance `F7` gives the torso twist.
+#[derive(Resource)]
+pub struct HandAlignEnabled(pub bool);
+
+impl Default for HandAlignEnabled {
+    fn default() -> Self {
+        Self(true)
+    }
+}
+
+pub fn toggle_hand_align(
+    keys: Res<ButtonInput<KeyCode>>,
+    mut enabled: ResMut<HandAlignEnabled>,
+) {
+    if keys.just_pressed(KeyCode::F8) {
+        enabled.0 = !enabled.0;
+        info!("hand alignment {}", if enabled.0 { "on" } else { "off" });
     }
 }
 
@@ -187,6 +220,7 @@ fn solve_arm(
     arm: &WeaponArm,
     weapon_world: &GlobalTransform,
     owner: &GlobalTransform,
+    align_hand: bool,
     parents: &Query<&ChildOf>,
     globals: &Query<&GlobalTransform>,
     transforms: &mut Query<&mut Transform>,
@@ -196,51 +230,170 @@ fn solve_arm(
 
     // Forward kinematics from this frame's animated locals — see the module docs for why
     // the bones' own globals are not used.
-    let upper_local = *transforms.get(arm.upper).ok()?;
-    let lower_local = *transforms.get(arm.lower).ok()?;
-    let upper_world = base_world.mul_transform(upper_local);
-    let lower_world = upper_world.mul_transform(lower_local);
+    let upper_world = base_world.mul_transform(*transforms.get(arm.upper).ok()?);
+    let lower_world = upper_world.mul_transform(*transforms.get(arm.lower).ok()?);
 
-    let mut effector_world = lower_world;
-    for bone in path_down(arm.effector, arm.lower, parents)? {
-        effector_world = effector_world.mul_transform(*transforms.get(bone).ok()?);
+    let mut hand_world = lower_world;
+    for bone in path_down(arm.hand, arm.lower, parents)? {
+        hand_world = hand_world.mul_transform(*transforms.get(bone).ok()?);
     }
+    // The hardpoint usually hangs a few finger joints below the wrist.
+    let mut hardpoint_world = hand_world;
+    if arm.effector != arm.hand {
+        for bone in path_down(arm.effector, arm.hand, parents)? {
+            hardpoint_world = hardpoint_world.mul_transform(*transforms.get(bone).ok()?);
+        }
+    }
+    let hardpoint_world = hardpoint_world.mul_transform(arm.effector_frame);
+    let target = weapon_world.mul_transform(arm.weapon_frame);
+
+    // The hardpoint is rigidly bolted to the wrist, so the wrist's pose determines it.
+    // Working out where the *wrist* has to be, rather than solving for the hardpoint and
+    // rotating afterwards, is what lets orientation and position both come out exact:
+    // rotating the hand last would drag the hardpoint off the target it had just reached.
+    let hand_rotation = hand_world.rotation();
+    let offset_in_hand = hand_rotation.inverse()
+        * (hardpoint_world.translation() - hand_world.translation());
+    let hardpoint_in_hand = hand_rotation.inverse() * hardpoint_world.rotation();
+
+    let wanted_hand_rotation = if align_hand {
+        target.rotation() * hardpoint_in_hand.inverse()
+    } else {
+        hand_rotation
+    };
+    let wanted_hand =
+        target.translation() - wanted_hand_rotation * offset_in_hand;
 
     let shoulder = upper_world.translation();
     let elbow = lower_world.translation();
-    let effector = effector_world.transform_point(arm.effector_offset);
-    let target = weapon_world.transform_point(arm.weapon_point);
+    let hand = hand_world.translation();
 
     let upper_len = (elbow - shoulder).length();
-    let lower_len = (effector - elbow).length();
+    let lower_len = (hand - elbow).length();
     if upper_len < 1e-5 || lower_len < 1e-5 {
         return None;
     }
 
     let pole = owner.rotation() * arm.pole;
-    let wanted_elbow = solve_elbow(shoulder, target, upper_len, lower_len, pole);
+    let wanted_elbow = solve_elbow(shoulder, wanted_hand, upper_len, lower_len, pole);
 
     // Upper arm: swing the shoulder so the elbow lands where the solve wants it.
-    let upper_rotation = aim_bone(upper_world.rotation(), elbow - shoulder, wanted_elbow - shoulder);
+    let upper_rotation =
+        aim_bone(upper_world.rotation(), elbow - shoulder, wanted_elbow - shoulder);
     let swing = upper_rotation * upper_world.rotation().inverse();
 
     // Everything below the shoulder is rigid under that swing, so the forearm's new
-    // orientation and the effector's new position follow without re-composing the chain.
+    // orientation and the wrist's new position follow without re-composing the chain.
     let lower_rotation_after_swing = swing * lower_world.rotation();
-    let effector_after_swing = wanted_elbow + swing * (effector - elbow);
+    let hand_after_swing = wanted_elbow + swing * (hand - elbow);
 
-    // Forearm: swing the elbow so the effector lands on the target.
-    let lower_rotation = aim_bone(
-        lower_rotation_after_swing,
-        effector_after_swing - wanted_elbow,
-        target - wanted_elbow,
-    );
+    // Forearm: swing the elbow so the wrist lands where it needs to be.
+    //
+    // With the wrist about to be set to a known orientation, aiming it is exact — the
+    // hardpoint's offset from the wrist is then exactly what the target assumed. Without
+    // that (F8 off), the wrist keeps whatever orientation the swing gave it and the
+    // assumption breaks, so aim the *hardpoint* at the target instead and accept whatever
+    // roll the animation had.
+    let lower_rotation = if align_hand {
+        aim_bone(
+            lower_rotation_after_swing,
+            hand_after_swing - wanted_elbow,
+            wanted_hand - wanted_elbow,
+        )
+    } else {
+        let hardpoint_after_swing =
+            wanted_elbow + swing * (hardpoint_world.translation() - elbow);
+        aim_bone(
+            lower_rotation_after_swing,
+            hardpoint_after_swing - wanted_elbow,
+            target.translation() - wanted_elbow,
+        )
+    };
 
     transforms.get_mut(arm.upper).ok()?.rotation =
         local_from_world(base_world.rotation(), upper_rotation);
     transforms.get_mut(arm.lower).ok()?.rotation =
         local_from_world(upper_rotation, lower_rotation);
+
+    if align_hand {
+        // The wrist's parent is the forearm, which has just moved; its new world rotation
+        // is what the hand's local has to be expressed against.
+        let hand_parent = parents.get(arm.hand).ok()?.parent();
+        let parent_rotation = if hand_parent == arm.lower {
+            lower_rotation
+        } else {
+            // A rig with extra bones between forearm and wrist: re-compose down to it.
+            let mut world = GlobalTransform::from(Transform::from_rotation(lower_rotation));
+            for bone in path_down(hand_parent, arm.lower, parents)? {
+                world = world.mul_transform(*transforms.get(bone).ok()?);
+            }
+            world.rotation()
+        };
+        transforms.get_mut(arm.hand).ok()?.rotation =
+            local_from_world(parent_rotation, wanted_hand_rotation);
+    }
     Some(())
+}
+
+/// How far the head may be turned from its animated pose to look down the sights.
+///
+/// A clamp, because the alignment is absolute: a weapon pointed behind the character would
+/// otherwise wring the neck right round. Past the limit the head turns as far as it can
+/// and the aim wins the rest.
+pub const MAX_HEAD_TURN_DEGREES: f32 = 55.0;
+
+/// Lines a character's `sight` frame up with the weapon's, by turning one bone.
+///
+/// Position is left alone deliberately. The head cannot *move* to the sight without
+/// dragging the spine with it, and the useful half of aiming down sights is the head
+/// pointing where the gun points — which is pure rotation.
+#[derive(Component, Clone)]
+pub struct SightAlign {
+    pub weapon: Entity,
+    /// Bone to turn — the character's `sight` anchor, usually the head.
+    pub bone: Entity,
+    /// The character-side `sight` frame, local to `bone`.
+    pub bone_frame: Transform,
+    /// The weapon-side `sight` frame, local to the weapon.
+    pub weapon_frame: Transform,
+}
+
+/// Rotate `from` toward `to`, by at most `max_radians`.
+pub fn limited_turn(from: Quat, to: Quat, max_radians: f32) -> Quat {
+    let angle = from.angle_between(to);
+    if angle <= max_radians || angle < 1e-6 {
+        return to;
+    }
+    from.slerp(to, max_radians / angle).normalize()
+}
+
+/// Turn each character's sight bone to line up with the weapon's sight frame.
+pub fn align_sights(
+    characters: Query<(&SightAlign, &GlobalTransform)>,
+    parents: Query<&ChildOf>,
+    globals: Query<&GlobalTransform>,
+    mut transforms: Query<&mut Transform>,
+) {
+    for (sight, owner) in characters.iter() {
+        let Ok(weapon_local) = transforms.get(sight.weapon).copied() else { continue };
+        let weapon_world = owner.mul_transform(weapon_local);
+        let target = weapon_world.mul_transform(sight.weapon_frame).rotation();
+
+        let Ok(parent) = parents.get(sight.bone).map(|p| p.parent()) else { continue };
+        let Ok(parent_world) = globals.get(parent).copied() else { continue };
+        let Ok(bone_local) = transforms.get(sight.bone).copied() else { continue };
+
+        // Same stale-globals reasoning as the arms: compose this frame's animated local
+        // against the parent's world rather than reading the bone's own global, which
+        // still carries the turn written last frame.
+        let animated = parent_world.mul_transform(bone_local).rotation();
+        let wanted = target * sight.bone_frame.rotation.inverse();
+        let limited = limited_turn(animated, wanted, MAX_HEAD_TURN_DEGREES.to_radians());
+
+        if let Ok(mut transform) = transforms.get_mut(sight.bone) {
+            transform.rotation = local_from_world(parent_world.rotation(), limited);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -341,6 +494,33 @@ mod tests {
     fn a_hardpoint_on_the_wrist_uses_the_two_bones_above_it() {
         let ancestors = ["lowerarm_r", "upperarm_r", "clavicle_r"];
         assert_eq!(arm_chain(&ancestors), Some((2, 1)));
+    }
+
+    /// The whole point of the clamp: an absolute alignment would wring the neck right
+    /// round when the weapon points behind the character.
+    #[test]
+    fn a_turn_past_the_limit_stops_at_the_limit() {
+        let from = Quat::IDENTITY;
+        let to = Quat::from_rotation_y(std::f32::consts::PI);
+        let limited = limited_turn(from, to, 55f32.to_radians());
+        assert!(
+            (limited.angle_between(from).to_degrees() - 55.0).abs() < 1e-2,
+            "turned {} degrees",
+            limited.angle_between(from).to_degrees()
+        );
+    }
+
+    #[test]
+    fn a_turn_within_the_limit_is_taken_in_full() {
+        let from = Quat::IDENTITY;
+        let to = Quat::from_rotation_y(0.3);
+        assert!(limited_turn(from, to, 55f32.to_radians()).angle_between(to) < 1e-5);
+    }
+
+    #[test]
+    fn turning_to_where_you_already_are_is_not_a_division_by_zero() {
+        let same = Quat::from_rotation_y(0.4);
+        assert!(limited_turn(same, same, 0.0).is_finite());
     }
 
     /// A hardpoint anchored somewhere with no arm above it must be refused, not solved

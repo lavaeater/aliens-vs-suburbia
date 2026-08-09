@@ -15,10 +15,10 @@ use bevy::world_serialization::WorldAssetRoot;
 use crate::assets::asset_definition::{
     AssetDefinition, Hardpoint, ModelType, WeaponHands, WeaponProps,
 };
-use crate::assets::hardpoint::{snap_transform, weapon_local_scale};
+use crate::assets::hardpoint::{self, snap_transform, weapon_local_scale};
 use crate::player::systems::shoot::Weapon;
 use crate::player::systems::spawn_players::PlayerModelRoot;
-use crate::player::systems::arm_ik::{self, WeaponArm, WeaponArms};
+use crate::player::systems::arm_ik::{self, SightAlign, WeaponArm, WeaponArms};
 use crate::player::systems::weapon_aim::{self, AimedWeapon};
 
 /// The role both sides use to attach a one-handed weapon to a hand.
@@ -26,6 +26,10 @@ pub const GRIP_ROLE: &str = "grip";
 
 /// Weapon-only role: the frame bullets leave from.
 pub const MUZZLE_ROLE: &str = "muzzle";
+
+/// The aim-down-sights frame: on the weapon its rear sight, on the character the eye or
+/// head bone that should line up behind it.
+pub const SIGHT_ROLE: &str = "sight";
 
 /// How many frames we wait for the skeleton to spawn before giving up (and saying so).
 const EQUIP_MAX_TRIES: u32 = 600;
@@ -74,8 +78,11 @@ pub struct AimedPlan {
     pub weapon_anchor: Vec3,
     /// Weapon-local anchor-to-muzzle direction.
     pub weapon_axis: Vec3,
-    /// Character hardpoint and matching weapon-local point per arm role, for the IK.
-    pub arm_targets: Vec<(Hardpoint, Vec3)>,
+    /// Character hardpoint and matching weapon hardpoint per arm role, for the IK. Both
+    /// full frames now, not just points: the rotations are what orient the hands.
+    pub arm_targets: Vec<(Hardpoint, Hardpoint)>,
+    /// Character and weapon `sight` frames, when both sides carry one.
+    pub sight: Option<(Hardpoint, Hardpoint)>,
 }
 
 impl PendingEquip {
@@ -135,7 +142,7 @@ fn plan_aimed(
             let char_point = character.hardpoints.get(*role)?;
             char_point.anchor.as_ref()?;
             let weapon_point = weapon.hardpoints.get(*role)?;
-            Some((char_point.clone(), weapon_aim::hardpoint_point(weapon_point)))
+            Some((char_point.clone(), weapon_point.clone()))
         })
         .collect();
 
@@ -148,6 +155,12 @@ fn plan_aimed(
             weapon_aim::hardpoint_point(muzzle),
         ),
         arm_targets,
+        sight: character
+            .hardpoints
+            .get(SIGHT_ROLE)
+            .filter(|frame| frame.anchor.is_some())
+            .cloned()
+            .zip(weapon.hardpoints.get(SIGHT_ROLE).cloned()),
     })
 }
 
@@ -173,21 +186,44 @@ fn resolve_arms(
             // The chain is found by name from the effector upward, because how many bones
             // sit between a hardpoint and the arm depends on where it was anchored.
             let ancestors = ancestor_names(effector, parents, names);
-            let (upper_index, lower_index) =
-                arm_ik::arm_chain(&ancestors.iter().map(String::as_str).collect::<Vec<_>>())?;
+            let names_ref: Vec<&str> = ancestors.iter().map(String::as_str).collect();
+            let (upper_index, lower_index) = arm_ik::arm_chain(&names_ref)?;
             let chain = ancestor_entities(effector, parents);
+            // The wrist is the bone just above the forearm; when the hardpoint is anchored
+            // to the hand itself that is the effector.
+            let hand = if lower_index == 0 { effector } else { *chain.get(lower_index - 1)? };
 
             Some(WeaponArm {
                 upper: *chain.get(upper_index)?,
                 lower: *chain.get(lower_index)?,
+                hand,
                 effector,
-                effector_offset: Vec3::from(char_point.translation),
-                weapon_point: *weapon_point,
+                effector_frame: hardpoint::transform_from_frame(hardpoint::hardpoint_frame(char_point)),
+                weapon_frame: hardpoint::transform_from_frame(hardpoint::hardpoint_frame(weapon_point)),
                 pole: arm_ik::DEFAULT_POLE,
             })
         })
         .collect();
     WeaponArms { weapon, arms }
+}
+
+/// Wire up the head-to-sights alignment, when both defs carry a `sight` frame.
+fn resolve_sight(
+    character: Entity,
+    weapon: Entity,
+    plan: &AimedPlan,
+    children: &Query<&Children>,
+    names: &Query<&Name>,
+) -> Option<SightAlign> {
+    let (char_sight, weapon_sight) = plan.sight.as_ref()?;
+    let bone_name = char_sight.anchor.as_ref()?;
+    let bone = find_descendant_named(character, bone_name, children, names)?;
+    Some(SightAlign {
+        weapon,
+        bone,
+        bone_frame: hardpoint::transform_from_frame(hardpoint::hardpoint_frame(char_sight)),
+        weapon_frame: hardpoint::transform_from_frame(hardpoint::hardpoint_frame(weapon_sight)),
+    })
 }
 
 /// The entity's ancestors, nearest first. Bounded because a cycle in the hierarchy would
@@ -352,11 +388,15 @@ pub fn equip_pending_weapons(
             commands.entity(character).add_child(weapon);
             let arms = resolve_arms(character, weapon, &plan, &children, &names, &parents);
             let solved = arms.arms.len();
+            let sight = resolve_sight(character, weapon, &plan, &children, &names);
             commands
                 .entity(character)
                 .insert(EquippedWeapon(weapon))
                 .insert(arms)
                 .remove::<PendingEquip>();
+            if let Some(sight) = sight {
+                commands.entity(character).insert(sight);
+            }
             // Which role won says a lot about how it will look: `stock` is shouldered,
             // `grip` pivots about the trigger hand because the weapon has no stock frame.
             info!(

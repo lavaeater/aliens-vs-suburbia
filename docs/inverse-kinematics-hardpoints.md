@@ -436,11 +436,47 @@ Measured on swat-2 with the rifle shouldered: anchor error 0.0013, hand errors 0
 support arm at 82%. The residuals are the one-frame lag between the propagated pose the
 probe reads and the placement composed this frame, not solve error.
 
+### Hand orientation, and the head down the sights
+
+Both fall out of the same idea: **a hardpoint is a frame, so align the rotation too, not
+just the position.**
+
+*Hands.* The wrist is rotated so the character's `grip` frame matches the weapon's. The
+order matters and is not the obvious one: solving the arm for position and rotating the
+hand afterwards would drag the hardpoint off the target it had just reached, because the
+hardpoint hangs several finger joints below the wrist. Instead the wanted **wrist** pose is
+derived first — `wanted_hand_rotation = target_rotation * hardpoint_in_hand.inverse()`, and
+the wrist position that puts the hardpoint on the target given that rotation — and the
+two-bone solve then targets the wrist. Position and orientation both come out exact in one
+pass, no iteration.
+
+Measured on swat-2 with the rifle, alignment on versus off:
+
+| | trigger hand | support hand |
+|---|---|---|
+| rotation error, on | 1.3 deg | 2.1 deg |
+| rotation error, off | 69.5 deg | 159.8 deg |
+| position error, on | 0.0026 | 0.0143 |
+
+`F8` toggles it, the A/B affordance `F7` gives the torso twist.
+
+*Sights.* The same alignment applied to one bone: the character's `sight` frame (anchored to
+the head) is turned to match the weapon's `sight` frame, so the head looks down the barrel.
+Rotation only — the head cannot *move* to the sight without dragging the spine along, and
+the useful half of aiming down sights is where the head points. The turn is clamped to
+`MAX_HEAD_TURN_DEGREES` (55) because the alignment is absolute: a weapon pointed behind the
+character would otherwise wring the neck right round.
+
+Neither is wired to anything the shipped defs carry yet — `sight` has to be authored on both
+the character (anchored to the head bone) and the weapon before anything happens.
+
 ### Still open
 
-- **Hand orientation.** Position only, as designed: the hands reach the right points but
-  keep their animated roll. Matching the hand's grip *frame* to the weapon's is the next
-  increment.
+- **The support arm is at the end of its reach.** With the rifle shouldered on swat-2 the
+  left hand sits at 97% of the arm's length, and the 0.014 residual above is simply the arm
+  running out — not solver error. The rifle is long for this character: moving the weapon's
+  `foregrip` back toward the grip, or scaling the rifle down, is the fix, and both are
+  authoring decisions rather than code.
 - **Pole tuning.** Elbows bend down-and-back (`DEFAULT_POLE`) for both arms. It wants eyes
   on it, and probably a per-character override.
 - **Live re-equip.** Editing a hardpoint in the playground does not move an aimed weapon;
