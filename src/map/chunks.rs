@@ -258,7 +258,7 @@ mod tests {
         assert!(EdgeType::Road.mates_with(EdgeType::Road));
         assert!(!EdgeType::Road.mates_with(EdgeType::Open));
         assert!(!EdgeType::Wall.mates_with(EdgeType::Open));
-        assert!(EdgeType::Wall.is_passable() == false);
+        assert!(!EdgeType::Wall.is_passable());
         assert!(EdgeType::Road.is_passable() && EdgeType::Open.is_passable());
     }
 

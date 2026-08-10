@@ -166,13 +166,11 @@ mod tests {
     /// A grid that's all floor except a wall ring, a spawn and a goal.
     fn test_grid() -> Vec<Vec<u64>> {
         let mut g = vec![vec![floor(); 10]; 10];
-        for c in 0..10 {
-            g[0][c] = wall();
-            g[9][c] = wall();
-        }
-        for r in 0..10 {
-            g[r][0] = wall();
-            g[r][9] = wall();
+        g[0].fill(wall());
+        g[9].fill(wall());
+        for row in &mut g {
+            row[0] = wall();
+            row[9] = wall();
         }
         g[5][0] = spawn();
         g[5][9] = (MapFeatures::Floor | MapFeatures::EnemyExit).bits();

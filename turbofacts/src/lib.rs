@@ -36,7 +36,7 @@ mod tests {
     #[test]
     fn missing_facts_read_as_defaults() {
         let facts = Facts::default();
-        assert_eq!(facts.bool("nope"), false);
+        assert!(!facts.bool("nope"));
         assert_eq!(facts.int("nope"), 0);
         assert_eq!(facts.float("nope"), 0.0);
         assert_eq!(facts.text("nope"), "");
@@ -51,7 +51,7 @@ mod tests {
         facts.set_float("f", 1.5);
         facts.set_text("s", "hello");
 
-        assert_eq!(facts.bool("b"), true);
+        assert!(facts.bool("b"));
         assert_eq!(facts.int("i"), 42);
         assert_eq!(facts.float("f"), 1.5);
         assert_eq!(facts.text("s"), "hello");
@@ -94,7 +94,7 @@ mod tests {
         });
         assert!(facts.drain_dirty().is_empty());
         // and reads still work
-        assert_eq!(facts.bool("a"), true);
+        assert!(facts.bool("a"));
         assert_eq!(facts.int("b"), 2);
     }
 
@@ -169,7 +169,7 @@ mod tests {
             .silent(|f| f.set_bool("seeded", true));
         app.update();
         assert!(drain_changes(&mut app).is_empty());
-        assert_eq!(app.world().resource::<Facts>().bool("seeded"), true);
+        assert!(app.world().resource::<Facts>().bool("seeded"));
     }
 
     #[test]
@@ -273,7 +273,7 @@ mod tests {
 
         let mut effects = Vec::new();
         assert!(story.check_and_apply(&mut facts, &mut effects));
-        assert_eq!(facts.bool("done"), true);
+        assert!(facts.bool("done"));
         // latched: does not fire again even though rules still pass
         assert!(!story.check_and_apply(&mut facts, &mut effects));
     }
@@ -347,7 +347,7 @@ mod tests {
         app.update();
         app.update();
 
-        assert_eq!(app.world().resource::<Facts>().bool(keys::LEVEL_COMPLETE), true);
+        assert!(app.world().resource::<Facts>().bool(keys::LEVEL_COMPLETE));
         let effects: Vec<_> = app
             .world_mut()
             .resource_mut::<bevy::ecs::message::Messages<StoryEffect>>()
@@ -372,7 +372,7 @@ mod tests {
         app.world_mut().resource_mut::<Facts>().set_bool("ready", true);
         app.update();
         app.update();
-        assert_eq!(app.world().resource::<Facts>().bool("done"), false);
+        assert!(!app.world().resource::<Facts>().bool("done"));
     }
 
     #[test]
@@ -402,7 +402,7 @@ mod tests {
         let mut s = stories::level_complete_story();
         let mut effects = Vec::new();
         assert!(s.check_and_apply(&mut facts, &mut effects));
-        assert_eq!(facts.bool(keys::GOTO_NEXT_LEVEL), true);
+        assert!(facts.bool(keys::GOTO_NEXT_LEVEL));
         assert_eq!(effects, vec!["level_complete".to_string()]);
     }
 
@@ -419,7 +419,7 @@ mod tests {
 
         facts.set_bool(keys::ALL_ALIENS_DEAD, true);
         assert!(s.check_and_apply(&mut facts, &mut effects));
-        assert_eq!(facts.bool(keys::LEVEL_COMPLETE), true);
+        assert!(facts.bool(keys::LEVEL_COMPLETE));
     }
 
     #[test]
@@ -430,7 +430,7 @@ mod tests {
         facts.set_bool(keys::ALL_PLAYERS_DEAD, true);
         let mut effects = Vec::new();
         assert!(stories::level_failed_story().check_and_apply(&mut facts, &mut effects));
-        assert_eq!(facts.bool(keys::LEVEL_FAILED), true);
+        assert!(facts.bool(keys::LEVEL_FAILED));
         assert!(effects.contains(&"level_failed".to_string()));
 
         // Too many aliens escaped.
@@ -439,7 +439,7 @@ mod tests {
         facts.set_bool(keys::TOO_MANY_ALIENS_ESCAPED, true);
         let mut effects = Vec::new();
         assert!(stories::level_failed_escaped_story().check_and_apply(&mut facts, &mut effects));
-        assert_eq!(facts.bool(keys::LEVEL_FAILED), true);
+        assert!(facts.bool(keys::LEVEL_FAILED));
     }
 
     #[test]
@@ -455,9 +455,9 @@ mod tests {
         for s in &mut store.stories {
             s.check_and_apply(&mut facts, &mut effects);
         }
-        assert_eq!(facts.bool(keys::LEVEL_STARTED), true);
+        assert!(facts.bool(keys::LEVEL_STARTED));
         assert!(effects.contains(&"level_starting".to_string()));
-        assert_eq!(facts.bool(keys::LEVEL_COMPLETE), false);
+        assert!(!facts.bool(keys::LEVEL_COMPLETE));
 
         // World derives the win condition; the win + complete stories then cascade.
         facts.set_bool(keys::ALL_ALIENS_DEAD, true);
@@ -465,8 +465,8 @@ mod tests {
         for s in &mut store.stories {
             s.check_and_apply(&mut facts, &mut effects);
         }
-        assert_eq!(facts.bool(keys::LEVEL_COMPLETE), true);
-        assert_eq!(facts.bool(keys::GOTO_NEXT_LEVEL), true);
+        assert!(facts.bool(keys::LEVEL_COMPLETE));
+        assert!(facts.bool(keys::GOTO_NEXT_LEVEL));
         assert!(effects.contains(&"level_complete".to_string()));
     }
 
@@ -483,7 +483,7 @@ mod tests {
         assert!(!store.stories[0].check_and_apply(&mut facts, &mut effects));
         facts.set_int(keys::ENEMY_KILL_COUNT, 5);
         assert!(store.stories[0].check_and_apply(&mut facts, &mut effects));
-        assert_eq!(facts.bool(keys::LEVEL_COMPLETE), true);
+        assert!(facts.bool(keys::LEVEL_COMPLETE));
     }
 
     #[test]
@@ -492,7 +492,7 @@ mod tests {
         let mut store = StoryStore::default();
         store.add(stories::boss_and_objectives_story());
         store.activate(&mut facts);
-        assert_eq!(facts.bool(keys::BOSS_IS_DEAD), false);
+        assert!(!facts.bool(keys::BOSS_IS_DEAD));
         assert!(facts.contains(keys::ALL_OBJECTIVES_TOUCHED));
     }
 
@@ -510,7 +510,7 @@ mod tests {
 
         let mut loaded = Facts::default();
         persistence::facts_from_ron(&mut loaded, &ron_str).unwrap();
-        assert_eq!(loaded.bool("b"), true);
+        assert!(loaded.bool("b"));
         assert_eq!(loaded.int("i"), 9);
         assert_eq!(loaded.float("f"), 2.5);
         assert_eq!(loaded.text("s"), "hi");
@@ -540,7 +540,7 @@ mod tests {
         facts.set_int("kills", 4);
         let mut effects = Vec::new();
         assert!(stories[0].check_and_apply(&mut facts, &mut effects));
-        assert_eq!(facts.bool("won"), true);
+        assert!(facts.bool("won"));
     }
 
     #[test]

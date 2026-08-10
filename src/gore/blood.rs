@@ -177,7 +177,7 @@ pub fn spawn_blood_on_damage(
 
         // ── Ground stain: persistent, budget-capped. Flat quad just above the floor,
         //    directly under the hit (maps are flat, so y≈0 works without a raycast). ─
-        let yaw = (hit.position.x * 12.9898 + hit.position.z * 78.233).sin() * 43758.5453;
+        let yaw = (hit.position.x * 12.9898 + hit.position.z * 78.233).sin() * 43_758.547;
         let yaw = (yaw - yaw.floor()) * std::f32::consts::TAU;
         let size = (0.6 + mag * 0.5) * (0.8 + 0.4 * (yaw / std::f32::consts::TAU));
         let decal = commands

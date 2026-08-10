@@ -9,6 +9,7 @@ use crate::gore::components::{DamageDealt, DamageKind};
 /// Damage a thrown ball deals to what it hits.
 const BALL_DAMAGE: i32 = 10;
 
+#[allow(clippy::too_many_arguments)]
 pub fn collision_handling_system(
     mut alien_counter: ResMut<AlienCounter>,
     mut collision_event_reader: MessageReader<CollisionStart>,

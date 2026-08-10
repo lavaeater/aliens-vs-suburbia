@@ -134,8 +134,7 @@ mod tests {
 
     #[test]
     fn a_saved_file_round_trips() {
-        let mut bindings = GamepadBindings::default();
-        bindings.fire = GamepadButton::LeftTrigger2;
+        let bindings = GamepadBindings { fire: GamepadButton::LeftTrigger2, ..Default::default() };
         let text = ron::ser::to_string_pretty(&bindings, ron::ser::PrettyConfig::default())
             .expect("serializes");
         let back: GamepadBindings = ron::from_str(&text).expect("round trips");

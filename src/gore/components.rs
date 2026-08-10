@@ -162,8 +162,7 @@ mod tests {
     #[test]
     fn decal_budget_recycles_oldest_first() {
         let e = entities(3);
-        let mut budget = GoreBudget::default();
-        budget.max_decals = 2;
+        let mut budget = GoreBudget { max_decals: 2, ..Default::default() };
 
         assert_eq!(budget.push_decal(e[0]), None, "under cap: nothing evicted");
         assert_eq!(budget.push_decal(e[1]), None, "at cap: nothing evicted");
@@ -173,9 +172,7 @@ mod tests {
     #[test]
     fn gib_and_decal_budgets_are_independent() {
         let e = entities(3);
-        let mut budget = GoreBudget::default();
-        budget.max_gibs = 1;
-        budget.max_decals = 10;
+        let mut budget = GoreBudget { max_gibs: 1, max_decals: 10, ..Default::default() };
 
         // Pushing decals never evicts gibs, and vice versa.
         assert_eq!(budget.push_decal(e[0]), None);

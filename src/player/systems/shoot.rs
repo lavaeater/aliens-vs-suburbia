@@ -78,7 +78,7 @@ impl Rng {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn shoot_weapons(
     time: Res<Time>,
     spatial: SpatialQuery,
@@ -227,24 +227,21 @@ mod tests {
 
     #[test]
     fn shot_interval_is_derived_from_fire_rate() {
-        let mut props = WeaponProps::default();
-        props.fire_rate_per_minute = 300.0; // 5 shots/sec
+        let props = WeaponProps { fire_rate_per_minute: 300.0, ..Default::default() }; // 5 shots/sec
         let w = Weapon::from_props(&props, None);
         assert!((w.shot_interval - 0.2).abs() < 1e-6, "300 rpm -> 0.2s between shots");
     }
 
     #[test]
     fn zero_fire_rate_falls_back_to_a_sane_interval() {
-        let mut props = WeaponProps::default();
-        props.fire_rate_per_minute = 0.0;
+        let props = WeaponProps { fire_rate_per_minute: 0.0, ..Default::default() };
         let w = Weapon::from_props(&props, None);
         assert!(w.shot_interval > 0.0, "must not divide by zero into an infinite fire rate");
     }
 
     #[test]
     fn pellets_are_clamped_to_at_least_one() {
-        let mut props = WeaponProps::default();
-        props.pellets = 0;
+        let props = WeaponProps { pellets: 0, ..Default::default() };
         let w = Weapon::from_props(&props, None);
         assert_eq!(w.pellets, 1, "a weapon with 0 pellets would never hit anything");
     }

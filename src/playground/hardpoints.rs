@@ -381,11 +381,13 @@ mod tests {
     #[test]
     fn a_character_def_reports_the_weapon_it_wants() {
         use crate::assets::asset_definition::{ModelType, PlayerProps};
-        let mut def = AssetDefinition::default();
-        def.model_type = ModelType::Player(PlayerProps {
-            weapon: Some("assets/defs/Pistol.ron".to_string()),
+        let def = AssetDefinition {
+            model_type: ModelType::Player(PlayerProps {
+                weapon: Some("assets/defs/Pistol.ron".to_string()),
+                ..Default::default()
+            }),
             ..Default::default()
-        });
+        };
         assert_eq!(weapon_def_path(&def).as_deref(), Some("assets/defs/Pistol.ron"));
     }
 

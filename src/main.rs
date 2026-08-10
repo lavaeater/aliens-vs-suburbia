@@ -171,7 +171,7 @@ fn main() {
         }))
         .add_plugins(SkeinPlugin::default())
         .add_plugins(PhysicsPlugins::default())
-        .add_plugins(PhysicsDebugPlugin::default())
+        .add_plugins(PhysicsDebugPlugin)
         .insert_gizmo_config(
             PhysicsGizmos::default(),
             GizmoConfig {

@@ -141,7 +141,7 @@ mod tests {
         let mut def = def_with_tags(&[("Armature|Wave", "Social/Wave")]);
         bind(&mut def, AnimationKey::Wave, "Social/Wave");
         unbind(&mut def, AnimationKey::Wave);
-        assert!(def.animation_bindings.get("wave").is_none());
+        assert!(!def.animation_bindings.contains_key("wave"));
         assert!(resolution_label(&def, AnimationKey::Wave).contains("unbound"));
     }
 
