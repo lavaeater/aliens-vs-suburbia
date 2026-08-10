@@ -11,6 +11,11 @@ members = ["turbofacts", "bevy_mod_inverse_kinematics"]
 exclude = ["rusty_music"]
 resolver = "2"
 
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+must_use_candidate = "allow"
+missing_errors_doc = "allow"
+
 [dependencies]
 bevy = { version = "0.19.0", features = ["wayland", "3d", "ui", "bevy_feathers", "webp"] }
 avian3d = { version = "0.7.0", default-features = false, features = ["3d", "parry-f32", "debug-plugin", "collider-from-mesh", "simd", "parallel", "serialize", "bevy_scene", "bevy_picking", "xpbd_joints"] }
