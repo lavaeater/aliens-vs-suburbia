@@ -20,7 +20,7 @@ use bevy::prelude::*;
 
 use crate::player::components::{Player, PlayerDead};
 use crate::player::systems::arm_ik::{aim_bone, local_from_world, solve_elbow};
-use crate::player::systems::gait::{Foot, GaitContext, GaitParams, GaitState};
+use crate::player::systems::gait::{horizontal_reach, Foot, GaitContext, GaitParams, GaitState};
 
 /// The gait shape, as a tunable resource.
 ///
@@ -65,19 +65,33 @@ pub struct LegChain {
 pub struct Legs {
     /// Indexed by [`Foot::index`].
     pub chains: [LegChain; 2],
-    pub gait: GaitState,
+    /// Set on the first frame the legs are driven, not at resolve.
+    ///
+    /// Where the feet stand depends on the ground and on the character's size, and neither
+    /// is known reliably at resolve — the model may not have been scaled yet. Starting the
+    /// stance with the wrong numbers puts the first plants out of the legs' reach, and a
+    /// character standing still never takes the step that would replace them.
+    pub gait: Option<GaitState>,
     /// Last frame's world position, so the cycle can be advanced by distance travelled.
     last_position: Vec3,
-    /// Foot height above the character's origin in the rig's rest pose.
+    /// The character's own child that the skeleton hangs from — the model's origin, which
+    /// on a standing rig is the floor it stands on.
     ///
-    /// Self-calibrating, and it has to be: model roots sit at different heights above the
-    /// floor depending on how a def was authored. Measuring the rig's own ankles once, at
-    /// resolve time, gets the plant height right for any model without map knowledge or a
-    /// per-def offset to keep in sync.
-    ground_offset: f32,
-    /// How this rig's legs compare to a human's, used to scale the gait — see
+    /// The ground is read from this entity live, every frame, rather than measured once.
+    /// `fix_scene_transform` writes the model's real scale and offset in `Update`, and
+    /// nothing orders it against [`resolve_legs`] — an unchained `add_systems` tuple is not
+    /// a sequence — so any measurement taken at resolve is a coin flip on whether the model
+    /// had been sized yet. Reading it live also means the playground's scale slider moves
+    /// the feet with the model instead of leaving them behind.
+    model_root: Entity,
+    /// Ankle height above the model's origin, in the model's own units.
+    ///
+    /// Measured within the model, so the model root's own scale and offset — the parts that
+    /// may not be set yet — cancel out. Multiplied by the live scale when used.
+    foot_lift: f32,
+    /// Hip-to-ankle in the model's own units, for scaling the gait. See
     /// [`GaitParams::scaled`].
-    gait_scale: f32,
+    leg_length: f32,
 }
 
 /// Bone names still to be resolved, retried until the skeleton spawns. Mirrors
@@ -191,6 +205,18 @@ fn offset_within(bone: Entity, root: Entity, parents: &Query<&ChildOf>, transfor
     Some(out)
 }
 
+/// The ancestor of `bone` that is a direct child of `character` — the scene's own root.
+fn child_of_character(bone: Entity, character: Entity, parents: &Query<&ChildOf>) -> Option<Entity> {
+    let mut current = bone;
+    loop {
+        let parent = parents.get(current).ok()?.parent();
+        if parent == character {
+            return Some(current);
+        }
+        current = parent;
+    }
+}
+
 /// Turn a spawned skeleton into two leg chains, once it exists.
 #[allow(clippy::type_complexity)]
 pub fn resolve_legs(
@@ -200,7 +226,6 @@ pub fn resolve_legs(
     parents: Query<&ChildOf>,
     names: Query<&Name>,
     transforms: Query<&Transform>,
-    params: Res<GaitSettings>,
 ) {
     for (character, mut pending) in pending.iter_mut() {
         let mut found: [Option<Entity>; 2] = [None; 2];
@@ -233,26 +258,28 @@ pub fn resolve_legs(
             continue;
         };
 
-        // Measure the rig in the character's own space: how far below the origin the ankles
-        // rest, and how long a leg is.
+        // Measure the rig inside the model, where the model root's own transform cancels
+        // out: how far above the model's origin the ankles rest, and how long a leg is.
+        let Some(model_root) = child_of_character(left.foot, character, &parents) else {
+            pending.tries += 1;
+            continue;
+        };
         let (Some(hip), Some(knee), Some(ankle)) = (
-            offset_within(left.upper, character, &parents, &transforms),
-            offset_within(left.lower, character, &parents, &transforms),
-            offset_within(left.foot, character, &parents, &transforms),
+            offset_within(left.upper, model_root, &parents, &transforms),
+            offset_within(left.lower, model_root, &parents, &transforms),
+            offset_within(left.foot, model_root, &parents, &transforms),
         ) else {
             pending.tries += 1;
             continue;
         };
 
-        let ground_offset = ankle.translation.y;
+        let foot_lift = ankle.translation.y;
         let leg_length = hip.translation.distance(knee.translation)
             + knee.translation.distance(ankle.translation);
 
-        // The feet have to end up below the hips. If the measurement says otherwise the rig
-        // is not posed yet -- retry rather than nail the plant targets up by the character's
-        // head, which is precisely the shape the bug took when this was read off a stale
-        // `GlobalTransform`.
-        if leg_length < 1e-4 || ground_offset >= hip.translation.y {
+        // The ankles have to be below the hips. If they are not, the rig is not posed yet;
+        // retry rather than plant the feet somewhere the legs have to reach up to.
+        if leg_length < 1e-4 || foot_lift >= hip.translation.y {
             pending.tries += 1;
             if pending.tries >= RESOLVE_MAX_TRIES {
                 warn!("procedural legs disabled: this rig's ankles never settled below its hips");
@@ -262,18 +289,16 @@ pub fn resolve_legs(
         }
 
         let Ok(body) = transforms.get(character) else { continue };
-        let hip_ground = body.translation.with_y(body.translation.y + ground_offset);
-        let right_dir = body.rotation * Vec3::X;
-        let gait_scale = leg_length / REFERENCE_LEG_LENGTH;
 
         commands
             .entity(character)
             .insert(Legs {
                 chains: [left, right],
-                gait: GaitState::standing(hip_ground, right_dir, &params.0.scaled(gait_scale)),
+                gait: None,
                 last_position: body.translation,
-                ground_offset,
-                gait_scale,
+                model_root,
+                foot_lift,
+                leg_length,
             })
             .remove::<PendingLegs>();
     }
@@ -302,7 +327,9 @@ pub fn apply_leg_ik(
         // The chains hold bone entities, which die with the skeleton. A model swap or a
         // revive respawns it, so drop the stale chains and resolve again rather than
         // solving against entities that no longer exist.
-        if legs.chains.iter().any(|c| globals.get(c.foot).is_err()) {
+        if legs.chains.iter().any(|c| globals.get(c.foot).is_err())
+            || globals.get(legs.model_root).is_err()
+        {
             commands
                 .entity(character)
                 .remove::<Legs>()
@@ -326,12 +353,29 @@ pub fn apply_leg_ik(
             .unwrap_or_else(|| (body.rotation() * Vec3::NEG_Z).with_y(0.0).normalize_or(Vec3::NEG_Z));
         let right = Vec3::Y.cross(forward).normalize_or(body.rotation() * Vec3::X);
 
-        let ground_y = position.y + legs.ground_offset;
+        // The ground under the character, read from the model itself: the model's origin is
+        // the floor it was authored standing on, and the ankles rest a little above that.
+        // Live rather than latched, so the feet follow the model when it is rescaled and,
+        // more to the point, when it is dropped onto the map at spawn.
+        let Ok(model) = globals.get(legs.model_root) else { continue };
+        let model_scale = model.scale().y;
+        let ground_y = model.translation().y + legs.foot_lift * model_scale;
+        let gait_scale = legs.leg_length * model_scale / REFERENCE_LEG_LENGTH;
+
+        // How much stride the legs can actually pay for, from where the hips are riding this
+        // frame. Live, because the animation moves the pelvis: a crouch shortens the steps
+        // by itself, without a special case.
+        let leg_world = legs.leg_length * model_scale;
+        let hip_height = globals
+            .get(legs.chains[0].upper)
+            .map_or(leg_world, |hip| hip.translation().y - ground_y);
+
         let ctx = GaitContext {
             hip_ground: position.with_y(ground_y),
             forward,
             right,
             ground_y,
+            reach: horizontal_reach(leg_world, hip_height),
             distance: if flat.length() > MOVING_EPSILON { flat.length() } else { 0.0 },
             dt,
         };
@@ -339,8 +383,11 @@ pub fn apply_leg_ik(
         // Read from the resource every frame rather than a snapshot taken at resolve, so
         // tuning the gait live moves the feet immediately -- scaled to this rig, so the
         // slider still reads in human metres whatever size the character is.
-        let scaled = params.0.scaled(legs.gait_scale);
-        let targets = legs.gait.update(&ctx, &scaled);
+        let scaled = params.0.scaled(gait_scale).fit_to_reach(leg_world, hip_height);
+        let gait = legs
+            .gait
+            .get_or_insert_with(|| GaitState::standing(ctx.hip_ground, ctx.right, &scaled));
+        let targets = gait.update(&ctx, &scaled);
         for foot in Foot::BOTH {
             let chain = legs.chains[foot.index()];
             solve_leg(&chain, targets[foot.index()], body, &parents, &globals, &mut transforms);
@@ -476,6 +523,7 @@ mod world_tests {
     struct Rig {
         app: App,
         character: Entity,
+        model: Entity,
         hip: Entity,
         feet: [Entity; 2],
     }
@@ -483,8 +531,14 @@ mod world_tests {
     const BODY_Y: f32 = 0.5;
     const MODEL_SCALE: f32 = 0.25;
     const MODEL_DROP: f32 = -0.25;
-    /// Ankle height within the model, before the model root scales it.
-    const ANKLE_IN_MODEL: f32 = 0.05;
+    // Heights within the model, taken from swat-2's own skeleton (`packs/mesh2motion`).
+    // The proportions matter: the rig stands with its knees slightly bent, so hip-to-ankle
+    // is about 9% shorter than the leg, and that slack is what lets a foot reach out to the
+    // side of the hip and still touch the floor.
+    const PELVIS_IN_MODEL: f32 = 0.660;
+    const HIP_IN_MODEL: f32 = 0.676;
+    const KNEE_IN_MODEL: f32 = 0.385;
+    const ANKLE_IN_MODEL: f32 = 0.073;
     /// Where the ankles rest relative to the character's origin.
     const ANKLE_REST: f32 = MODEL_DROP + MODEL_SCALE * ANKLE_IN_MODEL;
 
@@ -533,27 +587,36 @@ mod world_tests {
             .insert(ChildOf(character))
             .id();
         let pelvis = world
-            .spawn((Name::new("pelvis"), Transform::from_xyz(0.0, 0.9, 0.0)))
+            .spawn((Name::new("pelvis"), Transform::from_xyz(0.0, PELVIS_IN_MODEL, 0.0)))
             .insert(ChildOf(model))
             .id();
 
         let mut feet = [Entity::PLACEHOLDER; 2];
         for foot in Foot::BOTH {
             let side = if foot == Foot::Left { "l" } else { "r" };
-            let x = foot.lateral_sign() * 0.1;
+            let x = foot.lateral_sign() * 0.07;
             let thigh = world
                 .spawn((
                     Name::new(format!("thigh_{side}")),
-                    Transform::from_xyz(x, -0.05, 0.0),
+                    Transform::from_xyz(x, HIP_IN_MODEL - PELVIS_IN_MODEL, 0.0),
                 ))
                 .insert(ChildOf(pelvis))
                 .id();
+            // Knees forward, so the leg has slack. A rig posed with dead-straight legs is
+            // already at full extension and can never quite reach the ground once the
+            // stance puts the foot off to the side of the hip.
             let shin = world
-                .spawn((Name::new(format!("calf_{side}")), Transform::from_xyz(0.0, -0.4, 0.0)))
+                .spawn((
+                    Name::new(format!("calf_{side}")),
+                    Transform::from_xyz(0.0, KNEE_IN_MODEL - HIP_IN_MODEL, 0.135),
+                ))
                 .insert(ChildOf(thigh))
                 .id();
             feet[foot.index()] = world
-                .spawn((Name::new(format!("foot_{side}")), Transform::from_xyz(0.0, -0.4, 0.0)))
+                .spawn((
+                    Name::new(format!("foot_{side}")),
+                    Transform::from_xyz(0.0, ANKLE_IN_MODEL - KNEE_IN_MODEL, -0.135),
+                ))
                 .insert(ChildOf(shin))
                 .id();
         }
@@ -561,7 +624,7 @@ mod world_tests {
         // One tick, deliberately: the legs must resolve on the very frame the model root is
         // fixed, which is the frame whose globals still say otherwise.
         app.update();
-        Rig { app, character, hip: pelvis, feet }
+        Rig { app, character, model, hip: pelvis, feet }
     }
 
     impl Rig {
@@ -598,20 +661,53 @@ mod world_tests {
             .entity(rig.character)
             .get::<Legs>()
             .expect("legs resolved from the rig's bone names");
-        // The feet belong *below* the character's origin. Reading this off the model root's
-        // unfixed global gave +0.05 instead of -0.24 -- feet above the origin, which on a
-        // character whose origin is at its middle is up around its head.
+        // Measured inside the model, so both numbers are in the model's own units and are
+        // the same whether or not the model root has been sized yet.
         assert!(
-            (legs.ground_offset - ANKLE_REST).abs() < 1e-4,
-            "ground offset was {}, expected {ANKLE_REST}",
-            legs.ground_offset
+            (legs.foot_lift - ANKLE_IN_MODEL).abs() < 1e-4,
+            "foot lift was {}, expected {ANKLE_IN_MODEL}",
+            legs.foot_lift
         );
-        // 0.8 of model-space leg at quarter scale.
         assert!(
-            (legs.gait_scale - 0.2 / REFERENCE_LEG_LENGTH).abs() < 1e-3,
-            "gait scale was {}, so the stride is sized for the wrong character",
-            legs.gait_scale
+            (legs.leg_length - 0.663).abs() < 5e-3,
+            "leg length was {}, so the stride would be sized for the wrong character",
+            legs.leg_length
         );
+    }
+
+    #[test]
+    fn the_feet_follow_a_character_that_spawns_in_the_air_and_falls() {
+        // The bug as it actually shipped. The player is dropped onto the map and settles a
+        // metre lower; standing still, no foot ever swings, so nothing ever produced the
+        // touchdown that re-grounded the plants. The feet stayed nailed at the spawn height
+        // and the legs pointed up at them.
+        let mut rig = rig();
+        for _ in 0..40 {
+            let mut transform = rig
+                .app
+                .world_mut()
+                .get_mut::<Transform>(rig.character)
+                .expect("character");
+            transform.translation.y -= 0.03;
+            rig.app.update();
+        }
+        // Let it land. Reading the ground from a `GlobalTransform` costs a frame of lag, so
+        // mid-fall the feet trail the body by a frame's worth of drop -- unavoidable in a
+        // slot that runs before propagation, and invisible next to a step.
+        for _ in 0..5 {
+            rig.app.update();
+        }
+
+        let hip_y = rig.world_y(rig.hip);
+        let ground = rig.world_y(rig.model) + ANKLE_IN_MODEL * MODEL_SCALE;
+        for foot in Foot::BOTH {
+            let y = rig.world_y(rig.feet[foot.index()]);
+            assert!(y < hip_y, "{foot:?} foot is above the hip ({y} vs {hip_y}) after the fall");
+            assert!(
+                (y - ground).abs() < 0.02,
+                "{foot:?} foot is at y {y}, left behind above the ground at {ground}"
+            );
+        }
     }
 
     #[test]
@@ -619,7 +715,8 @@ mod world_tests {
         let mut rig = rig();
         let step_height = {
             let legs = rig.app.world().entity(rig.character).get::<Legs>().expect("legs");
-            GaitParams::default().scaled(legs.gait_scale).step_height
+            let gait_scale = legs.leg_length * MODEL_SCALE / REFERENCE_LEG_LENGTH;
+            GaitParams::default().scaled(gait_scale).step_height
         };
         rig.walk(120, 0.005);
 

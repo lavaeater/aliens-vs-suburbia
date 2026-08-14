@@ -111,6 +111,53 @@ impl GaitParams {
             duty_factor: self.duty_factor,
         }
     }
+
+    /// Shrink the stride until the feet can actually get to where it puts them.
+    ///
+    /// A leg of length `L` whose hip rides `h` above the ground can only put its foot
+    /// `sqrt(L² - h²)` away from directly underneath itself. Ask for more and the foot never
+    /// arrives: the IK straightens the leg and stops short, which reads as walking on
+    /// tiptoe, or on nothing at all.
+    ///
+    /// What buys a person their long stride is that their hips *drop* as the legs scissor
+    /// apart — the body bobs several centimetres every step. The pelvis here belongs to the
+    /// animation, which holds it at a steady height, so that budget does not exist and the
+    /// stride has to live within whatever slack the rig's own pose leaves. A rig posed with
+    /// nearly straight legs takes small quick steps, which is exactly what a person does
+    /// when they refuse to bend their knees.
+    ///
+    /// The forward lead and the sideways stance share the reach, hence the circle: at
+    /// touchdown the foot is `stance_width / 2` off to the side *and* `duty_factor / 2`
+    /// strides ahead.
+    #[must_use]
+    pub fn fit_to_reach(&self, leg_length: f32, hip_height: f32) -> Self {
+        let reach = horizontal_reach(leg_length, hip_height);
+        let stance_width = self.stance_width.min(reach);
+        let half = stance_width * 0.5;
+        let lead = (reach * reach - half * half).max(0.0).sqrt();
+        let duty = self.duty_factor.clamp(0.01, 0.99);
+        Self {
+            stride_length: self.stride_length.min(lead / (duty * 0.5)),
+            stance_width,
+            step_height: self.step_height,
+            duty_factor: self.duty_factor,
+        }
+    }
+}
+
+/// How much of a leg's horizontal reach the gait may spend.
+///
+/// The rest is left as a bend in the knee. A leg solved dead straight looks like a stilt and
+/// has nowhere to go if the ground turns out to be slightly lower than expected.
+const REACH_MARGIN: f32 = 0.85;
+
+/// How far from under its own hip a foot can be put down, and still reach the floor.
+///
+/// Pythagoras on the leg: the hip is `hip_height` up, the foot is on the ground, and the
+/// straight line between them cannot exceed `leg_length`.
+#[must_use]
+pub fn horizontal_reach(leg_length: f32, hip_height: f32) -> f32 {
+    (leg_length * leg_length - hip_height * hip_height).max(0.0).sqrt() * REACH_MARGIN
 }
 
 /// Cycles per second used to finish a step that was interrupted by stopping.
@@ -190,6 +237,16 @@ pub fn plant_target(
         + right * (foot.lateral_sign() * params.stance_width * 0.5)
 }
 
+/// The nearest point to `plant` that the leg can actually stand on, horizontally.
+fn pull_into_reach(plant: Vec3, ctx: &GaitContext) -> Vec3 {
+    let from_hip = Vec3::new(plant.x - ctx.hip_ground.x, 0.0, plant.z - ctx.hip_ground.z);
+    let distance = from_hip.length();
+    if distance <= ctx.reach || distance < 1e-6 {
+        return plant;
+    }
+    ctx.hip_ground.with_y(plant.y) + from_hip * (ctx.reach / distance)
+}
+
 /// Everything the gait needs to know about the body this frame.
 #[derive(Clone, Copy, Debug)]
 pub struct GaitContext {
@@ -202,6 +259,9 @@ pub struct GaitContext {
     pub right: Vec3,
     /// Ground height under the character. A constant on a flat map; a raycast later.
     pub ground_y: f32,
+    /// How far from under the hips a foot can be planted and still touch the ground — see
+    /// [`horizontal_reach`].
+    pub reach: f32,
     /// Metres travelled since the last update. Drives the whole cycle.
     pub distance: f32,
     /// Seconds since the last update. Used only to settle an interrupted step.
@@ -252,7 +312,18 @@ impl GaitState {
                         self.plant[i] = self.swing_end(ctx, params, foot, 1.0).with_y(ctx.ground_y);
                         self.swinging[i] = false;
                     }
-                    out[i] = self.plant[i];
+                    // A plant that the leg cannot reach is not a plant. Standing still
+                    // never produces a touchdown, so nothing else would ever revisit a
+                    // footprint left somewhere impossible -- by a resolve that happened
+                    // before the model was sized, or by the character being moved out from
+                    // under its own feet. A real foot in that position shuffles.
+                    self.plant[i] = pull_into_reach(self.plant[i], ctx);
+                    // A plant holds its *ground* position; the ground's height is read fresh
+                    // every frame. Only the horizontal part is what "planted" means, and
+                    // holding a latched height instead leaves the feet hanging wherever the
+                    // character last touched down -- a character that spawns in the air and
+                    // falls keeps its feet up at the spawn point, standing on nothing.
+                    out[i] = self.plant[i].with_y(ctx.ground_y);
                 }
                 FootPhase::Swinging { progress } => {
                     if !self.swinging[i] {
@@ -319,8 +390,73 @@ mod tests {
             forward: Vec3::Z,
             right: Vec3::X,
             ground_y: 0.0,
+            // Generous: these tests are about the cycle, not about what a leg can reach.
+            reach: 100.0,
             distance,
             dt: 1.0 / 60.0,
+        }
+    }
+
+    #[test]
+    fn a_stride_never_exceeds_what_the_legs_can_reach() {
+        // Human proportions: a 0.85 m leg with the hip 0.8 m up has 0.28 m of horizontal
+        // reach, and the default 1.6 m stride plants the foot 0.48 m ahead -- too far.
+        let fitted = GaitParams::default().fit_to_reach(0.85, 0.8);
+        let lead = fitted.stride_length * fitted.duty_factor * 0.5;
+        let lateral = fitted.stance_width * 0.5;
+        let needed = (lead * lead + lateral * lateral).sqrt();
+        assert!(
+            needed <= horizontal_reach(0.85, 0.8) + 1e-5,
+            "the foot is planted {needed} out, past a reach of {}",
+            horizontal_reach(0.85, 0.8)
+        );
+    }
+
+    #[test]
+    fn a_gait_that_already_fits_is_left_alone() {
+        // Only a cap. A rig with room to spare keeps the stride it was given.
+        let params = GaitParams { stride_length: 0.4, ..Default::default() };
+        let fitted = params.fit_to_reach(0.85, 0.3);
+        assert_eq!(fitted, params);
+    }
+
+    #[test]
+    fn a_foot_left_somewhere_impossible_shuffles_back_under_the_hips() {
+        // The shape of the shipped bug: the character is dropped onto the map and its feet
+        // are still planted where it spawned. Standing still, no foot ever swings, so
+        // nothing but this rule ever moves them again.
+        let params = GaitParams::default();
+        let hip = Vec3::new(0.0, 0.0, 0.0);
+        let mut gait = GaitState::standing(hip, Vec3::X, &params);
+
+        let mut context = ctx(hip, 0.0);
+        context.reach = 0.3;
+        let feet = gait.update(&context, &params);
+        for foot in Foot::BOTH {
+            let position = feet[foot.index()];
+            let distance = Vec3::new(position.x, 0.0, position.z).length();
+            assert!(
+                distance <= 0.3 + 1e-5,
+                "{foot:?} foot is {distance} from the hips, past a reach of 0.3"
+            );
+        }
+    }
+
+    #[test]
+    fn a_planted_foot_follows_the_ground_down() {
+        // Its horizontal position is nailed; its height is not. The character falls, and the
+        // feet have to come with it rather than stay hanging where it spawned.
+        let params = GaitParams::default();
+        let mut gait = GaitState::standing(Vec3::ZERO, Vec3::X, &params);
+        let mut context = ctx(Vec3::new(0.0, -1.0, 0.0), 0.0);
+        context.ground_y = -1.0;
+        let feet = gait.update(&context, &params);
+        for foot in Foot::BOTH {
+            assert!(
+                (feet[foot.index()].y - (-1.0)).abs() < 1e-5,
+                "{foot:?} foot stayed at {} instead of following the ground to -1.0",
+                feet[foot.index()].y
+            );
         }
     }
 
