@@ -13,6 +13,7 @@ use crate::player::systems::torso_twist::{
 };
 use bevy::transform::TransformSystems;
 use crate::player::systems::arm_ik::{align_sights, solve_weapon_arms, toggle_hand_align, HandAlignEnabled};
+use crate::player::systems::leg_ik::{apply_leg_ik, resolve_legs, toggle_leg_ik, GaitSettings, LegIkEnabled};
 use crate::player::systems::weapon_aim::aim_weapons;
 use bevy::prelude::*;
 use bevy::world_serialization::{WorldInstance, WorldAssetRoot};
@@ -31,13 +32,17 @@ impl Plugin for PlayerPlugin {
         app.init_resource::<AbilityInput>()
             .init_resource::<TorsoTwistEnabled>()
             .init_resource::<HandAlignEnabled>()
+            .init_resource::<LegIkEnabled>()
+            .init_resource::<GaitSettings>()
             // The twist must land after the animation has posed the skeleton and before
             // the pose is propagated -- see torso_twist.rs.
             .add_systems(
                 PostUpdate,
                 // Strictly ordered: the twist poses the shoulders, `aim_weapons` places the
                 // gun from one of them, and the arms are then solved onto the placed gun.
-                (apply_torso_twist, aim_weapons, solve_weapon_arms, align_sights)
+                // The legs are last and independent: they read the character's world
+                // position, which none of the upper-body work touches.
+                (apply_torso_twist, aim_weapons, solve_weapon_arms, align_sights, apply_leg_ik)
                     .chain()
                     .after(bevy::app::AnimationSystems)
                     .before(TransformSystems::Propagate)
@@ -65,6 +70,8 @@ impl Plugin for PlayerPlugin {
                     resolve_twist_bones,
                     toggle_torso_twist,
                     toggle_hand_align,
+                    resolve_legs,
+                    toggle_leg_ik,
                 )
                 .run_if(in_state(GameState::InGame)),
             );
@@ -152,12 +159,15 @@ fn hide_player_weapon_nodes(
 
     for (player_entity, scene_instance) in player_query.iter() {
         if !scene_spawner.instance_is_ready(**scene_instance) { continue; }
-        commands.entity(player_entity).insert(WeaponsHidden);
+        // `try_insert`: the player can be despawned between this queueing and the
+        // buffers applying -- a model swap or a death does exactly that -- and a plain
+        // `insert` on a despawned entity takes the whole app down.
+        commands.entity(player_entity).try_insert(WeaponsHidden);
         for entity in scene_spawner.iter_instance_entities(**scene_instance) {
             if let Ok((_, name)) = named_query.get(entity)
                 && hidden.contains(&name.as_str())
             {
-                commands.entity(entity).insert(Visibility::Hidden);
+                commands.entity(entity).try_insert(Visibility::Hidden);
             }
         }
     }

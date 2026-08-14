@@ -24,11 +24,6 @@
 //!
 //! The single exception is documented on [`SETTLE_RATE`].
 
-// Nothing drives this yet -- it is the solved-and-tested core, ahead of the system that
-// will feed it hips and hand its output to `arm_ik::solve_elbow`. Comes off with that
-// wiring.
-#![allow(dead_code)]
-
 use bevy::math::Vec3;
 
 /// Which leg. Also the index into the per-foot arrays on [`GaitState`].
@@ -69,7 +64,7 @@ impl Foot {
 }
 
 /// The shape of the walk. One cycle is *both* steps.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct GaitParams {
     /// Metres of travel per full cycle. Longer strides mean fewer, bigger steps at the
     /// same speed.
@@ -213,12 +208,6 @@ impl GaitState {
             hip_ground + right * (foot.lateral_sign() * params.stance_width * 0.5)
         });
         Self { cycle: 0.0, plant, swing_from: plant, swinging: [false; 2] }
-    }
-
-    /// Where the body is in the walk cycle, `[0, 1)`.
-    #[must_use]
-    pub fn cycle(&self) -> f32 {
-        self.cycle
     }
 
     /// Advance the cycle and return where both feet go this frame, indexed by

@@ -5,6 +5,7 @@ pub(crate) mod abilities;
 pub(crate) mod arm_ik;
 pub(crate) mod equip;
 pub(crate) mod gait;
+pub(crate) mod leg_ik;
 pub(crate) mod shoot;
 pub(crate) mod torso_twist;
 pub(crate) mod weapon_aim;

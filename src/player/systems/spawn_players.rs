@@ -8,6 +8,7 @@ use crate::assets::asset_definition::{AssetDefinition, ModelType};
 use crate::assets::assets_plugin::GameAssets;
 use crate::control::gamepad_input::WantsGamepad;
 use crate::player::systems::equip::PendingEquip;
+use crate::player::systems::leg_ik::PendingLegs;
 use crate::player::systems::torso_twist::PendingTorsoTwist;
 use crate::player_setup::state::InputDevice;
 pub use crate::player::components::WeaponsHidden;
@@ -148,6 +149,9 @@ pub fn spawn_players(
         commands.entity(player).insert(PendingTorsoTwist::new(
             roster_def.as_ref().map(|def| def.aim_bones.clone()).unwrap_or_default(),
         ));
+        // Procedural legs: the chains are found from the skeleton's own bone names once it
+        // spawns, so there is nothing per-def to carry here.
+        commands.entity(player).insert(PendingLegs::default());
         // Players who joined on a gamepad drop the keyboard component; `assign_gamepads`
         // resolves the pad index to the actual gamepad entity once it sees this.
         if let Some(InputDevice::Gamepad(pad_index)) =
@@ -195,8 +199,12 @@ pub fn fix_scene_transform(
                 transform.translation = fix_scene_transform.translation;
                 transform.rotation = fix_scene_transform.rotation;
                 transform.scale = fix_scene_transform.scale;
-                commands.entity(child).insert(PlayerModelRoot);
-                commands.entity(parent).remove::<FixSceneTransform>();
+                // `try_insert`/`try_remove`: the player and its scene can be despawned
+                // between this queueing and the buffers applying -- the playground's model
+                // swap does exactly that -- and a plain `insert` on a despawned entity is
+                // a hard error that takes the app down.
+                commands.entity(child).try_insert(PlayerModelRoot);
+                commands.entity(parent).try_remove::<FixSceneTransform>();
             }
         }
     }
