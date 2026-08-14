@@ -94,6 +94,25 @@ impl Default for GaitParams {
     }
 }
 
+impl GaitParams {
+    /// The same walk on a body `factor` times a human's size.
+    ///
+    /// Gait is a matter of proportion, not of metres: everyone takes a stride of roughly
+    /// twice their leg length, and a character a quarter of human size that keeps the
+    /// human's 1.6 m stride is reaching several body-lengths ahead of itself with every
+    /// step. The lengths scale; the duty factor does not, being a fraction of the cycle
+    /// rather than a distance — a mouse and a horse both walk at about 0.6.
+    #[must_use]
+    pub fn scaled(&self, factor: f32) -> Self {
+        Self {
+            stride_length: self.stride_length * factor,
+            stance_width: self.stance_width * factor,
+            step_height: self.step_height * factor,
+            duty_factor: self.duty_factor,
+        }
+    }
+}
+
 /// Cycles per second used to finish a step that was interrupted by stopping.
 ///
 /// The one place a clock is allowed in, and only because the alternative is worse: stop
