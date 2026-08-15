@@ -13,7 +13,9 @@ use crate::player::systems::torso_twist::{
 };
 use bevy::transform::TransformSystems;
 use crate::player::systems::arm_ik::{align_sights, solve_weapon_arms, toggle_hand_align, HandAlignEnabled};
-use crate::player::systems::leg_ik::{apply_leg_ik, resolve_legs, toggle_leg_ik, GaitSettings, LegIkEnabled};
+use crate::player::systems::leg_ik::{
+    apply_leg_ik, resolve_legs, toggle_leg_ik, GaitReadout, GaitSettings, LegIkEnabled,
+};
 use crate::player::systems::weapon_aim::aim_weapons;
 use bevy::prelude::*;
 use bevy::world_serialization::{WorldInstance, WorldAssetRoot};
@@ -33,7 +35,8 @@ impl Plugin for PlayerPlugin {
             .init_resource::<TorsoTwistEnabled>()
             .init_resource::<HandAlignEnabled>()
             .init_resource::<LegIkEnabled>()
-            .init_resource::<GaitSettings>()
+            .insert_resource(GaitSettings::load())
+            .init_resource::<GaitReadout>()
             // The twist must land after the animation has posed the skeleton and before
             // the pose is propagated -- see torso_twist.rs.
             .add_systems(

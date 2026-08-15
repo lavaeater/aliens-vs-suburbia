@@ -101,12 +101,13 @@ fn load_playground_map(mut load_map_mw: MessageWriter<LoadMap>) {
     }
 }
 
-/// The camera and model tweak panels the normal HUD carries, toggled with F1 / F2. They
-/// are self-contained and their update systems already run for the whole of `InGame`, so
-/// the playground just needs to spawn them — no duplicate sliders.
+/// The camera and model tweak panels the normal HUD carries (F1 / F2), plus the gait panel
+/// (F10). They are self-contained and their update systems already run for the whole of
+/// `InGame`, so the playground just needs to spawn them — no duplicate sliders.
 fn spawn_settings_panels(mut commands: Commands, theme: Res<lava_ui_builder::LavaTheme>) {
     crate::ui::spawn_ui::spawn_camera_panel(commands.reborrow(), &theme);
-    crate::ui::spawn_ui::spawn_model_panel(commands, &theme);
+    crate::ui::spawn_ui::spawn_model_panel(commands.reborrow(), &theme);
+    crate::ui::gait_panel::spawn_gait_panel(commands, &theme);
 }
 
 /// Scan `assets/defs` and the model folders fresh on every entry, so a def written by the

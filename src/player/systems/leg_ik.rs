@@ -29,6 +29,57 @@ use crate::player::systems::gait::{horizontal_reach, Foot, GaitContext, GaitPara
 #[derive(Resource, Debug, Clone, Copy, Default, Deref, DerefMut)]
 pub struct GaitSettings(pub GaitParams);
 
+/// Where the tuning panel's numbers live between runs.
+pub const GAIT_SETTINGS_PATH: &str = "gait-settings.ron";
+
+impl GaitSettings {
+    /// Load the saved gait, falling back to the human-scale defaults.
+    ///
+    /// Same shape as `GameSettings::load` / `GamepadBindings::load`: a missing or unreadable
+    /// file is not an error, it just means nothing has been tuned yet.
+    #[must_use]
+    pub fn load() -> Self {
+        let path = std::path::Path::new(GAIT_SETTINGS_PATH);
+        if path.exists()
+            && let Ok(text) = std::fs::read_to_string(path)
+            && let Ok(params) = ron::from_str::<GaitParams>(&text)
+        {
+            return Self(params);
+        }
+        Self::default()
+    }
+
+    pub fn save(&self) {
+        if let Ok(text) = ron::ser::to_string_pretty(&self.0, ron::ser::PrettyConfig::default()) {
+            let _ = std::fs::write(GAIT_SETTINGS_PATH, text);
+        }
+    }
+}
+
+/// What the gait actually came out as, for the tuning panel to show.
+///
+/// Purely a readout — nothing reads it back. It exists because the numbers in
+/// [`GaitSettings`] are human-scale and get both rescaled to the rig and clamped to its
+/// reach, so a stride typed in at 1.6 m may be walked at 0.12 m. Tuning a value you cannot
+/// see the effect of is guesswork.
+///
+/// Last player wins, which is fine for a dev overlay and wrong for anything else.
+#[derive(Resource, Debug, Clone, Copy, Default)]
+pub struct GaitReadout {
+    /// This rig's size relative to the human the defaults describe.
+    pub gait_scale: f32,
+    /// Hip-to-ankle, in world metres.
+    pub leg_length: f32,
+    /// How high the hips ride above the ground, in world metres.
+    pub hip_height: f32,
+    /// How far from under the hips a foot can reach the ground.
+    pub reach: f32,
+    /// The stride actually used, after scaling and clamping.
+    pub stride: f32,
+    /// Footfalls per second at the current speed. Two per cycle.
+    pub steps_per_second: f32,
+}
+
 /// Knees bend forward, where elbows bend back. The character's forward is `-Z`, which is
 /// the whole of the difference between solving a leg and solving an arm.
 pub const KNEE_POLE: Vec3 = Vec3::NEG_Z;
@@ -313,6 +364,7 @@ pub fn apply_leg_ik(
     time: Res<Time>,
     enabled: Res<LegIkEnabled>,
     params: Res<GaitSettings>,
+    mut readout: ResMut<GaitReadout>,
     mut characters: Query<(Entity, &mut Legs), (With<Player>, Without<PlayerDead>)>,
     globals: Query<&GlobalTransform>,
     parents: Query<&ChildOf>,
@@ -388,6 +440,20 @@ pub fn apply_leg_ik(
             .gait
             .get_or_insert_with(|| GaitState::standing(ctx.hip_ground, ctx.right, &scaled));
         let targets = gait.update(&ctx, &scaled);
+
+        *readout = GaitReadout {
+            gait_scale,
+            leg_length: leg_world,
+            hip_height,
+            reach: ctx.reach,
+            stride: scaled.stride_length,
+            // Two footfalls per cycle, and a cycle is one stride of travel.
+            steps_per_second: if dt > 0.0 && scaled.stride_length > 0.0 {
+                2.0 * (ctx.distance / dt) / scaled.stride_length
+            } else {
+                0.0
+            },
+        };
         for foot in Foot::BOTH {
             let chain = legs.chains[foot.index()];
             solve_leg(&chain, targets[foot.index()], body, &parents, &globals, &mut transforms);
@@ -565,6 +631,7 @@ mod world_tests {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, TransformPlugin));
         app.init_resource::<GaitSettings>()
+            .init_resource::<GaitReadout>()
             .init_resource::<LegIkEnabled>();
         app.add_systems(Update, (fix_model_root, resolve_legs).chain());
         app.add_systems(

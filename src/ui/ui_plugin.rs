@@ -3,6 +3,7 @@ use bevy::feathers::{dark_theme::create_dark_theme, theme::UiTheme, FeathersPlug
 use bevy::prelude::{in_state, Camera2d, Commands, IntoScheduleConfigs, IsDefaultUiCamera, OnEnter, OnExit};
 use lava_ui_builder::LavaUiPlugin;
 use crate::game_state::GameState;
+use crate::ui::gait_panel::{toggle_gait_panel, update_gait_panel};
 use crate::ui::spawn_ui::{
     add_health_bar, cleanup_state, game_theme, goto_state_system, GotoState,
     spawn_menu, spawn_showcase_ui, spawn_ui, sync_health_bars,
@@ -42,6 +43,8 @@ impl Plugin for UiPlugin {
                     update_ability_hud,
                     update_build_cost_hud,
                     toggle_settings_panel,
+                    toggle_gait_panel,
+                    update_gait_panel,
                     toggle_model_panel,
                     update_camera_panel,
                     update_model_labels,

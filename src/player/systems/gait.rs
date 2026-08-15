@@ -25,6 +25,7 @@
 //! The single exception is documented on [`SETTLE_RATE`].
 
 use bevy::math::Vec3;
+use serde::{Deserialize, Serialize};
 
 /// Which leg. Also the index into the per-foot arrays on [`GaitState`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -64,7 +65,7 @@ impl Foot {
 }
 
 /// The shape of the walk. One cycle is *both* steps.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct GaitParams {
     /// Metres of travel per full cycle. Longer strides mean fewer, bigger steps at the
     /// same speed.
