@@ -256,6 +256,17 @@ fn offset_within(bone: Entity, root: Entity, parents: &Query<&ChildOf>, transfor
     Some(out)
 }
 
+/// The character's right, given the direction it is walking.
+///
+/// `forward.cross(Y)`, not `Y.cross(forward)`. The two differ by a sign, and the sign is the
+/// difference between the feet landing either side of the centreline and the character
+/// crossing its own legs with every step: Bevy is right-handed with `-Z` forward, so
+/// `Y × (-Z)` is `-X`, which is the character's *left*.
+#[must_use]
+fn right_of(forward: Vec3) -> Vec3 {
+    forward.cross(Vec3::Y)
+}
+
 /// The ancestor of `bone` that is a direct child of `character` — the scene's own root.
 fn child_of_character(bone: Entity, character: Entity, parents: &Query<&ChildOf>) -> Option<Entity> {
     let mut current = bone;
@@ -403,7 +414,7 @@ pub fn apply_leg_ik(
         let forward = flat
             .try_normalize()
             .unwrap_or_else(|| (body.rotation() * Vec3::NEG_Z).with_y(0.0).normalize_or(Vec3::NEG_Z));
-        let right = Vec3::Y.cross(forward).normalize_or(body.rotation() * Vec3::X);
+        let right = right_of(forward).normalize_or(body.rotation() * Vec3::X);
 
         // The ground under the character, read from the model itself: the model's origin is
         // the floor it was authored standing on, and the ankles rest a little above that.
@@ -592,6 +603,38 @@ mod tests {
         assert_eq!(bone_side("foot.L"), Some(Foot::Left));
         assert_eq!(bone_side("thigh_r_01"), Some(Foot::Right), "a numeric index is skipped");
         assert_eq!(bone_side("pelvis"), None);
+    }
+
+    #[test]
+    fn right_is_to_the_right_of_the_way_the_character_is_walking() {
+        // Walking the way Bevy calls forward, the character's right hand is +X. Getting
+        // this backwards plants the left foot on the right of the centreline and the right
+        // foot on the left, and the character walks with its legs crossed.
+        let right = right_of(Vec3::NEG_Z);
+        assert!(
+            (right - Vec3::X).length() < 1e-5,
+            "walking toward -Z, right came out as {right:?}, expected +X"
+        );
+        // And it stays right-handed all the way round: turn to face +X and your right
+        // hand swings to +Z, turn to +Z and it swings to -X.
+        assert!((right_of(Vec3::X) - Vec3::Z).length() < 1e-5);
+        assert!((right_of(Vec3::Z) - Vec3::NEG_X).length() < 1e-5);
+    }
+
+    #[test]
+    fn the_left_foot_lands_on_the_left() {
+        // The whole chain, end to end: walking toward -Z, `foot_l` belongs at negative X.
+        let params = GaitParams::default();
+        let forward = Vec3::NEG_Z;
+        let target = crate::player::systems::gait::plant_target(
+            Vec3::ZERO,
+            forward,
+            right_of(forward),
+            Foot::Left,
+            &params,
+            0.0,
+        );
+        assert!(target.x < 0.0, "the left foot planted at x {}, on the right", target.x);
     }
 
     #[test]
