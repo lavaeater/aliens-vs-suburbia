@@ -28,6 +28,8 @@ pub enum GaitLabel {
     Stride,
     Stance,
     StepHeight,
+    /// Hip height as a fraction of leg length; 0 leaves it to the animation.
+    HipTarget,
     Duty,
     Speed,
     LegIk,
@@ -100,6 +102,19 @@ pub fn spawn_gait_panel(commands: Commands, theme: &LavaTheme) {
         |g| g.duty_factor = (g.duty_factor + 0.05).min(0.95),
     );
 
+    // 0 hands the hips back to the animation. The rig's own standing height is around
+    // 0.96, and every step of slack below that is stride.
+    gait_row(
+        &mut ui,
+        "Hips",
+        &t,
+        GaitLabel::HipTarget,
+        |g| g.hip_height = (g.hip_height - 0.05).max(0.0),
+        |g| g.hip_height = (g.hip_height - 0.01).max(0.0),
+        |g| g.hip_height = (g.hip_height + 0.01).min(1.0),
+        |g| g.hip_height = (g.hip_height + 0.05).min(1.0),
+    );
+
     setting_row(&mut ui, "Speed", &t, |row| {
         row.add_button_observe("<<", |b| { b.size_px(28.0, 28.0); },
             |_: On<Activate>, mut s: ResMut<GameSettings>| {
@@ -137,7 +152,7 @@ pub fn spawn_gait_panel(commands: Commands, theme: &LavaTheme) {
     ui.label("-- as walked (read-only) --", 12.0, Color::srgb(0.75, 0.5, 0.35));
     readout_row(&mut ui, "Rig", &t, GaitLabel::Scale);
     readout_row(&mut ui, "Leg", &t, GaitLabel::LegLength);
-    readout_row(&mut ui, "Hip", &t, GaitLabel::HipHeight);
+    readout_row(&mut ui, "Hip up", &t, GaitLabel::HipHeight);
     readout_row(&mut ui, "Reach", &t, GaitLabel::Reach);
     readout_row(&mut ui, "Stride", &t, GaitLabel::FittedStride);
     readout_row(&mut ui, "Steps/s", &t, GaitLabel::StepsPerSecond);
@@ -228,6 +243,11 @@ pub fn update_gait_panel(
             GaitLabel::Stride => format!("{:.2}m", gait.stride_length),
             GaitLabel::Stance => format!("{:.2}m", gait.stance_width),
             GaitLabel::StepHeight => format!("{:.2}m", gait.step_height),
+            GaitLabel::HipTarget => if gait.hip_height > 0.0 {
+                format!("{:.2}L", gait.hip_height)
+            } else {
+                "anim".to_string()
+            },
             GaitLabel::Duty => format!("{:.2}", gait.duty_factor),
             GaitLabel::Speed => format!("{:.2}x", settings.player_speed_multiplier),
             GaitLabel::LegIk => if enabled.0 { "on" } else { "off" }.to_string(),

@@ -74,6 +74,21 @@ pub struct GaitParams {
     pub stance_width: f32,
     /// How high the swinging foot lifts at mid-step.
     pub step_height: f32,
+    /// How high the hips ride, as a fraction of leg length. Zero leaves them alone.
+    ///
+    /// The one number that decides how long a stride can be. A leg reaches
+    /// `sqrt(L² - h²)` from under its own hip, which collapses as `h` approaches `L`:
+    /// hips at 96% of leg length leave 28% of a leg's worth of reach, at 90% they leave
+    /// 44%, at 85% 53%. Rigs are modelled standing up straight, near the top of that
+    /// curve, where a centimetre of hip height is worth several of stride.
+    ///
+    /// So the gait lowers them. This is not a liberty — it is what walking *is*: the
+    /// pelvis drops as the legs scissor apart and rises over the planted foot, and a
+    /// walk cycle animator draws exactly this. The animation still owns the pelvis
+    /// sideways, forwards, and in rotation; only its height is taken over, and only when
+    /// this is non-zero.
+    #[serde(default = "default_hip_height")]
+    pub hip_height: f32,
     /// Fraction of the cycle each foot spends on the ground.
     ///
     /// This one number is the difference between a walk and a run. Above 0.5 the two
@@ -90,10 +105,18 @@ impl Default for GaitParams {
             stride_length: 1.6,
             stance_width: 0.3,
             step_height: 0.15,
+            hip_height: default_hip_height(),
             duty_factor: 0.6,
         }
     }
 }
+
+/// Hips at 90% of leg length.
+///
+/// A person standing still is at about 95%; walking, they spend most of the cycle nearer
+/// 90%, which is where the reach to take the step comes from. Also comfortably clear of
+/// the singularity at 100%, where reach goes to zero and the stride with it.
+fn default_hip_height() -> f32 { 0.9 }
 
 impl GaitParams {
     /// The same walk on a body `factor` times a human's size.
@@ -109,6 +132,8 @@ impl GaitParams {
             stride_length: self.stride_length * factor,
             stance_width: self.stance_width * factor,
             step_height: self.step_height * factor,
+            // A proportion already, so it does not scale.
+            hip_height: self.hip_height,
             duty_factor: self.duty_factor,
         }
     }
@@ -140,7 +165,11 @@ impl GaitParams {
         Self {
             stride_length: self.stride_length.min(lead / (duty * 0.5)),
             stance_width,
-            step_height: self.step_height,
+            // Lift the foot too far and the leg has to fold up to follow it. Past about
+            // half the hip's height the knee is tucked into the chest, which is a high
+            // march at best and a broken puppet at worst.
+            step_height: self.step_height.min(hip_height * MAX_STEP_FRACTION),
+            hip_height: self.hip_height,
             duty_factor: self.duty_factor,
         }
     }
@@ -148,9 +177,15 @@ impl GaitParams {
 
 /// How much of a leg's horizontal reach the gait may spend.
 ///
-/// The rest is left as a bend in the knee. A leg solved dead straight looks like a stilt and
-/// has nowhere to go if the ground turns out to be slightly lower than expected.
-const REACH_MARGIN: f32 = 0.85;
+/// The rest is left as a bend in the knee, so the leg is never solved dead straight — a
+/// stilt with nowhere to go if the ground turns out lower than expected. Close to 1
+/// because an animator is no more timid: swat-2's own walk cycle plants its foot at 99.3%
+/// of full extension, and holding a permanent bend instead is what makes a walk read as a
+/// creep.
+const REACH_MARGIN: f32 = 0.95;
+
+/// The tallest step, as a fraction of hip height. See [`GaitParams::fit_to_reach`].
+const MAX_STEP_FRACTION: f32 = 0.5;
 
 /// How far from under its own hip a foot can be put down, and still reach the floor.
 ///
@@ -411,6 +446,25 @@ mod tests {
             "the foot is planted {needed} out, past a reach of {}",
             horizontal_reach(0.85, 0.8)
         );
+    }
+
+    #[test]
+    fn a_step_is_never_lifted_higher_than_the_leg_can_fold() {
+        // A foot lifted to the hips has to fold the knee into the chest to follow.
+        let params = GaitParams { step_height: 5.0, ..Default::default() };
+        let fitted = params.fit_to_reach(0.85, 0.8);
+        assert!(
+            fitted.step_height <= 0.8 * MAX_STEP_FRACTION + 1e-6,
+            "step height came out at {}, higher than half the hip",
+            fitted.step_height
+        );
+    }
+
+    #[test]
+    fn hip_height_is_a_proportion_and_does_not_scale_with_the_body() {
+        // Lengths scale with the rig; a fraction of leg length is already relative.
+        let params = GaitParams::default();
+        assert_eq!(params.scaled(0.25).hip_height, params.hip_height);
     }
 
     #[test]

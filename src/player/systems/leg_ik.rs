@@ -414,13 +414,49 @@ pub fn apply_leg_ik(
         let ground_y = model.translation().y + legs.foot_lift * model_scale;
         let gait_scale = legs.leg_length * model_scale / REFERENCE_LEG_LENGTH;
 
-        // How much stride the legs can actually pay for, from where the hips are riding this
-        // frame. Live, because the animation moves the pelvis: a crouch shortens the steps
-        // by itself, without a special case.
         let leg_world = legs.leg_length * model_scale;
-        let hip_height = globals
-            .get(legs.chains[0].upper)
-            .map_or(leg_world, |hip| hip.translation().y - ground_y);
+
+        // Both legs hang off the same pelvis, and it is the pelvis the whole gait is
+        // measured against.
+        let Ok(pelvis) = parents.get(legs.chains[0].upper).map(ChildOf::parent) else { continue };
+
+        // Where the hips are *this* frame, by forward kinematics from the model root rather
+        // than from the thigh's own `GlobalTransform`, which is a frame stale and already
+        // carries the previous frame's correction -- reading it back would compound. The
+        // model root's staleness cancels: `ground_y` comes from the same transform, and only
+        // the difference between them is used.
+        let hip_local = offset_within(legs.chains[0].upper, legs.model_root, &parents, &transforms.as_readonly());
+        let Some(hip_local) = hip_local else { continue };
+        let hip_height = model.mul_transform(hip_local).translation().y - ground_y;
+
+        // Take the hips to the height the gait wants them at. Left to the animation, they
+        // ride wherever the clip's author put them -- for swat-2 that is 96% of full leg
+        // extension, which leaves 4cm of reach on a 17cm leg and clamps every stride down
+        // to a shuffle no matter what the sliders say.
+        let hip_height = if params.hip_height > 0.0 {
+            let wanted = params.hip_height * leg_world;
+            let lift = wanted - hip_height;
+            if let Ok(parent_of_pelvis) = parents.get(pelvis).map(ChildOf::parent)
+                && let Ok(parent_world) = globals.get(parent_of_pelvis)
+                && let Ok(mut pelvis_local) = transforms.get_mut(pelvis)
+            {
+                // World-space lift into the parent's frame: this rig's armature is rotated a
+                // quarter turn (Z-up source art) and the model root another half turn, so
+                // "up" is nowhere near +Y in the pelvis's own space.
+                pelvis_local.translation +=
+                    parent_world.affine().inverse().transform_vector3(Vec3::Y * lift);
+            }
+            wanted
+        } else {
+            hip_height
+        };
+
+        // Recomputed after the lift, so the solve works from where the pelvis now is rather
+        // than where the animation left it. Everything below the pelvis is untouched, so
+        // composing the locals gives its new world transform exactly.
+        let pelvis_world = offset_within(pelvis, legs.model_root, &parents, &transforms.as_readonly())
+            .map(|local| model.mul_transform(local));
+        let Some(pelvis_world) = pelvis_world else { continue };
 
         let ctx = GaitContext {
             hip_ground: position.with_y(ground_y),
@@ -456,7 +492,7 @@ pub fn apply_leg_ik(
         };
         for foot in Foot::BOTH {
             let chain = legs.chains[foot.index()];
-            solve_leg(&chain, targets[foot.index()], body, &parents, &globals, &mut transforms);
+            solve_leg(&chain, targets[foot.index()], &pelvis_world, body, &mut transforms);
         }
     }
 }
@@ -468,17 +504,14 @@ pub fn apply_leg_ik(
 fn solve_leg(
     chain: &LegChain,
     target: Vec3,
+    base_world: &GlobalTransform,
     owner: &GlobalTransform,
-    parents: &Query<&ChildOf>,
-    globals: &Query<&GlobalTransform>,
     transforms: &mut Query<&mut Transform>,
 ) -> Option<()> {
-    let base = parents.get(chain.upper).ok()?.parent();
-    let base_world = *globals.get(base).ok()?;
-
     // Forward kinematics from this frame's animated locals. The bones' own globals are a
     // frame stale *and* carry last frame's correction, so using them would compound — the
-    // same trap documented in `arm_ik`.
+    // same trap documented in `arm_ik`. `base_world` is passed in for the same reason: the
+    // pelvis has just been moved this frame, and its own global does not know yet.
     let upper_world = base_world.mul_transform(*transforms.get(chain.upper).ok()?);
     let lower_world = upper_world.mul_transform(*transforms.get(chain.lower).ok()?);
     let foot_world = lower_world.mul_transform(*transforms.get(chain.foot).ok()?);
@@ -591,6 +624,7 @@ mod world_tests {
         character: Entity,
         model: Entity,
         hip: Entity,
+        thigh: Entity,
         feet: [Entity; 2],
     }
 
@@ -659,6 +693,7 @@ mod world_tests {
             .id();
 
         let mut feet = [Entity::PLACEHOLDER; 2];
+        let mut left_thigh = Entity::PLACEHOLDER;
         for foot in Foot::BOTH {
             let side = if foot == Foot::Left { "l" } else { "r" };
             let x = foot.lateral_sign() * 0.07;
@@ -669,6 +704,9 @@ mod world_tests {
                 ))
                 .insert(ChildOf(pelvis))
                 .id();
+            if foot == Foot::Left {
+                left_thigh = thigh;
+            }
             // Knees forward, so the leg has slack. A rig posed with dead-straight legs is
             // already at full extension and can never quite reach the ground once the
             // stance puts the foot off to the side of the hip.
@@ -691,7 +729,7 @@ mod world_tests {
         // One tick, deliberately: the legs must resolve on the very frame the model root is
         // fixed, which is the frame whose globals still say otherwise.
         app.update();
-        Rig { app, character, model, hip: pelvis, feet }
+        Rig { app, character, model, hip: pelvis, thigh: left_thigh, feet }
     }
 
     impl Rig {
@@ -775,6 +813,59 @@ mod world_tests {
                 "{foot:?} foot is at y {y}, left behind above the ground at {ground}"
             );
         }
+    }
+
+    #[test]
+    fn the_hips_are_taken_to_the_height_the_gait_asks_for() {
+        let mut rig = rig();
+        for _ in 0..10 {
+            rig.app.update();
+        }
+        let leg = 0.663 * MODEL_SCALE;
+        let wanted = GaitParams::default().hip_height * leg;
+        let ground = rig.world_y(rig.model) + ANKLE_IN_MODEL * MODEL_SCALE;
+        let hip = rig.world_y(rig.thigh) - ground;
+        assert!(
+            (hip - wanted).abs() < 0.005,
+            "hips are {hip} above the ground, not the {wanted} the gait asked for"
+        );
+    }
+
+    #[test]
+    fn the_hip_correction_does_not_accumulate() {
+        // Nothing resets the pelvis here, which is the dangerous case: a clip that does not
+        // animate pelvis translation leaves last frame's correction in place, and a
+        // correction applied on top of itself walks the character into the floor or the sky.
+        // It has to be computed from where the hips *are*, every frame, so it converges.
+        let mut rig = rig();
+        for _ in 0..10 {
+            rig.app.update();
+        }
+        let ground = rig.world_y(rig.model) + ANKLE_IN_MODEL * MODEL_SCALE;
+        let early = rig.world_y(rig.thigh) - ground;
+        for _ in 0..300 {
+            rig.app.update();
+        }
+        let late = rig.world_y(rig.thigh) - ground;
+        assert!(
+            (late - early).abs() < 1e-3,
+            "hips drifted from {early} to {late} over 300 frames"
+        );
+    }
+
+    #[test]
+    fn lowering_the_hips_buys_a_longer_stride() {
+        // The whole point of taking the pelvis over. Same rig, same settings, hips 6% lower.
+        let leg = 0.663 * MODEL_SCALE;
+        let params = GaitParams::default();
+        let tall = params.scaled(leg / REFERENCE_LEG_LENGTH).fit_to_reach(leg, 0.96 * leg);
+        let walking = params.scaled(leg / REFERENCE_LEG_LENGTH).fit_to_reach(leg, 0.90 * leg);
+        assert!(
+            walking.stride_length > tall.stride_length * 1.5,
+            "hips at 90% gave a stride of {}, barely better than {} at 96%",
+            walking.stride_length,
+            tall.stride_length
+        );
     }
 
     #[test]
