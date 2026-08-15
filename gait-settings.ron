@@ -1,7 +1,7 @@
 (
-    stride_length: 1.8,
-    stance_width: 0.45999995,
-    step_height: 0.6,
-    hip_height: 0.9,
-    duty_factor: 0.7100001,
+    stride_length: 0.79999983,
+    stance_width: 0.96000004,
+    step_height: 0.34999996,
+    hip_height: 0.84999996,
+    duty_factor: 0.51000005,
 )
