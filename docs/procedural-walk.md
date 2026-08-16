@@ -1,9 +1,13 @@
 # The procedural walk
 
-The player's legs are not animated. The clip still drives the whole body, but every frame
-the thigh and shin rotations — and the pelvis height — are overwritten by a solve that puts
-the feet on the ground and keeps them there. `F9` toggles it off for an A/B against the
-clip's own legs.
+> **Off by default.** The clip's own legs look better today, so that is what ships. `F9` —
+> or the gait panel's Legs toggle — turns this on. What is left to do is at the bottom.
+
+With it on, the player's legs are not animated: the clip still drives the whole body, but
+every frame the thigh and shin rotations — and the pelvis height — are overwritten by a
+solve that puts the feet on the ground and keeps them there. `F9` toggles it back off for an
+A/B against the clip's own legs, and nothing needs undoing when it goes off, because the
+animation rewrites those bones from the clip on the very next frame.
 
 Three pieces: `src/player/systems/gait.rs` decides where the feet go, in world space, and
 knows nothing about the engine. `src/player/systems/leg_ik.rs` finds the leg chains, keeps

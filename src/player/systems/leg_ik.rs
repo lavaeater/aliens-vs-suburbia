@@ -194,14 +194,15 @@ pub struct PendingLegs {
 }
 
 /// Runtime switch, `F9`, so procedural legs can be A/B'd against the clip in place.
-#[derive(Resource)]
+///
+/// **Off by default.** The procedural walk works but is not finished — the feet keep the
+/// clip's orientation, so they neither lie flat nor roll heel to toe, and only the knee has
+/// joint limits. The clip's own legs look better today, so that is what ships while the
+/// weapon and hardpoint work goes on. `F9`, or the playground's gait panel, turns it back
+/// on; nothing else changes, since everything it writes is overwritten by the animation the
+/// moment it stops writing. See `docs/procedural-walk.md`.
+#[derive(Resource, Default)]
 pub struct LegIkEnabled(pub bool);
-
-impl Default for LegIkEnabled {
-    fn default() -> Self {
-        Self(true)
-    }
-}
 
 // ── Finding the legs ────────────────────────────────────────────────────────
 
@@ -846,7 +847,11 @@ mod world_tests {
         app.add_plugins((MinimalPlugins, TransformPlugin));
         app.init_resource::<GaitSettings>()
             .init_resource::<GaitReadout>()
-            .init_resource::<LegIkEnabled>();
+            // Explicitly on: the shipping default is off, and a test that silently stops
+            // exercising the thing it is named after is worse than no test. Several of
+            // these would still pass with the solve disabled, because the rig's rest pose
+            // already has its feet on the ground.
+            .insert_resource(LegIkEnabled(true));
         app.add_systems(Update, (fix_model_root, resolve_legs).chain());
         app.add_systems(
             PostUpdate,
