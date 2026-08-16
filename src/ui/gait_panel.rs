@@ -28,6 +28,8 @@ pub enum GaitLabel {
     Stride,
     Stance,
     StepHeight,
+    /// Where the footfalls sit fore and aft of the hips, in strides.
+    StrideBias,
     /// Hip height as a fraction of leg length; 0 leaves it to the animation.
     HipTarget,
     Duty,
@@ -100,6 +102,19 @@ pub fn spawn_gait_panel(commands: Commands, theme: &LavaTheme) {
         |g| g.duty_factor = (g.duty_factor - 0.01).max(0.2),
         |g| g.duty_factor = (g.duty_factor + 0.01).min(0.95),
         |g| g.duty_factor = (g.duty_factor + 0.05).min(0.95),
+    );
+
+    // Negative puts the footfalls further back, which is the body riding further forward
+    // over them.
+    gait_row(
+        &mut ui,
+        "Fore/aft",
+        &t,
+        GaitLabel::StrideBias,
+        |g| g.stride_bias = (g.stride_bias - 0.05).max(-0.5),
+        |g| g.stride_bias = (g.stride_bias - 0.01).max(-0.5),
+        |g| g.stride_bias = (g.stride_bias + 0.01).min(0.5),
+        |g| g.stride_bias = (g.stride_bias + 0.05).min(0.5),
     );
 
     // 0 hands the hips back to the animation. The rig's own standing height is around
@@ -243,6 +258,7 @@ pub fn update_gait_panel(
             GaitLabel::Stride => format!("{:.2}m", gait.stride_length),
             GaitLabel::Stance => format!("{:.2}m", gait.stance_width),
             GaitLabel::StepHeight => format!("{:.2}m", gait.step_height),
+            GaitLabel::StrideBias => format!("{:+.2}", gait.stride_bias),
             GaitLabel::HipTarget => if gait.hip_height > 0.0 {
                 format!("{:.2}L", gait.hip_height)
             } else {

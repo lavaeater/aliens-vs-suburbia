@@ -111,6 +111,35 @@ pub struct LegChain {
     pub foot: Entity,
 }
 
+/// The last frame of gait, in world space, kept so the overlay can draw it.
+///
+/// A snapshot rather than a recomputation: the gizmos have to show what the feet were
+/// actually sent to, and anything recomputed in a later system is a second implementation
+/// that can disagree with the first — which is precisely the bug an overlay exists to find.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct GaitFrame {
+    /// The hips, dropped onto the ground plane.
+    pub hip_ground: Vec3,
+    /// Unit, the direction of travel.
+    pub forward: Vec3,
+    /// Unit, the character's right.
+    pub right: Vec3,
+    /// How far from under the hips a foot can still reach the ground.
+    pub reach: f32,
+    /// Where each foot was sent this frame.
+    pub targets: [Vec3; 2],
+    /// Where each foot is nailed, or last was.
+    pub plants: [Vec3; 2],
+    /// Which feet are in the air.
+    pub swinging: [bool; 2],
+    /// Along `forward` from the hips: where a foot should touch down, and where it should
+    /// leave the ground.
+    pub touchdown: f32,
+    pub liftoff: f32,
+    /// Distance between the feet across the direction of travel.
+    pub stance_width: f32,
+}
+
 /// A character walking on procedural legs.
 #[derive(Component)]
 pub struct Legs {
@@ -143,6 +172,9 @@ pub struct Legs {
     /// Hip-to-ankle in the model's own units, for scaling the gait. See
     /// [`GaitParams::scaled`].
     leg_length: f32,
+    /// Last frame's gait, for the overlay. Written every frame, read by nothing that
+    /// matters.
+    pub frame: GaitFrame,
 }
 
 /// Bone names still to be resolved, retried until the skeleton spawns. Mirrors
@@ -361,6 +393,7 @@ pub fn resolve_legs(
                 model_root,
                 foot_lift,
                 leg_length,
+                frame: GaitFrame::default(),
             })
             .remove::<PendingLegs>();
     }
@@ -487,6 +520,22 @@ pub fn apply_leg_ik(
             .gait
             .get_or_insert_with(|| GaitState::standing(ctx.hip_ground, ctx.right, &scaled));
         let targets = gait.update(&ctx, &scaled);
+
+        let half_stance = scaled.stance_width * 0.5;
+        legs.frame = GaitFrame {
+            hip_ground: ctx.hip_ground,
+            forward,
+            right,
+            reach: ctx.reach,
+            targets,
+            plants: gait.plants(),
+            swinging: Foot::BOTH.map(|foot| gait.is_swinging(foot)),
+            // A planted foot lands ahead of the hips and leaves the ground behind them,
+            // one stance's worth of travel later.
+            touchdown: (scaled.duty_factor * 0.5 + scaled.stride_bias) * scaled.stride_length,
+            liftoff: (scaled.stride_bias - scaled.duty_factor * 0.5) * scaled.stride_length,
+            stance_width: half_stance * 2.0,
+        };
 
         *readout = GaitReadout {
             gait_scale,

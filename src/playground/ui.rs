@@ -375,6 +375,7 @@ pub fn rebuild_debug_toggles(
         (debug.physics, "physics colliders  [F3]"),
         (debug.skeleton, "skeleton"),
         (debug.hardpoints, "hardpoint frames"),
+        (debug.gait, "gait targets"),
     ];
     commands.entity(container).with_children(|parent| {
         for (index, (on, label)) in rows.into_iter().enumerate() {
@@ -390,7 +391,8 @@ pub fn rebuild_debug_toggles(
                             // panel dirty, so there is one source of truth.
                         }
                         1 => debug.toggle_skeleton(),
-                        _ => debug.toggle_hardpoints(),
+                        2 => debug.toggle_hardpoints(),
+                        _ => debug.toggle_gait(),
                     }
                 },
             );

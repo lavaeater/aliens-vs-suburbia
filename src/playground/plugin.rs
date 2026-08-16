@@ -13,8 +13,8 @@ use crate::general::components::map_components::MapFile;
 use crate::general::events::map_events::LoadMap;
 use crate::playground::dummies::{respawn_dummies, spawn_dummy_posts};
 use crate::playground::debug::{
-    bias_gizmos_over_mesh, draw_player_overlays, reset_gizmo_bias, sync_physics_toggle,
-    PlaygroundDebug,
+    bias_gizmos_over_mesh, draw_gait_gizmos, draw_player_overlays, reset_gizmo_bias,
+    sync_physics_toggle, PlaygroundDebug,
 };
 use crate::playground::animation::AnimationEditor;
 use crate::playground::hardpoints::{
@@ -71,6 +71,7 @@ impl Plugin for PlaygroundPlugin {
                 sync_physics_toggle,
                 rebuild_debug_toggles,
                 draw_player_overlays,
+                draw_gait_gizmos,
                 // Ordered: load the weapon def before the panel that draws it and the
                 // system that pushes it at the live weapon.
                 sync_weapon_def,

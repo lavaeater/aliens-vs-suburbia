@@ -17,6 +17,8 @@ use bevy::prelude::*;
 use crate::assets::gizmos::{bone_map, draw_hardpoints, draw_skeleton, joints_under};
 use crate::model_settings::plugin::PlayerAssetDef;
 use crate::player::components::Player;
+use crate::player::systems::gait::Foot;
+use crate::player::systems::leg_ik::Legs;
 use crate::player::systems::equip::EquippedWeapon;
 use crate::playground::hardpoints::PlaygroundWeaponDef;
 
@@ -27,6 +29,9 @@ pub struct PlaygroundDebug {
     /// Mirror of avian's `PhysicsGizmos::enabled`, so the panel can show its state. Kept
     /// current by [`sync_physics_toggle`] — `F3` can flip it behind our back.
     pub physics: bool,
+    /// The walk's footfalls: where each foot is going, where it is nailed, and how far the
+    /// legs can reach.
+    pub gait: bool,
     pub ui_dirty: bool,
 }
 
@@ -40,6 +45,83 @@ impl PlaygroundDebug {
         self.hardpoints = !self.hardpoints;
         self.ui_dirty = true;
     }
+
+    pub fn toggle_gait(&mut self) {
+        self.gait = !self.gait;
+        self.ui_dirty = true;
+    }
+}
+
+/// Left is orange, right is blue, everywhere and always.
+///
+/// The same two colours the whole way through, because the first thing this overlay is
+/// asked is "which foot is that?" — and a character walking with its legs crossed looks
+/// exactly like one walking normally until you can answer it.
+const LEFT_COLOR: Color = Color::srgb(1.0, 0.55, 0.15);
+const RIGHT_COLOR: Color = Color::srgb(0.25, 0.7, 1.0);
+
+fn foot_color(foot: Foot) -> Color {
+    match foot {
+        Foot::Left => LEFT_COLOR,
+        Foot::Right => RIGHT_COLOR,
+    }
+}
+
+/// Draw the gait: the reach the legs have, the line each foot walks along, where it is
+/// supposed to touch down and leave the ground, and where it is right now.
+pub fn draw_gait_gizmos(debug: Res<PlaygroundDebug>, mut gizmos: Gizmos, players: Query<&Legs>) {
+    if !debug.gait {
+        return;
+    }
+    let flat = Quat::from_rotation_arc(Vec3::Z, Vec3::Y);
+
+    for legs in players.iter() {
+        let f = &legs.frame;
+        if f.forward.length_squared() < 0.5 {
+            continue; // never driven yet
+        }
+
+        // How far a foot can get from under the hips and still touch the floor. Every
+        // marker outside this ring is a foot the legs cannot actually reach.
+        gizmos.circle(
+            Isometry3d::new(f.hip_ground, flat),
+            f.reach,
+            Color::srgb(0.55, 0.5, 0.2),
+        );
+        // The hips themselves, and the centreline the feet are placed either side of.
+        gizmos.line(f.hip_ground, f.hip_ground + Vec3::Y * 0.25, Color::srgb(0.6, 0.6, 0.6));
+
+        for foot in Foot::BOTH {
+            let i = foot.index();
+            let color = foot_color(foot);
+            let side = f.right * (foot.lateral_sign() * f.stance_width * 0.5);
+            let touchdown = f.hip_ground + side + f.forward * f.touchdown;
+            let liftoff = f.hip_ground + side + f.forward * f.liftoff;
+
+            // The stance: the foot lands at one end and leaves the ground at the other,
+            // having stood still while the body travelled the length of it.
+            gizmos.line(liftoff, touchdown, color.with_alpha(0.5));
+            cross(&mut gizmos, touchdown, 0.04, color);
+            cross(&mut gizmos, liftoff, 0.025, color.with_alpha(0.4));
+
+            // Where the foot actually is, and what it is standing on.
+            let target = f.targets[i];
+            gizmos.sphere(Isometry3d::from_translation(target), 0.02, color);
+            if f.swinging[i] {
+                // In the air: show the footprint it left and the one it is heading for.
+                gizmos.line(f.plants[i], target, color.with_alpha(0.35));
+                cross(&mut gizmos, f.plants[i], 0.02, color.with_alpha(0.3));
+            } else {
+                gizmos.line(target, target + Vec3::Y * 0.06, color);
+            }
+        }
+    }
+}
+
+/// A flat cross on the ground, which reads at any camera angle where a sphere does not.
+fn cross(gizmos: &mut Gizmos, at: Vec3, size: f32, color: Color) {
+    gizmos.line(at - Vec3::X * size, at + Vec3::X * size, color);
+    gizmos.line(at - Vec3::Z * size, at + Vec3::Z * size, color);
 }
 
 /// Flip avian's collider gizmos. Writes the config directly rather than a local flag, so

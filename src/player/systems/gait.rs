@@ -74,6 +74,17 @@ pub struct GaitParams {
     pub stance_width: f32,
     /// How high the swinging foot lifts at mid-step.
     pub step_height: f32,
+    /// Where the footfalls sit fore and aft of the hips, in strides. Zero is centred.
+    ///
+    /// A planted foot travels from `duty/2` strides in front of the hips to `duty/2`
+    /// behind, symmetrically, because that is what keeps the body's weight over the foot
+    /// for the middle of the stance. Whether that *looks* right is another matter: the
+    /// visual centre of a character is its chest, not its hip joint, and a rig that leans
+    /// into its walk carries that centre forward of the hips. Negative values put the feet
+    /// down further back, which is the same thing as the body riding further forward over
+    /// them.
+    #[serde(default)]
+    pub stride_bias: f32,
     /// How high the hips ride, as a fraction of leg length. Zero leaves them alone.
     ///
     /// The one number that decides how long a stride can be. A leg reaches
@@ -105,6 +116,7 @@ impl Default for GaitParams {
             stride_length: 1.6,
             stance_width: 0.3,
             step_height: 0.15,
+            stride_bias: 0.0,
             hip_height: default_hip_height(),
             duty_factor: 0.6,
         }
@@ -132,7 +144,8 @@ impl GaitParams {
             stride_length: self.stride_length * factor,
             stance_width: self.stance_width * factor,
             step_height: self.step_height * factor,
-            // A proportion already, so it does not scale.
+            // Proportions already, so they do not scale.
+            stride_bias: self.stride_bias,
             hip_height: self.hip_height,
             duty_factor: self.duty_factor,
         }
@@ -163,12 +176,17 @@ impl GaitParams {
         let lead = (reach * reach - half * half).max(0.0).sqrt();
         let duty = self.duty_factor.clamp(0.01, 0.99);
         Self {
-            stride_length: self.stride_length.min(lead / (duty * 0.5)),
+            // The furthest a planted foot gets from the hips is `duty/2 + |bias|` strides,
+            // so a biased gait has to keep its stride shorter to stay inside the same reach.
+            stride_length: self
+                .stride_length
+                .min(lead / (duty * 0.5 + self.stride_bias.abs())),
             stance_width,
             // Lift the foot too far and the leg has to fold up to follow it. Past about
             // half the hip's height the knee is tucked into the chest, which is a high
             // march at best and a broken puppet at worst.
             step_height: self.step_height.min(hip_height * MAX_STEP_FRACTION),
+            stride_bias: self.stride_bias,
             hip_height: self.hip_height,
             duty_factor: self.duty_factor,
         }
@@ -267,7 +285,8 @@ pub fn plant_target(
     params: &GaitParams,
     swing_remaining: f32,
 ) -> Vec3 {
-    let lead = (swing_remaining + params.duty_factor * 0.5) * params.stride_length;
+    let lead =
+        (swing_remaining + params.duty_factor * 0.5 + params.stride_bias) * params.stride_length;
     hip_ground
         + forward * lead
         + right * (foot.lateral_sign() * params.stance_width * 0.5)
@@ -316,6 +335,19 @@ pub struct GaitState {
 }
 
 impl GaitState {
+    /// Where each foot is currently nailed. For the overlay; the solve uses
+    /// [`GaitState::update`]'s return value.
+    #[must_use]
+    pub fn plants(&self) -> [Vec3; 2] {
+        self.plant
+    }
+
+    /// Whether this foot is in the air.
+    #[must_use]
+    pub fn is_swinging(&self, foot: Foot) -> bool {
+        self.swinging[foot.index()]
+    }
+
     /// Start with both feet planted either side of `hip_ground`.
     #[must_use]
     pub fn standing(hip_ground: Vec3, right: Vec3, params: &GaitParams) -> Self {
@@ -445,6 +477,48 @@ mod tests {
             needed <= horizontal_reach(0.85, 0.8) + 1e-5,
             "the foot is planted {needed} out, past a reach of {}",
             horizontal_reach(0.85, 0.8)
+        );
+    }
+
+    #[test]
+    fn a_negative_bias_puts_the_footfalls_further_back() {
+        // What the character sees as the body riding further forward over its feet.
+        let params = GaitParams { stride_bias: -0.2, ..Default::default() };
+        let centred = GaitParams::default();
+        let biased_target =
+            plant_target(Vec3::ZERO, Vec3::NEG_Z, Vec3::X, Foot::Left, &params, 0.0);
+        let centred_target =
+            plant_target(Vec3::ZERO, Vec3::NEG_Z, Vec3::X, Foot::Left, &centred, 0.0);
+        // Forward is -Z, so "further back" is a larger z.
+        assert!(
+            biased_target.z > centred_target.z,
+            "biased foot landed at z {} , not behind the centred {}",
+            biased_target.z,
+            centred_target.z
+        );
+        assert!(
+            (biased_target.z - centred_target.z - 0.2 * params.stride_length).abs() < 1e-5,
+            "the shift should be exactly the bias in strides"
+        );
+    }
+
+    #[test]
+    fn a_biased_stride_still_fits_the_legs() {
+        // The bias pushes one end of the stance further out, so the stride has to give way
+        // -- otherwise the trailing foot is left somewhere the leg cannot reach and the
+        // reach clamp drags it forward mid-stance, which is a skid.
+        let leg = 0.85;
+        let hip = 0.8;
+        let params = GaitParams { stride_bias: -0.3, ..Default::default() };
+        let fitted = params.fit_to_reach(leg, hip);
+        let furthest =
+            (fitted.duty_factor * 0.5 + fitted.stride_bias.abs()) * fitted.stride_length;
+        let lateral = fitted.stance_width * 0.5;
+        let needed = (furthest * furthest + lateral * lateral).sqrt();
+        assert!(
+            needed <= horizontal_reach(leg, hip) + 1e-5,
+            "the trailing foot is {needed} out, past a reach of {}",
+            horizontal_reach(leg, hip)
         );
     }
 
