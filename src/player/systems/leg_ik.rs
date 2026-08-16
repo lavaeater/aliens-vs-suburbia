@@ -70,8 +70,10 @@ impl GaitSettings {
 pub struct GaitReadout {
     /// This rig's size relative to the human the defaults describe.
     pub gait_scale: f32,
-    /// Hip-to-ankle, in world metres.
+    /// Hip-to-ankle, in world metres, with a knee that locks straight.
     pub leg_length: f32,
+    /// The furthest the ankle can actually get from the hip, once the knee's limits apply.
+    pub furthest: f32,
     /// How high the hips ride above the ground, in world metres.
     pub hip_height: f32,
     /// How far from under the hips a foot can reach the ground.
@@ -174,6 +176,11 @@ pub struct Legs {
     /// Hip-to-ankle in the model's own units, for scaling the gait. See
     /// [`GaitParams::scaled`].
     leg_length: f32,
+    /// The two bones, in the model's own units. Kept apart rather than summed because the
+    /// knee's limits are a triangle across them, not a single length — see
+    /// [`KneeLimits::span`].
+    upper_length: f32,
+    lower_length: f32,
     /// Last frame's gait, for the overlay. Written every frame, read by nothing that
     /// matters.
     pub frame: GaitFrame,
@@ -370,8 +377,9 @@ pub fn resolve_legs(
         };
 
         let foot_lift = ankle.translation.y;
-        let leg_length = hip.translation.distance(knee.translation)
-            + knee.translation.distance(ankle.translation);
+        let upper_length = hip.translation.distance(knee.translation);
+        let lower_length = knee.translation.distance(ankle.translation);
+        let leg_length = upper_length + lower_length;
 
         // The ankles have to be below the hips. If they are not, the rig is not posed yet;
         // retry rather than plant the feet somewhere the legs have to reach up to.
@@ -395,6 +403,8 @@ pub fn resolve_legs(
                 model_root,
                 foot_lift,
                 leg_length,
+                upper_length,
+                lower_length,
                 frame: GaitFrame::default(),
             })
             .remove::<PendingLegs>();
@@ -461,6 +471,12 @@ pub fn apply_leg_ik(
         let gait_scale = legs.leg_length * model_scale / REFERENCE_LEG_LENGTH;
 
         let leg_world = legs.leg_length * model_scale;
+        // What the knee allows, in world metres: how near and how far the ankle can get
+        // from the hip. Everything about reach is measured from `furthest` rather than from
+        // `leg_world`, which is the length of a leg with a knee that locks.
+        let (nearest, furthest) = params
+            .knee
+            .span(legs.upper_length * model_scale, legs.lower_length * model_scale);
 
         // Both legs hang off the same pelvis, and it is the pelvis the whole gait is
         // measured against.
@@ -526,7 +542,7 @@ pub fn apply_leg_ik(
             forward,
             right,
             ground_y,
-            reach: horizontal_reach(leg_world, mean_hip),
+            reach: horizontal_reach(furthest, mean_hip),
             distance: if flat.length() > MOVING_EPSILON { flat.length() } else { 0.0 },
             dt,
         };
@@ -534,7 +550,11 @@ pub fn apply_leg_ik(
         // Read from the resource every frame rather than a snapshot taken at resolve, so
         // tuning the gait live moves the feet immediately -- scaled to this rig, so the
         // slider still reads in human metres whatever size the character is.
-        let scaled = params.0.scaled(gait_scale).fit_to_reach(leg_world, mean_hip);
+        let scaled = params.0.scaled(gait_scale).fit_to_reach(
+            legs.upper_length * model_scale,
+            legs.lower_length * model_scale,
+            mean_hip,
+        );
         let gait = legs
             .gait
             .get_or_insert_with(|| GaitState::standing(ctx.hip_ground, ctx.right, &scaled));
@@ -559,6 +579,7 @@ pub fn apply_leg_ik(
         *readout = GaitReadout {
             gait_scale,
             leg_length: leg_world,
+            furthest,
             hip_height,
             reach: ctx.reach,
             stride: scaled.stride_length,
@@ -571,9 +592,31 @@ pub fn apply_leg_ik(
         };
         for foot in Foot::BOTH {
             let chain = legs.chains[foot.index()];
-            solve_leg(&chain, targets[foot.index()], &pelvis_world, body, &mut transforms);
+            solve_leg(
+                &chain,
+                targets[foot.index()],
+                (nearest, furthest),
+                &pelvis_world,
+                body,
+                &mut transforms,
+            );
         }
     }
+}
+
+/// The nearest point to `target` that the knee can actually put the ankle on.
+///
+/// `span` is `(nearest, furthest)` from [`KneeLimits::span`] — the ring around the hip the
+/// ankle is confined to.
+fn within_reach(hip: Vec3, target: Vec3, span: (f32, f32)) -> Vec3 {
+    let (nearest, furthest) = span;
+    let offset = target - hip;
+    let distance = offset.length();
+    if distance < 1e-6 {
+        return hip + Vec3::NEG_Y * nearest;
+    }
+    let clamped = distance.clamp(nearest, furthest);
+    hip + offset * (clamped / distance)
 }
 
 /// Bend one leg so its ankle reaches `target`.
@@ -583,6 +626,7 @@ pub fn apply_leg_ik(
 fn solve_leg(
     chain: &LegChain,
     target: Vec3,
+    span: (f32, f32),
     base_world: &GlobalTransform,
     owner: &GlobalTransform,
     transforms: &mut Query<&mut Transform>,
@@ -604,6 +648,14 @@ fn solve_leg(
     if upper_len < 1e-5 || lower_len < 1e-5 {
         return None;
     }
+
+    // The gait plans its targets inside what the knee can reach, so this normally does
+    // nothing. When it does bite -- a step height wound past the fold, a foot left over a
+    // hole in the floor -- the foot comes off its mark rather than the knee going somewhere
+    // a knee does not go. Which of the two to give up is the whole question, and a
+    // plausible leg missing its target by a centimetre beats a correct target reached by
+    // inverting the joint.
+    let target = within_reach(hip, target, span);
 
     let pole = owner.rotation() * KNEE_POLE;
     let wanted_knee = solve_elbow(hip, target, upper_len, lower_len, pole);
@@ -687,6 +739,23 @@ mod tests {
         // hand swings to +Z, turn to +Z and it swings to -X.
         assert!((right_of(Vec3::X) - Vec3::Z).length() < 1e-5);
         assert!((right_of(Vec3::Z) - Vec3::NEG_X).length() < 1e-5);
+    }
+
+    #[test]
+    fn a_target_beyond_the_knee_is_pulled_back_to_what_it_can_reach() {
+        let hip = Vec3::new(0.0, 1.0, 0.0);
+        let span = (0.2, 0.8);
+        // Too far: brought in along the same line, so the foot keeps its direction and
+        // gives up only the distance it could never have covered.
+        let far = within_reach(hip, Vec3::new(0.0, 1.0 - 2.0, 0.0), span);
+        assert!((far.distance(hip) - 0.8).abs() < 1e-5);
+        assert!((far - hip).normalize().dot(Vec3::NEG_Y) > 0.999);
+        // Too close: pushed back out to the fold limit.
+        let near = within_reach(hip, hip + Vec3::NEG_Y * 0.05, span);
+        assert!((near.distance(hip) - 0.2).abs() < 1e-5);
+        // Inside the ring: untouched.
+        let ok = hip + Vec3::new(0.1, -0.4, 0.0);
+        assert!(within_reach(hip, ok, span).distance(ok) < 1e-6);
     }
 
     #[test]
@@ -969,8 +1038,13 @@ mod world_tests {
         // The whole point of taking the pelvis over. Same rig, same settings, hips 6% lower.
         let leg = 0.663 * MODEL_SCALE;
         let params = GaitParams::default();
-        let tall = params.scaled(leg / REFERENCE_LEG_LENGTH).fit_to_reach(leg, 0.96 * leg);
-        let walking = params.scaled(leg / REFERENCE_LEG_LENGTH).fit_to_reach(leg, 0.90 * leg);
+        let (upper, lower) = (leg * 0.48, leg * 0.52);
+        let tall = params
+            .scaled(leg / REFERENCE_LEG_LENGTH)
+            .fit_to_reach(upper, lower, 0.96 * leg);
+        let walking = params
+            .scaled(leg / REFERENCE_LEG_LENGTH)
+            .fit_to_reach(upper, lower, 0.90 * leg);
         assert!(
             walking.stride_length > tall.stride_length * 1.5,
             "hips at 90% gave a stride of {}, barely better than {} at 96%",

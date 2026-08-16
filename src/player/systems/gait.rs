@@ -64,6 +64,55 @@ impl Foot {
     }
 }
 
+/// What the knee between the two leg bones will do.
+///
+/// Angles are the interior angle at the knee: 180 degrees is a leg straightened into a
+/// stilt, and small angles are a heel folded up toward the backside. Walking, a knee is at
+/// its straightest around 175 at heel strike and folds to roughly 120 at mid-swing.
+///
+/// Anatomy rather than choreography, so it belongs to the character in the long run — a
+/// per-def field beside `aim_bones` and `hardpoints`. It lives here for now because here is
+/// what has a tuning panel attached to it.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub struct KneeLimits {
+    /// The straightest the leg may be solved, in degrees.
+    ///
+    /// Never quite 180. A knee that locks dead straight reads as a stilt, and it is also
+    /// the singularity of the two-bone solve: at full extension the knee's bend direction
+    /// is undefined, so a hair of noise in the target flips it anywhere it likes.
+    pub straightest_deg: f32,
+    /// The most the leg may fold, in degrees.
+    pub most_bent_deg: f32,
+}
+
+impl Default for KneeLimits {
+    fn default() -> Self {
+        Self { straightest_deg: 175.0, most_bent_deg: 40.0 }
+    }
+}
+
+impl KneeLimits {
+    /// How near and how far the ankle can get from the hip, given the two bone lengths.
+    ///
+    /// The law of cosines on the leg's own triangle. This is the honest version of "how
+    /// long is a leg": not `upper + lower`, which assumes a knee that locks, but the
+    /// distance across the triangle at the angles the joint actually permits.
+    ///
+    /// Returns `(nearest, furthest)`.
+    #[must_use]
+    pub fn span(&self, upper: f32, lower: f32) -> (f32, f32) {
+        let at = |degrees: f32| {
+            let angle = degrees.clamp(1.0, 180.0).to_radians();
+            (upper * upper + lower * lower - 2.0 * upper * lower * angle.cos())
+                .max(0.0)
+                .sqrt()
+        };
+        let a = at(self.most_bent_deg);
+        let b = at(self.straightest_deg);
+        (a.min(b), a.max(b))
+    }
+}
+
 /// The shape of the walk. One cycle is *both* steps.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct GaitParams {
@@ -85,6 +134,9 @@ pub struct GaitParams {
     /// them.
     #[serde(default)]
     pub stride_bias: f32,
+    /// What the knees will do. See [`KneeLimits`].
+    #[serde(default)]
+    pub knee: KneeLimits,
     /// How far the hips rise and fall over the cycle, as a fraction of leg length.
     ///
     /// Zero is a body gliding along at a constant height, which is the single clearest
@@ -129,6 +181,7 @@ impl Default for GaitParams {
             stance_width: 0.3,
             step_height: 0.15,
             stride_bias: 0.0,
+            knee: KneeLimits::default(),
             hip_bob: default_hip_bob(),
             hip_height: default_hip_height(),
             duty_factor: 0.6,
@@ -162,6 +215,8 @@ impl GaitParams {
             step_height: self.step_height * factor,
             // Proportions already, so they do not scale.
             stride_bias: self.stride_bias,
+            // Angles, not lengths: a small character bends its knees just as far.
+            knee: self.knee,
             hip_bob: self.hip_bob,
             hip_height: self.hip_height,
             duty_factor: self.duty_factor,
@@ -186,8 +241,9 @@ impl GaitParams {
     /// touchdown the foot is `stance_width / 2` off to the side *and* `duty_factor / 2`
     /// strides ahead.
     #[must_use]
-    pub fn fit_to_reach(&self, leg_length: f32, hip_height: f32) -> Self {
-        let reach = horizontal_reach(leg_length, hip_height);
+    pub fn fit_to_reach(&self, upper: f32, lower: f32, hip_height: f32) -> Self {
+        let (nearest, furthest) = self.knee.span(upper, lower);
+        let reach = horizontal_reach(furthest, hip_height);
         let stance_width = self.stance_width.min(reach);
         let half = stance_width * 0.5;
         let lead = (reach * reach - half * half).max(0.0).sqrt();
@@ -199,11 +255,13 @@ impl GaitParams {
                 .stride_length
                 .min(lead / (duty * 0.5 + self.stride_bias.abs())),
             stance_width,
-            // Lift the foot too far and the leg has to fold up to follow it. Past about
-            // half the hip's height the knee is tucked into the chest, which is a high
-            // march at best and a broken puppet at worst.
-            step_height: self.step_height.min(hip_height * MAX_STEP_FRACTION),
+            // The foot cannot be lifted closer to the hip than a folded knee allows, so the
+            // ceiling on a step is the height of the hip less that. The old rule here was
+            // half the hip height, picked because it looked about right; this one is the
+            // same joint limit that decides everything else.
+            step_height: self.step_height.min((hip_height - nearest).max(0.0)),
             stride_bias: self.stride_bias,
+            knee: self.knee,
             hip_bob: self.hip_bob,
             hip_height: self.hip_height,
             duty_factor: self.duty_factor,
@@ -211,25 +269,18 @@ impl GaitParams {
     }
 }
 
-/// How much of a leg's horizontal reach the gait may spend.
-///
-/// The rest is left as a bend in the knee, so the leg is never solved dead straight — a
-/// stilt with nowhere to go if the ground turns out lower than expected. Close to 1
-/// because an animator is no more timid: swat-2's own walk cycle plants its foot at 99.3%
-/// of full extension, and holding a permanent bend instead is what makes a walk read as a
-/// creep.
-const REACH_MARGIN: f32 = 0.95;
-
-/// The tallest step, as a fraction of hip height. See [`GaitParams::fit_to_reach`].
-const MAX_STEP_FRACTION: f32 = 0.5;
-
 /// How far from under its own hip a foot can be put down, and still reach the floor.
 ///
 /// Pythagoras on the leg: the hip is `hip_height` up, the foot is on the ground, and the
-/// straight line between them cannot exceed `leg_length`.
+/// straight line between them cannot exceed `furthest` — [`KneeLimits::span`]'s answer to
+/// how long the leg really is.
+///
+/// This used to take `upper + lower` and then shave 5% off the result, a fudge standing in
+/// for "do not solve the leg dead straight". The knee limit says the same thing properly,
+/// and says it where the reason lives.
 #[must_use]
-pub fn horizontal_reach(leg_length: f32, hip_height: f32) -> f32 {
-    (leg_length * leg_length - hip_height * hip_height).max(0.0).sqrt() * REACH_MARGIN
+pub fn horizontal_reach(furthest: f32, hip_height: f32) -> f32 {
+    (furthest * furthest - hip_height * hip_height).max(0.0).sqrt()
 }
 
 /// How far the hips sit above their mean height at this point in the cycle.
@@ -515,17 +566,59 @@ mod tests {
     }
 
     #[test]
+    fn a_knee_that_locks_straight_spans_the_whole_leg() {
+        // The degenerate case the old code assumed: 180 degrees is `upper + lower`, and
+        // folded flat is the difference between the two bones.
+        let locked = KneeLimits { straightest_deg: 180.0, most_bent_deg: 0.0 };
+        let (nearest, furthest) = locked.span(0.4, 0.5);
+        assert!((furthest - 0.9).abs() < 1e-4, "straight should be 0.9, was {furthest}");
+        // Folded flat is the difference between the bones. Not exactly, because `span`
+        // holds the angle a degree off zero -- a leg folded onto itself is a degenerate
+        // triangle and the solve has no plane to bend in.
+        assert!((nearest - 0.1).abs() < 1e-3, "folded should be about 0.1, was {nearest}");
+    }
+
+    #[test]
+    fn a_real_knee_is_shorter_than_the_sum_of_its_bones() {
+        let (nearest, furthest) = KneeLimits::default().span(0.425, 0.425);
+        assert!(furthest < 0.85, "a knee that cannot lock cannot reach {furthest}");
+        assert!(furthest > 0.84, "5 degrees off straight should cost very little reach");
+        assert!(nearest > 0.2, "a knee that stops folding keeps the ankle away from the hip");
+    }
+
+    #[test]
+    fn a_straighter_knee_reaches_further() {
+        // The whole reason the limit is an input to the plan rather than a clamp on the
+        // output: it decides how long a stride the character can take.
+        let bent = GaitParams {
+            knee: KneeLimits { straightest_deg: 150.0, ..Default::default() },
+            ..Default::default()
+        };
+        let straight = GaitParams {
+            knee: KneeLimits { straightest_deg: 178.0, ..Default::default() },
+            ..Default::default()
+        };
+        let hip = 0.75;
+        assert!(
+            straight.fit_to_reach(0.425, 0.425, hip).stride_length
+                > bent.fit_to_reach(0.425, 0.425, hip).stride_length,
+            "a knee allowed to straighten should buy a longer stride"
+        );
+    }
+
+    #[test]
     fn a_stride_never_exceeds_what_the_legs_can_reach() {
-        // Human proportions: a 0.85 m leg with the hip 0.8 m up has 0.28 m of horizontal
-        // reach, and the default 1.6 m stride plants the foot 0.48 m ahead -- too far.
-        let fitted = GaitParams::default().fit_to_reach(0.85, 0.8);
+        // Human proportions: a 0.85 m leg with the hip 0.8 m up has about 0.28 m of
+        // horizontal reach, and the default 1.6 m stride plants the foot 0.48 m ahead.
+        let params = GaitParams::default();
+        let fitted = params.fit_to_reach(0.425, 0.425, 0.8);
+        let reach = horizontal_reach(params.knee.span(0.425, 0.425).1, 0.8);
         let lead = fitted.stride_length * fitted.duty_factor * 0.5;
         let lateral = fitted.stance_width * 0.5;
         let needed = (lead * lead + lateral * lateral).sqrt();
         assert!(
-            needed <= horizontal_reach(0.85, 0.8) + 1e-5,
-            "the foot is planted {needed} out, past a reach of {}",
-            horizontal_reach(0.85, 0.8)
+            needed <= reach + 1e-5,
+            "the foot is planted {needed} out, past a reach of {reach}"
         );
     }
 
@@ -621,27 +714,31 @@ mod tests {
         let leg = 0.85;
         let hip = 0.8;
         let params = GaitParams { stride_bias: -0.3, ..Default::default() };
-        let fitted = params.fit_to_reach(leg, hip);
+        let fitted = params.fit_to_reach(leg * 0.5, leg * 0.5, hip);
         let furthest =
             (fitted.duty_factor * 0.5 + fitted.stride_bias.abs()) * fitted.stride_length;
         let lateral = fitted.stance_width * 0.5;
         let needed = (furthest * furthest + lateral * lateral).sqrt();
         assert!(
-            needed <= horizontal_reach(leg, hip) + 1e-5,
+            needed <= horizontal_reach(params.knee.span(leg * 0.5, leg * 0.5).1, hip) + 1e-5,
             "the trailing foot is {needed} out, past a reach of {}",
-            horizontal_reach(leg, hip)
+            horizontal_reach(params.knee.span(leg * 0.5, leg * 0.5).1, hip)
         );
     }
 
     #[test]
-    fn a_step_is_never_lifted_higher_than_the_leg_can_fold() {
-        // A foot lifted to the hips has to fold the knee into the chest to follow.
+    fn a_step_is_never_lifted_higher_than_the_knee_can_fold() {
+        // A foot lifted toward the hips has to fold the knee to follow it, and the knee
+        // stops folding at some point: the ankle can get no nearer the hip than that.
         let params = GaitParams { step_height: 5.0, ..Default::default() };
-        let fitted = params.fit_to_reach(0.85, 0.8);
+        let hip = 0.8;
+        let fitted = params.fit_to_reach(0.425, 0.425, hip);
+        let nearest = params.knee.span(0.425, 0.425).0;
         assert!(
-            fitted.step_height <= 0.8 * MAX_STEP_FRACTION + 1e-6,
-            "step height came out at {}, higher than half the hip",
-            fitted.step_height
+            fitted.step_height <= hip - nearest + 1e-6,
+            "a step of {} lifts the foot to {} of the hip, inside a fold limit of {nearest}",
+            fitted.step_height,
+            hip - fitted.step_height
         );
     }
 
@@ -654,9 +751,13 @@ mod tests {
 
     #[test]
     fn a_gait_that_already_fits_is_left_alone() {
-        // Only a cap. A rig with room to spare keeps the stride it was given.
+        // Only a cap. A rig with room to spare keeps everything it was given.
+        //
+        // Hips at 0.7 of a 0.85 leg: standing tall enough that the knee is nowhere near
+        // either limit. (At 0.3 it would be squatting, with the knee close enough to its
+        // fold that the foot can barely lift -- correctly clamped, but not this test.)
         let params = GaitParams { stride_length: 0.4, ..Default::default() };
-        let fitted = params.fit_to_reach(0.85, 0.3);
+        let fitted = params.fit_to_reach(0.425, 0.425, 0.7);
         assert_eq!(fitted, params);
     }
 

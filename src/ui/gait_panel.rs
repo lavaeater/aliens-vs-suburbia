@@ -30,6 +30,10 @@ pub enum GaitLabel {
     StepHeight,
     /// Where the footfalls sit fore and aft of the hips, in strides.
     StrideBias,
+    /// The straightest the knee may be solved, in degrees.
+    KneeStraight,
+    /// The most the knee may fold, in degrees.
+    KneeBent,
     /// Hip rise and fall over the cycle, as a fraction of leg length.
     HipBob,
     /// Hip height as a fraction of leg length; 0 leaves it to the animation.
@@ -40,6 +44,8 @@ pub enum GaitLabel {
     // Read-only: what the rig actually ended up walking with.
     Scale,
     LegLength,
+    /// The furthest the ankle can get from the hip, once the knee has its say.
+    Furthest,
     HipHeight,
     Reach,
     FittedStride,
@@ -104,6 +110,28 @@ pub fn spawn_gait_panel(commands: Commands, theme: &LavaTheme) {
         |g| g.duty_factor = (g.duty_factor - 0.01).max(0.2),
         |g| g.duty_factor = (g.duty_factor + 0.01).min(0.95),
         |g| g.duty_factor = (g.duty_factor + 0.05).min(0.95),
+    );
+
+    // Anatomy, not choreography: how straight the knee may lock and how far it may fold.
+    gait_row(
+        &mut ui,
+        "Knee max",
+        &t,
+        GaitLabel::KneeStraight,
+        |g| g.knee.straightest_deg = (g.knee.straightest_deg - 5.0).max(90.0),
+        |g| g.knee.straightest_deg = (g.knee.straightest_deg - 1.0).max(90.0),
+        |g| g.knee.straightest_deg = (g.knee.straightest_deg + 1.0).min(180.0),
+        |g| g.knee.straightest_deg = (g.knee.straightest_deg + 5.0).min(180.0),
+    );
+    gait_row(
+        &mut ui,
+        "Knee min",
+        &t,
+        GaitLabel::KneeBent,
+        |g| g.knee.most_bent_deg = (g.knee.most_bent_deg - 5.0).max(5.0),
+        |g| g.knee.most_bent_deg = (g.knee.most_bent_deg - 1.0).max(5.0),
+        |g| g.knee.most_bent_deg = (g.knee.most_bent_deg + 1.0).min(170.0),
+        |g| g.knee.most_bent_deg = (g.knee.most_bent_deg + 5.0).min(170.0),
     );
 
     // The hips rise over the planted foot and drop between steps, twice a cycle.
@@ -181,6 +209,7 @@ pub fn spawn_gait_panel(commands: Commands, theme: &LavaTheme) {
     ui.label("-- as walked (read-only) --", 12.0, Color::srgb(0.75, 0.5, 0.35));
     readout_row(&mut ui, "Rig", &t, GaitLabel::Scale);
     readout_row(&mut ui, "Leg", &t, GaitLabel::LegLength);
+    readout_row(&mut ui, "Extend", &t, GaitLabel::Furthest);
     readout_row(&mut ui, "Hip up", &t, GaitLabel::HipHeight);
     readout_row(&mut ui, "Reach", &t, GaitLabel::Reach);
     readout_row(&mut ui, "Stride", &t, GaitLabel::FittedStride);
@@ -273,6 +302,8 @@ pub fn update_gait_panel(
             GaitLabel::Stance => format!("{:.2}m", gait.stance_width),
             GaitLabel::StepHeight => format!("{:.2}m", gait.step_height),
             GaitLabel::StrideBias => format!("{:+.2}", gait.stride_bias),
+            GaitLabel::KneeStraight => format!("{:.0}deg", gait.knee.straightest_deg),
+            GaitLabel::KneeBent => format!("{:.0}deg", gait.knee.most_bent_deg),
             GaitLabel::HipBob => format!("{:.3}L", gait.hip_bob),
             GaitLabel::HipTarget => if gait.hip_height > 0.0 {
                 format!("{:.2}L", gait.hip_height)
@@ -284,6 +315,7 @@ pub fn update_gait_panel(
             GaitLabel::LegIk => if enabled.0 { "on" } else { "off" }.to_string(),
             GaitLabel::Scale => format!("{:.2}x", readout.gait_scale),
             GaitLabel::LegLength => format!("{:.3}m", readout.leg_length),
+            GaitLabel::Furthest => format!("{:.3}m", readout.furthest),
             GaitLabel::HipHeight => format!("{:.3}m", readout.hip_height),
             GaitLabel::Reach => format!("{:.3}m", readout.reach),
             GaitLabel::FittedStride => format!("{:.3}m", readout.stride),

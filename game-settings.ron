@@ -3,7 +3,7 @@
     zoom: 4.0,
     pitch_degrees: -10.0,
     yaw_degrees: 0.0,
-    player_speed_multiplier: 0.10000019,
+    player_speed_multiplier: 0.10000001,
     player_unit: 1.0,
     ortho_near: -1150.0,
     ortho_far: 1000.0,
