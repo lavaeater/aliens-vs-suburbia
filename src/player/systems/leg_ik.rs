@@ -20,7 +20,9 @@ use bevy::prelude::*;
 
 use crate::player::components::{Player, PlayerDead};
 use crate::player::systems::arm_ik::{aim_bone, local_from_world, solve_elbow};
-use crate::player::systems::gait::{horizontal_reach, Foot, GaitContext, GaitParams, GaitState};
+use crate::player::systems::gait::{
+    hip_bob_offset, horizontal_reach, Foot, GaitContext, GaitParams, GaitState,
+};
 
 /// The gait shape, as a tunable resource.
 ///
@@ -478,7 +480,12 @@ pub fn apply_leg_ik(
         // extension, which leaves 4cm of reach on a 17cm leg and clamps every stride down
         // to a shuffle no matter what the sliders say.
         let hip_height = if params.hip_height > 0.0 {
-            let wanted = params.hip_height * leg_world;
+            // The bob rides on top of the mean height. Phase comes from last frame's cycle,
+            // since this frame's is not advanced until the gait updates below -- a frame of
+            // lag on a curve this smooth is invisible.
+            let cycle = legs.gait.as_ref().map_or(0.0, GaitState::cycle);
+            let wanted =
+                (params.hip_height + hip_bob_offset(cycle, params.hip_bob)) * leg_world;
             let lift = wanted - hip_height;
             if let Ok(parent_of_pelvis) = parents.get(pelvis).map(ChildOf::parent)
                 && let Ok(parent_world) = globals.get(parent_of_pelvis)
@@ -502,12 +509,24 @@ pub fn apply_leg_ik(
             .map(|local| model.mul_transform(local));
         let Some(pelvis_world) = pelvis_world else { continue };
 
+        // Everything about reach is measured from the *mean* hip height rather than this
+        // instant's. Planning against the bob would swing the stride up and down with it,
+        // and a stride that changes every frame changes the cycle rate with it, which is a
+        // wobble in the step timing. It also keeps the plan and the clamp in agreement: a
+        // foot placed against the mean and then pulled back against the bob's high point
+        // would be dragged in mid-stance, which is a skid.
+        let mean_hip = if params.hip_height > 0.0 {
+            params.hip_height * leg_world
+        } else {
+            hip_height
+        };
+
         let ctx = GaitContext {
             hip_ground: position.with_y(ground_y),
             forward,
             right,
             ground_y,
-            reach: horizontal_reach(leg_world, hip_height),
+            reach: horizontal_reach(leg_world, mean_hip),
             distance: if flat.length() > MOVING_EPSILON { flat.length() } else { 0.0 },
             dt,
         };
@@ -515,7 +534,7 @@ pub fn apply_leg_ik(
         // Read from the resource every frame rather than a snapshot taken at resolve, so
         // tuning the gait live moves the feet immediately -- scaled to this rig, so the
         // slider still reads in human metres whatever size the character is.
-        let scaled = params.0.scaled(gait_scale).fit_to_reach(leg_world, hip_height);
+        let scaled = params.0.scaled(gait_scale).fit_to_reach(leg_world, mean_hip);
         let gait = legs
             .gait
             .get_or_insert_with(|| GaitState::standing(ctx.hip_ground, ctx.right, &scaled));

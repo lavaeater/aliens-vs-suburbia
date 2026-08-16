@@ -30,6 +30,8 @@ pub enum GaitLabel {
     StepHeight,
     /// Where the footfalls sit fore and aft of the hips, in strides.
     StrideBias,
+    /// Hip rise and fall over the cycle, as a fraction of leg length.
+    HipBob,
     /// Hip height as a fraction of leg length; 0 leaves it to the animation.
     HipTarget,
     Duty,
@@ -102,6 +104,18 @@ pub fn spawn_gait_panel(commands: Commands, theme: &LavaTheme) {
         |g| g.duty_factor = (g.duty_factor - 0.01).max(0.2),
         |g| g.duty_factor = (g.duty_factor + 0.01).min(0.95),
         |g| g.duty_factor = (g.duty_factor + 0.05).min(0.95),
+    );
+
+    // The hips rise over the planted foot and drop between steps, twice a cycle.
+    gait_row(
+        &mut ui,
+        "Hip bob",
+        &t,
+        GaitLabel::HipBob,
+        |g| g.hip_bob = (g.hip_bob - 0.01).max(0.0),
+        |g| g.hip_bob = (g.hip_bob - 0.002).max(0.0),
+        |g| g.hip_bob = (g.hip_bob + 0.002).min(0.2),
+        |g| g.hip_bob = (g.hip_bob + 0.01).min(0.2),
     );
 
     // Negative puts the footfalls further back, which is the body riding further forward
@@ -259,6 +273,7 @@ pub fn update_gait_panel(
             GaitLabel::Stance => format!("{:.2}m", gait.stance_width),
             GaitLabel::StepHeight => format!("{:.2}m", gait.step_height),
             GaitLabel::StrideBias => format!("{:+.2}", gait.stride_bias),
+            GaitLabel::HipBob => format!("{:.3}L", gait.hip_bob),
             GaitLabel::HipTarget => if gait.hip_height > 0.0 {
                 format!("{:.2}L", gait.hip_height)
             } else {

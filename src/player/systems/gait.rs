@@ -85,6 +85,18 @@ pub struct GaitParams {
     /// them.
     #[serde(default)]
     pub stride_bias: f32,
+    /// How far the hips rise and fall over the cycle, as a fraction of leg length.
+    ///
+    /// Zero is a body gliding along at a constant height, which is the single clearest
+    /// tell that a walk is machinery rather than a person. Real hips vault: highest over
+    /// the planted foot at mid-stance, lowest at double support when both legs are spread
+    /// and neither is vertical, twice per cycle. A person's hips move about 5% of their
+    /// leg length peak to peak.
+    ///
+    /// It pays for itself in stride, too. The hips are at their lowest exactly when the
+    /// feet are furthest apart and need the most reach.
+    #[serde(default = "default_hip_bob")]
+    pub hip_bob: f32,
     /// How high the hips ride, as a fraction of leg length. Zero leaves them alone.
     ///
     /// The one number that decides how long a stride can be. A leg reaches
@@ -117,6 +129,7 @@ impl Default for GaitParams {
             stance_width: 0.3,
             step_height: 0.15,
             stride_bias: 0.0,
+            hip_bob: default_hip_bob(),
             hip_height: default_hip_height(),
             duty_factor: 0.6,
         }
@@ -129,6 +142,9 @@ impl Default for GaitParams {
 /// 90%, which is where the reach to take the step comes from. Also comfortably clear of
 /// the singularity at 100%, where reach goes to zero and the stride with it.
 fn default_hip_height() -> f32 { 0.9 }
+
+/// Half of a person's roughly 5%-of-leg-length hip rise and fall.
+fn default_hip_bob() -> f32 { 0.025 }
 
 impl GaitParams {
     /// The same walk on a body `factor` times a human's size.
@@ -146,6 +162,7 @@ impl GaitParams {
             step_height: self.step_height * factor,
             // Proportions already, so they do not scale.
             stride_bias: self.stride_bias,
+            hip_bob: self.hip_bob,
             hip_height: self.hip_height,
             duty_factor: self.duty_factor,
         }
@@ -187,6 +204,7 @@ impl GaitParams {
             // march at best and a broken puppet at worst.
             step_height: self.step_height.min(hip_height * MAX_STEP_FRACTION),
             stride_bias: self.stride_bias,
+            hip_bob: self.hip_bob,
             hip_height: self.hip_height,
             duty_factor: self.duty_factor,
         }
@@ -214,6 +232,16 @@ pub fn horizontal_reach(leg_length: f32, hip_height: f32) -> f32 {
     (leg_length * leg_length - hip_height * hip_height).max(0.0).sqrt() * REACH_MARGIN
 }
 
+/// How far the hips sit above their mean height at this point in the cycle.
+///
+/// Twice per cycle, because both legs do the same thing half a cycle apart: highest at
+/// mid-stance, vaulting over a planted foot, and lowest at double support with both feet
+/// down and spread. Cycle 0 is a touchdown, so it starts at the bottom.
+#[must_use]
+pub fn hip_bob_offset(cycle: f32, amount: f32) -> f32 {
+    -amount * (cycle * 4.0 * std::f32::consts::PI).cos()
+}
+
 /// Cycles per second used to finish a step that was interrupted by stopping.
 ///
 /// The one place a clock is allowed in, and only because the alternative is worse: stop
@@ -221,6 +249,11 @@ pub fn horizontal_reach(leg_length: f32, hip_height: f32) -> f32 {
 /// forever, since no further distance is ever travelled. So a foot already in the air
 /// keeps swinging until it lands, and *then* everything stops. A foot on the ground never
 /// lifts for this — standing still can never start a step.
+///
+/// It applies *only* when the character has actually stopped. While it is still moving,
+/// however slowly, distance is the only thing allowed to advance the cycle: a clock running
+/// alongside is a second opinion about how fast the feet should be going, and the two
+/// disagree by exactly the amount the feet then skate.
 pub const SETTLE_RATE: f32 = 1.0;
 
 /// Where a foot is in its own cycle.
@@ -335,6 +368,12 @@ pub struct GaitState {
 }
 
 impl GaitState {
+    /// How far through the cycle, in `[0, 1)`.
+    #[must_use]
+    pub fn cycle(&self) -> f32 {
+        self.cycle
+    }
+
     /// Where each foot is currently nailed. For the overlay; the solve uses
     /// [`GaitState::update`]'s return value.
     #[must_use]
@@ -439,9 +478,19 @@ impl GaitState {
 
         // A foot already in the air must land even if the character stopped dead; see
         // `SETTLE_RATE`. Never lifts a planted foot, so standing still stays still.
-        let settling = Foot::BOTH
-            .iter()
-            .any(|&foot| !foot_phase(self.cycle, foot, params.duty_factor).is_planted());
+        //
+        // Only when *stopped*, and the distinction is the whole of it. Applied whenever a
+        // foot happened to be in the air, this is a floor of one cycle per second on the
+        // step rate, which silently caps the step length at whatever the body covers in a
+        // second no matter how long a stride is asked for — the slower the walk, the
+        // shorter the steps and the less the stride does, until at a crawl the feet are
+        // paddling on the spot. The caller reports a distance of exactly zero when it has
+        // decided the character is standing still, so that is the test.
+        let stopped = ctx.distance <= 0.0;
+        let settling = stopped
+            && Foot::BOTH
+                .iter()
+                .any(|&foot| !foot_phase(self.cycle, foot, params.duty_factor).is_planted());
         let by_settle = if settling { ctx.dt * SETTLE_RATE } else { 0.0 };
 
         self.cycle = (self.cycle + by_distance.max(by_settle)).rem_euclid(1.0);
@@ -477,6 +526,68 @@ mod tests {
             needed <= horizontal_reach(0.85, 0.8) + 1e-5,
             "the foot is planted {needed} out, past a reach of {}",
             horizontal_reach(0.85, 0.8)
+        );
+    }
+
+    /// Walk at `speed` for a while and measure how far apart one foot's footprints are.
+    fn measured_step_length(params: &GaitParams, speed: f32) -> f32 {
+        let dt = 1.0 / 60.0;
+        let mut hip = Vec3::ZERO;
+        let mut gait = GaitState::standing(hip, Vec3::X, params);
+        let mut prints: Vec<Vec3> = Vec::new();
+        let mut was_planted = true;
+        // Ten strides of ground covered, however long that takes at this speed.
+        let frames = (10.0 * params.stride_length / (speed * dt)).ceil() as u32;
+        for _ in 0..frames {
+            hip += Vec3::Z * (speed * dt);
+            let mut c = ctx(hip, speed * dt);
+            c.dt = dt;
+            gait.update(&c, params);
+            let planted = !gait.is_swinging(Foot::Right);
+            if planted && !was_planted {
+                prints.push(gait.plants()[Foot::Right.index()]);
+            }
+            was_planted = planted;
+        }
+        assert!(prints.len() > 4, "expected several footfalls, got {}", prints.len());
+        // Skip the first, which starts from the standing pose.
+        let steps: Vec<f32> = prints.windows(2).skip(1).map(|w| w[0].distance(w[1])).collect();
+        steps.iter().sum::<f32>() / steps.len() as f32
+    }
+
+    #[test]
+    fn the_hips_rise_over_the_planted_foot_and_drop_between_steps() {
+        let amount = 0.03;
+        // Cycle 0 is a touchdown: both feet down, legs spread, hips at their lowest.
+        assert!((hip_bob_offset(0.0, amount) + amount).abs() < 1e-5);
+        // A quarter cycle later the body is vaulting over that foot, and highest.
+        assert!((hip_bob_offset(0.25, amount) - amount).abs() < 1e-5);
+        // Twice per cycle, because the other leg does the same thing half a cycle later.
+        assert!((hip_bob_offset(0.5, amount) + amount).abs() < 1e-5);
+        assert!((hip_bob_offset(0.75, amount) - amount).abs() < 1e-5);
+    }
+
+    #[test]
+    fn step_length_is_set_by_stride_and_not_by_speed() {
+        // The cycle is driven by distance, so a footfall lands one stride after the last
+        // one whether the character is strolling or sprinting. Anything else means the feet
+        // are keeping their own time and skating over the ground to do it.
+        let params = GaitParams { stride_bias: 0.0, ..Default::default() };
+        let fast = measured_step_length(&params, 3.0);
+        let slow = measured_step_length(&params, 0.15);
+        let crawl = measured_step_length(&params, 0.05);
+        assert!(
+            (fast - params.stride_length).abs() < 0.05,
+            "at speed a step covered {fast}, not the {} stride asked for",
+            params.stride_length
+        );
+        assert!(
+            (slow - fast).abs() < 0.05,
+            "walking slowly the step shrank from {fast} to {slow}"
+        );
+        assert!(
+            (crawl - fast).abs() < 0.05,
+            "crawling, the step shrank from {fast} to {crawl}"
         );
     }
 
@@ -706,7 +817,9 @@ mod tests {
 
         let mut touchdowns = 0;
         let mut was_planted = true;
-        for _ in 0..100 {
+        // Two and a half strides, so the count does not hinge on whether the final frame
+        // lands exactly on the wrap.
+        for _ in 0..250 {
             hip += Vec3::Z * step;
             gait.update(&ctx(hip, step), &params);
             let planted = foot_phase(gait.cycle, Foot::Right, params.duty_factor).is_planted();
@@ -715,7 +828,7 @@ mod tests {
             }
             was_planted = planted;
         }
-        assert_eq!(touchdowns, 1, "each foot should plant once per stride length");
+        assert_eq!(touchdowns, 2, "each foot should plant once per stride length travelled");
     }
 
     #[test]
