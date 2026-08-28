@@ -99,7 +99,7 @@ pub fn spawn_aliens(
         */
 
         let id = commands.spawn((
-            Alien::default(),
+            Alien,
             alien_transform,
             WorldAssetRoot(game_assets.alien_scene.clone()),
             // WindWakerShaderBuilder::default().build(),

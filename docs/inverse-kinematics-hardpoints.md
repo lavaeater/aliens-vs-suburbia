@@ -249,6 +249,9 @@ useful even if IK is deprioritized (one-handed weapons just work).
   character*, and spawns the weapon as its child using the shared
   `hardpoint::snap_transform`. Browser preview and in-game equip call the same
   function, so they can't drift apart.
+- ✅ **Torso twist / aim offset** (`src/player/systems/torso_twist.rs`) — see §15. Not on
+  the original staging plan, and deliberately jumped ahead of stage 2: it is FK rather
+  than IK, so it is much cheaper, and it buys more visible payoff than the support hand.
 - ⏳ **Stage 2**: two-bone analytic IK for the support hand onto the rifle `foregrip`.
   Needs a `foregrip` on the weapon and the arm chain (shoulder/elbow/hand bones) on
   the character — currently only `grip` is authored.
@@ -268,3 +271,216 @@ useful even if IK is deprioritized (one-handed weapons just work).
   follows. What animation clips do.
 - **IK (inverse kinematics)**: the end drives the bones — put the hand *here*, and
   solve what the shoulder/elbow must do.
+
+---
+
+## 15. Torso twist (aim offset) — built
+
+The legs face where you walk; the upper body — and therefore the arms, hands and the
+weapon parented to the grip bone — faces where you aim.
+
+**This is not IK.** IK is end-driven: you know where the hand must land and solve
+backwards. Here we set one rotation per spine bone and everything above rides along as
+children. No solver, no law of cosines, no pole vector. The support-hand problem in §9
+stays exactly as hard as it was; this is a different, much cheaper thing that happens to
+deliver most of the "the character is aiming at that" feeling.
+
+Causality runs **aim → spine → hand → gun**, not gun → spine. Solving backwards from the
+muzzle would reintroduce the IK problem for no benefit.
+
+### The two things that actually matter
+
+**1. Rotate about world up, not the bone's own long axis.** Mixamo-style rigs give every
+bone an arbitrary local orientation, so "twist around the bone's length" leans and rolls
+differently depending on the animated pose. Build the rotation in world space and
+conjugate it into the parent's frame:
+
+```rust
+pub fn twisted_local(parent_world: Quat, local_anim: Quat, yaw: f32) -> Quat {
+    let twist_in_parent_space = parent_world.inverse() * Quat::from_rotation_y(yaw) * parent_world;
+    (twist_in_parent_space * local_anim).normalize()
+}
+```
+
+Note it modifies `local_anim` — the local rotation the animation *just* wrote — rather than
+deriving from the bone's `GlobalTransform`. That distinction is the whole correctness
+argument, because when this system runs the `GlobalTransform`s are still last frame's:
+
+- Reading the bone's stale world rotation would discard this frame's animation *and*
+  re-apply the twist on top of last frame's twist, winding the torso further every frame.
+- Reading the *parent's* stale world rotation is harmless: a parent carrying last frame's
+  offset differs only by a rotation about the same Y axis, and rotations about a shared
+  axis commute, so it cancels in the conjugation. Only a one-frame lag in the basis
+  remains, and it does not accumulate.
+
+`holding_a_steady_twist_does_not_accumulate_over_frames` pins this down.
+
+**2. Ordering.** Clip-driven bones are overwritten every frame by `animate_targets`, which
+lives in `PostUpdate` inside `bevy_app::AnimationSystems`:
+
+```rust
+app.add_systems(PostUpdate, apply_torso_twist
+    .after(bevy::app::AnimationSystems)
+    .before(TransformSystems::Propagate));
+```
+
+Earlier and the animation stomps it; after propagation and it never reaches
+`GlobalTransform`.
+
+### Data & tuning
+
+- `AssetDefinition.aim_bones: Vec<AimBone { bone, weight }>` — the chain and each bone's
+  share of the twist. Weights are normalized at use, so any proportions work. Empty falls
+  back to the mixamo `Spine`/`Spine1`/`Spine2` chain at 0.2/0.35/0.45.
+- Spreading across bones matters: the whole angle on one waist joint tears the skinning
+  and reads as a broken doll.
+- `TWIST_LIMIT_DEGREES` (60) clamps how far the torso may lead the hips.
+  `face_movement_direction` turns the body to absorb anything past that, so you can't wind
+  the torso around backwards. Standing still, the body holds and only the torso moves.
+- Exponential smoothing at `TWIST_RESPONSIVENESS` (18/s) so the torso eases instead of
+  snapping when the aim jumps across the character.
+- **F7** toggles the effect at runtime for A/B comparison.
+
+### Consequence for shooting
+
+`shoot.rs` already spawns bullets from the muzzle hardpoint's world position but takes
+direction from `AutoAim`. With the twist the muzzle actually swings to where you're
+aiming, so the visual and the hitscan stop disagreeing.
+
+### Known gap
+
+The legs keep playing a forward-walk clip while strafing. It reads acceptably at this
+camera distance, but the real fix is directional blending (walk fwd/back/left/right blended
+by the movement-vs-facing angle) in `AnimationStore` — a separate, bigger job.
+
+---
+
+## 16. Stage 2 built: aim-driven weapons and two-bone arm IK
+
+The staging in §11 assumed the weapon stays in the hand and the support arm reaches for it.
+Built the other way round, on the observation that what a rifle actually needs is for the
+*barrel* to point where you aim:
+
+> **aim -> weapon -> hands.** The weapon's pose comes from the aim; the arms are solved to
+> reach whatever hardpoints the weapon ended up presenting.
+
+### Placing the weapon (`src/player/systems/weapon_aim.rs`)
+
+Two steps, because an aim direction only pins two of three degrees of freedom:
+
+1. `from_rotation_arc` lands the weapon's anchor-to-muzzle axis on the aim direction;
+2. a roll about the aim itself brings the weapon's up as close to world up as it can —
+   without it the gun points correctly but banks arbitrarily, which is exactly the
+   "aligned by one vector" mistake §3 warns about.
+
+Then the weapon is slid so its anchor hardpoint sits on the character's matching one. The
+anchor role is whichever of `stock`, `grip`, `foregrip` **both** defs carry, in that order:
+a rifle with an authored stock hangs off the shoulder, one without pivots about the trigger
+hand. `Assault Rifle.ron` has no stock frame today, so it takes the grip fallback — author
+one and it switches to shouldered with no code change.
+
+The weapon parents to the **character root**, not to a bone. Parenting it to a bone the arm
+IK is about to rotate would have the weapon ride the correction meant to reach it, and the
+two would chase each other.
+
+### Solving the arms (`src/player/systems/arm_ik.rs`)
+
+Analytic two-bone, law of cosines. An arm is two bones and one target; that has a closed
+form, so there is nothing to iterate and nothing to converge. `bevy_mod_inverse_kinematics`
+stays available for longer chains where a general solver earns its keep.
+
+Three things that had to be right:
+
+- **Forward kinematics by hand.** Every `GlobalTransform` is a frame stale in this slot, and
+  worse, carries the correction this system itself wrote last frame — reading the arm's pose
+  from them would compound. The chain is re-composed from this frame's animated *local*
+  transforms, starting at the shoulder's parent, which no solver touches. The weapon's world
+  transform is composed the same way rather than read, since `aim_weapons` has only just
+  written its `Transform`.
+- **Clamped reach.** `acos` of an out-of-range cosine is NaN and a NaN bone rotation blanks
+  the character. The target distance is clamped into `[|upper - lower|, upper + lower]`, so
+  an unreachable target extends the arm instead.
+- **Aim the bone, don't set it.** Rigs bake arbitrary bone orientations, so the solve never
+  needs to know what a bone's rest pose meant — only where it currently points and where it
+  should (`from_rotation_arc` on top of the current world rotation).
+
+The chain is *found*, not assumed: the number of bones between a hardpoint and the arm
+depends on where it was anchored (swat-2's grip is on `thumb_02_r`, four below the
+shoulder). `arm_chain` walks up from the effector to the first ancestor that looks like a
+hand and takes the two bones above it, which resolves mesh2motion and mixamo alike.
+
+### Measured
+
+swat-2 holding the Assault Rifle: barrel-to-aim dot `1.0000`, anchor error `0.0000`, and
+both arms landing their hardpoints at `err=0.0000` — the support arm genuinely bent
+(reach 0.126 against 0.133 of arm length), not merely straightened.
+
+### Shouldered, and kept level
+
+`Assault Rifle.ron` now carries a `stock` frame, so the anchor pairing picks `stock` over
+`grip` and the rifle hangs off the shoulder as intended — both arms then do real work
+instead of the trigger arm being a no-op. The frame sits at the rear of the mesh
+(`x = -1.5`, against an AABB running `-1.6 .. 3.8` in def space) on the bore line through
+`foregrip` and `muzzle`, so `stock -> muzzle` is the sight line the aim points along.
+
+The aim is clamped to `MAX_AIM_PITCH_DEGREES` (15) before the weapon is placed. With an
+isometric camera and everything worth shooting standing on the same floor, pitch is nearly
+always `AutoAim` picking up a height difference that does not matter, and it is expensive:
+pitching the weapon swings the grip and foregrip through a long arc away from the shoulder
+and drags the arms to the edge of their reach. Clamped rather than flattened, so shooting
+slightly up or down still reads. Shooting itself still uses the true aim — the bullet
+leaves the (level) muzzle along the real direction.
+
+Measured on swat-2 with the rifle shouldered: anchor error 0.0013, hand errors 0.0004 and
+0.0020 world units against ~0.12 of arm length, the trigger arm at 38% of its reach and the
+support arm at 82%. The residuals are the one-frame lag between the propagated pose the
+probe reads and the placement composed this frame, not solve error.
+
+### Hand orientation, and the head down the sights
+
+Both fall out of the same idea: **a hardpoint is a frame, so align the rotation too, not
+just the position.**
+
+*Hands.* The wrist is rotated so the character's `grip` frame matches the weapon's. The
+order matters and is not the obvious one: solving the arm for position and rotating the
+hand afterwards would drag the hardpoint off the target it had just reached, because the
+hardpoint hangs several finger joints below the wrist. Instead the wanted **wrist** pose is
+derived first — `wanted_hand_rotation = target_rotation * hardpoint_in_hand.inverse()`, and
+the wrist position that puts the hardpoint on the target given that rotation — and the
+two-bone solve then targets the wrist. Position and orientation both come out exact in one
+pass, no iteration.
+
+Measured on swat-2 with the rifle, alignment on versus off:
+
+| | trigger hand | support hand |
+|---|---|---|
+| rotation error, on | 1.3 deg | 2.1 deg |
+| rotation error, off | 69.5 deg | 159.8 deg |
+| position error, on | 0.0026 | 0.0143 |
+
+`F8` toggles it, the A/B affordance `F7` gives the torso twist.
+
+*Sights.* The same alignment applied to one bone: the character's `sight` frame (anchored to
+the head) is turned to match the weapon's `sight` frame, so the head looks down the barrel.
+Rotation only — the head cannot *move* to the sight without dragging the spine along, and
+the useful half of aiming down sights is where the head points. The turn is clamped to
+`MAX_HEAD_TURN_DEGREES` (55) because the alignment is absolute: a weapon pointed behind the
+character would otherwise wring the neck right round.
+
+Neither is wired to anything the shipped defs carry yet — `sight` has to be authored on both
+the character (anchored to the head bone) and the weapon before anything happens.
+
+### Still open
+
+- **The support arm is at the end of its reach.** With the rifle shouldered on swat-2 the
+  left hand sits at 97% of the arm's length, and the 0.014 residual above is simply the arm
+  running out — not solver error. The rifle is long for this character: moving the weapon's
+  `foregrip` back toward the grip, or scaling the rifle down, is the fix, and both are
+  authoring decisions rather than code.
+- **Pole tuning.** Elbows bend down-and-back (`DEFAULT_POLE`) for both arms. It wants eyes
+  on it, and probably a per-character override.
+- **Live re-equip.** Editing a hardpoint in the playground does not move an aimed weapon;
+  the plan is resolved at equip time. Changing the weapon respawns and therefore does.
+- **The butt sits in the shoulder joint.** swat-2's `stock` hardpoint has a zero offset on
+  `upperarm_r`, so the rifle's rear end is pinned inside the shoulder rather than against
+  the front of it. A nudge on the character side in the playground is all it needs.

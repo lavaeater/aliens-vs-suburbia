@@ -1,7 +1,7 @@
+use avian3d::prelude::{ PhysicsSystems};
 use bevy::app::{App, Plugin, PostUpdate, Update};
 use bevy::ecs::schedule::SystemCondition;
 use bevy::prelude::{in_state, resource_changed, IntoScheduleConfigs, OnEnter};
-use bevy::transform::TransformSystems;
 use crate::camera::systems::{apply_camera_settings, camera_follow, spawn_camera};
 use crate::game_state::GameState;
 use crate::settings::resources::GameSettings;
@@ -21,7 +21,7 @@ impl Plugin for StatefulCameraPlugin {
         .add_systems(
             PostUpdate,
             camera_follow
-                .before(TransformSystems::Propagate)
+                .after(PhysicsSystems::Writeback)
                 .run_if(in_state(GameState::InGame)),
         )
         .add_systems(

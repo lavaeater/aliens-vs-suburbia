@@ -11,7 +11,6 @@ pub enum GameState {
     PlayerSetup,
     InGame,
     ModelShowcase,
-    CharacterCreator,
     PolyPizza,
     AssetBrowser,
     MapEditor,

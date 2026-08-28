@@ -93,6 +93,7 @@ pub fn handle_setup_input(
                     SlotState::Confirmed { .. } => {
                         if state.any_confirmed() {
                             roster.def_paths = state.confirmed_paths();
+                            roster.devices = state.confirmed_devices();
                             next_state.set(GameState::InGame);
                         }
                     }
@@ -122,6 +123,7 @@ pub fn handle_setup_input(
                 SlotState::Confirmed { .. } => {
                     if state.any_confirmed() {
                         roster.def_paths = state.confirmed_paths();
+                        roster.devices = state.confirmed_devices();
                         next_state.set(GameState::InGame);
                     }
                 }

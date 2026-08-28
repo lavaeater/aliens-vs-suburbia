@@ -283,6 +283,20 @@ pub struct AssetDefinition {
     /// characters (grip in the hand) and weapons (grip/foregrip/stock/sight).
     #[serde(default)]
     pub hardpoints: HashMap<String, Hardpoint>,
+    /// Spine bones the torso-twist aim offset rotates, with the share of the total
+    /// twist each one takes (see `src/player/systems/torso_twist.rs`). Spreading the
+    /// angle over several joints avoids tearing the skinning at one waist bone.
+    /// Empty = use the default mixamo-style spine chain.
+    #[serde(default)]
+    pub aim_bones: Vec<AimBone>,
+}
+
+/// One link in the torso-twist chain: a bone name and its share of the twist.
+/// Weights are normalized at use, so they can be written as any proportions.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct AimBone {
+    pub bone: String,
+    pub weight: f32,
 }
 
 impl Default for AssetDefinition {
@@ -298,6 +312,7 @@ impl Default for AssetDefinition {
             animation_sources: Vec::new(),
             attachments: Vec::new(),
             hardpoints: HashMap::new(),
+            aim_bones: Vec::new(),
         }
     }
 }

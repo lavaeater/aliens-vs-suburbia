@@ -3,14 +3,20 @@ use bevy::prelude::{Color, Gizmos, GlobalTransform, Query, With, Without};
 use crate::alien::components::general::Alien;
 use crate::constants::PLAYER_FOV_DOT;
 use crate::control::components::{CharacterControl, ControlCommand, InputKeyboard};
+use crate::control::gamepad_input::InputGamepad;
 use crate::player::components::{AutoAim, Player};
 
 // Keyboard players aim with the mouse (see control::mouse_aim); auto-aim is for gamepads.
+#[allow(clippy::type_complexity)]
 pub fn auto_aim(
-    mut player_query: Query<(&GlobalTransform, &mut AutoAim, &CharacterControl), (With<Player>, Without<InputKeyboard>)>,
+    mut player_query: Query<(&GlobalTransform, &mut AutoAim, &CharacterControl, Option<&InputGamepad>), (With<Player>, Without<InputKeyboard>)>,
     alien_query: Query<&GlobalTransform, With<Alien>>,
 ) {
-    for (player_transform, mut auto_aim, character_control) in player_query.iter_mut() {
+    for (player_transform, mut auto_aim, character_control, gamepad) in player_query.iter_mut() {
+        // A deflected right stick is an explicit aim — don't snap it to a target.
+        if gamepad.is_some_and(|g| g.aim_active) {
+            continue;
+        }
         if character_control.triggers.contains(&ControlCommand::Throw) {
             let forward = player_transform.forward();
             let closest =

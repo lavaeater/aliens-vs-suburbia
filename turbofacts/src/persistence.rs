@@ -22,7 +22,6 @@ pub fn facts_to_ron(facts: &Facts) -> Result<String, ron::Error> {
         .map(|(k, v)| (k.clone(), v.clone()))
         .collect();
     ron::ser::to_string_pretty(&snapshot, ron::ser::PrettyConfig::default())
-        .map_err(ron::Error::from)
 }
 
 /// Loads facts from a RON string, applying them silently (no change signalling).

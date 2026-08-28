@@ -1,20 +1,19 @@
-use bevy::math::{Quat, Rect, Vec2, Vec3};
-use bevy::prelude::{
-    Assets, Camera, Camera2d, Camera3d, Commands, Image,
-    Name, OrthographicProjection, PerspectiveProjection, Query, Res,
-    ResMut, Sprite, Transform, Window, With, default,
-};
-use bevy::camera::{ImageRenderTarget, Projection, RenderTarget, ScalingMode};
-use bevy::image::ImageSampler;
-use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages};
-use bevy::camera::visibility::RenderLayers;
-use bevy::window::PrimaryWindow;
-use std::f32::consts::PI;
-use avian3d::interpolation::TransformInterpolation;
-use avian3d::prelude::Position;
 use crate::camera::components::{CameraOffset, GameCamera, PixelCanvas};
 use crate::player::components::Player;
 use crate::settings::resources::{GameSettings, ProjectionMode};
+use avian3d::interpolation::TransformInterpolation;
+use avian3d::prelude::Position;
+use bevy::camera::visibility::RenderLayers;
+use bevy::camera::{ImageRenderTarget, Projection, RenderTarget, ScalingMode};
+use bevy::image::ImageSampler;
+use bevy::math::{Quat, Rect, Vec2, Vec3};
+use bevy::prelude::{
+    Assets, Camera, Camera2d, Camera3d, Commands, Image, Name, OrthographicProjection,
+    PerspectiveProjection, Query, Res, ResMut, Sprite, Transform, Window, With, default,
+};
+use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages};
+use bevy::window::PrimaryWindow;
+use std::f32::consts::PI;
 
 #[allow(dead_code)]
 const PIXEL_WIDTH: u32 = 480;
@@ -24,25 +23,27 @@ const PIXEL_HEIGHT: u32 = 360;
 const CANVAS_LAYER: usize = 1;
 
 pub fn spawn_camera(mut commands: Commands) {
-  commands.spawn((
-    Name::from("Camera"),
-    CameraOffset(Vec3::new(2.0, 1.5, 2.0)),
-    Camera3d::default(),
-    Projection::Orthographic(OrthographicProjection {
-      near: -1000.0,
-      far: 1000.0,
-      viewport_origin: Vec2::new(0.5, 0.5),
-      scaling_mode: ScalingMode::FixedVertical { viewport_height: 2.0 },
-      area: Rect::new(-1.0, -1.0, 1.0, 1.0),
-      scale: 2.0,
-    }),
-    Transform {
-      rotation: Quat::from_rotation_x(-PI / 4.),
-      ..default()
-    },
-    TransformInterpolation,
-    GameCamera {},
-  ));
+    commands.spawn((
+        Name::from("Camera"),
+        CameraOffset(Vec3::new(2.0, 1.5, 2.0)),
+        Camera3d::default(),
+        Projection::Orthographic(OrthographicProjection {
+            near: -1000.0,
+            far: 1000.0,
+            viewport_origin: Vec2::new(0.5, 0.5),
+            scaling_mode: ScalingMode::FixedVertical {
+                viewport_height: 2.0,
+            },
+            area: Rect::new(-1.0, -1.0, 1.0, 1.0),
+            scale: 2.0,
+        }),
+        Transform {
+            rotation: Quat::from_rotation_x(-PI / 4.),
+            ..default()
+        },
+        // TransformInterpolation,
+        GameCamera {},
+    ));
 }
 
 #[allow(dead_code)]
@@ -82,7 +83,10 @@ pub fn spawn_pixelated_camera(
         Name::from("Camera"),
         CameraOffset(Vec3::new(2.0, 1.5, 2.0)),
         Camera3d::default(),
-        Camera { order: -1, ..default() },
+        Camera {
+            order: -1,
+            ..default()
+        },
         RenderTarget::Image(ImageRenderTarget {
             handle: render_texture_handle.clone(),
             scale_factor: 1.0,
@@ -91,19 +95,22 @@ pub fn spawn_pixelated_camera(
             near: -1000.0,
             far: 1000.0,
             viewport_origin: Vec2::new(0.5, 0.5),
-            scaling_mode: ScalingMode::FixedVertical { viewport_height: 2.0 },
+            scaling_mode: ScalingMode::FixedVertical {
+                viewport_height: 2.0,
+            },
             area: Rect::new(-1.0, -1.0, 1.0, 1.0),
             scale: 2.0,
         }),
+        TransformInterpolation,
         Transform {
             rotation: Quat::from_rotation_x(-PI / 4.),
             ..default()
         },
-        TransformInterpolation,
         GameCamera {},
     ));
 
-    let window_size = window_q.single()
+    let window_size = window_q
+        .single()
         .map(|w| Vec2::new(w.width(), w.height()))
         .unwrap_or(Vec2::new(1280.0, 720.0));
 
@@ -111,7 +118,10 @@ pub fn spawn_pixelated_camera(
     commands.spawn((
         Name::from("PixelCanvasCamera"),
         Camera2d,
-        Camera { order: 0, ..default() },
+        Camera {
+            order: 0,
+            ..default()
+        },
         RenderLayers::layer(CANVAS_LAYER),
     ));
 
@@ -134,8 +144,12 @@ pub fn resize_pixel_canvas(
     window_q: Query<&Window, With<PrimaryWindow>>,
     mut canvas_q: Query<&mut Sprite, With<PixelCanvas>>,
 ) {
-    let Ok(window) = window_q.single() else { return; };
-    let Ok(mut sprite) = canvas_q.single_mut() else { return; };
+    let Ok(window) = window_q.single() else {
+        return;
+    };
+    let Ok(mut sprite) = canvas_q.single_mut() else {
+        return;
+    };
     sprite.custom_size = Some(Vec2::new(window.width(), window.height()));
 }
 
@@ -155,7 +169,6 @@ pub fn apply_camera_settings(
     settings: Res<GameSettings>,
     mut camera_query: Query<(&mut Projection, &mut Transform, &mut CameraOffset), With<GameCamera>>,
 ) {
-
     let pitch_rad = settings.pitch_degrees.to_radians();
     let yaw_rad = settings.yaw_degrees.to_radians();
     let offset_dist = settings.zoom * 0.75;
@@ -163,7 +176,11 @@ pub fn apply_camera_settings(
     let offset_xz = pitch_rad.cos() * offset_dist;
 
     for (mut proj, mut _transform, mut offset) in &mut camera_query {
-        offset.0 = Vec3::new(yaw_rad.sin() * offset_xz, offset_y, yaw_rad.cos() * offset_xz);
+        offset.0 = Vec3::new(
+            yaw_rad.sin() * offset_xz,
+            offset_y,
+            yaw_rad.cos() * offset_xz,
+        );
 
         *proj = match settings.projection {
             ProjectionMode::Orthographic => Projection::Orthographic(OrthographicProjection {

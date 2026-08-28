@@ -6,10 +6,15 @@ edition = "2024"
 # The root package is itself a member; list the local crates whose tests should also run
 # under `cargo test` / `cargo nextest run` from the workspace root.
 [workspace]
-members = ["turbofacts"]
+members = ["turbofacts", "bevy_mod_inverse_kinematics"]
 # rusty_music is its own workspace (path dependency via the submodule).
 exclude = ["rusty_music"]
 resolver = "2"
+
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+must_use_candidate = "allow"
+missing_errors_doc = "allow"
 
 [dependencies]
 bevy = { version = "0.19.0", features = ["wayland", "3d", "ui", "bevy_feathers", "webp"] }
@@ -27,7 +32,6 @@ ureq = { version = "3.3.0", features = ["json"] }
 dotenvy = "0.15"
 urlencoding = "2"
 bevy_wind_waker_shader = { path = "bevy_wind_waker_shader" }
-image = { version = "0.25", default-features = false, features = ["png"] }
 bevy_skein = "0.6.0"
 ratatui   = { version = "0.30", optional = true }
 crossterm = { version = "0.29", optional = true }

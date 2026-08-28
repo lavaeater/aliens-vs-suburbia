@@ -1,22 +1,21 @@
-//! Mouse aiming for the keyboard player. The cursor is projected onto the ground
-//! plane; the player aims (and turns) toward that point, so guns and throws fire where
-//! you point. Gamepad players keep the auto-aim behaviour.
+//! Mouse aiming for the keyboard player. The cursor is projected onto the ground plane
+//! and the player aims toward that point, so guns and throws fire where you point.
+//! Gamepad players aim with the right stick (or auto-aim) instead.
 //!
-//! This overrides the tank-style A/D rotation for the keyboard player — the mouse now
-//! sets facing. `mouse_aim` writes `AutoAim` (the fire direction, consumed by shooting
-//! and throwing); `mouse_face` turns the body toward it by steering the physics angular
-//! velocity, so it stays consistent with the rest of the movement.
+//! `mouse_aim` writes `AutoAim` (the fire direction, consumed by shooting and throwing).
+//! The body does *not* turn to face it: the hips follow the direction of travel and the
+//! spine twists toward the aim instead -- see `player::systems::torso_twist`.
 
-use avian3d::prelude::AngularVelocity;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 use crate::camera::components::GameCamera;
-use crate::control::components::{CharacterControl, InputKeyboard};
+use crate::control::components::InputKeyboard;
 use crate::player::components::{AutoAim, Player, PlayerDead};
 
 /// Project the cursor onto the ground plane and point the keyboard player's `AutoAim`
 /// from the player toward it.
+#[allow(clippy::type_complexity)]
 pub fn mouse_aim(
     windows: Query<&Window, With<PrimaryWindow>>,
     cameras: Query<(&Camera, &GlobalTransform), With<GameCamera>>,
@@ -43,27 +42,6 @@ pub fn ground_aim_from_ray(ray: Ray3d, player_pos: Vec3) -> Option<Vec3> {
     let point = ray.get_point(dist);
     let dir = Vec3::new(point.x - player_pos.x, 0.0, point.z - player_pos.z);
     (dir.length_squared() > 1e-4).then(|| dir.normalize())
-}
-
-/// Steer the keyboard player's body to face its `AutoAim`, by setting the physics yaw
-/// angular velocity toward the aim (self-damping: zero once aligned). Runs after the
-/// movement system so it wins over the A/D torque.
-pub fn mouse_face(
-    mut players: Query<
-        (&Transform, &mut AngularVelocity, &AutoAim, &CharacterControl),
-        (With<Player>, With<InputKeyboard>, Without<PlayerDead>),
-    >,
-) {
-    for (transform, mut angular, aim, control) in players.iter_mut() {
-        if aim.0.length_squared() < 1e-4 {
-            continue;
-        }
-        let forward = transform.rotation * Vec3::NEG_Z;
-        // y of cross(forward, aim): its sign is the way to turn, its magnitude sin(error).
-        let cross_y = forward.z * aim.0.x - forward.x * aim.0.z;
-        let max = control.max_turn_speed.max(1.0);
-        angular.0.y = (cross_y * 12.0).clamp(-max, max);
-    }
 }
 
 #[cfg(test)]

@@ -145,8 +145,7 @@ mod wave_system_tests {
     fn test_app(manager: WaveManager) -> App {
         let mut app = App::new();
         app.init_resource::<Time>();
-        let mut tracker = LevelTracker::default();
-        tracker.level_state = LevelState::InProgress;
+        let tracker = LevelTracker { level_state: LevelState::InProgress, ..Default::default() };
         app.insert_resource(tracker);
         app.insert_resource(manager);
         app.insert_resource(AlienCounter { count: 0, max_count: 100 });
@@ -156,8 +155,7 @@ mod wave_system_tests {
 
     #[test]
     fn the_countdown_starts_the_wave_and_arms_the_spawn_points() {
-        let mut manager = WaveManager::default();
-        manager.wave_timer = 0.5; // about to start wave 0 (rate 6/min)
+        let manager = WaveManager { wave_timer: 0.5, ..Default::default() }; // about to start wave 0 (rate 6/min)
         let mut app = test_app(manager);
         let sp = app.world_mut().spawn(AlienSpawnPoint::new(0.0)).id();
 

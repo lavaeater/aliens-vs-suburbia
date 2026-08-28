@@ -106,7 +106,7 @@ prop used as map decoration — reuse that art.
 
 Plan:
 - Subscribe to `DamageDealt`. For each hit, spawn N spray quads as `Ephemeral` billboards
-  (there's already a `src/sprite_billboard/` module) launched along `normal` with gravity, or
+  launched along `normal` with gravity, or
   cheap unlit stretched quads.
 - On spray settle (or immediately, for simplicity) project a **decal** onto the nearest floor
   below via a downward raycast (avian `spatial_query`), spawning a flat alpha-blended quad a

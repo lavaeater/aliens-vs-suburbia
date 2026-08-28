@@ -9,7 +9,7 @@ use crate::general::components::{Attack, CollisionLayer, Health, HittableTarget,
 use crate::player::systems::spawn_players::FixSceneTransform;
 use avian3d::prelude::{
     AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes,
-    RigidBody,
+    RigidBody
 };
 use crate::CurrentTile;
 
@@ -23,8 +23,12 @@ fn locked_axes()-> LockedAxes {
     Name::from("Alien"),
     HittableTarget,
     KinematicMovement,
+    // The model's feet belong on the collider's *bottom*, not partway up it: the capsule's
+    // half-height is 1.5 (radius 1.0 plus half of its 1.0 length) and this mesh hangs about
+    // 0.05 below its own origin, hence -1.45. The old -0.35 left the alien hovering a
+    // quarter of its own height above whatever it was standing on.
     FixSceneTransform::new(
-        Vec3::new(0.0, -0.35, 0.0),
+        Vec3::new(0.0, -1.45, 0.0),
         Quat::from_euler(EulerRot::YXZ, 180.0f32.to_radians(), 0.0, 0.0),
         Vec3::new(0.5, 0.5, 0.5),
     ),

@@ -8,6 +8,15 @@ use crate::player::systems::spawn_players::{fix_scene_transform, spawn_players};
 use crate::player::systems::abilities::{AbilityInput, activate_ability, tick_ability_flash, tick_cooldowns, tick_whirlwind};
 use crate::player::systems::equip::{equip_pending_weapons, keep_weapons_snapped};
 use crate::player::systems::shoot::shoot_weapons;
+use crate::player::systems::torso_twist::{
+    apply_torso_twist, resolve_twist_bones, toggle_torso_twist, TorsoTwistEnabled,
+};
+use bevy::transform::TransformSystems;
+use crate::player::systems::arm_ik::{align_sights, solve_weapon_arms, toggle_hand_align, HandAlignEnabled};
+use crate::player::systems::leg_ik::{
+    apply_leg_ik, resolve_legs, toggle_leg_ik, GaitReadout, GaitSettings, LegIkEnabled,
+};
+use crate::player::systems::weapon_aim::aim_weapons;
 use bevy::prelude::*;
 use bevy::world_serialization::{WorldInstance, WorldAssetRoot};
 use bevy_mod_outline::{AsyncWorldInheritOutline, AutoGenerateOutlineNormalsPlugin, InheritOutline, OutlinePlugin, OutlineVolume};
@@ -23,6 +32,25 @@ impl Plugin for PlayerPlugin {
             app.add_systems(Update, debug_gizmos.run_if(in_state(GameState::InGame)));
         }
         app.init_resource::<AbilityInput>()
+            .init_resource::<TorsoTwistEnabled>()
+            .init_resource::<HandAlignEnabled>()
+            .init_resource::<LegIkEnabled>()
+            .insert_resource(GaitSettings::load())
+            .init_resource::<GaitReadout>()
+            // The twist must land after the animation has posed the skeleton and before
+            // the pose is propagated -- see torso_twist.rs.
+            .add_systems(
+                PostUpdate,
+                // Strictly ordered: the twist poses the shoulders, `aim_weapons` places the
+                // gun from one of them, and the arms are then solved onto the placed gun.
+                // The legs are last and independent: they read the character's world
+                // position, which none of the upper-body work touches.
+                (apply_torso_twist, aim_weapons, solve_weapon_arms, align_sights, apply_leg_ik)
+                    .chain()
+                    .after(bevy::app::AnimationSystems)
+                    .before(TransformSystems::Propagate)
+                    .run_if(in_state(GameState::InGame)),
+            )
             .add_plugins((OutlinePlugin::EXTRUDE_VERTEX, AutoGenerateOutlineNormalsPlugin::default()))
             .add_systems(Update, (auto_outline_scenes, sync_outline_with_visibility))
             .add_systems(
@@ -42,6 +70,11 @@ impl Plugin for PlayerPlugin {
                     tick_whirlwind,
                     tick_ability_flash,
                     reset_ability_input,
+                    resolve_twist_bones,
+                    toggle_torso_twist,
+                    toggle_hand_align,
+                    resolve_legs,
+                    toggle_leg_ik,
                 )
                 .run_if(in_state(GameState::InGame)),
             );
@@ -58,7 +91,11 @@ fn auto_outline_scenes(
     query: Query<Entity, (With<WorldAssetRoot>, Without<AsyncWorldInheritOutline>, Without<Floor>)>,
 ) {
     for entity in query.iter() {
-        commands.entity(entity).insert((
+        // `try_insert`, not `insert`: a scene root can be despawned between this system
+        // queueing the command and the buffers being applied — the playground's model swap
+        // does exactly that on the frame it changes character — and a plain `insert` on a
+        // despawned entity is a hard error that takes the app down.
+        commands.entity(entity).try_insert((
             OutlineVolume {
                 visible: true,
                 width: 2.0,
@@ -125,12 +162,15 @@ fn hide_player_weapon_nodes(
 
     for (player_entity, scene_instance) in player_query.iter() {
         if !scene_spawner.instance_is_ready(**scene_instance) { continue; }
-        commands.entity(player_entity).insert(WeaponsHidden);
+        // `try_insert`: the player can be despawned between this queueing and the
+        // buffers applying -- a model swap or a death does exactly that -- and a plain
+        // `insert` on a despawned entity takes the whole app down.
+        commands.entity(player_entity).try_insert(WeaponsHidden);
         for entity in scene_spawner.iter_instance_entities(**scene_instance) {
             if let Ok((_, name)) = named_query.get(entity)
                 && hidden.contains(&name.as_str())
             {
-                commands.entity(entity).insert(Visibility::Hidden);
+                commands.entity(entity).try_insert(Visibility::Hidden);
             }
         }
     }

@@ -6,17 +6,18 @@ use bevy::world_serialization::WorldAssetRoot;
 use avian3d::prelude::Collider;
 use crate::assets::asset_definition::{AssetDefinition, ModelType};
 use crate::assets::assets_plugin::GameAssets;
+use crate::control::gamepad_input::WantsGamepad;
 use crate::player::systems::equip::PendingEquip;
+use crate::player::systems::leg_ik::PendingLegs;
+use crate::player::systems::torso_twist::PendingTorsoTwist;
+use crate::player_setup::state::InputDevice;
 pub use crate::player::components::WeaponsHidden;
-use crate::character_creator::config::{CharacterConfig, ComposedSpriteSheet};
 use crate::game_state::score_keeper::GameTrackingEvent;
 use crate::general::components::CollisionLayer;
 use crate::general::events::map_events::SpawnPlayer;
 use crate::model_settings::plugin::PlayerAssetDef;
 use crate::model_settings::resources::ModelSettings;
 use crate::player::bundle::PlayerBundle;
-use crate::sprite_billboard::components::{BillboardMeshHandle, SpriteBillboard};
-use crate::sprite_billboard::material::SpriteBillboardMaterial;
 use crate::ui::spawn_ui::AddHealthBar;
 
 #[derive(Component)]
@@ -46,10 +47,6 @@ pub fn spawn_players(
     asset_server: Res<AssetServer>,
     roster: Option<Res<crate::player_setup::state::PlayerRoster>>,
     existing_players: Query<(), With<crate::player::components::Player>>,
-    config: Option<Res<CharacterConfig>>,
-    sheet: Option<Res<ComposedSpriteSheet>>,
-    billboard_mesh: Option<Res<BillboardMeshHandle>>,
-    mut sprite_materials: ResMut<Assets<SpriteBillboardMaterial>>,
     mut add_health_bar_mw: MessageWriter<AddHealthBar>,
     mut player_added_mw: MessageWriter<GameTrackingEvent>,
 ) {
@@ -98,55 +95,7 @@ pub fn spawn_players(
             .zip(roster_def.as_ref())
             .and_then(|(weapon_def_path, def)| PendingEquip::resolve(def, weapon_def_path));
 
-        // Decide: use sprite billboard or 3D model?
-        let use_billboard = config.as_ref()
-            .map(|c| !c.body_type.is_empty())
-            .unwrap_or(false);
-        let billboard_sheet = use_billboard
-            .then(|| sheet.as_ref().and_then(|s| s.billboard_handle.clone()))
-            .flatten();
-
-        let player = if use_billboard && let Some(billboard_sheet) = billboard_sheet && let Some(billboard_mesh) = billboard_mesh.as_ref() {
-            let sheet_handle = billboard_sheet;
-            let mesh_handle = billboard_mesh.0.clone();
-
-            let mat = sprite_materials.add(SpriteBillboardMaterial {
-                sprite_sheet: sheet_handle,
-                uv_rect: bevy::prelude::Vec4::new(0.0, 0.5, 64.0 / 704.0, 64.0 / 256.0),
-            });
-
-            let entity_cmds = commands.spawn((
-                pos,
-                Visibility::default(),
-                Collider::cuboid(0.5, 0.5, 0.45),
-                PlayerBundle::with_throw_rate(
-                    "player",
-                    [CollisionLayer::Player],
-                    [
-                        CollisionLayer::Ball,
-                        CollisionLayer::ImpassableAll,
-                        CollisionLayer::ImpassablePlayer,
-                        CollisionLayer::Floor,
-                        CollisionLayer::Alien,
-                        CollisionLayer::Player,
-                        CollisionLayer::AlienSpawnPoint,
-                        CollisionLayer::AlienGoal,
-                    ],
-                    roster_throw_rate,
-                ),
-            ));
-            // Spawn billboard as a child.
-            let parent_id = entity_cmds.id();
-            commands.entity(parent_id).with_children(|parent| {
-                parent.spawn((
-                    SpriteBillboard::default(),
-                    bevy::prelude::Mesh3d(mesh_handle),
-                    bevy::prelude::MeshMaterial3d(mat),
-                    bevy::prelude::Transform::from_xyz(0.0, 0.25, 0.0),
-                ));
-            });
-            parent_id
-        } else {
+        let player = {
             // 3D model path — use roster def if available for this slot, else default.
             let s = &*model_settings;
             // Load scene from roster def if available; also sync game_assets and
@@ -174,6 +123,7 @@ pub fn spawn_players(
                 WorldAssetRoot(scene),
                 pos,
                 Collider::cuboid(0.5, 0.5, 0.45),
+                // TransformInterpolation,
                 PlayerBundle::with_throw_rate(
                     "player",
                     [CollisionLayer::Player],
@@ -194,6 +144,24 @@ pub fn spawn_players(
 
         // Override ability from def / slot default.
         commands.entity(player).insert(roster_ability);
+        // Torso twist: resolved to bone entities once the skeleton spawns. Defs that
+        // don't list `aim_bones` fall back to the default mixamo spine chain.
+        commands.entity(player).insert(PendingTorsoTwist::new(
+            roster_def.as_ref().map(|def| def.aim_bones.clone()).unwrap_or_default(),
+        ));
+        // Procedural legs: the chains are found from the skeleton's own bone names once it
+        // spawns, so there is nothing per-def to carry here.
+        commands.entity(player).insert(PendingLegs::default());
+        // Players who joined on a gamepad drop the keyboard component; `assign_gamepads`
+        // resolves the pad index to the actual gamepad entity once it sees this.
+        if let Some(InputDevice::Gamepad(pad_index)) =
+            roster.as_ref().and_then(|r| r.devices.get(slot)).copied()
+        {
+            commands
+                .entity(player)
+                .remove::<crate::control::components::InputKeyboard>()
+                .insert(WantsGamepad(pad_index));
+        }
         // The weapon is spawned later, once the skeleton exists (see `equip`).
         if let Some(equip) = pending_equip {
             commands.entity(player).insert(equip);
@@ -231,8 +199,12 @@ pub fn fix_scene_transform(
                 transform.translation = fix_scene_transform.translation;
                 transform.rotation = fix_scene_transform.rotation;
                 transform.scale = fix_scene_transform.scale;
-                commands.entity(child).insert(PlayerModelRoot);
-                commands.entity(parent).remove::<FixSceneTransform>();
+                // `try_insert`/`try_remove`: the player and its scene can be despawned
+                // between this queueing and the buffers applying -- the playground's model
+                // swap does exactly that -- and a plain `insert` on a despawned entity is
+                // a hard error that takes the app down.
+                commands.entity(child).try_insert(PlayerModelRoot);
+                commands.entity(parent).try_remove::<FixSceneTransform>();
             }
         }
     }

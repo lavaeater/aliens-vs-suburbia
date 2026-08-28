@@ -62,15 +62,15 @@ impl Facts {
 
     /// Inserts a value, warning (but not panicking) when it changes an existing fact's type.
     fn insert(&mut self, key: &str, value: FactValue) {
-        if let Some(existing) = self.map.get(key) {
-            if existing.type_tag() != value.type_tag() {
-                bevy::log::warn!(
-                    "fact '{}' changing type from {} to {}",
-                    key,
-                    existing.type_tag(),
-                    value.type_tag()
-                );
-            }
+        if let Some(existing) = self.map.get(key)
+            && existing.type_tag() != value.type_tag()
+        {
+            bevy::log::warn!(
+                "fact '{}' changing type from {} to {}",
+                key,
+                existing.type_tag(),
+                value.type_tag()
+            );
         }
         self.map.insert(key.to_string(), value);
         self.touch(key);
@@ -277,7 +277,10 @@ impl Facts {
     /// Returns facts whose key matches `pattern`. Mirrors Kotlin `factsFor`:
     /// - a single `*` matches a prefix/suffix split (`"enemy.*.dead"`),
     /// - otherwise the pattern is matched as a substring (`contains`).
-    pub fn query<'a>(&'a self, pattern: &'a str) -> impl Iterator<Item = (&'a String, &'a FactValue)> {
+    pub fn query<'a>(
+        &'a self,
+        pattern: &'a str,
+    ) -> impl Iterator<Item = (&'a String, &'a FactValue)> {
         let star_count = pattern.matches('*').count();
         let (start, end) = if star_count == 1 {
             let mut split = pattern.splitn(2, '*');

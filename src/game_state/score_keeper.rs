@@ -107,7 +107,7 @@ impl Plugin for ScoreKeeperPlugin {
             .add_systems(bevy::prelude::OnEnter(GameState::InGame), reset_level_state)
             .add_systems(Update, (
                 game_tracking_event_system,
-                level_state_system,
+                level_state_system.run_if(crate::playground::state::in_normal_game),
             )
                 .run_if(in_state(GameState::InGame)),
             )

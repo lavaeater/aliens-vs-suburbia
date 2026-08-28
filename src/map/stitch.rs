@@ -259,10 +259,8 @@ pub fn stitch_map_with_library(
     let border = f(MapFeatures::Floor
         | MapFeatures::ImpassableForPlayers
         | MapFeatures::ImpassableForEnemies);
-    for c in 0..w {
-        tiles[0][c] = border;
-        tiles[h - 1][c] = border;
-    }
+    tiles.first_mut().unwrap().fill(border);
+    tiles.last_mut().unwrap().fill(border);
     for row in tiles.iter_mut() {
         row[0] = border;
         row[w - 1] = border;

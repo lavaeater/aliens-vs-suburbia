@@ -94,15 +94,15 @@ pub struct UfoStingers {
 
 impl MusicPlayer for UfoStingers {
     fn play(&mut self, beat: Beat, commands: &mut Commands, base_intensity: f32, chord: &Chord) {
-        if beat.beat == 0 && beat.sixteenth == 0 && beat.bar_count % 2 == 0 {
-            if let Some(note) = TonalPlayer::get_scale_note(chord, 1.0 - base_intensity) {
-                spawn_note(commands, &self.ufo, self.volume, note.midi_note_diff);
-            }
+        if beat.beat == 0 && beat.sixteenth == 0 && beat.bar_count.is_multiple_of(2)
+            && let Some(note) = TonalPlayer::get_scale_note(chord, 1.0 - base_intensity)
+        {
+            spawn_note(commands, &self.ufo, self.volume, note.midi_note_diff);
         }
-        if base_intensity > 0.5 && beat.sixteenth == 3 && beat.beat % 2 == 0 {
-            if let Some(note) = TonalPlayer::get_chord_note(chord, 0.5) {
-                spawn_note(commands, &self.sid, self.volume - 4.0, note.midi_note_diff + 12);
-            }
+        if base_intensity > 0.5 && beat.sixteenth == 3 && beat.beat.is_multiple_of(2)
+            && let Some(note) = TonalPlayer::get_chord_note(chord, 0.5)
+        {
+            spawn_note(commands, &self.sid, self.volume - 4.0, note.midi_note_diff + 12);
         }
     }
 }

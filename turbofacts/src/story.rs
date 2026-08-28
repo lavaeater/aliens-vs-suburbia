@@ -130,7 +130,7 @@ impl StoryStore {
     pub fn add(&mut self, story: Story) {
         self.stories.push(story);
         self.stories
-            .sort_by(|a, b| b.specificity().cmp(&a.specificity()));
+            .sort_by_key(|a| std::cmp::Reverse(a.specificity()));
     }
 
     pub fn add_all(&mut self, stories: impl IntoIterator<Item = Story>) {

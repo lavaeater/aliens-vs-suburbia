@@ -18,6 +18,9 @@ use bevy_wind_waker_shader::WindWakerShaderBuilder;
 use crate::assets::assets_plugin::GameAssets;
 use crate::map::{BitFlags, MapFeatures};
 use crate::building::systems::ToWorldCoordinates;
+
+/// Positions, normals, UVs and indices accumulated per terrain color while building floor meshes.
+type TerrainQuadMesh = (Vec<[f32; 3]>, Vec<[f32; 3]>, Vec<[f32; 2]>, Vec<u32>);
 use crate::player::components::{IsBuildIndicator, IsObstacle};
 use crate::general::components::{Health, Indestructible};
 use crate::assets::asset_definition::{AssetDefinition, ModelType};
@@ -204,12 +207,18 @@ pub fn map_loader(
                         }
                         max_row += 1;
                     }
+                    
+                    #[allow(clippy::needless_range_loop)]
                     for r in row..=max_row { for c in col..=max_col { covered[r][c] = true; } }
                     let w = (max_col - col + 1) as f32;
                     let h = (max_row - row + 1) as f32;
+                    // Sunk by its own half-height so the slab's *top* is the visual floor
+                    // plane, which is drawn flat at `floor_level`. Centred on that plane
+                    // instead, the collider's surface sat half a slab above the floor you
+                    // can see, and everything that walks on it stood that far in the air.
                     let center = Vec3::new(
                         tile_defs.tile_width * (col + max_col) as f32 / 2.0,
-                        tile_defs.floor_level,
+                        tile_defs.floor_level - floor_model_def.height * tile_defs.tile_unit,
                         tile_defs.tile_width * (row + max_row) as f32 / 2.0,
                     );
                     commands.spawn((
@@ -227,9 +236,10 @@ pub fn map_loader(
 
         // ── Floor visual mesh (per-terrain-type coloured quads) ───────────────
         {
-            let mut terrain_quads: std::collections::HashMap<[u8;3], (Vec<[f32;3]>, Vec<[f32;3]>, Vec<[f32;2]>, Vec<u32>)> = Default::default();
+            let mut terrain_quads: std::collections::HashMap<[u8; 3], TerrainQuadMesh> = Default::default();
             let tw = tile_defs.tile_width;
             let y_floor = tile_defs.floor_level;
+            #[allow(clippy::needless_range_loop)]
             for row in 0..rows {
                 for col in 0..cols {
                     let raw = m[row][col];
@@ -288,11 +298,13 @@ pub fn map_loader(
                     let mut max_row = row;
                     'extend_imp: loop {
                         if max_row + 1 >= rows { break; }
+                        #[allow(clippy::needless_range_loop)]
                         for c in col..=max_col {
                             if !set.contains(&(c as i32, (max_row + 1) as i32)) || covered[max_row + 1][c] { break 'extend_imp; }
                         }
                         max_row += 1;
                     }
+                    #[allow(clippy::needless_range_loop)]
                     for r in row..=max_row { for c in col..=max_col { covered[r][c] = true; } }
                     let w = (max_col - col + 1) as f32;
                     let h = (max_row - row + 1) as f32;

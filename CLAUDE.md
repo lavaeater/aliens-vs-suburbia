@@ -34,7 +34,7 @@ The game follows Bevy's **plugin-based ECS architecture**. Each subsystem lives 
 Menu → PlayerSetup → InGame
 Menu → AssetBrowser
 Menu → MapEditor
-Menu → ModelShowcase / CharacterCreator / PolyPizza
+Menu → ModelShowcase / PolyPizza
 ```
 
 Most gameplay systems use `.run_if(in_state(InGame))`. Physics runs on a fixed timestep of 0.05s.
@@ -45,9 +45,9 @@ Most gameplay systems use `.run_if(in_state(InGame))`. Physics runs on a fixed t
 |--------|---------------|
 | `src/ai/` | Enemy AI behaviors: `ApproachAndAttackPlayer`, `AvoidWalls`, `MoveTowardsGoal`, `DestroyTheMap`. `recheck_path_after_tile_opened` clears stale destroy-behavior when a tile opens. |
 | `src/alien/` | Alien spawning (wave-based via `WaveManager`). `wave_manager.rs` drives wave progression; waves can come from `MapFile.waves` or fall back to hardcoded defaults. |
-| `src/player/` | Player character: physics, auto-aim, scene loading, outline rendering, death/revive, special abilities (`src/player/systems/abilities.rs`). |
+| `src/player/` | Player character: physics, auto-aim, scene loading, outline rendering, death/revive, special abilities (`src/player/systems/abilities.rs`), torso twist (`systems/torso_twist.rs`). |
 | `src/towers/` | Tower entities: shooting, slow, area-damage sensors and cooldown systems. |
-| `src/control/` | Input: keyboard (`keyboard_input.rs`), gamepad (`gamepad_input.rs`), mouse aim (`mouse_aim.rs`). `Q` key fires special ability via `AbilityInput` resource. The keyboard player aims with the mouse: `mouse_aim` projects the cursor onto the ground plane and sets `AutoAim`; `mouse_face` steers the body to face it (overriding A/D tank rotation). Gamepad players keep `auto_aim` (closest-in-FOV). |
+| `src/control/` | Input: keyboard (`keyboard_input.rs`), gamepad (`gamepad_input.rs`), mouse aim (`mouse_aim.rs`). `Q` key fires special ability via `AbilityInput` resource. **Both schemes are twin-stick and camera-relative**: WASD / the left stick walk in *world* space rotated by `GameSettings::yaw_degrees` (W or stick-up = up the screen, A/D strafe rather than rotate); the mouse / right stick sets `AutoAim`. Movement and facing are decoupled — `torso_twist::face_movement_direction` steers the body toward the direction of travel and the spine twists the rest of the way to the aim. Buttons are remappable via `GamepadBindings` (`bindings.rs`), loaded from `gamepad-bindings.ron` at the project root with the same `load`/`save` pattern as `GameSettings` — defaults are R2 fire, Square build mode, Cross place, Circle cancel, Triangle ability, d-pad to cycle the build item. Firing sets `ControlCommand::Throw` and the build buttons write the same messages the keyboard's B/Space/Escape/arrows do. With the right stick released, `auto_aim` (closest-in-FOV) takes over while firing. Pads are bound to players by `assign_gamepads` from `PlayerRoster::devices` (slot 0 = keyboard, slot N = pad N-1), with a fallback that hands a connected pad to the lone keyboard player when the setup screen was skipped. |
 | `src/building/` | Build mode: enter/exit, tile placement preview, tower construction. Checks `TeamWallet` for cost. |
 | `src/map/` | Tile-based level: map generator, pathfinding grid (`MapGraph`), wall/floor/obstacle spawning. `map_loader` now also spawns editor `placements` from `MapFile`. |
 | `src/general/` | Core mechanics: collision, `Health`/health bars, `TouchDamage`, `Indestructible`, `Coin`/`TeamWallet` economy, physics throws, lighting, kinematic movement, tile tracking. |
@@ -55,9 +55,10 @@ Most gameplay systems use `.run_if(in_state(InGame))`. Physics runs on a fixed t
 | `src/ui/` | Menu, HUD (`spawn_ui.rs`). HUD shows: aliens, wave info, coins, build cost, ability cooldown. |
 | `src/music/` | Generative soundtrack via the `rusty_music` submodule (path dep). `GameMusicPlugin` spawns the band; `MusicMoods` holds two intensity measures (`combat`, `danger`) computed from game state, smoothed into the global `Intensity` and gating musician channels (`Ambient`/`Groove`/`Combat`/`Danger`) via `Muted` with hysteresis. Samples live in `assets/instruments/` (copied from `rusty_music/assets/samples/`). |
 | `src/camera/` | Isometric camera tracking with wall occlusion fading. |
-| `src/assets/` | `AssetDefinition` (`asset_definition.rs`) — the core per-model def type persisted to `assets/defs/*.ron`. |
+| `src/assets/` | `AssetDefinition` (`asset_definition.rs`) — the core per-model def type persisted to `assets/defs/*.ron`. `hardpoint.rs` — weapon-snap frame algebra. `gizmos.rs` — skeleton and hardpoint overlay drawing, shared by the asset browser and the playground. |
 | `src/asset_browser/` | In-engine tool for importing models: browse GLB files, set scale/height, toggle hidden nodes, tag each animation clip with a free-form hierarchical path and bind game animation keys to those tag paths, add external animation sources, set `ModelType`, overlay the skinned skeleton (`B`), and attach weapon models to bones (sockets) with live numeric-nudge offset editing. Press `I` to export `.ron`. |
 | `src/player_setup/` | `GameState::PlayerSetup` screen. Keyboard (Enter) and gamepad (South) to join slots, arrow keys / d-pad to pick model. Writes `PlayerRoster` resource. |
+| `src/playground/` | Sandbox tweaking screen (`docs/playground.md`). **Not a `GameState`** — it runs in `GameState::InGame` with a `PlaygroundSession` resource inserted, so every gameplay system works there untouched. `state::in_playground` / `state::in_normal_game` gate the four things that differ: map loading, the HUD, the win/lose transition, and waves (`WaveManager::default()` ships hardcoded waves, so `waves: []` in the map is *not* enough — `silence_waves` clears them). Two panes: the left is UI, the right is the ordinary game camera with `Camera::viewport` clipped to the pane. `dummies.rs` keeps three static `Alien`s standing on `DummyPost`s that respawn them. `models.rs` lists imported player defs and swaps the live player between them via `PlayerRoster` (a two-frame despawn/respawn), plus a file browser that "imports" a `.glb` by writing a minimal def. `debug.rs` toggles physics/skeleton/hardpoint overlays, drawing via `assets::gizmos` (shared with the asset browser) — note it scopes joints to the player's subtree with `joints_under`, since the dummies are skinned too. `hardpoints.rs` edits hardpoints on the live model, on either side of the grip (`HardpointSide`): the character's land in `PlayerAssetDef`, the weapon's in `PlaygroundWeaponDef` (loaded from `PlayerProps::weapon` by `sync_weapon_def`, which keys on the *path* — keying on `PlayerAssetDef::is_changed()` would discard edits, since every nudge marks it changed). `keep_weapons_snapped` rebuilds the held weapon from `WeaponModel::char_grip`/`weapon_grip` every frame, so the setters are all that's needed for it to follow; the weapon's `muzzle` goes into `Weapon::muzzle`, where `shoot_weapons` takes the tracer origin from. Dirty state and Save are per side (two defs, two files); weapon frames are model-origin relative, so the bone picker is character-only. Nothing is written until Save. `animation.rs` plays animation keys on the live character and re-binds them to `clip_tags` paths (live — `build_player_anim_graph` keys its rebuild off `animation_bindings`). Camera/model sliders are the HUD's own F1/F2 panels, spawned rather than duplicated. `prefs.rs` persists the last model worn to `playground-prefs.ron` (gitignored) so a session resumes on the rig you were working on. `cargo run -- --playground` boots straight in. |
 | `src/map_editor/` | `GameState::MapEditor`. Grid-based map layout tool. Palette sidebar filtered by `ModelType`. Left-click to place, right-click erase, `R` rotate, `S` save. Wave editor on right panel. |
 | `src/model_settings/` | Live model hot-reload, `build_player_anim_graph` — builds the player animation graph, resolves `stem|clip` values against external GLTF sources. |
 | `src/inspection/` | Dev tooling via `bevy-inspector-egui`. |
@@ -83,6 +84,25 @@ Stored at `assets/defs/<model-stem>.ron`. Fields:
 ### Special Abilities
 
 `SpecialAbility` enum on players: `Bombardment`, `Healing`, `Whirlwind`, `GoldDigger`. Activated with `Q` key. Cooldowns via `AbilityCooldown` component. Assigned from `PlayerProps.ability` in the def, or cycled by slot index.
+
+### Torso Twist (aim offset)
+
+`src/player/systems/torso_twist.rs` — the legs face the direction of travel while the
+upper body (and the weapon parented to the grip bone) faces `AutoAim`. This is **forward**
+kinematics, not IK: a per-spine-bone rotation, no solver. Two invariants keep it working:
+
+- **Rotate about world up, not the bone's own axis.** `twisted_local` conjugates the world
+  yaw by the parent's world rotation and pre-multiplies the *animated local* pose. Working
+  from the bone's `GlobalTransform` instead would reuse last frame's already-twisted pose
+  and wind the torso further every frame.
+- **Ordering.** `apply_torso_twist` runs in `PostUpdate`, `.after(AnimationSystems)` and
+  `.before(TransformSystems::Propagate)` — earlier and `animate_targets` stomps it, later
+  and it never propagates.
+
+The chain comes from `AssetDefinition.aim_bones` (bone name + weight), defaulting to the
+mixamo `Spine`/`Spine1`/`Spine2` chain with rising weights. Twist is clamped to
+`TWIST_LIMIT_DEGREES` (60); past that the body turns to absorb the excess. **F7 toggles it**
+at runtime for A/B comparison.
 
 ### Physics & Collision
 
@@ -119,7 +139,7 @@ Each behavior has its own submodule under `src/ai/`. When aliens can't find a pa
 - 3D models: `.glb`/`.gltf` files under `assets/packs/`
 - Model definitions: `assets/defs/*.ron`
 - Maps: `assets/maps/*.ron` (format: `MapFile` in `src/general/components/map_components.rs`)
-- Settings: `game-settings.ron`, `player-settings.ron` at project root
+- Settings: `game-settings.ron`, `player-settings.ron`, `gamepad-bindings.ron` at project root
 
 ### Known Gotchas
 

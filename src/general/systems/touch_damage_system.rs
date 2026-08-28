@@ -6,6 +6,7 @@ use crate::gore::components::{DamageDealt, DamageKind};
 use crate::player::components::Player;
 use crate::player::components::PlayerDead;
 
+#[allow(clippy::type_complexity)]
 pub fn touch_damage_system(
     time: Res<Time>,
     damagers: Query<(&CollidingEntities, &TouchDamage, Option<&Position>)>,
