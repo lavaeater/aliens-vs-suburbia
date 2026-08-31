@@ -3,7 +3,7 @@ use bevy::input::mouse::MouseButton;
 use bevy::window::PrimaryWindow;
 use enumflags2::BitFlags;
 use crate::map::MapFeatures;
-use crate::map_editor::state::MapEditorState;
+use crate::map_editor::state::{EditorTool, MapEditorState};
 use crate::ui::spawn_ui::StateMarker;
 
 pub const CELL_SIZE: f32 = 24.0; // pixels per tile in the grid view
@@ -180,10 +180,16 @@ pub fn handle_grid_click(
     mouse: Res<ButtonInput<MouseButton>>,
     windows: Query<&Window, With<PrimaryWindow>>,
 ) {
+    let Ok(window) = windows.single() else { return };
+
+    if state.tool == EditorTool::House {
+        handle_house_polygon_input(&mut state, &mouse, window);
+        return;
+    }
+
     let (left, right) = (mouse.pressed(MouseButton::Left), mouse.pressed(MouseButton::Right));
     if !left && !right { return; }
 
-    let Ok(window) = windows.single() else { return };
     let Some((col, row)) = cursor_to_tile(window, state.width, state.height) else { return };
 
     let erasing = right || (left && state.erase_mode);
@@ -191,5 +197,55 @@ pub fn handle_grid_click(
         state.erase_at(col, row);
     } else if left {
         state.place_at(col, row);
+    }
+}
+
+/// Click-to-place nodes for the House tool: each click adds a (perpendicular-snapped)
+/// polygon node, clicking back on the first node closes and resolves the shape, and
+/// right-click cancels the in-progress polygon.
+fn handle_house_polygon_input(state: &mut MapEditorState, mouse: &ButtonInput<MouseButton>, window: &Window) {
+    if mouse.just_pressed(MouseButton::Right) {
+        state.cancel_house_polygon();
+        return;
+    }
+    if mouse.just_pressed(MouseButton::Left) {
+        let Some((col, row)) = cursor_to_tile(window, state.width, state.height) else { return };
+        state.house_add_point(col, row);
+    }
+}
+
+#[derive(Component)]
+pub struct HousePreviewMarker;
+
+/// Draws a marker at each node of the in-progress House polygon (drawn fresh every frame
+/// while the tool is active — this is editor-only UI, not a hot path).
+pub fn update_house_preview(
+    state: Res<MapEditorState>,
+    mut commands: Commands,
+    windows: Query<&Window, With<PrimaryWindow>>,
+    markers: Query<Entity, With<HousePreviewMarker>>,
+) {
+    for e in markers.iter() { commands.entity(e).despawn(); }
+    if state.house_points.is_empty() { return; }
+
+    let Ok(window) = windows.single() else { return };
+    let grid_left = (window.width()  * 0.5 - state.width  as f32 * CELL_SIZE * 0.5).round();
+    let grid_top  = (window.height() * 0.5 - state.height as f32 * CELL_SIZE * 0.5).round();
+
+    for (i, &(x, y)) in state.house_points.iter().enumerate() {
+        let color = if i == 0 { Color::srgba(1.0, 0.9, 0.2, 0.9) } else { Color::srgba(1.0, 1.0, 1.0, 0.7) };
+        commands.spawn((
+            HousePreviewMarker,
+            StateMarker,
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(grid_left + x as f32 * CELL_SIZE + CELL_SIZE * 0.25),
+                top:  Val::Px(grid_top  + y as f32 * CELL_SIZE + CELL_SIZE * 0.25),
+                width:  Val::Px(CELL_SIZE * 0.5),
+                height: Val::Px(CELL_SIZE * 0.5),
+                ..Default::default()
+            },
+            BackgroundColor(color),
+        ));
     }
 }

@@ -7,7 +7,7 @@ use crate::game_state::GameState;
 use crate::map::map_generator::generate_suburb_map;
 use crate::map::chunks::CHUNK_SIZE;
 use crate::map::chunk_loader::stitch_map_from_dir;
-use crate::map_editor::state::{MapEditorState, PaletteTab};
+use crate::map_editor::state::{EditorTool, MapEditorState, PaletteTab};
 use crate::ui::spawn_ui::StateMarker;
 
 // ── Markers ──────────────────────────────────────────────────────────────────
@@ -46,6 +46,8 @@ pub fn spawn_map_editor_ui(
         left.label("[R] rotate  [S] save  [Esc] back", 11.0, Color::srgba(0.5, 0.7, 0.5, 0.7));
         left.label("[E] toggle erase  RClick erase", 11.0, Color::srgba(0.5, 0.7, 0.5, 0.7));
         left.label("Hold LMB to drag-paint", 11.0, Color::srgba(0.5, 0.7, 0.5, 0.7));
+        left.label("[H] House tool: click nodes, click", 11.0, Color::srgba(0.5, 0.7, 0.5, 0.7));
+        left.label("  start (or Enter) to close, Esc/RClick cancel", 11.0, Color::srgba(0.5, 0.7, 0.5, 0.7));
 
         left.with_child(|c| {
             c.with_text("Mode: Paint", Some(lava_ui_builder::TextStyle::size_color(12.0, Color::srgb(0.6, 1.0, 0.6))))
@@ -309,7 +311,11 @@ pub fn rebuild_mode_label(
 ) {
     if !state.is_changed() { return; }
     let Ok(mut t) = label_q.single_mut() else { return };
-    **t = if state.erase_mode { "Mode: Erase".to_string() } else { "Mode: Paint".to_string() };
+    **t = match state.tool {
+        EditorTool::House => format!("Mode: House ({} pts)", state.house_points.len()),
+        EditorTool::Paint if state.erase_mode => "Mode: Erase".to_string(),
+        EditorTool::Paint => "Mode: Paint".to_string(),
+    };
 }
 
 pub fn handle_editor_keys(
@@ -324,6 +330,13 @@ pub fn handle_editor_keys(
             Key::Character(c) if c == "s" || c == "S" => state.save(),
             Key::Character(c) if c == "e" || c == "E" => {
                 state.erase_mode = !state.erase_mode;
+            }
+            Key::Character(c) if c == "h" || c == "H" => state.toggle_tool(),
+            Key::Enter if state.tool == EditorTool::House && !state.house_points.is_empty() => {
+                state.finish_house_polygon();
+            }
+            Key::Escape if state.tool == EditorTool::House && !state.house_points.is_empty() => {
+                state.cancel_house_polygon();
             }
             Key::Escape => next.set(GameState::Menu),
             _ => {}

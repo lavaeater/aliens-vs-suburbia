@@ -9,6 +9,7 @@ pub mod chunks;
 pub mod stitch;
 pub mod scatter;
 pub mod chunk_loader;
+pub mod procgen;
 
 #[bitflags(default = Nothing)]
 #[repr(u64)]
