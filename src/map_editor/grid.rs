@@ -66,10 +66,9 @@ pub fn rebuild_grid(
     let grid_left = (win_w * 0.5 - w as f32 * CELL_SIZE * 0.5).round();
     let grid_top  = (win_h * 0.5 - h as f32 * CELL_SIZE * 0.5).round();
 
-    for row in 0..h {
-        for col in 0..w {
-            let tile = state.tiles[row][col];
-            let color = tile_color(tile);
+  for (row, cols) in state.tiles.iter().enumerate().take(h) {
+      for (col, tile) in cols.iter().enumerate().take(w) {
+            let color = tile_color(*tile);
             commands.spawn((
                 GridCellMarker { x: col, y: row },
                 StateMarker,
@@ -180,7 +179,7 @@ pub fn handle_grid_click(
     mouse: Res<ButtonInput<MouseButton>>,
     windows: Query<&Window, With<PrimaryWindow>>,
 ) {
-    let Ok(window) = windows.single() else { return };
+    let Ok(window) = windows.single() else { bevy::log::info!("house tool: no primary window"); return };
 
     if state.tool == EditorTool::House {
         handle_house_polygon_input(&mut state, &mouse, window);
@@ -205,12 +204,19 @@ pub fn handle_grid_click(
 /// right-click cancels the in-progress polygon.
 fn handle_house_polygon_input(state: &mut MapEditorState, mouse: &ButtonInput<MouseButton>, window: &Window) {
     if mouse.just_pressed(MouseButton::Right) {
+        bevy::log::info!("house tool: right-click, cancelling polygon");
         state.cancel_house_polygon();
         return;
     }
     if mouse.just_pressed(MouseButton::Left) {
-        let Some((col, row)) = cursor_to_tile(window, state.width, state.height) else { return };
-        state.house_add_point(col, row);
+        match cursor_to_tile(window, state.width, state.height) {
+            Some((col, row)) => {
+                bevy::log::info!("house tool: click at tile ({col}, {row})");
+                state.house_add_point(col, row);
+                bevy::log::info!("house tool: now {} point(s)", state.house_points.len());
+            }
+            None => bevy::log::info!("house tool: click outside grid bounds (cursor {:?})", window.cursor_position()),
+        }
     }
 }
 

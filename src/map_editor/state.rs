@@ -1,17 +1,21 @@
-use bevy::prelude::Resource;
 use crate::assets::asset_definition::{AssetDefinition, ModelType};
 use crate::general::components::map_components::{MapFile, TilePlacement, WaveDef};
 use crate::map::MapFeatures;
-use crate::map::procgen::{apply_house, resolve_house, HouseSpec, Polygon};
+use crate::map::procgen::{HouseSpec, Polygon, apply_house, resolve_house};
+use bevy::prelude::Resource;
 
 pub const TILE_SPECIAL_FLOOR: u64 = MapFeatures::Floor as u64;
-pub const TILE_ALIEN_SPAWN: u64   = MapFeatures::Floor as u64 | MapFeatures::EnemySpawn as u64;
-pub const TILE_ALIEN_GOAL: u64    = MapFeatures::Floor as u64 | MapFeatures::EnemyExit as u64;
-pub const TILE_PLAYER_SPAWN: u64  = MapFeatures::Floor as u64 | MapFeatures::PlayerSpawn as u64;
-pub const TILE_WALL_ALL: u64      = MapFeatures::Floor as u64 | MapFeatures::ImpassableForPlayers as u64 | MapFeatures::ImpassableForEnemies as u64;
-pub const TILE_WALL_PLAYER: u64   = MapFeatures::Floor as u64 | MapFeatures::ImpassableForPlayers as u64;
-pub const TILE_WALL_ALIEN: u64    = MapFeatures::Floor as u64 | MapFeatures::ImpassableForEnemies as u64;
-pub const TILE_VOID: u64          = 0;
+pub const TILE_ALIEN_SPAWN: u64 = MapFeatures::Floor as u64 | MapFeatures::EnemySpawn as u64;
+pub const TILE_ALIEN_GOAL: u64 = MapFeatures::Floor as u64 | MapFeatures::EnemyExit as u64;
+pub const TILE_PLAYER_SPAWN: u64 = MapFeatures::Floor as u64 | MapFeatures::PlayerSpawn as u64;
+pub const TILE_WALL_ALL: u64 = MapFeatures::Floor as u64
+    | MapFeatures::ImpassableForPlayers as u64
+    | MapFeatures::ImpassableForEnemies as u64;
+pub const TILE_WALL_PLAYER: u64 =
+    MapFeatures::Floor as u64 | MapFeatures::ImpassableForPlayers as u64;
+pub const TILE_WALL_ALIEN: u64 =
+    MapFeatures::Floor as u64 | MapFeatures::ImpassableForEnemies as u64;
+pub const TILE_VOID: u64 = 0;
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum PaletteTab {
@@ -24,14 +28,20 @@ pub enum PaletteTab {
 
 impl PaletteTab {
     pub fn all() -> &'static [PaletteTab] {
-        &[PaletteTab::Terrain, PaletteTab::Tower, PaletteTab::Item, PaletteTab::Enemy, PaletteTab::Special]
+        &[
+            PaletteTab::Terrain,
+            PaletteTab::Tower,
+            PaletteTab::Item,
+            PaletteTab::Enemy,
+            PaletteTab::Special,
+        ]
     }
     pub fn label(&self) -> &'static str {
         match self {
             PaletteTab::Terrain => "Terrain",
-            PaletteTab::Tower   => "Tower",
-            PaletteTab::Item    => "Item",
-            PaletteTab::Enemy   => "Enemy",
+            PaletteTab::Tower => "Tower",
+            PaletteTab::Item => "Item",
+            PaletteTab::Enemy => "Enemy",
             PaletteTab::Special => "Special",
         }
     }
@@ -50,7 +60,10 @@ pub enum PaletteItem {
     /// A model def file.
     Def { path: String, name: String },
     /// A special tile marker (spawn point, goal, player spawn).
-    Special { label: &'static str, tile_value: u64 },
+    Special {
+        label: &'static str,
+        tile_value: u64,
+    },
 }
 
 impl PaletteItem {
@@ -140,14 +153,38 @@ impl MapEditorState {
     pub fn refresh_palette(&mut self) {
         self.palette_items = match self.active_tab {
             PaletteTab::Special => vec![
-                PaletteItem::Special { label: "Floor",         tile_value: TILE_SPECIAL_FLOOR },
-                PaletteItem::Special { label: "Wall (all)",    tile_value: TILE_WALL_ALL },
-                PaletteItem::Special { label: "Wall (player)", tile_value: TILE_WALL_PLAYER },
-                PaletteItem::Special { label: "Wall (alien)",  tile_value: TILE_WALL_ALIEN },
-                PaletteItem::Special { label: "Void",          tile_value: TILE_VOID },
-                PaletteItem::Special { label: "Alien Spawn",   tile_value: TILE_ALIEN_SPAWN },
-                PaletteItem::Special { label: "Alien Goal",    tile_value: TILE_ALIEN_GOAL },
-                PaletteItem::Special { label: "Player Spawn",  tile_value: TILE_PLAYER_SPAWN },
+                PaletteItem::Special {
+                    label: "Floor",
+                    tile_value: TILE_SPECIAL_FLOOR,
+                },
+                PaletteItem::Special {
+                    label: "Wall (all)",
+                    tile_value: TILE_WALL_ALL,
+                },
+                PaletteItem::Special {
+                    label: "Wall (player)",
+                    tile_value: TILE_WALL_PLAYER,
+                },
+                PaletteItem::Special {
+                    label: "Wall (alien)",
+                    tile_value: TILE_WALL_ALIEN,
+                },
+                PaletteItem::Special {
+                    label: "Void",
+                    tile_value: TILE_VOID,
+                },
+                PaletteItem::Special {
+                    label: "Alien Spawn",
+                    tile_value: TILE_ALIEN_SPAWN,
+                },
+                PaletteItem::Special {
+                    label: "Alien Goal",
+                    tile_value: TILE_ALIEN_GOAL,
+                },
+                PaletteItem::Special {
+                    label: "Player Spawn",
+                    tile_value: TILE_PLAYER_SPAWN,
+                },
             ],
             _ => scan_defs_for_tab(&self.active_tab),
         };
@@ -165,7 +202,9 @@ impl MapEditorState {
     }
 
     pub fn place_at(&mut self, x: i32, y: i32) {
-        if x < 0 || y < 0 || x >= self.width as i32 || y >= self.height as i32 { return; }
+        if x < 0 || y < 0 || x >= self.width as i32 || y >= self.height as i32 {
+            return;
+        }
         let (ux, uy) = (x as usize, y as usize);
 
         // Resolve what to place before taking mutable borrows.
@@ -180,7 +219,12 @@ impl MapEditorState {
             if let Some(path) = maybe_path {
                 let rot = self.rotation_steps;
                 self.placements.retain(|p| !(p.x == x && p.y == y));
-                self.placements.push(TilePlacement { x, y, def_path: path, rotation_steps: rot });
+                self.placements.push(TilePlacement {
+                    x,
+                    y,
+                    def_path: path,
+                    rotation_steps: rot,
+                });
             }
             self.grid_dirty = true;
         }
@@ -188,18 +232,24 @@ impl MapEditorState {
 
     /// Erase both tile value and any placement at (x, y).
     pub fn erase_at(&mut self, x: i32, y: i32) {
-        if x < 0 || y < 0 || x >= self.width as i32 || y >= self.height as i32 { return; }
+        if x < 0 || y < 0 || x >= self.width as i32 || y >= self.height as i32 {
+            return;
+        }
         self.tiles[y as usize][x as usize] = 0;
         self.placements.retain(|p| !(p.x == x && p.y == y));
         self.grid_dirty = true;
     }
 
     pub fn add_wave(&mut self) {
-        let enemy_def = self.enemy_defs
+        let enemy_def = self
+            .enemy_defs
             .get(self.selected_enemy)
             .map(|(path, _)| path.clone())
             .unwrap_or_default();
-        self.waves.push(WaveDef { enemy_def, ..WaveDef::default() });
+        self.waves.push(WaveDef {
+            enemy_def,
+            ..WaveDef::default()
+        });
         self.waves_dirty = true;
     }
 
@@ -225,15 +275,20 @@ impl MapEditorState {
     /// is always rectilinear (an L-shape, T-shape, etc. — not just a rectangle) and every
     /// wall segment lands on one of `procgen`'s four cardinal facings.
     pub fn house_add_point(&mut self, x: i32, y: i32) {
-        if let Some(&first) = self.house_points.first() {
-            if self.house_points.len() >= 3 && (x, y) == first {
-                self.finish_house_polygon();
-                return;
-            }
+        if let Some(&first) = self.house_points.first()
+            && self.house_points.len() >= 3
+            && (x, y) == first
+        {
+            self.finish_house_polygon();
+            return;
         }
         let point = match self.house_points.last() {
             Some(&(lx, ly)) => {
-                if (x - lx).abs() >= (y - ly).abs() { (x, ly) } else { (lx, y) }
+                if (x - lx).abs() >= (y - ly).abs() {
+                    (x, ly)
+                } else {
+                    (lx, y)
+                }
             }
             None => (x, y),
         };
@@ -247,10 +302,19 @@ impl MapEditorState {
     /// it into the grid. No-ops (and clears) if fewer than 3 nodes were placed.
     pub fn finish_house_polygon(&mut self) {
         if self.house_points.len() >= 3 {
-            let polygon = Polygon { points: self.house_points.clone() };
+            let polygon = Polygon {
+                points: self.house_points.clone(),
+            };
             let spec = HouseSpec::new(self.house_wall_def.clone());
             let result = resolve_house(&polygon, &spec);
-            apply_house(&result, &spec, self.width, self.height, &mut self.tiles, &mut self.placements);
+            apply_house(
+                &result,
+                &spec,
+                self.width,
+                self.height,
+                &mut self.tiles,
+                &mut self.placements,
+            );
             self.grid_dirty = true;
         }
         self.house_points.clear();
@@ -302,17 +366,26 @@ impl MapEditorState {
 
 pub fn scan_enemy_defs() -> Vec<(String, String)> {
     let dir = std::path::Path::new("assets/defs");
-    let Ok(entries) = std::fs::read_dir(dir) else { return vec![] };
-    let mut items: Vec<(String, String)> = entries.flatten().filter_map(|e| {
-        let p = e.path();
-        if p.extension()?.to_str()? != "ron" { return None; }
-        let text = std::fs::read_to_string(&p).ok()?;
-        let def: AssetDefinition = ron::from_str(&text).ok()?;
-        if !matches!(def.model_type, ModelType::Enemy(_)) { return None; }
-        let name = p.file_stem()?.to_str()?.to_string();
-        let path = p.to_string_lossy().replace('\\', "/");
-        Some((path, name))
-    }).collect();
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return vec![];
+    };
+    let mut items: Vec<(String, String)> = entries
+        .flatten()
+        .filter_map(|e| {
+            let p = e.path();
+            if p.extension()?.to_str()? != "ron" {
+                return None;
+            }
+            let text = std::fs::read_to_string(&p).ok()?;
+            let def: AssetDefinition = ron::from_str(&text).ok()?;
+            if !matches!(def.model_type, ModelType::Enemy(_)) {
+                return None;
+            }
+            let name = p.file_stem()?.to_str()?.to_string();
+            let path = p.to_string_lossy().replace('\\', "/");
+            Some((path, name))
+        })
+        .collect();
     items.sort_by(|a, b| a.1.cmp(&b.1));
     items
 }
@@ -322,16 +395,24 @@ pub fn scan_enemy_defs() -> Vec<(String, String)> {
 fn scan_wall_def() -> Option<String> {
     let dir = std::path::Path::new("assets/defs");
     let entries = std::fs::read_dir(dir).ok()?;
-    let mut terrain_defs: Vec<String> = entries.flatten().filter_map(|e| {
-        let p = e.path();
-        if p.extension()?.to_str()? != "ron" { return None; }
-        let text = std::fs::read_to_string(&p).ok()?;
-        let def: AssetDefinition = ron::from_str(&text).ok()?;
-        if !matches!(def.model_type, ModelType::Terrain(_)) { return None; }
-        Some(p.to_string_lossy().replace('\\', "/"))
-    }).collect();
+    let mut terrain_defs: Vec<String> = entries
+        .flatten()
+        .filter_map(|e| {
+            let p = e.path();
+            if p.extension()?.to_str()? != "ron" {
+                return None;
+            }
+            let text = std::fs::read_to_string(&p).ok()?;
+            let def: AssetDefinition = ron::from_str(&text).ok()?;
+            if !matches!(def.model_type, ModelType::Terrain(_)) {
+                return None;
+            }
+            Some(p.to_string_lossy().replace('\\', "/"))
+        })
+        .collect();
     terrain_defs.sort();
-    terrain_defs.iter()
+    terrain_defs
+        .iter()
         .find(|p| p.to_lowercase().contains("wall"))
         .cloned()
         .or_else(|| terrain_defs.into_iter().next())
@@ -339,23 +420,35 @@ fn scan_wall_def() -> Option<String> {
 
 fn scan_defs_for_tab(tab: &PaletteTab) -> Vec<PaletteItem> {
     let dir = std::path::Path::new("assets/defs");
-    let Ok(entries) = std::fs::read_dir(dir) else { return vec![] };
-    let mut items: Vec<PaletteItem> = entries.flatten().filter_map(|e| {
-        let p = e.path();
-        if p.extension()?.to_str()? != "ron" { return None; }
-        let text = std::fs::read_to_string(&p).ok()?;
-        let def: AssetDefinition = ron::from_str(&text).ok()?;
-        let matches = match tab {
-            PaletteTab::Terrain => matches!(def.model_type, ModelType::Terrain(_)),
-            PaletteTab::Tower   => matches!(def.model_type, ModelType::Tower(_)),
-            PaletteTab::Item    => matches!(def.model_type, ModelType::Item(_)),
-            PaletteTab::Enemy   => matches!(def.model_type, ModelType::Enemy(_)),
-            PaletteTab::Special => false,
-        };
-        if !matches { return None; }
-        let name = p.file_stem()?.to_str()?.to_string();
-        Some(PaletteItem::Def { path: p.to_string_lossy().replace('\\', "/"), name })
-    }).collect();
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return vec![];
+    };
+    let mut items: Vec<PaletteItem> = entries
+        .flatten()
+        .filter_map(|e| {
+            let p = e.path();
+            if p.extension()?.to_str()? != "ron" {
+                return None;
+            }
+            let text = std::fs::read_to_string(&p).ok()?;
+            let def: AssetDefinition = ron::from_str(&text).ok()?;
+            let matches = match tab {
+                PaletteTab::Terrain => matches!(def.model_type, ModelType::Terrain(_)),
+                PaletteTab::Tower => matches!(def.model_type, ModelType::Tower(_)),
+                PaletteTab::Item => matches!(def.model_type, ModelType::Item(_)),
+                PaletteTab::Enemy => matches!(def.model_type, ModelType::Enemy(_)),
+                PaletteTab::Special => false,
+            };
+            if !matches {
+                return None;
+            }
+            let name = p.file_stem()?.to_str()?.to_string();
+            Some(PaletteItem::Def {
+                path: p.to_string_lossy().replace('\\', "/"),
+                name,
+            })
+        })
+        .collect();
     items.sort_by(|a, b| a.display_name().cmp(b.display_name()));
     items
 }
