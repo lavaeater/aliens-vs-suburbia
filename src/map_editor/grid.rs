@@ -179,7 +179,7 @@ pub fn handle_grid_click(
     mouse: Res<ButtonInput<MouseButton>>,
     windows: Query<&Window, With<PrimaryWindow>>,
 ) {
-    let Ok(window) = windows.single() else { bevy::log::info!("house tool: no primary window"); return };
+    let Ok(window) = windows.single() else { return };
 
     if state.tool == EditorTool::House {
         handle_house_polygon_input(&mut state, &mouse, window);
@@ -204,27 +204,22 @@ pub fn handle_grid_click(
 /// right-click cancels the in-progress polygon.
 fn handle_house_polygon_input(state: &mut MapEditorState, mouse: &ButtonInput<MouseButton>, window: &Window) {
     if mouse.just_pressed(MouseButton::Right) {
-        bevy::log::info!("house tool: right-click, cancelling polygon");
         state.cancel_house_polygon();
         return;
     }
     if mouse.just_pressed(MouseButton::Left) {
-        match cursor_to_tile(window, state.width, state.height) {
-            Some((col, row)) => {
-                bevy::log::info!("house tool: click at tile ({col}, {row})");
-                state.house_add_point(col, row);
-                bevy::log::info!("house tool: now {} point(s)", state.house_points.len());
-            }
-            None => bevy::log::info!("house tool: click outside grid bounds (cursor {:?})", window.cursor_position()),
-        }
+        let Some((col, row)) = cursor_to_tile(window, state.width, state.height) else { return };
+        state.house_add_point(col, row);
     }
 }
 
 #[derive(Component)]
 pub struct HousePreviewMarker;
 
-/// Draws a marker at each node of the in-progress House polygon (drawn fresh every frame
-/// while the tool is active — this is editor-only UI, not a hot path).
+/// Draws a marker at each node of the in-progress House polygon, plus a thin bar along
+/// each edge so far, so the shape being drawn is actually legible rather than a scatter
+/// of dots. Rebuilt fresh every frame while the tool is active — editor-only UI, not a
+/// hot path.
 pub fn update_house_preview(
     state: Res<MapEditorState>,
     mut commands: Commands,
@@ -237,21 +232,55 @@ pub fn update_house_preview(
     let Ok(window) = windows.single() else { return };
     let grid_left = (window.width()  * 0.5 - state.width  as f32 * CELL_SIZE * 0.5).round();
     let grid_top  = (window.height() * 0.5 - state.height as f32 * CELL_SIZE * 0.5).round();
+    let cell_center = |x: i32, y: i32| (
+        grid_left + x as f32 * CELL_SIZE + CELL_SIZE * 0.5,
+        grid_top  + y as f32 * CELL_SIZE + CELL_SIZE * 0.5,
+    );
 
-    for (i, &(x, y)) in state.house_points.iter().enumerate() {
-        let color = if i == 0 { Color::srgba(1.0, 0.9, 0.2, 0.9) } else { Color::srgba(1.0, 1.0, 1.0, 0.7) };
+    const EDGE_COLOR: Color = Color::srgba(1.0, 1.0, 1.0, 0.8);
+    const NODE_SIZE: f32 = 12.0;
+    const EDGE_THICKNESS: f32 = 3.0;
+
+    // Edges between consecutive placed nodes (the closing edge is only implied once the
+    // polygon is actually resolved, so it isn't drawn here).
+    for pair in state.house_points.windows(2) {
+        let (x0, y0) = cell_center(pair[0].0, pair[0].1);
+        let (x1, y1) = cell_center(pair[1].0, pair[1].1);
+        let (left, top, width, height) = if (x1 - x0).abs() >= (y1 - y0).abs() {
+            (x0.min(x1), y0 - EDGE_THICKNESS * 0.5, (x1 - x0).abs(), EDGE_THICKNESS)
+        } else {
+            (x0 - EDGE_THICKNESS * 0.5, y0.min(y1), EDGE_THICKNESS, (y1 - y0).abs())
+        };
         commands.spawn((
             HousePreviewMarker,
             StateMarker,
             Node {
                 position_type: PositionType::Absolute,
-                left: Val::Px(grid_left + x as f32 * CELL_SIZE + CELL_SIZE * 0.25),
-                top:  Val::Px(grid_top  + y as f32 * CELL_SIZE + CELL_SIZE * 0.25),
-                width:  Val::Px(CELL_SIZE * 0.5),
-                height: Val::Px(CELL_SIZE * 0.5),
+                left: Val::Px(left), top: Val::Px(top),
+                width: Val::Px(width), height: Val::Px(height),
+                ..Default::default()
+            },
+            BackgroundColor(EDGE_COLOR),
+        ));
+    }
+
+    for (i, &(x, y)) in state.house_points.iter().enumerate() {
+        let color = if i == 0 { Color::srgba(1.0, 0.9, 0.2, 1.0) } else { Color::srgba(1.0, 1.0, 1.0, 1.0) };
+        let (cx, cy) = cell_center(x, y);
+        commands.spawn((
+            HousePreviewMarker,
+            StateMarker,
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(cx - NODE_SIZE * 0.5),
+                top:  Val::Px(cy - NODE_SIZE * 0.5),
+                width:  Val::Px(NODE_SIZE),
+                height: Val::Px(NODE_SIZE),
+                border: UiRect::all(Val::Px(1.5)),
                 ..Default::default()
             },
             BackgroundColor(color),
+            BorderColor::all(Color::BLACK),
         ));
     }
 }
