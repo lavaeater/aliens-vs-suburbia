@@ -14,4 +14,5 @@ pub enum GameState {
     PolyPizza,
     AssetBrowser,
     MapEditor,
+    HouseEditor,
 }

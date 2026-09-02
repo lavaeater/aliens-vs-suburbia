@@ -34,6 +34,7 @@ use crate::poly_pizza::plugin::PolyPizzaPlugin;
 use crate::asset_browser::plugin::AssetBrowserPlugin;
 use crate::player_setup::plugin::PlayerSetupPlugin;
 use crate::map_editor::plugin::MapEditorPlugin;
+use crate::house_editor::plugin::HouseEditorPlugin;
 use crate::playground::plugin::PlaygroundPlugin;
 use crate::music::game_music_plugin::GameMusicPlugin;
 use crate::gore::plugin::GorePlugin;
@@ -78,6 +79,7 @@ impl Plugin for GamePlugin {
                 AssetBrowserPlugin,
                 PlayerSetupPlugin,
                 MapEditorPlugin,
+                HouseEditorPlugin,
                 PlaygroundPlugin,
                 FactsPlugin,
                 FactsGameIntegrationPlugin,

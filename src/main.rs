@@ -28,6 +28,7 @@ pub(crate) mod facts;
 pub(crate) mod game_state;
 pub(crate) mod general;
 pub(crate) mod gore;
+pub(crate) mod house_editor;
 mod map;
 pub(crate) mod map_editor;
 #[cfg(feature = "map-editor")]
