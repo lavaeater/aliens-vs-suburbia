@@ -55,6 +55,14 @@ Most gameplay systems use `.run_if(in_state(InGame))`. Physics runs on a fixed t
 | `src/ui/` | Menu, HUD (`spawn_ui.rs`). HUD shows: aliens, wave info, coins, build cost, ability cooldown. |
 | `src/music/` | Generative soundtrack via the `rusty_music` submodule (path dep). `GameMusicPlugin` spawns the band; `MusicMoods` holds two intensity measures (`combat`, `danger`) computed from game state, smoothed into the global `Intensity` and gating musician channels (`Ambient`/`Groove`/`Combat`/`Danger`) via `Muted` with hysteresis. Samples live in `assets/instruments/` (copied from `rusty_music/assets/samples/`). |
 | `src/camera/` | Isometric camera tracking with wall occlusion fading. |
+| `src/items/` | `Item(ItemKind)` + `Pickup` on the ground: med-kits, ammo, guns, coins, keys. `SpawnItem` builds a visual (guns use their def's model); `pickup_items` applies the effect (`apply_pickup`, pure) and emits `ItemPickedUp` for the HUD toast. Coins are items with a `Coin` marker for GoldDigger. |
+| `src/loot/` | Weighted drop tables from `assets/loot/*.ron` (`Nothing` / `Item` / nested `Table`, `always` entries). Anything with `LootDrop(name)` rolls its table the frame its health hits zero (`spawn_loot_on_death`, ordered before the despawn systems). |
+| `src/general/damage.rs` | The one damage sink - see *Damage pipeline* below. |
+| `src/general/explosion.rs` | `Explode` message -> radial `ApplyDamage` with quadratic falloff, wall shielding, velocity shove, flash/debris, optional fire, `CameraShake`. `ExplodesOnDeath` for barrels. |
+| `src/general/projectiles.rs` | Physics projectiles for grenades, molotovs and launcher guns: one `Projectile` with an `Impact` (Damage / Explode / Fire) and optional fuse. `throw_special` (G / L1) lobs from the `AmmoPouch`. |
+| `src/player/ammo.rs`, `src/player/systems/loadout.rs` | `AmmoPouch` (per `AmmoKind`, capped) and `Weapons` (carried guns; switching despawns the held gun and queues a fresh `PendingEquip`, magazine carried over). |
+| `src/player/systems/death_revive.rs` | Downed -> revive (Interact, E / Circle) or bleed out -> drop kit, spend a life, `RespawnQueue` -> `SpawnPlayer { slot, lives }`. Team wipe fails the level. |
+| `src/alien/enemy_defs.rs` | Def-driven enemies: `EnemyDefCache`, per-def animation graphs (`build_graph` shared with the player), `RangedAttack`. Waves name the def (`WaveDef.enemy_def`); a wave without one spawns the built-in quaternius alien. |
 | `src/assets/` | `AssetDefinition` (`asset_definition.rs`) — the core per-model def type persisted to `assets/defs/*.ron`. `hardpoint.rs` — weapon-snap frame algebra. `gizmos.rs` — skeleton and hardpoint overlay drawing, shared by the asset browser and the playground. |
 | `src/asset_browser/` | In-engine tool for importing models: browse GLB files, set scale/height, toggle hidden nodes, tag each animation clip with a free-form hierarchical path and bind game animation keys to those tag paths, add external animation sources, set `ModelType`, overlay the skinned skeleton (`B`), and attach weapon models to bones (sockets) with live numeric-nudge offset editing. Press `I` to export `.ron`. |
 | `src/player_setup/` | `GameState::PlayerSetup` screen. Keyboard (Enter) and gamepad (South) to join slots, arrow keys / d-pad to pick model. Writes `PlayerRoster` resource. |
@@ -96,6 +104,12 @@ in `spawn_players`), smooths it into the `CameraFocus` resource, and zooms out
 (`fit_factor`) until all targets fit. Tunables: `GameSettings::{fit_margin, fit_zoom_max,
 focus_smoothing}`. Players carry `PlayerSlot(usize)`; the bottom HUD bar
 (`src/ui/player_hud.rs`) keys on it.
+
+### Roadmap
+
+`docs/gameplay.md` lists the MVP features; `docs/roadmap.md` tracks each one with status,
+file references and what is left. Phases 1-6 landed 2026-09-20 **without a runtime playtest**
+- expect tuning (camera fit, tower ranges, enemy stats, Shotgun/SMG hardpoints).
 
 ### Economy
 
