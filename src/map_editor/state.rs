@@ -442,7 +442,13 @@ fn scan_defs_for_tab(tab: &PaletteTab) -> Vec<PaletteItem> {
             if !matches {
                 return None;
             }
-            let name = p.file_stem()?.to_str()?.to_string();
+            let mut name = p.file_stem()?.to_str()?.to_string();
+            // Say what a pickup does, so "Medkit" vs "Medkit [+25 HP]" is visible at a glance.
+            if let ModelType::Item(props) = &def.model_type
+                && props.kind.is_pickup()
+            {
+                name = format!("{name} [{}]", props.kind.label());
+            }
             Some(PaletteItem::Def {
                 path: p.to_string_lossy().replace('\\', "/"),
                 name,

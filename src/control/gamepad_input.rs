@@ -28,6 +28,8 @@ use crate::player::events::building_events::{
     ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode,
 };
 use crate::player::systems::abilities::AbilityInput;
+use crate::player::systems::loadout::{SwitchWeapon, WeaponSelect};
+use crate::player::systems::shoot::ReloadRequest;
 use crate::settings::resources::GameSettings;
 
 /// Marker component for entities controlled by a gamepad.
@@ -148,6 +150,8 @@ pub fn gamepad_game_input(
     mut execute_build_ew: MessageWriter<ExecuteBuild>,
     mut change_build_indicator_ew: MessageWriter<ChangeBuildIndicator>,
     mut ability_input: Option<ResMut<AbilityInput>>,
+    mut reload_mw: MessageWriter<ReloadRequest>,
+    mut switch_mw: MessageWriter<SwitchWeapon>,
 ) {
     let yaw = settings.yaw_degrees;
     let dead_zone = bindings.stick_dead_zone;
@@ -214,6 +218,17 @@ pub fn gamepad_game_input(
             if gamepad.just_pressed(bindings.prev_build_item) {
                 change_build_indicator_ew.write(ChangeBuildIndicator(entity, -1));
             }
+        }
+
+        // ── Weapons ─────────────────────────────────────────────────────────
+        if gamepad.just_pressed(bindings.reload) {
+            reload_mw.write(ReloadRequest(entity));
+        }
+        if gamepad.just_pressed(bindings.next_weapon) {
+            switch_mw.write(SwitchWeapon { player: entity, select: WeaponSelect::Next });
+        }
+        if gamepad.just_pressed(bindings.prev_weapon) {
+            switch_mw.write(SwitchWeapon { player: entity, select: WeaponSelect::Prev });
         }
 
         // ── Ability ─────────────────────────────────────────────────────────

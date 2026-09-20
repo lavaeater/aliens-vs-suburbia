@@ -5,6 +5,8 @@
         ability: Bombardment,
         throw_rate_per_minute: 60.0,
         weapon: Some("assets/defs/Pistol.ron"),
+        extra_weapons: ["assets/defs/Assault Rifle.ron", "assets/defs/SMG.ron"],
+        starting_ammo: [(Pistol, 48), (Rifle, 60)],
     )),
     hidden_nodes: [],
     animation_mapping: {},

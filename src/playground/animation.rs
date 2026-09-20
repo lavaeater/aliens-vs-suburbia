@@ -19,7 +19,7 @@ use crate::assets::asset_definition::AssetDefinition;
 
 /// Keys offered in the panel. The composite intent keys (`Throwing`, `Building`) are
 /// included because they are bindable, even though the state machine usually drives them.
-pub const PLAYABLE_KEYS: [AnimationKey; 17] = [
+pub const PLAYABLE_KEYS: [AnimationKey; 18] = [
     AnimationKey::Idle,
     AnimationKey::IdleShoot,
     AnimationKey::Walk,
@@ -37,6 +37,7 @@ pub const PLAYABLE_KEYS: [AnimationKey; 17] = [
     AnimationKey::HitReact,
     AnimationKey::Throwing,
     AnimationKey::Building,
+    AnimationKey::Reload,
 ];
 
 #[derive(Resource, Default)]

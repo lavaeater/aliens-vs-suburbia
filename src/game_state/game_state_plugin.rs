@@ -39,6 +39,7 @@ use crate::house_editor::plugin::HouseEditorPlugin;
 use crate::playground::plugin::PlaygroundPlugin;
 use crate::music::game_music_plugin::GameMusicPlugin;
 use crate::gore::plugin::GorePlugin;
+use crate::items::ItemsPlugin;
 
 fn toggle_physics_debug(
     keys: Res<ButtonInput<KeyCode>>,
@@ -74,6 +75,7 @@ impl Plugin for GamePlugin {
                 PlayerPlugin::default(),
                 ScoreKeeperPlugin,
                 GamepadPlugin,
+                ItemsPlugin,
             ))
             .add_plugins((
                 SettingsPlugin,

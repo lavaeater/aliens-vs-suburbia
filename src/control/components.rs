@@ -134,6 +134,7 @@ impl CharacterState {
         let has = |k: AnimationKey| self.state.contains(&k);
         if has(AnimationKey::Death)    { return AnimationKey::Death; }
         if has(AnimationKey::Building) { return AnimationKey::Building; }
+        if has(AnimationKey::Reload)   { return AnimationKey::Reload; }
         if has(AnimationKey::Duck)     { return AnimationKey::Duck; }
         match (has(AnimationKey::Walk), has(AnimationKey::Throwing)) {
             (true,  true)  => AnimationKey::Throwing,

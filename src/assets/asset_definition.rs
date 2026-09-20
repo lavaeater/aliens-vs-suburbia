@@ -52,11 +52,77 @@ impl Default for TerrainProps {
     fn default() -> Self { Self { blocks_enemies: true, blocks_players: false, health: None, resistances: HashMap::new() } }
 }
 
+/// What a gun consumes. Each kind is a separate pool in the player's `AmmoPouch`;
+/// `Infinite` weapons never reload (the playground's default).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum AmmoKind {
+    #[default]
+    Infinite,
+    Pistol,
+    Rifle,
+    Shells,
+    Grenade,
+    Molotov,
+}
+
+impl AmmoKind {
+    /// Most rounds of this kind a player can carry outside the magazine.
+    pub fn cap(self) -> u32 {
+        match self {
+            AmmoKind::Infinite => u32::MAX,
+            AmmoKind::Pistol => 120,
+            AmmoKind::Rifle => 240,
+            AmmoKind::Shells => 48,
+            AmmoKind::Grenade => 6,
+            AmmoKind::Molotov => 4,
+        }
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            AmmoKind::Infinite => "inf",
+            AmmoKind::Pistol => "9mm",
+            AmmoKind::Rifle => "5.56",
+            AmmoKind::Shells => "shells",
+            AmmoKind::Grenade => "grenades",
+            AmmoKind::Molotov => "molotovs",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub enum ItemKind {
     #[default]
     Decorative,
     HealthPickup { amount: f32 },
+    AmmoPickup { kind: AmmoKind, rounds: u32 },
+    /// Path to a Weapon-typed def; picking it up adds the gun to the loadout.
+    WeaponPickup { def: String },
+    Coins { value: u32 },
+    /// Objective token for maps/stories; no runtime effect yet beyond a fact.
+    Key { id: String },
+}
+
+impl ItemKind {
+    /// Short human label for editors and the HUD.
+    pub fn label(&self) -> String {
+        match self {
+            ItemKind::Decorative => "decorative".into(),
+            ItemKind::HealthPickup { amount } => format!("+{amount} HP"),
+            ItemKind::AmmoPickup { kind, rounds } => format!("{rounds} {}", kind.label()),
+            ItemKind::WeaponPickup { def } => std::path::Path::new(def)
+                .file_stem()
+                .map(|s| s.to_string_lossy().into_owned())
+                .unwrap_or_else(|| "weapon".into()),
+            ItemKind::Coins { value } => format!("{value} coins"),
+            ItemKind::Key { id } => format!("key {id}"),
+        }
+    }
+
+    /// Whether players can pick this up (everything except set dressing).
+    pub fn is_pickup(&self) -> bool {
+        !matches!(self, ItemKind::Decorative)
+    }
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -87,6 +153,12 @@ pub struct PlayerProps {
     /// Snapped to this model's `grip` hardpoint. `None` = unarmed.
     #[serde(default)]
     pub weapon: Option<String>,
+    /// Further weapon defs carried from the start (cycled with 1-4 / d-pad up-down).
+    #[serde(default)]
+    pub extra_weapons: Vec<String>,
+    /// Rounds in the pouch at spawn, per ammo kind (magazines start full on top of this).
+    #[serde(default)]
+    pub starting_ammo: Vec<(AmmoKind, u32)>,
 }
 
 impl Default for PlayerProps {
@@ -95,6 +167,8 @@ impl Default for PlayerProps {
             ability: PlayerAbility::default(),
             throw_rate_per_minute: default_throw_rate(),
             weapon: None,
+            extra_weapons: Vec::new(),
+            starting_ammo: Vec::new(),
         }
     }
 }
@@ -134,7 +208,19 @@ pub struct WeaponProps {
     /// Holds-to-fire (automatic) vs one shot per trigger press.
     #[serde(default)]
     pub auto: bool,
+    /// Ammo pool this weapon draws from. `Infinite` = never reloads.
+    #[serde(default)]
+    pub ammo: AmmoKind,
+    /// Rounds per magazine. Ignored for `Infinite`.
+    #[serde(default = "default_magazine")]
+    pub magazine: u32,
+    /// Seconds a reload takes.
+    #[serde(default = "default_reload_secs")]
+    pub reload_secs: f32,
 }
+
+fn default_magazine() -> u32 { 12 }
+fn default_reload_secs() -> f32 { 1.5 }
 
 impl Default for WeaponProps {
     fn default() -> Self {
@@ -146,6 +232,9 @@ impl Default for WeaponProps {
             spread_deg: default_spread_deg(),
             pellets: default_pellets(),
             auto: false,
+            ammo: AmmoKind::default(),
+            magazine: default_magazine(),
+            reload_secs: default_reload_secs(),
         }
     }
 }
@@ -384,6 +473,26 @@ impl AssetDefinition {
 
 #[cfg(test)]
 mod tests {
+    /// Every shipped def must parse: a typo in a hand-edited `.ron` otherwise only shows
+    /// up as a silently unarmed player or a missing enemy at runtime.
+    #[test]
+    fn every_def_in_assets_parses() {
+        let root = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/defs");
+        let mut checked = 0;
+        for entry in std::fs::read_dir(root).expect("assets/defs exists").flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("ron") {
+                continue;
+            }
+            let text = std::fs::read_to_string(&path).unwrap();
+            if let Err(e) = ron::from_str::<super::AssetDefinition>(&text) {
+                panic!("{} does not parse: {e}", path.display());
+            }
+            checked += 1;
+        }
+        assert!(checked > 0, "no defs found under {root}");
+    }
+
     use super::*;
 
     #[test]

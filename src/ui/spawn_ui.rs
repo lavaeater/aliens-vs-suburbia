@@ -396,6 +396,7 @@ fn key_label(key: AnimationKey) -> &'static str {
         AnimationKey::HitReact  => "Hit React",
         AnimationKey::Throwing  => "Throwing",
         AnimationKey::Building  => "Building",
+        AnimationKey::Reload    => "Reload",
     }
 }
 

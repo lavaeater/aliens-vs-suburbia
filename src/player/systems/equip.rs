@@ -56,6 +56,8 @@ pub struct PendingEquip {
     pub weapon_props: WeaponProps,
     /// Set when this pairing is flown from the aim instead of parented to a hand.
     pub aimed: Option<AimedPlan>,
+    /// Magazine to restore when re-equipping a holstered gun. `None` = full.
+    pub rounds_in_mag: Option<u32>,
     tries: u32,
 }
 
@@ -114,8 +116,20 @@ impl PendingEquip {
             muzzle,
             weapon_props,
             aimed,
+            rounds_in_mag: None,
             tries: 0,
         })
+    }
+}
+
+impl PendingEquip {
+    /// The combat component for the spawned gun, with a holstered magazine restored.
+    fn runtime_weapon(&self) -> Weapon {
+        let mut weapon = Weapon::from_props(&self.weapon_props, self.muzzle.clone());
+        if let Some(rounds) = self.rounds_in_mag {
+            weapon.rounds_in_mag = rounds.min(weapon.magazine);
+        }
+        weapon
     }
 }
 
@@ -389,7 +403,7 @@ pub fn equip_pending_weapons(
                         def_scale: equip.weapon_scale,
                     },
                     Name::new(equip.weapon_name.clone()),
-                    Weapon::from_props(&equip.weapon_props, equip.muzzle.clone()),
+                    equip.runtime_weapon(),
                 ))
                 .id();
             commands.entity(character).add_child(weapon);
@@ -456,7 +470,7 @@ pub fn equip_pending_weapons(
                     root,
                 },
                 Name::new(equip.weapon_name.clone()),
-                Weapon::from_props(&equip.weapon_props, equip.muzzle.clone()),
+                equip.runtime_weapon(),
             ))
             .id();
         commands.entity(anchor).add_child(weapon);

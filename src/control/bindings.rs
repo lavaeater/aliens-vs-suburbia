@@ -16,6 +16,9 @@
 //!     ability: North,
 //!     next_build_item: DPadRight,
 //!     prev_build_item: DPadLeft,
+//!     reload: RightTrigger,
+//!     next_weapon: DPadUp,
+//!     prev_weapon: DPadDown,
 //!     stick_dead_zone: 0.2,
 //!     trigger_threshold: 0.3,
 //! )
@@ -48,6 +51,14 @@ pub struct GamepadBindings {
     pub next_build_item: GamepadButton,
     #[serde(default = "default_prev_build_item")]
     pub prev_build_item: GamepadButton,
+    /// Reload the held gun. Default R1.
+    #[serde(default = "default_reload")]
+    pub reload: GamepadButton,
+    /// Cycle the carried weapons. Default D-pad up / down.
+    #[serde(default = "default_next_weapon")]
+    pub next_weapon: GamepadButton,
+    #[serde(default = "default_prev_weapon")]
+    pub prev_weapon: GamepadButton,
     /// Sticks below this deflection read as centred (on top of Bevy's own dead zone).
     #[serde(default = "default_stick_dead_zone")]
     pub stick_dead_zone: f32,
@@ -63,6 +74,9 @@ fn default_exit_build() -> GamepadButton { GamepadButton::East }
 fn default_ability() -> GamepadButton { GamepadButton::North }
 fn default_next_build_item() -> GamepadButton { GamepadButton::DPadRight }
 fn default_prev_build_item() -> GamepadButton { GamepadButton::DPadLeft }
+fn default_reload() -> GamepadButton { GamepadButton::RightTrigger }
+fn default_next_weapon() -> GamepadButton { GamepadButton::DPadUp }
+fn default_prev_weapon() -> GamepadButton { GamepadButton::DPadDown }
 fn default_stick_dead_zone() -> f32 { 0.2 }
 fn default_trigger_threshold() -> f32 { 0.3 }
 
@@ -76,6 +90,9 @@ impl Default for GamepadBindings {
             ability: default_ability(),
             next_build_item: default_next_build_item(),
             prev_build_item: default_prev_build_item(),
+            reload: default_reload(),
+            next_weapon: default_next_weapon(),
+            prev_weapon: default_prev_weapon(),
             stick_dead_zone: default_stick_dead_zone(),
             trigger_threshold: default_trigger_threshold(),
         }

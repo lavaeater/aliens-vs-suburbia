@@ -10,7 +10,9 @@ use crate::camera::components::CameraTarget;
 use crate::general::damage::Faction;
 use crate::player::components::PlayerSlot;
 use crate::control::gamepad_input::WantsGamepad;
+use crate::player::ammo::AmmoPouch;
 use crate::player::systems::equip::PendingEquip;
+use crate::player::systems::loadout::Weapons;
 use crate::player::systems::leg_ik::PendingLegs;
 use crate::player::systems::torso_twist::PendingTorsoTwist;
 use crate::player_setup::state::InputDevice;
@@ -92,11 +94,22 @@ pub fn spawn_players(
             })
             .unwrap_or_else(|| (ability_for_slot(slot), 60.0));
 
-        // Weapon to snap onto this character's `grip` hardpoint, if any.
-        let pending_equip = player_props.as_ref()
-            .and_then(|props| props.weapon.as_ref())
+        // Everything this character carries; the first is snapped onto the `grip`
+        // hardpoint now, the rest wait in the loadout for a switch.
+        let roster_def_path = roster.as_ref().and_then(|r| r.def_paths.get(slot)).cloned();
+        let loadout = match (player_props.as_ref(), roster_def_path.as_ref()) {
+            (Some(props), Some(def_path)) => Weapons::new(
+                def_path.clone(),
+                props.weapon.iter().chain(props.extra_weapons.iter()).cloned(),
+            ),
+            _ => Weapons::default(),
+        };
+        let pending_equip = loadout.active_slot()
             .zip(roster_def.as_ref())
-            .and_then(|(weapon_def_path, def)| PendingEquip::resolve(def, weapon_def_path));
+            .and_then(|(weapon_slot, def)| PendingEquip::resolve(def, &weapon_slot.def_path));
+        let pouch = AmmoPouch::from_loadout(
+            player_props.as_ref().map(|p| p.starting_ammo.as_slice()).unwrap_or(&[]),
+        );
 
         let player = {
             // 3D model path — use roster def if available for this slot, else default.
@@ -146,7 +159,7 @@ pub fn spawn_players(
         };
 
         // Override ability from def / slot default.
-        commands.entity(player).insert((roster_ability, PlayerSlot(slot), CameraTarget::default(), Faction::Player));
+        commands.entity(player).insert((roster_ability, PlayerSlot(slot), CameraTarget::default(), Faction::Player, loadout, pouch));
         // Torso twist: resolved to bone entities once the skeleton spawns. Defs that
         // don't list `aim_bones` fall back to the default mixamo spine chain.
         commands.entity(player).insert(PendingTorsoTwist::new(

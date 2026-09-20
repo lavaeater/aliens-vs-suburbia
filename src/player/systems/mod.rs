@@ -9,3 +9,4 @@ pub(crate) mod leg_ik;
 pub(crate) mod shoot;
 pub(crate) mod torso_twist;
 pub(crate) mod weapon_aim;
+pub(crate) mod loadout;

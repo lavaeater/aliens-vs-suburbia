@@ -781,10 +781,7 @@ pub fn rebuild_type_picker(
                     ));
                 }
                 ModelType::Item(p) => {
-                    let kind = match &p.kind {
-                        crate::assets::asset_definition::ItemKind::Decorative => "Decorative".to_string(),
-                        crate::assets::asset_definition::ItemKind::HealthPickup { amount } => format!("HealthPickup ({amount} HP)"),
-                    };
+                    let kind = p.kind.label();
                     parent.spawn((
                         Text::new(format!("kind: {kind}")),
                         TextFont::default().with_font_size(10.0),

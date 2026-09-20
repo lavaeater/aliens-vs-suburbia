@@ -73,11 +73,16 @@ build this if zoom-to-fit is not enough.
 
 ## Weapons
 
-**Status: partial.** Guns exist as `Weapon` defs (`assets/defs/Pistol.ron`,
-`Assault Rifle.ron`) with `WeaponProps { damage, fire_rate_per_minute, range, spread_deg,
-pellets, auto, hands }` (`src/assets/asset_definition.rs`), equipped via `PlayerProps.weapon`
-(`src/player/systems/equip.rs`) and fired hitscan in `shoot_weapons`
-(`src/player/systems/shoot.rs`). There is **no ammo of any kind** - every weapon fires forever.
+**Status: partial.** Steps 1-3 and 5 done 2026-09-20. `WeaponProps` gained
+`ammo: AmmoKind`, `magazine`, `reload_secs`; `Weapon` (runtime) tracks `rounds_in_mag` and
+`reloading`. `R` / R1 (`bindings.reload`) or a dry trigger pull starts a reload
+(`tick_reloads`, plays `AnimationKey::Reload`). `Weapons` (`src/player/systems/loadout.rs`)
+is the loadout; `1-4` / `Tab` / d-pad up-down switch via `SwitchWeapon`. **Switching is a
+despawn + fresh `PendingEquip`** (magazine carried across), not hide/show - the equip path
+resolves arm IK, sights and aimed-weapon parenting per gun and re-running it is far
+simpler than keeping that consistent for hidden guns. Defs: `Shotgun.ron`, `SMG.ron` added
+(hardpoints copied from the rifle - **tune in the playground**). Step 4 (projectile
+weapons) is phase 5.
 
 **Steps**
 
@@ -102,9 +107,11 @@ pellets, auto, hands }` (`src/assets/asset_definition.rs`), equipped via `Player
 
 ## Items
 
-**Status: partial.** `ItemKind` (`src/assets/asset_definition.rs`) already has `Decorative`
-and `HealthPickup { amount }`, but nothing at runtime *applies* a health pickup - the only
-code touching it is the asset-browser label.
+**Status: partial.** Steps 1-3 and 5 done 2026-09-20: `src/items/` has `Item(ItemKind)`
++ `Pickup`, a `SpawnItem` message (weapon pickups use the gun's own model, the rest a
+coloured primitive), `pickup_items` (pure `apply_pickup` + tests) and `ItemPickedUp`, which
+the HUD shows as a 2 s toast. A carried gun picked up again converts to one magazine of its
+ammo. Step 4 (fold `Coin` in) is still open.
 
 **Steps**
 
@@ -126,7 +133,10 @@ code touching it is the asset-browser label.
 
 ## Ammo
 
-**Status: missing.**
+**Status: done (2026-09-20).** `AmmoKind` (with `cap()` per kind) in the defs;
+`AmmoPouch` (`src/player/ammo.rs`) on players from `PlayerProps.starting_ammo`. Caps are
+hardcoded in `AmmoKind::cap` rather than a settings resource for now. Throwables (step 6)
+come with phase 5.
 
 **Steps**
 
@@ -145,8 +155,10 @@ code touching it is the asset-browser label.
 
 ## Pickups
 
-**Status: partial.** Coins drop and are auto-collected. Map-placed items via
-`MapFile.placements` spawn but are inert.
+**Status: partial.** Steps 1-2 done 2026-09-20: map placements with a non-decorative
+`ItemKind` are tagged `Item` + `Pickup` in `map_systems`, and the map editor palette shows
+the kind (`Medkit [+25 HP]`). Loot/death drops (step 3) are phase 4; respawning pickups
+(step 4) are open.
 
 **Steps**
 
@@ -544,7 +556,7 @@ Ordered so every phase ends in something playtestable with friends and family.
 |-------|------|----------|-------|
 | 1 | Co-op that does not fight the camera | Multiplayer (1-5), Gamepad support (1), HUD Information (1-3) | **Code done 2026-09-20.** Remaining: the gamepad test session (human). |
 | 2 | One damage pipeline | Damage (1-6), Health (1-2), Towers (1-2) | **Done 2026-09-20.** 249 tests green. |
-| 3 | Guns feel different | Ammo, Weapons (1-3, 5), Items (1-3), Pickups (1-2) | Ammo scarcity is the first real tuning knob. |
+| 3 | Guns feel different | Ammo, Weapons (1-3, 5), Items (1-3), Pickups (1-2) | **Done 2026-09-20.** Shotgun/SMG hardpoints need playground tuning. |
 | 4 | Dying matters | Death (1-7), Loot Drops, HUD Information (4) | Lives, bleed-out, drops, respawn anchors. |
 | 5 | Things go boom | Explosions, Thrown weapons, Weapons (4) | Grenades, molotovs, Bombardment rewrite. |
 | 6 | Enemy variety | At least 5 enemies, Towers (3-5) | Def-driven spawning first, then archetypes. |

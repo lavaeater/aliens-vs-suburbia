@@ -29,6 +29,7 @@ pub struct AnimMapping {
     #[serde(default)] pub hit_react: String,
     #[serde(default)] pub throwing: String,
     #[serde(default)] pub building: String,
+    #[serde(default)] pub reload: String,
 }
 
 impl AnimMapping {
@@ -53,6 +54,7 @@ impl AnimMapping {
             AnimationKey::HitReact  => &self.hit_react,
             AnimationKey::Throwing  => &self.throwing,
             AnimationKey::Building  => &self.building,
+            AnimationKey::Reload    => &self.reload,
         }
     }
 
@@ -77,6 +79,7 @@ impl AnimMapping {
             AnimationKey::HitReact  => self.hit_react  = name,
             AnimationKey::Throwing  => self.throwing   = name,
             AnimationKey::Building  => self.building   = name,
+            AnimationKey::Reload    => self.reload     = name,
         }
     }
 }

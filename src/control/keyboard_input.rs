@@ -9,6 +9,8 @@ use crate::settings::resources::GameSettings;
 use crate::player::components::PlayerDead;
 use crate::player::events::building_events::{ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode};
 use crate::player::systems::abilities::AbilityInput;
+use crate::player::systems::loadout::{SwitchWeapon, WeaponSelect};
+use crate::player::systems::shoot::ReloadRequest;
 
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn keyboard_input(
@@ -21,6 +23,8 @@ pub fn keyboard_input(
     mut change_build_indicator: MessageWriter<ChangeBuildIndicator>,
     mut animation_ew: MessageWriter<AnimationEvent>,
     mut ability_input: Option<ResMut<AbilityInput>>,
+    mut reload_mw: MessageWriter<ReloadRequest>,
+    mut switch_mw: MessageWriter<SwitchWeapon>,
 ) {
     if let Ok((entity, mut controller)) = query.single_mut() {
         for ev in key_evr.read() {
@@ -68,6 +72,21 @@ pub fn keyboard_input(
                         if let Some(ref mut ai) = ability_input {
                             ai.pressed = true;
                         }
+                    }
+                    KeyCode::KeyR => {
+                        reload_mw.write(ReloadRequest(entity));
+                    }
+                    KeyCode::Tab => {
+                        switch_mw.write(SwitchWeapon { player: entity, select: WeaponSelect::Next });
+                    }
+                    KeyCode::Digit1 | KeyCode::Digit2 | KeyCode::Digit3 | KeyCode::Digit4 => {
+                        let slot = match ev.key_code {
+                            KeyCode::Digit1 => 0,
+                            KeyCode::Digit2 => 1,
+                            KeyCode::Digit3 => 2,
+                            _ => 3,
+                        };
+                        switch_mw.write(SwitchWeapon { player: entity, select: WeaponSelect::Slot(slot) });
                     }
                     _ => {}
                 },

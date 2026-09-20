@@ -4,7 +4,7 @@ use bevy::prelude::{in_state, Camera2d, Commands, IntoScheduleConfigs, IsDefault
 use lava_ui_builder::LavaUiPlugin;
 use crate::game_state::GameState;
 use crate::ui::gait_panel::{toggle_gait_panel, update_gait_panel};
-use crate::ui::player_hud::{spawn_player_bar, update_player_bar};
+use crate::ui::player_hud::{spawn_player_bar, track_pickup_toasts, update_player_bar, PickupToasts};
 use crate::ui::spawn_ui::{
     add_health_bar, cleanup_state, game_theme, goto_state_system, GotoState,
     spawn_menu, spawn_showcase_ui, spawn_ui, sync_health_bars,
@@ -22,6 +22,7 @@ impl Plugin for UiPlugin {
         app.add_plugins((LavaUiPlugin, FeathersPlugins))
             .insert_resource(UiTheme(create_dark_theme()))
             .insert_resource(game_theme())
+            .init_resource::<PickupToasts>()
             .add_message::<GotoState>()
             .add_message::<AddHealthBar>()
             .add_systems(OnEnter(GameState::InGame), spawn_ui_camera)
@@ -41,6 +42,7 @@ impl Plugin for UiPlugin {
                     update_alien_meter,
                     update_wave_hud,
                     update_coin_hud,
+                    track_pickup_toasts,
                     update_player_bar,
                     update_build_cost_hud,
                     toggle_settings_panel,

@@ -7,7 +7,8 @@ use crate::player::systems::death_revive::{detect_player_death, player_revive_sy
 use crate::player::systems::spawn_players::{fix_scene_transform, spawn_players};
 use crate::player::systems::abilities::{AbilityInput, activate_ability, tick_ability_flash, tick_cooldowns, tick_whirlwind};
 use crate::player::systems::equip::{equip_pending_weapons, keep_weapons_snapped};
-use crate::player::systems::shoot::shoot_weapons;
+use crate::player::systems::shoot::{shoot_weapons, tick_reloads, ReloadRequest};
+use crate::player::systems::loadout::{switch_weapons, SwitchWeapon};
 use crate::player::systems::torso_twist::{
     apply_torso_twist, resolve_twist_bones, toggle_torso_twist, TorsoTwistEnabled,
 };
@@ -31,7 +32,9 @@ impl Plugin for PlayerPlugin {
         if self.with_debug {
             app.add_systems(Update, debug_gizmos.run_if(in_state(GameState::InGame)));
         }
-        app.init_resource::<AbilityInput>()
+        app.add_message::<ReloadRequest>()
+            .add_message::<SwitchWeapon>()
+            .init_resource::<AbilityInput>()
             .init_resource::<TorsoTwistEnabled>()
             .init_resource::<HandAlignEnabled>()
             .init_resource::<LegIkEnabled>()
@@ -57,14 +60,22 @@ impl Plugin for PlayerPlugin {
                 Update,
                 (
                     spawn_players,
+                    switch_weapons,
                     equip_pending_weapons,
                     keep_weapons_snapped,
                     shoot_weapons,
+                    tick_reloads,
                     fix_scene_transform,
                     auto_aim,
                     hide_player_weapon_nodes,
                     detect_player_death,
                     player_revive_system,
+                )
+                .run_if(in_state(GameState::InGame)),
+            )
+            .add_systems(
+                Update,
+                (
                     tick_cooldowns,
                     activate_ability,
                     tick_whirlwind,

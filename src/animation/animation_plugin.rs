@@ -86,6 +86,7 @@ pub enum AnimationKey {
     // ── Game-intent keys (resolved to composite clips by CharacterState) ───
     Throwing,   // → IdleShoot or WalkShoot depending on movement
     Building,   // direct clip ("interact" / "wave") or falls back to Idle
+    Reload,     // one-shot while a magazine is swapped; freezes if the rig has no clip
 }
 
 impl AnimationKey {
@@ -94,7 +95,7 @@ impl AnimationKey {
     pub fn loops(self) -> bool {
         !matches!(
             self,
-            AnimationKey::Death | AnimationKey::HitReact | AnimationKey::JumpLand
+            AnimationKey::Death | AnimationKey::HitReact | AnimationKey::JumpLand | AnimationKey::Reload
         )
     }
 
@@ -123,6 +124,7 @@ impl AnimationKey {
             AnimationKey::HitReact  => "hitreact",
             AnimationKey::Throwing  => "punch",
             AnimationKey::Building  => "interact",
+            AnimationKey::Reload    => "reload",
         }
     }
 }
@@ -164,6 +166,7 @@ pub const ANIM_KEYS: &[AnimationKey] = &[
     AnimationKey::HitReact,
     AnimationKey::Throwing,
     AnimationKey::Building,
+    AnimationKey::Reload,
 ];
 
 /*

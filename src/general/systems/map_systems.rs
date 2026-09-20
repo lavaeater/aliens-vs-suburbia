@@ -24,6 +24,7 @@ type TerrainQuadMesh = (Vec<[f32; 3]>, Vec<[f32; 3]>, Vec<[f32; 2]>, Vec<u32>);
 use crate::player::components::{IsBuildIndicator, IsObstacle};
 use crate::general::components::{Health, Indestructible};
 use crate::general::damage::{DamageResistances, Faction};
+use crate::items::{Item, Pickup};
 use crate::assets::asset_definition::{AssetDefinition, ModelType};
 use crate::towers::components::{TowerSensor, TowerShooter};
 use crate::ui::spawn_ui::AddHealthBar;
@@ -423,8 +424,19 @@ pub fn map_loader(
                     map_graph.path_finding_grid.remove_vertex(tile_coord);
                     add_health_bar_mw.write(AddHealthBar { entity: ec.id(), name: "TOWER" });
                 }
-                ModelType::Item(_) | ModelType::Player(_) | ModelType::Enemy(_) | ModelType::Weapon(_) => {
-                    // Items, weapons and decorative enemies just spawn as scenes.
+                ModelType::Item(props) => {
+                    let mut ec = commands.spawn((
+                        Name::from(format!("Item {}:{}", placement.x, placement.y)),
+                        WorldAssetRoot(scene_handle),
+                        Transform::from_translation(pos).with_rotation(rot).with_scale(scale),
+                    ));
+                    // Anything but set dressing is collectable where it was placed.
+                    if props.kind.is_pickup() {
+                        ec.insert((Item(props.kind.clone()), Pickup::default()));
+                    }
+                }
+                ModelType::Player(_) | ModelType::Enemy(_) | ModelType::Weapon(_) => {
+                    // Weapons and decorative enemies just spawn as scenes.
                     commands.spawn((
                         Name::from(format!("Item {}:{}", placement.x, placement.y)),
                         WorldAssetRoot(scene_handle),
