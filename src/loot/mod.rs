@@ -16,7 +16,6 @@ use avian3d::prelude::Position;
 use serde::{Deserialize, Serialize};
 
 use crate::assets::asset_definition::ItemKind;
-use crate::game_state::GameState;
 use crate::general::components::Health;
 use crate::items::SpawnItem;
 
@@ -137,8 +136,10 @@ pub struct LootPlugin;
 
 impl Plugin for LootPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(LootTables::load_dir("assets/loot"))
-            .add_systems(Update, spawn_loot_on_death.run_if(in_state(GameState::InGame)));
+        // `spawn_loot_on_death` is scheduled by `GamePlugin`, where it can be ordered
+        // against the death/despawn systems; adding it here too would make the
+        // ordering ambiguous.
+        app.insert_resource(LootTables::load_dir("assets/loot"));
     }
 }
 
