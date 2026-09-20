@@ -6,7 +6,11 @@ Style is cool, but style without gameplay is not good enough. We need to nail th
 
 ### Multiplayer
 
+Multiplayer is functional, but the camera should focus on a spot at the "center" of all player's position, so that would be done by simply adding a camera tracking component to all players and then always calculating the average position of all of them.
+
 ### Split screen
+
+So, we want the advanced one here: when players are far enough from each other, the screen should split into parts as needed. Say we have four players and ONE player moves away from the others, well, then that player gets half a screen and the others get the other half, until they split up enough. And then when they get close again, we merge screens. 
 
 ### Weapons
 
@@ -34,7 +38,7 @@ Different types of weapons do different amounts of damage and we need to apply t
 
 ### Death
 
-What happens when players die? I think we should keep track of players lives.
+What happens when players die? I think we should keep track of players lives. Another way to do this is to let players lie dead for a while and then other players can revive them where they die, this could be like on a timer of 10 seconds or some such thing. 
 
 #### Suggested changes
 
@@ -82,12 +86,14 @@ Yes, with selection for player, as well, of course. What could be better is of c
 
 #### Suggested changes
 
-- [ ] For keyboard, pressing Enter enables the player
-- [ ] Then left - right on keyboard moves between selectable characters
-- [ ] Pressing Enter again either starts game or marks player as Ready - if all players are ready, starts game
-- [ ] For gamepad, pressing X enables the player
-- [ ] Then left-right on DPad or Left stick moves between players
-- [ ] Pressing X again starts game or marks player as ready - if all players are ready, game starts
+Upon testing, all of the below things are already implemented!
+
+- [x] For keyboard, pressing Enter enables the player
+- [x] Then left - right on keyboard moves between selectable characters
+- [x] Pressing Enter again either starts game or marks player as Ready - if all players are ready, starts game
+- [x] For gamepad, pressing X enables the player
+- [x] Then left-right on DPad or Left stick moves between players
+- [x] Pressing X again starts game or marks player as ready - if all players are ready, game starts
 
 ### At least 4 playable characters
 
