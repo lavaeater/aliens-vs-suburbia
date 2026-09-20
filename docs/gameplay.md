@@ -93,6 +93,8 @@ Yes, with selection for player, as well, of course. What could be better is of c
 
 This is on me, the human developer, to get done.
 
+And checking just right now, Mesh2Motion has added 10 player characters and extra monsters, so we are GOOD TO GO!
+
 ### At least 5 enemies
 
 Also at least partially on me to design and code some enemies.
