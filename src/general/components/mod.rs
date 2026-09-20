@@ -93,4 +93,26 @@ impl Default for Health {
     }
 }
 
+impl Health {
+    pub fn full(max_health: i32) -> Self {
+        Self { health: max_health, max_health }
+    }
+
+    /// Subtract `amount` and report whether this blow was lethal (health now <= 0).
+    /// Only `general::damage::apply_damage` should call this in gameplay code.
+    pub fn apply(&mut self, amount: i32) -> bool {
+        self.health -= amount;
+        self.health <= 0
+    }
+
+    /// Add `amount`, capped at `max_health`.
+    pub fn heal(&mut self, amount: i32) {
+        self.health = (self.health + amount).min(self.max_health);
+    }
+
+    pub fn is_dead(&self) -> bool {
+        self.health <= 0
+    }
+}
+
 

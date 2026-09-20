@@ -5,10 +5,12 @@
 //! subscribe to those instead of each re-deriving who got hurt where.
 
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 
-/// Broad category of damage, used to pick the gore/SFX response.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+/// Broad category of damage, used to pick the gore/SFX response and looked up in a
+/// target's `DamageResistances`. Serialised by name in def files.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 pub enum DamageKind {
     /// Bullets, thrown balls — a sharp local spray.
     #[default]

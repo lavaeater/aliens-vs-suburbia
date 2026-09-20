@@ -6,6 +6,9 @@ use bevy::world_serialization::WorldAssetRoot;
 use avian3d::prelude::Collider;
 use crate::assets::asset_definition::{AssetDefinition, ModelType};
 use crate::assets::assets_plugin::GameAssets;
+use crate::camera::components::CameraTarget;
+use crate::general::damage::Faction;
+use crate::player::components::PlayerSlot;
 use crate::control::gamepad_input::WantsGamepad;
 use crate::player::systems::equip::PendingEquip;
 use crate::player::systems::leg_ik::PendingLegs;
@@ -143,7 +146,7 @@ pub fn spawn_players(
         };
 
         // Override ability from def / slot default.
-        commands.entity(player).insert(roster_ability);
+        commands.entity(player).insert((roster_ability, PlayerSlot(slot), CameraTarget::default(), Faction::Player));
         // Torso twist: resolved to bone entities once the skeleton spawns. Defs that
         // don't list `aim_bones` fall back to the default mixamo spine chain.
         commands.entity(player).insert(PendingTorsoTwist::new(

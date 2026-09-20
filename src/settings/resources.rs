@@ -44,6 +44,16 @@ pub struct GameSettings {
     pub persp_near: f32,
     #[serde(default = "default_persp_far")]
     pub persp_far: f32,
+    // Multiplayer camera
+    /// World units of breathing room kept around the outermost player when zooming to fit.
+    #[serde(default = "default_fit_margin")]
+    pub fit_margin: f32,
+    /// How far the camera may pull back (as a multiple of `zoom`) to keep everyone on screen.
+    #[serde(default = "default_fit_zoom_max")]
+    pub fit_zoom_max: f32,
+    /// Exponential smoothing rate (per second) for the camera focus point and fit zoom.
+    #[serde(default = "default_focus_smoothing")]
+    pub focus_smoothing: f32,
 }
 
 fn default_projection() -> ProjectionMode { ProjectionMode::Orthographic }
@@ -58,6 +68,9 @@ fn default_ortho_viewport_height() -> f32 { 2.0 }
 fn default_persp_fov()  -> f32 { 60.0 }
 fn default_persp_near() -> f32 { 0.1 }
 fn default_persp_far() -> f32 { 1000.0 }
+fn default_fit_margin() -> f32 { 3.0 }
+fn default_fit_zoom_max() -> f32 { 3.0 }
+fn default_focus_smoothing() -> f32 { 6.0 }
 
 impl Default for GameSettings {
     fn default() -> Self {
@@ -74,6 +87,9 @@ impl Default for GameSettings {
             persp_fov: default_persp_fov(),
             persp_near: default_persp_near(),
             persp_far: default_persp_far(),
+            fit_margin: default_fit_margin(),
+            fit_zoom_max: default_fit_zoom_max(),
+            focus_smoothing: default_focus_smoothing(),
         }
     }
 }

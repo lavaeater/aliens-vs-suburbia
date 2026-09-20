@@ -15,11 +15,13 @@ The suggested build order is at the end (see *Phases*); the sections themselves 
 
 ## Multiplayer
 
-**Status: partial.** Several players spawn from `PlayerRoster` and each has their own input
-device, but `camera_follow` (`src/camera/systems.rs`) loops over all players and the *last*
-one iterated wins, so the camera jumps between players.
+**Status: done (2026-09-20).** `camera_follow` (`src/camera/systems.rs`) aims at the
+weighted centroid of every `CameraTarget` (downed players count half), smooths it into the
+`CameraFocus` resource and zooms out (`fit_factor`) until everyone fits. Tunables in
+`GameSettings`: `fit_margin`, `fit_zoom_max`, `focus_smoothing`. Not yet playtested with
+real pads - the numbers are first guesses.
 
-**Steps**
+**Steps** (all done)
 
 1. Add a `CameraTarget { weight: f32 }` component (`src/camera/components.rs`) and insert it
    on every player in `spawn_players.rs`. Weight lets a downed player count for less later.
@@ -162,28 +164,27 @@ code touching it is the asset-browser label.
 
 **Status: done.** `Health { health, max_health }` (`src/general/components/mod.rs`), health
 bars via `AddHealthBar`, `health_monitor_system` despawns non-players at 0 and emits
-`EntityDied`.
+`EntityDied`. `Health::full/apply/heal/is_dead` added 2026-09-20.
 
-**Steps** (small cleanups only)
-
-1. `Health` is `i32` but `EnemyProps.health` / `TowerProps.health` / `TerrainProps.health` are
-   `f32`. Pick one (suggest `i32` everywhere, the ron files are hand-edited) and convert at
-   the def boundary.
-2. Add `Health::apply(&mut self, amount) -> bool` returning `lethal` so every damage site
-   stops re-implementing `health -= x; lethal = health <= 0`.
+**Decision:** defs keep `f32` health (`health: 100.0` is what every existing `.ron` and the
+asset-browser editors write; ron will not parse `100.0` as an `i32`). The `as i32` cast
+happens once at each spawn site via `Health::full`.
 
 ---
 
 ## Damage
 
-**Status: partial.** Damage is applied in four separate places that each mutate `Health`
-directly and emit `DamageDealt`: `shoot_weapons` (bullets to aliens only - the ray filter
-includes `ImpassableAll` but the `targets` query would also hit a wall with `Health`, which
-is unverified), `collision_handling_system` (thrown balls), `touch_damage_system` (melee to
-players only), `destroy_the_map_systems` (aliens chewing obstacles), `activate_ability`
-(Bombardment, no `DamageDealt` at all), and `tick_fire_fields`.
+**Status: done (2026-09-20).** `src/general/damage.rs` owns it: every hit site writes an
+`ApplyDamage` message and `apply_damage` is the only system that lowers `Health`. It
+checks `Indestructible`, the `DamageRules` matrix (`Faction` on players/aliens/structures;
+friendly fire off, aliens hurt structures, players do not - flip in the resource), applies
+`DamageResistances` (from `resistances` in Enemy/Tower/Terrain props), and emits
+`DamageDealt` + score events + the alien-counter decrement exactly once per kill. Found and
+fixed on the way: tower/fire kills never decremented `AlienCounter`, `AlienKilled` carried
+the alien instead of the killer so per-player kill score never counted, tower balls were
+"thrown" by themselves, and Whirlwind's `TouchDamage` could only ever hurt players.
 
-**Steps**
+**Steps** (all done; step 6 tests live next to each writer plus `damage.rs`)
 
 1. Introduce a single `ApplyDamage { target, amount, kind, position, normal, source }`
    message and one `apply_damage` system that: mutates `Health`, respects `Indestructible`,
@@ -268,13 +269,13 @@ and a `NullValue` entry for "nothing".
 ## Towers
 
 **Status: partial.** `TowerShooter`, `TowerSlow`, `TowerArea` exist (`src/towers/`) with
-`TowerProps { health, cost, range, damage, fire_rate_per_minute }`.
+`TowerProps { health, cost, range, damage, fire_rate_per_minute, resistances }`. Steps 1-2
+done 2026-09-20.
 
 **Steps**
 
-1. Route tower damage through `ApplyDamage` (*Damage* step 1).
-2. Towers as `Faction::Structure` so aliens' `DestroyTheMap` and *Explosions* can hurt
-   them, and they show a health bar when damaged.
+1. ~~Route tower damage through `ApplyDamage`.~~ Done; the tower (sensor) is the source.
+2. ~~Towers as `Faction::Structure`.~~ Done, on the root and the sensor child.
 3. Tower kind in the def: `TowerProps.kind: TowerKind { Shooter, Slow, Area }` plus kind-
    specific numbers, so the map editor and build menu can list them from defs instead of
    code.
@@ -497,19 +498,18 @@ completion returns to the menu.
 
 ## HUD Information
 
-**Status: partial.** The HUD (`src/ui/spawn_ui.rs`) is one global top-left column (aliens,
-coins, ability, wave, build) plus the escape meter. Nothing is per player.
+**Status: partial.** Steps 1-3 done 2026-09-20: `src/ui/player_hud.rs` spawns a bottom
+bar with four `PlayerHudSlot`s keyed on the new `PlayerSlot` component; each shows name
+(def stem), health bar + numbers, weapon (`Name` on the equipped weapon entity), an
+`Ammo: --` placeholder and ability charge; downed players read "NAME - DOWN". Team info is
+one row top-left. Lives (step 2) wait for *Death*.
 
 **Steps**
 
-1. Bottom bar: a full-width `Node` with four equal `PlayerHudSlot(usize)` children, one per
-   `PlayerRoster` slot, empty slots hidden.
-2. Per slot: character name (def stem), health bar (reuse `progress_bar`), lives, current
-   weapon name, `rounds_in_mag / pouch[kind]` (or `--` when `Infinite`), ability charge.
-   One `update_player_hud` system querying `(Player, Health, Lives, Weapons, AmmoPouch,
-   AbilityCooldown)` by slot.
-3. Move team-wide info (coins, wave, escape meter) to a slim top bar; drop the aliens-count
-   label or fold it into the wave text.
+1. ~~Bottom bar with four `PlayerHudSlot(usize)` children.~~ Done.
+2. ~~Per slot: name, health, weapon, ammo, ability.~~ Done except lives (needs *Death*)
+   and real ammo numbers (needs *Ammo*).
+3. ~~Move team-wide info to a slim top bar.~~ Done.
 4. Downed state: slot dims and shows "DOWN - 8s" from `PlayerDead.bleed_out`; respawning
    shows the countdown and the chosen anchor player's name.
 5. ASCII only (Bevy default font).
@@ -542,8 +542,8 @@ Ordered so every phase ends in something playtestable with friends and family.
 
 | Phase | Goal | Sections | Notes |
 |-------|------|----------|-------|
-| 1 | Co-op that does not fight the camera | Multiplayer (1-5), Gamepad support (1), HUD Information (1-3) | Zoom-to-fit + per-player HUD is enough for a first couch test. |
-| 2 | One damage pipeline | Damage (1-6), Health (1-2), Towers (1-2) | Unblocks everything below; mostly refactor with tests. |
+| 1 | Co-op that does not fight the camera | Multiplayer (1-5), Gamepad support (1), HUD Information (1-3) | **Code done 2026-09-20.** Remaining: the gamepad test session (human). |
+| 2 | One damage pipeline | Damage (1-6), Health (1-2), Towers (1-2) | **Done 2026-09-20.** 249 tests green. |
 | 3 | Guns feel different | Ammo, Weapons (1-3, 5), Items (1-3), Pickups (1-2) | Ammo scarcity is the first real tuning knob. |
 | 4 | Dying matters | Death (1-7), Loot Drops, HUD Information (4) | Lives, bleed-out, drops, respawn anchors. |
 | 5 | Things go boom | Explosions, Thrown weapons, Weapons (4) | Grenades, molotovs, Bombardment rewrite. |

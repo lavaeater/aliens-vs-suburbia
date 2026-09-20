@@ -21,7 +21,7 @@ pub fn detect_player_death(
     mut anim_ew: MessageWriter<AnimationEvent>,
 ) {
     for (entity, health, mut vel) in query.iter_mut() {
-        if health.health > 0 { continue; }
+        if !health.is_dead() { continue; }
 
         vel.0 = Vec3::ZERO;
 

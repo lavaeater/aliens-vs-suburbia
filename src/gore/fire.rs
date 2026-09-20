@@ -11,7 +11,8 @@ use bevy::prelude::*;
 
 use crate::alien::components::general::Alien;
 use crate::general::components::Health;
-use crate::gore::components::{DamageDealt, DamageKind, Ephemeral, GoreBudget};
+use crate::general::damage::ApplyDamage;
+use crate::gore::components::{DamageKind, Ephemeral, GoreBudget};
 use crate::player::components::Player;
 
 /// Start a fire field. Position is on the ground; radius/duration/dps shape it.
@@ -135,8 +136,8 @@ pub fn tick_fire_fields(
     mut budget: ResMut<GoreBudget>,
     fire_assets: Option<Res<FireAssets>>,
     mut fields: Query<(Entity, &mut FireField, &Transform)>,
-    mut targets: Query<(Entity, &Position, &mut Health, Has<Alien>, Has<Player>)>,
-    mut damage_mw: MessageWriter<DamageDealt>,
+    targets: Query<(Entity, &Position, Has<Alien>, Has<Player>), With<Health>>,
+    mut damage_mw: MessageWriter<ApplyDamage>,
     mut rng_seed: Local<u32>,
 ) {
     let dt = time.delta();
@@ -152,20 +153,17 @@ pub fn tick_fire_fields(
             let amount = (field.dps * field.damage_tick.duration().as_secs_f32()) as i32;
             if amount > 0 {
                 let r2 = field.radius * field.radius;
-                for (target, pos, mut health, is_alien, is_player) in targets.iter_mut() {
+                for (target, pos, is_alien, is_player) in targets.iter() {
                     if !(is_alien || is_player) {
                         continue;
                     }
                     if pos.0.distance_squared(center) <= r2 {
-                        health.health -= amount;
-                        damage_mw.write(DamageDealt {
+                        damage_mw.write(ApplyDamage::at(
                             target,
-                            position: pos.0 + Vec3::Y * 0.4,
-                            normal: Vec3::Y,
                             amount,
-                            kind: DamageKind::Fire,
-                            lethal: health.health <= 0,
-                        });
+                            DamageKind::Fire,
+                            pos.0 + Vec3::Y * 0.4,
+                        ));
                     }
                 }
             }
@@ -224,7 +222,9 @@ mod tests {
     use bevy::prelude::*;
     use std::time::Duration;
     use crate::alien::components::general::Alien;
+    use crate::game_state::score_keeper::GameTrackingEvent;
     use crate::general::components::Health;
+    use crate::general::damage::{apply_damage, ApplyDamage, DamageRules};
     use crate::gore::components::{DamageDealt, DamageKind, GoreBudget};
 
     #[derive(Resource, Default)]
@@ -240,13 +240,16 @@ mod tests {
     fn fire_burns_creatures_inside_the_radius_only() {
         let mut app = App::new();
         app.add_message::<DamageDealt>();
+        app.add_message::<ApplyDamage>();
+        app.add_message::<GameTrackingEvent>();
+        app.init_resource::<DamageRules>();
         app.init_resource::<Caught>();
         app.init_resource::<Time>();
         app.init_resource::<GoreBudget>();
         app.init_resource::<Assets<Mesh>>();
         app.init_resource::<Assets<StandardMaterial>>();
         // No FireAssets resource -> flame puffs use the mesh fallback; fine for a test.
-        app.add_systems(Update, (tick_fire_fields, catch).chain());
+        app.add_systems(Update, (tick_fire_fields, apply_damage, catch).chain());
 
         // Fire at the origin: radius 2, 40 dps.
         app.world_mut().spawn((FireField::new(5.0, 40.0, 2.0), Transform::from_translation(Vec3::ZERO)));

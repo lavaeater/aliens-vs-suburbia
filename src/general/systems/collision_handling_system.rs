@@ -1,24 +1,23 @@
 use bevy::math::Vec3;
-use bevy::prelude::{Commands, Has, MessageReader, MessageWriter, Query, ResMut};
+use bevy::prelude::{Commands, MessageReader, MessageWriter, Query, With};
 use avian3d::prelude::{CollisionStart, Position};
-use crate::alien::components::general::{Alien, AlienCounter};
-use crate::game_state::score_keeper::{GameTrackingEvent};
 use crate::general::components::{Ball, Health, HittableTarget};
-use crate::gore::components::{DamageDealt, DamageKind};
+use crate::general::damage::ApplyDamage;
+use crate::gore::components::DamageKind;
 
 /// Damage a thrown ball deals to what it hits.
 const BALL_DAMAGE: i32 = 10;
 
-#[allow(clippy::too_many_arguments)]
+/// Turns ball-vs-target contacts into damage requests. Bounce accounting and the
+/// one-score-per-throw rule live here; whether the hit actually hurts is `apply_damage`'s
+/// call.
 pub fn collision_handling_system(
-    mut alien_counter: ResMut<AlienCounter>,
     mut collision_event_reader: MessageReader<CollisionStart>,
     mut ball_query: Query<&mut Ball>,
-    mut hittable_target_query: Query<(&mut Health, &HittableTarget, Has<Alien>)>,
+    hittable_target_query: Query<(), (With<Health>, With<HittableTarget>)>,
     positions: Query<&Position>,
     mut commands: Commands,
-    mut game_mw: MessageWriter<GameTrackingEvent>,
-    mut damage_mw: MessageWriter<DamageDealt>,
+    mut damage_mw: MessageWriter<ApplyDamage>,
 ) {
     for collision in collision_event_reader.read() {
         let entity1 = collision.collider1;
@@ -31,7 +30,7 @@ pub fn collision_handling_system(
             continue;
         };
 
-        let (ball_bounces, ball_hit_entity, ball_can_score) = {
+        let (ball_bounces, ball_thrower, ball_can_score) = {
             let Ok(mut ball) = ball_query.get_mut(ball_entity) else { continue };
             ball.bounces += 1;
             if ball.bounces >= ball.max_bounces {
@@ -40,35 +39,23 @@ pub fn collision_handling_system(
             (ball.bounces, ball.entity, ball.can_score)
         };
 
-        let Some(hit_entity) = ball_hit_entity else { continue };
+        let Some(thrower) = ball_thrower else { continue };
 
-        if let Ok((mut target_health, _, is_alien)) = hittable_target_query.get_mut(hittable_entity) {
-            if ball_can_score {
-                if let Ok(mut ball) = ball_query.get_mut(ball_entity) {
-                    ball.can_score = false;
-                }
-                game_mw.write(GameTrackingEvent::ShotHit(hit_entity));
+        if hittable_target_query.contains(hittable_entity) {
+            if ball_can_score
+                && let Ok(mut ball) = ball_query.get_mut(ball_entity)
+            {
+                ball.can_score = false;
             }
             if ball_bounces <= 2 {
-                target_health.health -= BALL_DAMAGE;
-                let lethal = target_health.health <= 0;
-
                 // Spray gore from the hit, roughly along the ball's travel.
                 let target_pos = positions.get(hittable_entity).map(|p| p.0).unwrap_or(Vec3::ZERO);
                 let ball_pos = positions.get(ball_entity).map(|p| p.0).unwrap_or(target_pos);
-                damage_mw.write(DamageDealt {
-                    target: hittable_entity,
-                    position: target_pos + Vec3::Y * 0.4,
-                    normal: (target_pos - ball_pos).normalize_or(Vec3::Y),
-                    amount: BALL_DAMAGE,
-                    kind: DamageKind::Ballistic,
-                    lethal,
-                });
-
-                if lethal && is_alien {
-                    game_mw.write(GameTrackingEvent::AlienKilled(hit_entity));
-                    alien_counter.count -= 1;
-                }
+                damage_mw.write(
+                    ApplyDamage::at(hittable_entity, BALL_DAMAGE, DamageKind::Ballistic, target_pos + Vec3::Y * 0.4)
+                        .from(thrower)
+                        .along(target_pos - ball_pos),
+                );
             }
         }
     }
@@ -82,6 +69,7 @@ mod tests {
     use crate::alien::components::general::{Alien, AlienCounter};
     use crate::game_state::score_keeper::GameTrackingEvent;
     use crate::general::components::{Ball, Health, HittableTarget};
+    use crate::general::damage::{apply_damage, ApplyDamage, DamageRules};
     use crate::gore::components::DamageDealt;
 
     #[derive(Resource)]
@@ -111,9 +99,11 @@ mod tests {
         app.add_message::<CollisionStart>();
         app.add_message::<GameTrackingEvent>();
         app.add_message::<DamageDealt>();
+        app.add_message::<ApplyDamage>();
+        app.init_resource::<DamageRules>();
         app.insert_resource(AlienCounter { count: 1, max_count: 10 });
         app.init_resource::<Caught>();
-        app.add_systems(Update, (fire_collision, collision_handling_system, catch).chain());
+        app.add_systems(Update, (fire_collision, collision_handling_system, apply_damage, catch).chain());
 
         let thrower = app.world_mut().spawn_empty().id();
         let ball = app.world_mut().spawn(Ball::new(thrower)).id();
@@ -146,9 +136,11 @@ mod tests {
         app.add_message::<CollisionStart>();
         app.add_message::<GameTrackingEvent>();
         app.add_message::<DamageDealt>();
+        app.add_message::<ApplyDamage>();
+        app.init_resource::<DamageRules>();
         app.insert_resource(AlienCounter { count: 1, max_count: 10 });
         app.init_resource::<Caught>();
-        app.add_systems(Update, (fire_collision, collision_handling_system, catch).chain());
+        app.add_systems(Update, (fire_collision, collision_handling_system, apply_damage, catch).chain());
 
         let thrower = app.world_mut().spawn_empty().id();
         let ball = app.world_mut().spawn(Ball::new(thrower)).id();

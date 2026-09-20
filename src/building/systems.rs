@@ -7,6 +7,7 @@ use avian3d::prelude::{Collider, CollisionLayers, LockedAxes, Position, RigidBod
 use bevy_wind_waker_shader::WindWakerShaderBuilder;
 use crate::control::components::{ControlCommand, CharacterControl};
 use crate::general::components::{CollisionLayer, Health};
+use crate::general::damage::Faction;
 use crate::general::components::map_components::{CurrentTile, MapModelDefinitions};
 use crate::general::resources::map_resources::MapGraph;
 use crate::general::systems::coin_system::TeamWallet;
@@ -312,6 +313,7 @@ pub fn build_tower_system(
         let mut ec = commands.spawn((
             Name::from(model_def.name),
             IsObstacle {},
+            Faction::Structure,
             WorldAssetRoot(asset_server.load(model_def.file)),
             model_def.rigid_body,
             tile_defs.create_collider(model_def.width, model_def.height, model_def.depth),
@@ -330,6 +332,7 @@ pub fn build_tower_system(
                         CollisionLayers::new([CollisionLayer::Sensor], [CollisionLayer::Alien]),
                         Position::from(build_tower.position),
                         TowerSensor {},
+                        Faction::Structure,
                         TowerShooter::new(20.0),
                         Sensor,
                         WindWakerShaderBuilder::default().build(),
@@ -344,6 +347,7 @@ pub fn build_tower_system(
                         CollisionLayers::new([CollisionLayer::Sensor], [CollisionLayer::Alien]),
                         Position::from(build_tower.position),
                         TowerSensor {},
+                        Faction::Structure,
                         TowerSlow { factor: 0.35 },
                         Sensor,
                         WindWakerShaderBuilder::default().build(),
@@ -358,6 +362,7 @@ pub fn build_tower_system(
                         CollisionLayers::new([CollisionLayer::Sensor], [CollisionLayer::Alien]),
                         Position::from(build_tower.position),
                         TowerSensor {},
+                        Faction::Structure,
                         TowerArea::new(15.0, 4.0),
                         Sensor,
                         WindWakerShaderBuilder::default().build(),

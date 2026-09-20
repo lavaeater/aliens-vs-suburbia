@@ -12,6 +12,8 @@ use itertools::Itertools;
 use crate::building::systems::ToWorldCoordinates;
 use crate::control::components::{ControlDirection, CharacterControl, ControlRotation};
 use crate::general::components::{Health, Indestructible};
+use crate::general::damage::ApplyDamage;
+use crate::gore::components::DamageKind;
 
 /// When a tile is re-opened (tower destroyed or removed), check if a normal path now exists.
 /// If so, clear MustDestroyTheMap from all aliens so they resume normal pathing.
@@ -60,8 +62,9 @@ pub fn destroy_the_map_action_system(
     mut commands: Commands,
     mut map_graph: ResMut<MapGraph>,
     mut alien_query: Query<(Entity, &mut MustDestroyTheMap, &mut CharacterControl, &Position, &Rotation, &CurrentTile), With<Alien>>,
-    mut obstacle_query: Query<(&IsObstacle, &CurrentTile, &mut Health), Without<Indestructible>>,
+    obstacle_query: Query<(Entity, &CurrentTile, &Position), (With<IsObstacle>, With<Health>, Without<Indestructible>)>,
     tile_definitions: Res<TileDefinitions>,
+    mut damage_mw: MessageWriter<ApplyDamage>,
 ) {
     for (entity,
          mut must_destroy_data,
@@ -192,14 +195,16 @@ pub fn destroy_the_map_action_system(
                     Some(target_tile) => {
                         let target_tile = *target_tile;
                         let mut did_not_hit = true;
-                        for (_, tower_tile, mut health) in obstacle_query.iter_mut() {
+                        for (obstacle, tower_tile, obstacle_pos) in obstacle_query.iter() {
                             if tower_tile.tile == target_tile {
                                 did_not_hit = false;
-                                health.health -= 10;
-                                if health.health <= 0 {
-                                    map_graph.path_finding_grid.add_vertex(target_tile);
-                                    map_graph.path_reopened = true;
-                                }
+                                // `destroy_damaged_terrain` re-opens the tile once this
+                                // lands and the structure's health hits zero.
+                                damage_mw.write(
+                                    ApplyDamage::at(obstacle, 10, DamageKind::Blunt, obstacle_pos.0 + Vec3::Y * 0.5)
+                                        .from(entity)
+                                        .along(obstacle_pos.0 - alien_position.0),
+                                );
                                 must_destroy_data.target_tile = None;
                                 must_destroy_data.state = MustDestroyTheMapState::Finished;
                                 break;

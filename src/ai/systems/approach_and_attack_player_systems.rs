@@ -5,6 +5,8 @@ use avian3d::prelude::{Position, Rotation, SpatialQuery, SpatialQueryFilter};
 use bevy::math::Vec2;
 use crate::ai::components::approach_and_attack_player_components::ApproachAndAttackPlayerData;
 use crate::general::components::{Attack, CollisionLayer, Health};
+use crate::general::damage::ApplyDamage;
+use crate::gore::components::DamageKind;
 use crate::alien::components::general::{Alien, AlienSightShape};
 use crate::control::components::{ControlDirection, CharacterControl, ControlRotation};
 use crate::player::components::Player;
@@ -64,18 +66,23 @@ pub fn approach_player_system(
 }
 
 pub fn attack_player_system(
-    mut alien_query: Query<(&ApproachAndAttackPlayerData, &mut CharacterControl, &Position, &Attack), With<Alien>>,
-    mut player_query: Query<(&mut Health, &Position), With<Player>>,
+    mut alien_query: Query<(Entity, &ApproachAndAttackPlayerData, &mut CharacterControl, &Position, &Attack), With<Alien>>,
+    player_query: Query<&Position, (With<Player>, With<Health>)>,
+    mut damage_mw: MessageWriter<ApplyDamage>,
 ) {
-    for (attack_player_data, mut controller, alien_position, alien_attack) in alien_query.iter_mut() {
+    for (alien, attack_player_data, mut controller, alien_position, alien_attack) in alien_query.iter_mut() {
         if let Some(player_entity) = attack_player_data.seen_player {
             let alien_position_vector2 = Vec2::new(alien_position.0.x, alien_position.0.z);
-            if let Ok((mut player_health, player_position)) = player_query.get_mut(player_entity) {
+            if let Ok(player_position) = player_query.get(player_entity) {
                 let player_position_vector2 = Vec2::new(player_position.0.x, player_position.0.z);
                 controller.rotations.clear();
                 let distance = (player_position_vector2 - alien_position_vector2).length();
                 if distance < attack_player_data.attack_distance * 2.0 {
-                    player_health.health -= alien_attack.damage_range;
+                    damage_mw.write(
+                        ApplyDamage::at(player_entity, alien_attack.damage_range, DamageKind::Blunt, player_position.0 + Vec3::Y * 0.4)
+                            .from(alien)
+                            .along(player_position.0 - alien_position.0),
+                    );
                 }
             }
         }

@@ -77,6 +77,26 @@ Stored at `assets/defs/<model-stem>.ron`. Fields:
 - `attachments` — `Vec<Attachment>` of models socketed to bones (e.g. a held rifle). Each has `bone` (bone entity name), `model_path`, and a local offset (`translation`, `rotation_euler_deg`, `scale`). Manual, fixed props; authored/previewed in the asset browser only.
 - `hardpoints` — `HashMap<String, Hardpoint>` of named connection frames (role -> frame) for dynamic weapon snapping, on both characters (`grip` anchored to a hand bone) and weapons (`grip`/`foregrip`/`stock`/`sight`, anchor `None` = model origin). `Hardpoint { anchor: Option<String>, translation, rotation_euler_deg }`. The snap math (`src/assets/hardpoint.rs`, unit-tested) makes a weapon's `grip` coincide with a character's `grip`. Authored + previewed in the asset browser (`H` toggles frame gizmos). Equipped in-game via `PlayerProps.weapon` (a weapon def path) — `src/player/systems/equip.rs` snaps it onto the character's `grip` bone once the skeleton spawns, using the same `hardpoint::snap_transform` as the browser preview. Two-bone IK for the support hand is a future stage. See `docs/inverse-kinematics-hardpoints.md`.
 
+### Damage pipeline
+
+`src/general/damage.rs`. **Only `apply_damage` lowers `Health`.** Anything that hurts
+something writes an `ApplyDamage { target, amount, kind, position, normal, source }` message
+(builder: `ApplyDamage::at(..).from(source).along(normal)`). `apply_damage` checks
+`Indestructible`, the `DamageRules` resource against the `Faction` of source and target
+(`Player`/`Alien`/`Structure`; no faction = always allowed), scales by `DamageResistances`
+(from `resistances` in Enemy/Tower/Terrain props), then emits `DamageDealt` (gore),
+`ShotHit`/`AlienKilled` (score, credited to `source`) and decrements `AlienCounter` once per
+kill. It runs in `GamePlugin`'s `Update` tuple before the coin/death systems. Healing edits
+`Health` directly (`Health::heal`).
+
+### Multiplayer camera
+
+`camera_follow` aims at the weighted centroid of every `CameraTarget` (each player gets one
+in `spawn_players`), smooths it into the `CameraFocus` resource, and zooms out
+(`fit_factor`) until all targets fit. Tunables: `GameSettings::{fit_margin, fit_zoom_max,
+focus_smoothing}`. Players carry `PlayerSlot(usize)`; the bottom HUD bar
+(`src/ui/player_hud.rs`) keys on it.
+
 ### Economy
 
 `TeamWallet` resource tracks shared coins. Aliens drop `Coin` entities on death. Players auto-collect within `PickupRange`. Tower placement costs are checked in `execute_build` (`src/building/systems.rs`).

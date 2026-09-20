@@ -30,6 +30,13 @@ pub struct ShootingTower;
  #[type_path = "avs"]
 pub struct AutoAim(pub Vec3);
 
+/// Which roster slot this player occupies (0 = first joined). Stable for the whole
+/// session: the HUD, respawns and device binding all key on it.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash, Reflect)]
+#[reflect(Component)]
+#[type_path = "avs"]
+pub struct PlayerSlot(pub usize);
+
 /// Marks a player entity whose weapon nodes have been hidden.
 #[derive(Component, Default, Reflect)]
 #[reflect(Component, Default)]

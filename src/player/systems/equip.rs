@@ -46,6 +46,8 @@ pub struct PendingEquip {
     pub weapon_grip: Hardpoint,
     /// Weapon GLB path, relative to `assets/`.
     pub weapon_model_path: String,
+    /// Display name for the HUD: the weapon def's file stem (e.g. "Pistol").
+    pub weapon_name: String,
     /// Weapon def scale, applied as the weapon's local scale under the bone.
     pub weapon_scale: f32,
     /// The weapon's `muzzle` hardpoint (where bullets leave), if authored.
@@ -104,6 +106,10 @@ impl PendingEquip {
             char_grip,
             weapon_grip,
             weapon_model_path: weapon.model_path,
+            weapon_name: std::path::Path::new(weapon_def_path)
+                .file_stem()
+                .map(|s| s.to_string_lossy().into_owned())
+                .unwrap_or_else(|| "Weapon".to_string()),
             weapon_scale: weapon.scale,
             muzzle,
             weapon_props,
@@ -382,6 +388,7 @@ pub fn equip_pending_weapons(
                         model_root: root,
                         def_scale: equip.weapon_scale,
                     },
+                    Name::new(equip.weapon_name.clone()),
                     Weapon::from_props(&equip.weapon_props, equip.muzzle.clone()),
                 ))
                 .id();
@@ -448,6 +455,7 @@ pub fn equip_pending_weapons(
                     bone: anchor,
                     root,
                 },
+                Name::new(equip.weapon_name.clone()),
                 Weapon::from_props(&equip.weapon_props, equip.muzzle.clone()),
             ))
             .id();

@@ -17,6 +17,7 @@ use crate::game_state::clear_game_entities_plugin::ClearGameEntitiesPlugin;
 use crate::game_state::GameState;
 use crate::game_state::score_keeper::ScoreKeeperPlugin;
 use crate::facts::{FactsPlugin, FactsGameIntegrationPlugin};
+use crate::general::damage::{apply_damage, ApplyDamage, DamageRules};
 use crate::general::systems::collision_handling_system::collision_handling_system;
 use crate::general::systems::health_monitor_system::health_monitor_system;
 use crate::general::systems::touch_damage_system::touch_damage_system;
@@ -56,6 +57,8 @@ impl Plugin for GamePlugin {
         app
             .insert_resource(Time::<Fixed>::from_seconds(0.05))
             .init_resource::<TeamWallet>()
+            .init_resource::<DamageRules>()
+            .add_message::<ApplyDamage>()
             .init_state::<GameState>()
             .add_plugins((
                 AssetsPlugin,
@@ -100,6 +103,9 @@ impl Plugin for GamePlugin {
                     slow_alien_system,
                     area_damage_system,
                     touch_damage_system,
+                    // Every damage writer above (and in the player/AI/gore plugins) funnels
+                    // into this one; it must land before the death path reads Health.
+                    apply_damage.before(spawn_coins_on_alien_death).before(spawn_death_effects),
                     spawn_coins_on_alien_death.before(health_monitor_system),
                     coin_pickup_system,
                     spawn_death_effects.before(health_monitor_system),

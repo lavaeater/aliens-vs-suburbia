@@ -1,7 +1,7 @@
 //! Firing equipped guns. Hitscan: on the fire input, cast a ray from the weapon's
-//! `muzzle` hardpoint along the player's auto-aim, apply damage to whatever it hits,
-//! and emit [`DamageDealt`] so the gore layer sprays blood. Muzzle flash + tracer are
-//! cheap [`Ephemeral`] visuals.
+//! `muzzle` hardpoint along the player's auto-aim and request [`ApplyDamage`] on whatever
+//! it hits — the damage pipeline decides whether it lands and tells the gore layer.
+//! Muzzle flash + tracer are cheap [`Ephemeral`] visuals.
 //!
 //! Guns replace throwing while equipped — `throwing` is gated `Without<EquippedWeapon>`
 //! and this system requires it, so the same fire button does one or the other.
@@ -9,12 +9,12 @@
 use avian3d::prelude::{Position, SpatialQuery, SpatialQueryFilter};
 use bevy::prelude::*;
 
-use crate::alien::components::general::{Alien, AlienCounter};
 use crate::assets::asset_definition::{Hardpoint, WeaponProps};
 use crate::control::components::{CharacterControl, ControlCommand};
 use crate::game_state::score_keeper::GameTrackingEvent;
-use crate::general::components::{CollisionLayer, Health};
-use crate::gore::components::{DamageDealt, DamageKind, Ephemeral};
+use crate::general::components::CollisionLayer;
+use crate::general::damage::ApplyDamage;
+use crate::gore::components::{DamageKind, Ephemeral};
 use crate::player::components::{AutoAim, Player, PlayerDead};
 use crate::player::systems::equip::EquippedWeapon;
 
@@ -87,10 +87,8 @@ pub fn shoot_weapons(
     mut materials: ResMut<Assets<StandardMaterial>>,
     players: Query<(Entity, &AutoAim, &CharacterControl, &EquippedWeapon, &Position), (With<Player>, Without<PlayerDead>)>,
     mut weapons: Query<(&mut Weapon, &GlobalTransform)>,
-    mut targets: Query<(&mut Health, Has<Alien>)>,
-    mut alien_counter: ResMut<AlienCounter>,
     mut game_mw: MessageWriter<GameTrackingEvent>,
-    mut damage_mw: MessageWriter<DamageDealt>,
+    mut damage_mw: MessageWriter<ApplyDamage>,
     mut rng_seed: Local<u32>,
 ) {
     let dt = time.delta_secs();
@@ -140,23 +138,12 @@ pub fn shoot_weapons(
 
             let end = if let Some(hit) = spatial.cast_ray(origin, dir3, weapon.range, true, &filter) {
                 let point = origin + dir * hit.distance;
-                if let Ok((mut health, is_alien)) = targets.get_mut(hit.entity) {
-                    health.health -= weapon.damage;
-                    let lethal = health.health <= 0;
-                    damage_mw.write(DamageDealt {
-                        target: hit.entity,
-                        position: point,
-                        normal: -dir,
-                        amount: weapon.damage,
-                        kind: DamageKind::Ballistic,
-                        lethal,
-                    });
-                    game_mw.write(GameTrackingEvent::ShotHit(hit.entity));
-                    if lethal && is_alien {
-                        game_mw.write(GameTrackingEvent::AlienKilled(hit.entity));
-                        alien_counter.count -= 1;
-                    }
-                }
+                // Whatever it is — alien, wall, tower — `apply_damage` decides if it hurts.
+                damage_mw.write(
+                    ApplyDamage::at(hit.entity, weapon.damage, DamageKind::Ballistic, point)
+                        .from(player)
+                        .along(-dir),
+                );
                 point
             } else {
                 origin + dir * weapon.range

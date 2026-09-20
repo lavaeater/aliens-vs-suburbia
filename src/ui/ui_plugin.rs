@@ -4,10 +4,11 @@ use bevy::prelude::{in_state, Camera2d, Commands, IntoScheduleConfigs, IsDefault
 use lava_ui_builder::LavaUiPlugin;
 use crate::game_state::GameState;
 use crate::ui::gait_panel::{toggle_gait_panel, update_gait_panel};
+use crate::ui::player_hud::{spawn_player_bar, update_player_bar};
 use crate::ui::spawn_ui::{
     add_health_bar, cleanup_state, game_theme, goto_state_system, GotoState,
     spawn_menu, spawn_showcase_ui, spawn_ui, sync_health_bars,
-    update_alien_meter, update_wave_hud, update_coin_hud, update_ability_hud, update_build_cost_hud,
+    update_alien_meter, update_wave_hud, update_coin_hud, update_build_cost_hud,
     toggle_settings_panel, toggle_model_panel,
     update_camera_panel, update_model_labels, update_anim_mapping_labels,
     update_hud,
@@ -24,7 +25,7 @@ impl Plugin for UiPlugin {
             .add_message::<GotoState>()
             .add_message::<AddHealthBar>()
             .add_systems(OnEnter(GameState::InGame), spawn_ui_camera)
-            .add_systems(OnEnter(GameState::InGame), spawn_ui.run_if(crate::playground::state::in_normal_game))
+            .add_systems(OnEnter(GameState::InGame), (spawn_ui, spawn_player_bar).run_if(crate::playground::state::in_normal_game))
             .add_systems(OnEnter(GameState::Menu), (spawn_ui_camera, spawn_menu))
             .add_systems(OnEnter(GameState::ModelShowcase), (spawn_ui_camera, spawn_showcase_ui))
             .add_systems(OnExit(GameState::Menu), cleanup_state)
@@ -40,7 +41,7 @@ impl Plugin for UiPlugin {
                     update_alien_meter,
                     update_wave_hud,
                     update_coin_hud,
-                    update_ability_hud,
+                    update_player_bar,
                     update_build_cost_hud,
                     toggle_settings_panel,
                     toggle_gait_panel,

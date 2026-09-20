@@ -1,12 +1,14 @@
 use bevy::prelude::Name;
 use bevy::math::Vec3;
-use bevy::prelude::{Commands, Entity, Query, Res, Transform, With};
+use bevy::prelude::{Commands, Entity, MessageWriter, Query, Res, Transform, With};
 use bevy::world_serialization::WorldAssetRoot;
 use bevy::time::Time;
 use avian3d::prelude::{Collider, CollidingEntities, CollisionLayers, LinearVelocity, Position, RigidBody};
 use bevy_wind_waker_shader::WindWakerShaderBuilder;
 use crate::alien::components::general::Alien;
 use crate::general::components::{Ball, CollisionLayer, Health};
+use crate::general::damage::ApplyDamage;
+use crate::gore::components::DamageKind;
 use crate::general::components::map_components::CoolDown;
 use crate::towers::components::{Slowed, TowerArea, TowerSensor, TowerShooter, TowerSlow};
 use crate::assets::assets_plugin::GameAssets;
@@ -54,18 +56,21 @@ pub fn slow_alien_system(
     }
 }
 
-/// Deals flat damage per second to all aliens inside an area tower's sensor.
+/// Deals flat damage per tick to all aliens inside an area tower's sensor.
 pub fn area_damage_system(
-    mut sensor_query: Query<(&CollidingEntities, &mut TowerArea), With<TowerSensor>>,
-    mut alien_query: Query<&mut Health, With<Alien>>,
+    mut sensor_query: Query<(Entity, &CollidingEntities, &mut TowerArea), With<TowerSensor>>,
+    alien_query: Query<&Position, (With<Alien>, With<Health>)>,
     time: Res<Time>,
+    mut damage_mw: MessageWriter<ApplyDamage>,
 ) {
-    for (colliding, mut area) in sensor_query.iter_mut() {
+    for (tower, colliding, mut area) in sensor_query.iter_mut() {
         if !area.cool_down(time.delta_secs()) { continue; }
         let dmg = (area.damage_per_second * area.tick_interval) as i32;
         for &e in colliding.iter() {
-            if let Ok(mut health) = alien_query.get_mut(e) {
-                health.health -= dmg;
+            if let Ok(pos) = alien_query.get(e) {
+                damage_mw.write(
+                    ApplyDamage::at(e, dmg, DamageKind::Fire, pos.0 + Vec3::Y * 0.4).from(tower),
+                );
             }
         }
     }
@@ -73,12 +78,12 @@ pub fn area_damage_system(
 
 pub fn shoot_alien_system(
     mut commands: Commands,
-    mut tower_query: Query<(&Position, &CollidingEntities, &mut TowerShooter), With<TowerSensor>>,
+    mut tower_query: Query<(Entity, &Position, &CollidingEntities, &mut TowerShooter), With<TowerSensor>>,
     alien_query: Query<&Position, With<Alien>>,
     time: Res<Time>,
     game_assets: Res<GameAssets>,
 ) {
-    for (tower_position, colliding_entities, mut tower_shooter) in tower_query.iter_mut() {
+    for (tower, tower_position, colliding_entities, mut tower_shooter) in tower_query.iter_mut() {
         // Check if any alien is in range
         let has_alien = colliding_entities.iter().any(|e| alien_query.contains(*e));
         if !has_alien {
@@ -118,7 +123,9 @@ pub fn shoot_alien_system(
                         ]),
                 )).id();
 
-                commands.entity(entity).insert(Ball::new(entity));
+                // The tower is the thrower, so its kills are credited to it and the
+                // damage rules see a Structure-vs-Alien hit.
+                commands.entity(entity).insert(Ball::new(tower));
             }
         }
     }

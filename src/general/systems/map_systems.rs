@@ -23,6 +23,7 @@ use crate::building::systems::ToWorldCoordinates;
 type TerrainQuadMesh = (Vec<[f32; 3]>, Vec<[f32; 3]>, Vec<[f32; 2]>, Vec<u32>);
 use crate::player::components::{IsBuildIndicator, IsObstacle};
 use crate::general::components::{Health, Indestructible};
+use crate::general::damage::{DamageResistances, Faction};
 use crate::assets::asset_definition::{AssetDefinition, ModelType};
 use crate::towers::components::{TowerSensor, TowerShooter};
 use crate::ui::spawn_ui::AddHealthBar;
@@ -371,6 +372,7 @@ pub fn map_loader(
                     if props.blocks_enemies {
                         ec.insert((
                             IsObstacle,
+                            Faction::Structure,
                             tile_defs.create_collider(16.0, 8.0, 16.0),
                             CollisionLayers::new([CollisionLayer::ImpassableAll], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
                         ));
@@ -379,7 +381,10 @@ pub fn map_loader(
                     match props.health {
                         Some(hp) => {
                             let hp_i = hp as i32;
-                            ec.insert(Health { health: hp_i, max_health: hp_i });
+                            ec.insert(Health::full(hp_i));
+                            if !props.resistances.is_empty() {
+                                ec.insert(DamageResistances(props.resistances.clone()));
+                            }
                         }
                         None => { ec.insert(Indestructible); }
                     }
@@ -391,14 +396,18 @@ pub fn map_loader(
                     let mut ec = commands.spawn((
                         Name::from(format!("Tower {}:{}", placement.x, placement.y)),
                         IsObstacle,
+                        Faction::Structure,
                         WorldAssetRoot(scene_handle),
                         Transform::from_translation(pos).with_rotation(rot).with_scale(scale),
                         tile_defs.create_collider(16.0, 8.0, 16.0),
                         CollisionLayers::new([CollisionLayer::ImpassableAll], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
                         RigidBody::Static,
                         CurrentTile { tile: tile_coord },
-                        Health { health: hp, max_health: hp },
+                        Health::full(hp),
                     ));
+                    if !props.resistances.is_empty() {
+                        ec.insert(DamageResistances(props.resistances.clone()));
+                    }
                     ec.with_children(|parent| {
                         parent.spawn((
                             Name::from("Sensor"),
@@ -406,6 +415,7 @@ pub fn map_loader(
                             CollisionLayers::new([CollisionLayer::Sensor], [CollisionLayer::Alien]),
                             Position::from(pos),
                             TowerSensor {},
+                            Faction::Structure,
                             TowerShooter::new(fire_rate),
                             Sensor,
                         ));

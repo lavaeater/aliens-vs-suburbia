@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use crate::gore::components::DamageKind;
 
 fn default_scale() -> f32 { 1.0 }
 
@@ -8,10 +9,13 @@ pub struct EnemyProps {
     pub health: f32,
     pub speed: f32,
     pub coin_drop: u32,
+    /// Per-`DamageKind` multipliers (missing = 1.0, 0.0 = immune).
+    #[serde(default)]
+    pub resistances: HashMap<DamageKind, f32>,
 }
 
 impl Default for EnemyProps {
-    fn default() -> Self { Self { health: 100.0, speed: 2.0, coin_drop: 5 } }
+    fn default() -> Self { Self { health: 100.0, speed: 2.0, coin_drop: 5, resistances: HashMap::new() } }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -21,10 +25,15 @@ pub struct TowerProps {
     pub range: f32,
     pub damage: f32,
     pub fire_rate_per_minute: f32,
+    /// Per-`DamageKind` multipliers (missing = 1.0, 0.0 = immune).
+    #[serde(default)]
+    pub resistances: HashMap<DamageKind, f32>,
 }
 
 impl Default for TowerProps {
-    fn default() -> Self { Self { health: 200.0, cost: 50, range: 4.0, damage: 20.0, fire_rate_per_minute: 30.0 } }
+    fn default() -> Self {
+        Self { health: 200.0, cost: 50, range: 4.0, damage: 20.0, fire_rate_per_minute: 30.0, resistances: HashMap::new() }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -33,10 +42,14 @@ pub struct TerrainProps {
     pub blocks_players: bool,
     /// None = indestructible.
     pub health: Option<f32>,
+    /// Per-`DamageKind` multipliers (missing = 1.0, 0.0 = immune). Only meaningful with
+    /// `health: Some(_)`.
+    #[serde(default)]
+    pub resistances: HashMap<DamageKind, f32>,
 }
 
 impl Default for TerrainProps {
-    fn default() -> Self { Self { blocks_enemies: true, blocks_players: false, health: None } }
+    fn default() -> Self { Self { blocks_enemies: true, blocks_players: false, health: None, resistances: HashMap::new() } }
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]

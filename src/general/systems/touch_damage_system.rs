@@ -1,39 +1,42 @@
 use bevy::math::Vec3;
-use bevy::prelude::{MessageWriter, Query, Res, Time, With, Without};
+use bevy::prelude::{Entity, MessageWriter, Or, Query, Res, Time, With, Without};
 use avian3d::prelude::{CollidingEntities, Position};
+use crate::alien::components::general::Alien;
 use crate::general::components::{Health, TouchDamage};
-use crate::gore::components::{DamageDealt, DamageKind};
+use crate::general::damage::ApplyDamage;
+use crate::gore::components::DamageKind;
 use crate::player::components::Player;
 use crate::player::components::PlayerDead;
 
+/// Anything with [`TouchDamage`] grinds down the creatures it overlaps. Which creatures
+/// it may hurt (an alien mauling a player, a whirlwinding player shredding aliens, never a
+/// teammate) is the damage rules' decision, not this system's.
 #[allow(clippy::type_complexity)]
 pub fn touch_damage_system(
     time: Res<Time>,
-    damagers: Query<(&CollidingEntities, &TouchDamage, Option<&Position>)>,
-    mut players: Query<(&mut Health, Option<&Position>), (With<Player>, Without<PlayerDead>)>,
-    mut damage_mw: MessageWriter<DamageDealt>,
+    damagers: Query<(Entity, &CollidingEntities, &TouchDamage, Option<&Position>)>,
+    creatures: Query<Option<&Position>, (With<Health>, Or<(With<Player>, With<Alien>)>, Without<PlayerDead>)>,
+    mut damage_mw: MessageWriter<ApplyDamage>,
 ) {
     let dt = time.delta_secs();
-    for (colliding, touch, damager_pos) in damagers.iter() {
+    for (damager, colliding, touch, damager_pos) in damagers.iter() {
+        let amount = (touch.dps * dt) as i32;
+        if amount <= 0 {
+            continue;
+        }
         for &hit in colliding.iter() {
-            if let Ok((mut health, player_pos)) = players.get_mut(hit) {
-                let amount = (touch.dps * dt) as i32;
-                if amount <= 0 {
-                    continue;
-                }
-                health.health -= amount;
-                // Blood sprays off the player, away from the thing mauling them.
-                let ppos = player_pos.map(|p| p.0).unwrap_or(Vec3::ZERO);
-                let apos = damager_pos.map(|p| p.0).unwrap_or(ppos);
-                damage_mw.write(DamageDealt {
-                    target: hit,
-                    position: ppos + Vec3::Y * 0.4,
-                    normal: (ppos - apos).normalize_or(Vec3::Y),
-                    amount,
-                    kind: DamageKind::Blunt,
-                    lethal: health.health <= 0,
-                });
+            if hit == damager {
+                continue;
             }
+            let Ok(target_pos) = creatures.get(hit) else { continue };
+            // Blood sprays off the victim, away from the thing mauling them.
+            let vpos = target_pos.map(|p| p.0).unwrap_or(Vec3::ZERO);
+            let apos = damager_pos.map(|p| p.0).unwrap_or(vpos);
+            damage_mw.write(
+                ApplyDamage::at(hit, amount, DamageKind::Blunt, vpos + Vec3::Y * 0.4)
+                    .from(damager)
+                    .along(vpos - apos),
+            );
         }
     }
 }
@@ -45,7 +48,9 @@ mod tests {
     use bevy::ecs::entity::EntityHashSet;
     use bevy::prelude::*;
     use std::time::Duration;
+    use crate::game_state::score_keeper::GameTrackingEvent;
     use crate::general::components::{Health, TouchDamage};
+    use crate::general::damage::{apply_damage, ApplyDamage, DamageRules};
     use crate::gore::components::{DamageDealt, DamageKind};
     use crate::player::components::Player;
 
@@ -68,9 +73,12 @@ mod tests {
     fn a_toucher_damages_the_player_it_overlaps() {
         let mut app = App::new();
         app.add_message::<DamageDealt>();
+        app.add_message::<ApplyDamage>();
+        app.add_message::<GameTrackingEvent>();
+        app.init_resource::<DamageRules>();
         app.init_resource::<Caught>();
         app.init_resource::<Time>();
-        app.add_systems(Update, (touch_damage_system, catch).chain());
+        app.add_systems(Update, (touch_damage_system, apply_damage, catch).chain());
 
         let player = app
             .world_mut()
@@ -97,9 +105,12 @@ mod tests {
     fn no_damage_without_overlap() {
         let mut app = App::new();
         app.add_message::<DamageDealt>();
+        app.add_message::<ApplyDamage>();
+        app.add_message::<GameTrackingEvent>();
+        app.init_resource::<DamageRules>();
         app.init_resource::<Caught>();
         app.init_resource::<Time>();
-        app.add_systems(Update, (touch_damage_system, catch).chain());
+        app.add_systems(Update, (touch_damage_system, apply_damage, catch).chain());
 
         let player = app
             .world_mut()

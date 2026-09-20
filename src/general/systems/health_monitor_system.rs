@@ -15,7 +15,7 @@ pub fn health_monitor_system(
     mut died_mw: MessageWriter<EntityDied>,
 ) {
     for (entity, health, position, last_hit) in query.iter() {
-        if health.health <= 0 {
+        if health.is_dead() {
             // Announce the death (gibs, death SFX subscribe) before despawning it.
             let last = last_hit.copied().unwrap_or_default();
             died_mw.write(EntityDied {

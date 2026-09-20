@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 use crate::alien::components::general::Alien;
 use crate::general::components::{Health, TouchDamage};
+use crate::general::damage::ApplyDamage;
+use crate::gore::components::DamageKind;
 use crate::general::systems::coin_system::{Coin, TeamWallet};
 use crate::player::components::{Player, PlayerDead};
 
@@ -95,13 +97,14 @@ pub fn tick_cooldowns(_time: Res<Time>, _query: Query<&mut AbilityCooldown>) {
 pub fn activate_ability(
     mut commands: Commands,
     mut players: Query<(Entity, &Transform, &SpecialAbility, &mut AbilityCooldown), (With<Player>, Without<PlayerDead>)>,
-    mut aliens: Query<(&Transform, &mut Health), With<Alien>>,
+    aliens: Query<(Entity, &Transform), With<Alien>>,
     mut all_healable: Query<&mut Health, (Without<Alien>, Without<PlayerDead>)>,
     mut wallet: Option<ResMut<TeamWallet>>,
     mut coins: Query<(Entity, &Transform), With<Coin>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut fire_mw: MessageWriter<crate::gore::fire::SpawnFire>,
+    mut damage_mw: MessageWriter<ApplyDamage>,
     ability_input: Res<AbilityInput>,
 ) {
     if !ability_input.pressed { return; }
@@ -112,9 +115,13 @@ pub fn activate_ability(
 
         match ability {
             SpecialAbility::Bombardment => {
-                // Deal 75 damage to all aliens on screen (within large radius).
-                for (_, mut health) in aliens.iter_mut() {
-                    health.health -= 75;
+                // Deal 75 damage to every alien in view, through the damage pipeline so
+                // it bleeds, scores and counts like any other hit.
+                for (alien, alien_transform) in aliens.iter() {
+                    damage_mw.write(
+                        ApplyDamage::at(alien, 75, DamageKind::Explosive, alien_transform.translation + Vec3::Y * 0.4)
+                            .from(entity),
+                    );
                 }
                 // Spawn a visual flash effect.
                 spawn_flash(&mut commands, player_transform.translation, &mut meshes, &mut materials);
@@ -124,7 +131,7 @@ pub fn activate_ability(
                 let heal_range = 6.0;
                 // Heal all players + towers within range.
                 for mut health in all_healable.iter_mut() {
-                    health.health = (health.health + 30).min(health.max_health);
+                    health.heal(30);
                 }
                 let _ = (heal_range, entity); // suppress unused warnings
             }

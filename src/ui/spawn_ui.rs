@@ -191,29 +191,26 @@ pub struct HudWaveInfo;
 #[derive(Component)]
 pub struct HudCoins;
 
-/// Marker on the ability cooldown label.
-#[derive(Component)]
-pub struct HudAbility;
-
 /// Marker on the build cost label.
 #[derive(Component)]
 pub struct HudBuildCost;
 
 pub fn spawn_ui(mut commands: Commands, theme: Res<LavaTheme>) {
-    // ── Top-left HUD labels ──────────────────────────────────────────────────
+    // ── Team info: one slim row along the top-left ───────────────────────────
+    // Per-player state (health, weapon, ammo, ability) lives in the bottom bar; see
+    // `player_hud`. Only things shared by the whole team go up here.
     {
         let mut ui = UIBuilder::new(commands.reborrow(), Some(theme.clone()));
         ui.insert(StateMarker)
           .absolute_position().top(px(8.0)).left(px(8.0))
-          .flex_column().row_gap_px(4.0);
+          .display_flex().align_items_center().column_gap_px(16.0);
 
-        ui.with_child(|c| { c.with_text("Aliens: 0", Some(TextStyle::size_color(theme.text.label_size, theme.text.label_color))).insert(HudAlienCount); });
         ui.with_child(|c| { c.with_text("Coins: 0",  Some(TextStyle::size_color(14.0, Color::srgb(1.0, 0.85, 0.1)))).insert(HudCoins); });
-        ui.with_child(|c| { c.with_text("[Q] Ability - ready", Some(TextStyle::size_color(13.0, Color::srgb(0.5, 0.9, 1.0)))).insert(HudAbility); });
         ui.with_child(|c| { c.with_text("Wave 1 / 3 in 5s",   Some(TextStyle::size_color(13.0, Color::srgb(0.5, 0.8, 1.0)))).insert(HudWaveInfo); });
+        ui.with_child(|c| { c.with_text("Aliens: 0", Some(TextStyle::size_color(13.0, theme.text.label_color))).insert(HudAlienCount); });
         ui.with_child(|c| { c.with_text("", Some(TextStyle::size_color(theme.text.label_size, Color::srgb(1.0, 0.8, 0.2)))).insert(HudBuildMode); });
         ui.with_child(|c| { c.with_text("", Some(TextStyle::size_color(13.0, Color::srgb(0.8, 0.8, 0.2)))).insert(HudBuildCost); });
-        ui.with_child(|c| { c.with_text("", Some(TextStyle::size_color(14.0, Color::srgb(0.6, 0.6, 0.6)))).insert(HudProjection); });
+        ui.with_child(|c| { c.with_text("", Some(TextStyle::size_color(12.0, Color::srgb(0.6, 0.6, 0.6)))).insert(HudProjection); });
 
         ui.build();
     }
@@ -736,20 +733,6 @@ pub fn update_build_cost_hud(
     } else {
         Color::srgb(1.0, 0.2, 0.2)
     });
-}
-
-pub fn update_ability_hud(
-    players: Query<(&crate::player::systems::abilities::SpecialAbility, &crate::player::systems::abilities::AbilityCooldown), With<crate::player::components::Player>>,
-    mut label: Query<&mut Text, With<HudAbility>>,
-) {
-    let Ok(mut t) = label.single_mut() else { return };
-    let Ok((ability, meter)) = players.single() else { return };
-    if meter.ready() {
-        **t = format!("[Q] {} - READY", ability.label());
-    } else {
-        let pct = (meter.charge * 100.0) as u32;
-        **t = format!("[Q] {} - {}%", ability.label(), pct);
-    }
 }
 
 pub fn update_coin_hud(
