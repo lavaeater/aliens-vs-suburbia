@@ -81,8 +81,9 @@ is the loadout; `1-4` / `Tab` / d-pad up-down switch via `SwitchWeapon`. **Switc
 despawn + fresh `PendingEquip`** (magazine carried across), not hide/show - the equip path
 resolves arm IK, sights and aimed-weapon parenting per gun and re-running it is far
 simpler than keeping that consistent for hidden guns. Defs: `Shotgun.ron`, `SMG.ron` added
-(hardpoints copied from the rifle - **tune in the playground**). Step 4 (projectile
-weapons) is phase 5.
+(hardpoints copied from the rifle - **tune in the playground**), plus `Grenade
+Launcher.ron`. Step 4 done: `WeaponProps.projectile: Option<ProjectileProps>` makes
+`shoot_weapons` launch a physics projectile instead of casting a ray.
 
 **Steps**
 
@@ -320,9 +321,13 @@ done 2026-09-20.
 
 ## Thrown weapons
 
-**Status: partial.** Unarmed players throw physics balls (`throwing_system.rs`,
-`collision_handling_system.rs` applies `Ballistic` damage on hit). `SpecialAbility::Molotov`
-spawns `FireField`s in a ring, but there is no thrown molotov and no grenade.
+**Status: done (2026-09-20)** except the arc preview. `src/general/projectiles.rs`:
+`Projectile { impact: Damage | Explode | Fire, fuse }`; `G` / L1 (`ControlCommand::
+ThrowSpecial`, `bindings.throw_special`) lobs a grenade (2.5 s fuse, bounces) or, once
+those are gone, a molotov (shatters on contact into a `FireField`) from the `AmmoPouch`
+(`Grenade` / `Molotov` kinds - no defs, the two are constants in `ThrowableKind::props`).
+`lob_velocity` is a fixed 45-degree arc landing `THROW_RANGE` (7) away. No aiming arc
+preview yet (step 4); `SpecialAbility::Molotov` kept as the ring-of-fire ultimate (step 5).
 
 **Steps**
 
@@ -342,8 +347,13 @@ spawns `FireField`s in a ring, but there is no thrown molotov and no grenade.
 
 ## Explosions
 
-**Status: missing.** `DamageKind::Explosive` is declared in `src/gore/components.rs` and
-`spawn_flash` in `abilities.rs` is a usable placeholder visual.
+**Status: done (2026-09-20).** `src/general/explosion.rs`: `Explode { position, props:
+ExplosionProps { radius, damage, impulse, fire }, source }`; `explosion_system` hits every
+`Health` in range with quadratic `falloff`, skips targets a wall shields (ray to
+`ImpassableAll`), shoves `LinearVelocity`, spawns a flash + debris, leaves fire for `fire:
+true`, and adds `CameraShake`. Writers: grenades / launchers (`projectiles`), Bombardment
+(now up to eight real blasts on the aliens nearest `CameraFocus`), and
+`TerrainProps.explodes_on_death` -> `ExplodesOnDeath` (`assets/defs/Barrel.ron`).
 
 **Steps**
 
@@ -565,7 +575,7 @@ Ordered so every phase ends in something playtestable with friends and family.
 | 2 | One damage pipeline | Damage (1-6), Health (1-2), Towers (1-2) | **Done 2026-09-20.** 249 tests green. |
 | 3 | Guns feel different | Ammo, Weapons (1-3, 5), Items (1-3), Pickups (1-2) | **Done 2026-09-20.** Shotgun/SMG hardpoints need playground tuning. |
 | 4 | Dying matters | Death (1-7), Loot Drops, HUD Information (4) | **Done 2026-09-20.** Tunables in `game-settings.ron`. |
-| 5 | Things go boom | Explosions, Thrown weapons, Weapons (4) | Grenades, molotovs, Bombardment rewrite. |
+| 5 | Things go boom | Explosions, Thrown weapons, Weapons (4) | **Done 2026-09-20.** `Grenade Launcher.ron` is the first projectile gun. |
 | 6 | Enemy variety | At least 5 enemies, Towers (3-5) | Def-driven spawning first, then archetypes. |
 | 7 | A campaign | Maps, Stories (1-3), Transitions, On-Screen Crawls | Five maps strung together with fades and crawls. |
 | 8 | Polish | Split screen, Filters or VFX, Game setup screen, At least 4 playable characters | Split screen only if phase 1's zoom-to-fit fails in testing. Character imports can happen any time. |

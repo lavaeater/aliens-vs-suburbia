@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use crate::general::explosion::ExplosionProps;
+use crate::general::projectiles::ProjectileProps;
 use crate::gore::components::DamageKind;
 
 fn default_scale() -> f32 { 1.0 }
@@ -56,11 +58,21 @@ pub struct TerrainProps {
     /// Loot table (file stem under `assets/loot`) rolled when this breaks, e.g. `"crate"`.
     #[serde(default)]
     pub loot_table: Option<String>,
+    /// Detonate when destroyed (barrels). Needs `health: Some(_)`.
+    #[serde(default)]
+    pub explodes_on_death: Option<ExplosionProps>,
 }
 
 impl Default for TerrainProps {
     fn default() -> Self {
-        Self { blocks_enemies: true, blocks_players: false, health: None, resistances: HashMap::new(), loot_table: None }
+        Self {
+            blocks_enemies: true,
+            blocks_players: false,
+            health: None,
+            resistances: HashMap::new(),
+            loot_table: None,
+            explodes_on_death: None,
+        }
     }
 }
 
@@ -229,6 +241,9 @@ pub struct WeaponProps {
     /// Seconds a reload takes.
     #[serde(default = "default_reload_secs")]
     pub reload_secs: f32,
+    /// Fire a physics projectile (grenade launcher, rocket) instead of a hitscan ray.
+    #[serde(default)]
+    pub projectile: Option<ProjectileProps>,
 }
 
 fn default_magazine() -> u32 { 12 }
@@ -247,6 +262,7 @@ impl Default for WeaponProps {
             ammo: AmmoKind::default(),
             magazine: default_magazine(),
             reload_secs: default_reload_secs(),
+            projectile: None,
         }
     }
 }

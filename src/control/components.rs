@@ -15,6 +15,8 @@ pub enum ControlCommand {
     Build,
     /// Held: revive a downed teammate (E / Circle).
     Interact,
+    /// One-shot: lob the current throwable (G / L1). Consumed by `throw_special`.
+    ThrowSpecial,
 }
 
 

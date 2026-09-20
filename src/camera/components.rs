@@ -42,6 +42,31 @@ impl Default for CameraFocus {
     }
 }
 
+/// Decaying screen shake, fed by explosions. `camera_follow` adds a small jitter scaled
+/// by `amplitude` to the camera position each frame.
+#[derive(Resource, Debug, Clone, Copy, Default)]
+pub struct CameraShake {
+    pub amplitude: f32,
+}
+
+impl CameraShake {
+    /// Add trauma; stacking blasts saturate rather than fly off.
+    pub fn add(&mut self, amount: f32) {
+        self.amplitude = (self.amplitude + amount).min(1.0);
+    }
+
+    /// Decay towards zero and return this frame's jitter offset.
+    pub fn tick(&mut self, dt: f32, t: f32) -> Vec3 {
+        if self.amplitude <= 0.0 {
+            return Vec3::ZERO;
+        }
+        // Trauma^2 for a snappy start and gentle tail (Squirrel Eiserloh's trick).
+        let strength = self.amplitude * self.amplitude * 0.35;
+        self.amplitude = (self.amplitude - dt * 1.8).max(0.0);
+        Vec3::new((t * 37.0).sin(), (t * 43.0).cos(), (t * 29.0).sin()) * strength
+    }
+}
+
 #[allow(dead_code)]
 #[derive(Component)]
 pub struct PixelCanvas;

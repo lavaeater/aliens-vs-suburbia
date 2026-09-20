@@ -227,6 +227,10 @@ pub fn gamepad_game_input(
             controller.triggers.remove(&ControlCommand::Interact);
         }
 
+        if gamepad.just_pressed(bindings.throw_special) {
+            controller.triggers.insert(ControlCommand::ThrowSpecial);
+        }
+
         // ── Weapons ─────────────────────────────────────────────────────────
         if gamepad.just_pressed(bindings.reload) {
             reload_mw.write(ReloadRequest(entity));

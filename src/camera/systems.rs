@@ -1,4 +1,4 @@
-use crate::camera::components::{CameraFocus, CameraOffset, CameraTarget, GameCamera, PixelCanvas};
+use crate::camera::components::{CameraFocus, CameraOffset, CameraShake, CameraTarget, GameCamera, PixelCanvas};
 use crate::player::components::PlayerDead;
 use crate::settings::resources::{GameSettings, ProjectionMode};
 use avian3d::interpolation::TransformInterpolation;
@@ -164,6 +164,7 @@ pub fn camera_follow(
     time: Res<Time>,
     settings: Res<GameSettings>,
     mut focus: ResMut<CameraFocus>,
+    mut shake: ResMut<CameraShake>,
     mut camera_query: Query<(&mut Transform, &mut Projection, &CameraOffset), With<GameCamera>>,
     targets: Query<(&Position, &CameraTarget, Has<PlayerDead>)>,
 ) {
@@ -193,10 +194,12 @@ pub fn camera_follow(
         focus.primed = true;
     }
     focus.radius = radius;
+    let jitter = shake.tick(time.delta_secs(), time.elapsed_secs());
 
     for (mut camera_transform, mut projection, offset) in camera_query.iter_mut() {
         camera_transform.translation = focus.center + offset.0 * focus.fit;
         camera_transform.look_at(focus.center, Vec3::Y);
+        camera_transform.translation += jitter;
         if let Projection::Orthographic(ortho) = &mut *projection {
             ortho.scale = settings.zoom * focus.fit;
         }

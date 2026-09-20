@@ -16,6 +16,7 @@ use crate::control::components::{CharacterControl, ControlCommand};
 use crate::game_state::score_keeper::GameTrackingEvent;
 use crate::general::components::CollisionLayer;
 use crate::general::damage::ApplyDamage;
+use crate::general::projectiles::{self, ProjectileProps};
 use crate::gore::components::{DamageKind, Ephemeral};
 use crate::player::components::{AutoAim, Player, PlayerDead};
 use crate::player::systems::equip::EquippedWeapon;
@@ -46,6 +47,8 @@ pub struct Weapon {
     pub reload_secs: f32,
     /// Counting down while a reload is in progress.
     pub reloading: Option<Timer>,
+    /// Set for launcher-type guns; `None` = hitscan.
+    pub projectile: Option<ProjectileProps>,
 }
 
 impl Weapon {
@@ -72,6 +75,7 @@ impl Weapon {
             rounds_in_mag: magazine,
             reload_secs: props.reload_secs.max(0.05),
             reloading: None,
+            projectile: props.projectile.clone(),
         }
     }
 
@@ -213,6 +217,13 @@ pub fn shoot_weapons(
         let aim_dir = aim.0.normalize_or(Vec3::X);
 
         game_mw.write(GameTrackingEvent::ShotFired(player));
+
+        // Launcher-type guns fire a physics projectile instead of a ray.
+        if let Some(props) = &weapon.projectile {
+            projectiles::launch(&mut commands, &mut meshes, &mut materials, player, origin, aim_dir * props.speed, props);
+            spawn_muzzle_flash(&mut commands, &mut meshes, &mut materials, origin);
+            continue;
+        }
 
         *rng_seed = rng_seed.wrapping_add(0x9E3779B9);
         let mut rng = Rng(*rng_seed ^ player.to_bits() as u32);

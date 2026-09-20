@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 use crate::alien::components::general::Alien;
 use crate::general::components::{Health, TouchDamage};
-use crate::general::damage::ApplyDamage;
-use crate::gore::components::DamageKind;
+use crate::camera::components::CameraFocus;
+use crate::general::explosion::{Explode, ExplosionProps};
 use crate::general::systems::coin_system::{Coin, TeamWallet};
 use crate::player::components::{Player, PlayerDead};
 
@@ -104,7 +104,8 @@ pub fn activate_ability(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut fire_mw: MessageWriter<crate::gore::fire::SpawnFire>,
-    mut damage_mw: MessageWriter<ApplyDamage>,
+    mut explode_mw: MessageWriter<Explode>,
+    focus: Res<CameraFocus>,
     ability_input: Res<AbilityInput>,
 ) {
     if !ability_input.pressed { return; }
@@ -115,13 +116,21 @@ pub fn activate_ability(
 
         match ability {
             SpecialAbility::Bombardment => {
-                // Deal 75 damage to every alien in view, through the damage pipeline so
-                // it bleeds, scores and counts like any other hit.
-                for (alien, alien_transform) in aliens.iter() {
-                    damage_mw.write(
-                        ApplyDamage::at(alien, 75, DamageKind::Explosive, alien_transform.translation + Vec3::Y * 0.4)
-                            .from(entity),
-                    );
+                // Shells land on up to eight aliens in view; each is a real explosion,
+                // so walls shield, bodies fly and nearby aliens share the blast.
+                let view = focus.radius + 10.0;
+                let mut in_view: Vec<Vec3> = aliens
+                    .iter()
+                    .map(|(_, t)| t.translation)
+                    .filter(|p| p.distance(focus.center) <= view)
+                    .collect();
+                in_view.sort_by(|a, b| a.distance_squared(focus.center).total_cmp(&b.distance_squared(focus.center)));
+                for target in in_view.into_iter().take(8) {
+                    explode_mw.write(Explode {
+                        position: target,
+                        props: ExplosionProps { radius: 2.5, damage: 75, impulse: 8.0, fire: false },
+                        source: Some(entity),
+                    });
                 }
                 // Spawn a visual flash effect.
                 spawn_flash(&mut commands, player_transform.translation, &mut meshes, &mut materials);

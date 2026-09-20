@@ -18,6 +18,8 @@ use crate::game_state::GameState;
 use crate::game_state::score_keeper::ScoreKeeperPlugin;
 use crate::facts::{FactsPlugin, FactsGameIntegrationPlugin};
 use crate::general::damage::{apply_damage, ApplyDamage, DamageRules};
+use crate::general::explosion::{explode_on_death, explosion_system, Explode};
+use crate::general::projectiles::{projectile_impacts, throw_special, tick_projectiles};
 use crate::general::systems::collision_handling_system::collision_handling_system;
 use crate::general::systems::health_monitor_system::health_monitor_system;
 use crate::general::systems::touch_damage_system::touch_damage_system;
@@ -61,6 +63,7 @@ impl Plugin for GamePlugin {
             .init_resource::<TeamWallet>()
             .init_resource::<DamageRules>()
             .add_message::<ApplyDamage>()
+            .add_message::<Explode>()
             .init_state::<GameState>()
             .add_plugins((
                 AssetsPlugin,
@@ -102,6 +105,14 @@ impl Plugin for GamePlugin {
                 Update,
                 (
                     throwing,
+                    throw_special,
+                    tick_projectiles,
+                    projectile_impacts,
+                    // Blasts write damage; barrels blow before the death path removes them.
+                    explosion_system.before(apply_damage),
+                    explode_on_death
+                        .before(health_monitor_system)
+                        .before(crate::gore::terrain::destroy_damaged_terrain),
                     collision_handling_system,
                     shoot_alien_system,
                     slow_alien_system,

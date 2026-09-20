@@ -79,6 +79,9 @@ pub fn keyboard_input(
                     KeyCode::KeyE => {
                         controller.triggers.insert(ControlCommand::Interact);
                     }
+                    KeyCode::KeyG => {
+                        controller.triggers.insert(ControlCommand::ThrowSpecial);
+                    }
                     KeyCode::Tab => {
                         switch_mw.write(SwitchWeapon { player: entity, select: WeaponSelect::Next });
                     }

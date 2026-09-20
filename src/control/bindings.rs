@@ -17,6 +17,7 @@
 //!     next_build_item: DPadRight,
 //!     prev_build_item: DPadLeft,
 //!     interact: East,
+//!     throw_special: LeftTrigger,
 //!     reload: RightTrigger,
 //!     next_weapon: DPadUp,
 //!     prev_weapon: DPadDown,
@@ -56,6 +57,9 @@ pub struct GamepadBindings {
     /// only applies in build mode).
     #[serde(default = "default_interact")]
     pub interact: GamepadButton,
+    /// Lob a grenade / molotov. Default L1.
+    #[serde(default = "default_throw_special")]
+    pub throw_special: GamepadButton,
     /// Reload the held gun. Default R1.
     #[serde(default = "default_reload")]
     pub reload: GamepadButton,
@@ -80,6 +84,7 @@ fn default_ability() -> GamepadButton { GamepadButton::North }
 fn default_next_build_item() -> GamepadButton { GamepadButton::DPadRight }
 fn default_prev_build_item() -> GamepadButton { GamepadButton::DPadLeft }
 fn default_interact() -> GamepadButton { GamepadButton::East }
+fn default_throw_special() -> GamepadButton { GamepadButton::LeftTrigger }
 fn default_reload() -> GamepadButton { GamepadButton::RightTrigger }
 fn default_next_weapon() -> GamepadButton { GamepadButton::DPadUp }
 fn default_prev_weapon() -> GamepadButton { GamepadButton::DPadDown }
@@ -97,6 +102,7 @@ impl Default for GamepadBindings {
             next_build_item: default_next_build_item(),
             prev_build_item: default_prev_build_item(),
             interact: default_interact(),
+            throw_special: default_throw_special(),
             reload: default_reload(),
             next_weapon: default_next_weapon(),
             prev_weapon: default_prev_weapon(),

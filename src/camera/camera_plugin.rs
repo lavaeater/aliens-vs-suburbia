@@ -2,7 +2,7 @@ use avian3d::prelude::{ PhysicsSystems};
 use bevy::app::{App, Plugin, PostUpdate, Update};
 use bevy::ecs::schedule::SystemCondition;
 use bevy::prelude::{in_state, resource_changed, IntoScheduleConfigs, OnEnter, ResMut};
-use crate::camera::components::CameraFocus;
+use crate::camera::components::{CameraFocus, CameraShake};
 use crate::camera::systems::{apply_camera_settings, camera_follow, spawn_camera};
 use crate::game_state::GameState;
 use crate::settings::resources::GameSettings;
@@ -12,6 +12,7 @@ pub struct StatefulCameraPlugin;
 impl Plugin for StatefulCameraPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<CameraFocus>()
+        .init_resource::<CameraShake>()
         .add_systems(
             OnEnter(GameState::InGame),
             (reset_focus, spawn_camera, apply_camera_settings).chain(),

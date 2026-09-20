@@ -26,6 +26,7 @@ use crate::general::components::{Health, Indestructible};
 use crate::general::damage::{DamageResistances, Faction};
 use crate::items::{Item, Pickup};
 use crate::loot::LootDrop;
+use crate::general::explosion::ExplodesOnDeath;
 use crate::assets::asset_definition::{AssetDefinition, ModelType};
 use crate::towers::components::{TowerSensor, TowerShooter};
 use crate::ui::spawn_ui::AddHealthBar;
@@ -391,6 +392,9 @@ pub fn map_loader(
                             }
                             if let Some(table) = &props.loot_table {
                                 ec.insert(LootDrop(table.clone()));
+                            }
+                            if let Some(blast) = &props.explodes_on_death {
+                                ec.insert(ExplodesOnDeath(blast.clone()));
                             }
                         }
                         None => { ec.insert(Indestructible); }
