@@ -12,7 +12,9 @@ pub struct InputKeyboard;
 pub enum ControlCommand {
     Throw,
     Jump,
-    Build
+    Build,
+    /// Held: revive a downed teammate (E / Circle).
+    Interact,
 }
 
 

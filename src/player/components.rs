@@ -54,7 +54,15 @@ pub struct PlayerDead {
     pub revive_progress: f32,
     /// Entity of the WorldFollower revive-progress bar, spawned on death.
     pub revive_bar: Option<Entity>,
+    /// Seconds left before the player bleeds out and has to respawn.
+    pub bleed_out: f32,
 }
+
+/// Respawns left this level. Reaching zero and bleeding out means the player is out.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Reflect)]
+#[reflect(Component)]
+#[type_path = "avs"]
+pub struct Lives(pub u32);
 
 /// Weapon mesh-node names present in the toon-shooter character models.
 /// Nodes matching any of these names are hidden on spawn and can be revealed

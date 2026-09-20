@@ -100,7 +100,7 @@ pub fn activate_ability(
     aliens: Query<(Entity, &Transform), With<Alien>>,
     mut all_healable: Query<&mut Health, (Without<Alien>, Without<PlayerDead>)>,
     mut wallet: Option<ResMut<TeamWallet>>,
-    mut coins: Query<(Entity, &Transform), With<Coin>>,
+    coins: Query<(Entity, &Coin)>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut fire_mw: MessageWriter<crate::gore::fire::SpawnFire>,
@@ -146,9 +146,9 @@ pub fn activate_ability(
             SpecialAbility::GoldDigger => {
                 // Teleport all coins to wallet immediately.
                 let mut collected = 0u32;
-                for (coin_entity, _) in coins.iter_mut() {
+                for (coin_entity, coin) in coins.iter() {
                     commands.entity(coin_entity).despawn();
-                    collected += 5;
+                    collected += coin.value;
                 }
                 if let Some(ref mut w) = wallet {
                     w.coins += collected;

@@ -10,7 +10,8 @@ use lava_ui_builder::{progress_bar, LavaTheme, ProgressBar, TextStyle, UIBuilder
 use crate::general::components::Health;
 use crate::items::ItemPickedUp;
 use crate::player::ammo::AmmoPouch;
-use crate::player::components::{Player, PlayerDead, PlayerSlot};
+use crate::player::components::{Lives, Player, PlayerDead, PlayerSlot};
+use crate::player::systems::death_revive::RespawnQueue;
 use crate::player::systems::abilities::{AbilityCooldown, SpecialAbility};
 use crate::player::systems::equip::EquippedWeapon;
 use crate::player::systems::shoot::Weapon;
@@ -168,11 +169,12 @@ pub fn ability_label(ability: &SpecialAbility, meter: &AbilityCooldown) -> Strin
 pub fn update_player_bar(
     roster: Option<Res<PlayerRoster>>,
     players: Query<
-        (&PlayerSlot, &Health, Option<&EquippedWeapon>, Option<&AmmoPouch>, Option<&SpecialAbility>, Option<&AbilityCooldown>, Has<PlayerDead>),
+        (&PlayerSlot, &Health, Option<&EquippedWeapon>, Option<&AmmoPouch>, Option<&SpecialAbility>, Option<&AbilityCooldown>, Option<&PlayerDead>, Option<&Lives>),
         With<Player>,
     >,
     weapon_q: Query<(&Name, &Weapon)>,
     toasts: Res<PickupToasts>,
+    respawns: Res<RespawnQueue>,
     mut slots: Query<(Entity, &PlayerHudSlot, &mut Node)>,
     children_q: Query<&Children>,
     mut names: Query<(&mut Text, &mut TextColor), (With<HudSlotName>, Without<HudSlotHealthText>, Without<HudSlotWeapon>, Without<HudSlotAmmo>, Without<HudSlotAbility>, Without<HudSlotPickup>)>,
@@ -184,14 +186,56 @@ pub fn update_player_bar(
     mut bars: Query<&mut ProgressBar, With<HudSlotHealthBar>>,
 ) {
     for (slot_entity, hud_slot, mut node) in slots.iter_mut() {
+        let name = slot_name(roster.as_deref(), hud_slot.0);
         let player = players.iter().find(|(s, ..)| s.0 == hud_slot.0);
-        let Some((_, health, equipped, pouch, ability, meter, dead)) = player else {
-            node.display = Display::None;
+
+        // Between bodies: the slot stays up with the countdown, or "OUT".
+        let Some((_, health, equipped, pouch, ability, meter, dead, lives)) = player else {
+            let line = if let Some(pending) = respawns.pending_for(hud_slot.0) {
+                let secs = pending.timer.remaining_secs().ceil() as u32;
+                let near = pending
+                    .anchor
+                    .map(|a| format!("near {}", slot_name(roster.as_deref(), a)))
+                    .unwrap_or_else(|| "where you fell".to_string());
+                Some(format!("{name} - RESPAWN {secs}s {near}"))
+            } else if respawns.is_out(hud_slot.0) {
+                Some(format!("{name} - OUT"))
+            } else {
+                None
+            };
+            let Some(line) = line else {
+                node.display = Display::None;
+                continue;
+            };
+            node.display = Display::Flex;
+            for entity in descendants(slot_entity, &children_q) {
+                if let Ok((mut t, mut color)) = names.get_mut(entity) {
+                    **t = line.clone();
+                    *color = TextColor(DIM_COLOR);
+                } else if let Ok(mut t) = health_texts.get_mut(entity) {
+                    **t = String::new();
+                } else if let Ok(mut t) = weapons.get_mut(entity) {
+                    **t = String::new();
+                } else if let Ok(mut t) = ammos.get_mut(entity) {
+                    **t = String::new();
+                } else if let Ok(mut t) = abilities.get_mut(entity) {
+                    **t = String::new();
+                } else if let Ok(mut t) = pickups.get_mut(entity) {
+                    **t = "[<] [>] pick who to spawn near".to_string();
+                } else if let Ok(mut bar) = bars.get_mut(entity) {
+                    bar.value = 0.0;
+                }
+            }
             continue;
         };
         node.display = Display::Flex;
 
-        let name = slot_name(roster.as_deref(), hud_slot.0);
+        let lives_text = lives.map(|l| format!("  x{}", l.0)).unwrap_or_default();
+        let name_line = match dead {
+            Some(d) => format!("{name} - DOWN {}s", d.bleed_out.max(0.0).ceil() as u32),
+            None => format!("{name}{lives_text}"),
+        };
+        let dead = dead.is_some();
         let held = equipped.and_then(|e| weapon_q.get(e.0).ok());
         let weapon = held
             .map(|(n, _)| n.as_str().to_string())
@@ -207,7 +251,7 @@ pub fn update_player_bar(
         // Walk this slot's subtree once and fill whatever labelled nodes it holds.
         for entity in descendants(slot_entity, &children_q) {
             if let Ok((mut t, mut color)) = names.get_mut(entity) {
-                **t = if dead { format!("{name} - DOWN") } else { name.clone() };
+                **t = name_line.clone();
                 *color = TextColor(if dead { DIM_COLOR } else { NAME_COLOR });
             } else if let Ok(mut t) = health_texts.get_mut(entity) {
                 **t = format!("{} / {}", health.health.max(0), health.max_health);

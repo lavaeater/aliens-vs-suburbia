@@ -8,7 +8,9 @@ use crate::assets::asset_definition::{AssetDefinition, ModelType};
 use crate::assets::assets_plugin::GameAssets;
 use crate::camera::components::CameraTarget;
 use crate::general::damage::Faction;
-use crate::player::components::PlayerSlot;
+use crate::player::components::{Lives, PlayerSlot};
+use crate::player::systems::death_revive::RespawnQueue;
+use crate::settings::resources::GameSettings;
 use crate::control::gamepad_input::WantsGamepad;
 use crate::player::ammo::AmmoPouch;
 use crate::player::systems::equip::PendingEquip;
@@ -51,24 +53,27 @@ pub fn spawn_players(
     model_settings: Res<ModelSettings>,
     asset_server: Res<AssetServer>,
     roster: Option<Res<crate::player_setup::state::PlayerRoster>>,
-    existing_players: Query<(), With<crate::player::components::Player>>,
+    existing_players: Query<&PlayerSlot, With<crate::player::components::Player>>,
     mut add_health_bar_mw: MessageWriter<AddHealthBar>,
     mut player_added_mw: MessageWriter<GameTrackingEvent>,
+    settings: Res<GameSettings>,
+    mut respawn_queue: ResMut<RespawnQueue>,
 ) {
     let max_players = roster.as_ref()
         .map(|r| r.def_paths.len().max(1))
         .unwrap_or(1);
-    let current_count = existing_players.iter().count();
-    let spawn_events: Vec<_> = spawn_player_event_reader.read()
-        .take(max_players.saturating_sub(current_count))
-        .collect();
+    let occupied: Vec<usize> = existing_players.iter().map(|s| s.0).collect();
+    let requests: Vec<SpawnPlayer> = spawn_player_event_reader.read().cloned().collect();
+    let assignments = assign_spawns(&requests, &occupied, max_players);
 
-    for (slot, spawn_player) in (current_count..).zip(spawn_events.iter()) {
+    for (slot, spawn_player) in assignments {
+        respawn_queue.started = true;
         let pos = Transform::from_xyz(
             spawn_player.position.x,
             spawn_player.position.y,
             spawn_player.position.z,
         );
+        let lives = Lives(spawn_player.lives.unwrap_or(settings.lives_per_player));
 
         // The roster def for this slot drives ability, throw rate, model and weapon.
         let roster_def = roster.as_ref()
@@ -159,7 +164,7 @@ pub fn spawn_players(
         };
 
         // Override ability from def / slot default.
-        commands.entity(player).insert((roster_ability, PlayerSlot(slot), CameraTarget::default(), Faction::Player, loadout, pouch));
+        commands.entity(player).insert((roster_ability, PlayerSlot(slot), CameraTarget::default(), Faction::Player, loadout, pouch, lives));
         // Torso twist: resolved to bone entities once the skeleton spawns. Defs that
         // don't list `aim_bones` fall back to the default mixamo spine chain.
         commands.entity(player).insert(PendingTorsoTwist::new(
@@ -185,6 +190,38 @@ pub fn spawn_players(
         add_health_bar_mw.write(AddHealthBar { entity: player, name: "PLAYER" });
         player_added_mw.write(GameTrackingEvent::PlayerAdded(player));
     }
+}
+
+/// Pair spawn requests with roster slots. Explicit slots (respawns) are honoured; the
+/// rest fill free slots in order. When the map has fewer spawn points than players, the
+/// points are reused so everyone still gets on the field.
+pub fn assign_spawns(requests: &[SpawnPlayer], occupied: &[usize], max_players: usize) -> Vec<(usize, SpawnPlayer)> {
+    let mut taken: Vec<usize> = occupied.to_vec();
+    let mut out = Vec::new();
+
+    for req in requests.iter().filter(|r| r.slot.is_some()) {
+        let slot = req.slot.unwrap();
+        if slot < max_players && !taken.contains(&slot) {
+            taken.push(slot);
+            out.push((slot, req.clone()));
+        }
+    }
+
+    let anonymous: Vec<&SpawnPlayer> = requests.iter().filter(|r| r.slot.is_none()).collect();
+    if anonymous.is_empty() {
+        return out;
+    }
+    let mut i = 0;
+    for slot in 0..max_players {
+        if taken.contains(&slot) {
+            continue;
+        }
+        let req = anonymous[i % anonymous.len()];
+        out.push((slot, req.clone()));
+        taken.push(slot);
+        i += 1;
+    }
+    out
 }
 
 /// Cycles through abilities by slot so each player starts with a different one.
@@ -240,5 +277,44 @@ pub fn apply_model_settings_live(
         transform.translation = Vec3::new(s.translation_x, s.translation_y, s.translation_z);
         transform.rotation = Quat::from_rotation_y(s.rotation_y_degrees.to_radians());
         transform.scale = Vec3::splat(s.scale);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::assign_spawns;
+    use crate::general::events::map_events::SpawnPlayer;
+    use bevy::math::Vec3;
+
+    fn at(x: f32) -> SpawnPlayer {
+        SpawnPlayer { position: Vec3::new(x, 0.0, 0.0), slot: None, lives: None }
+    }
+
+    #[test]
+    fn one_spawn_point_still_seats_every_player() {
+        let out = assign_spawns(&[at(1.0)], &[], 3);
+        assert_eq!(out.iter().map(|(s, _)| *s).collect::<Vec<_>>(), vec![0, 1, 2]);
+    }
+
+    #[test]
+    fn free_slots_are_filled_around_the_living() {
+        let out = assign_spawns(&[at(1.0), at(2.0)], &[1], 3);
+        assert_eq!(out.iter().map(|(s, _)| *s).collect::<Vec<_>>(), vec![0, 2]);
+        assert_eq!(out[1].1.position.x, 2.0, "second point goes to the second free slot");
+    }
+
+    #[test]
+    fn explicit_slots_win_and_never_double_seat() {
+        let respawn = SpawnPlayer { position: Vec3::ZERO, slot: Some(2), lives: Some(1) };
+        let out = assign_spawns(&[respawn.clone(), respawn], &[0], 4);
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0].0, 2);
+        assert_eq!(out[0].1.lives, Some(1));
+    }
+
+    #[test]
+    fn nothing_spawns_past_the_roster() {
+        let out = assign_spawns(&[at(1.0)], &[0], 1);
+        assert!(out.is_empty());
     }
 }

@@ -220,6 +220,13 @@ pub fn gamepad_game_input(
             }
         }
 
+        // ── Interact (revive) ───────────────────────────────────────────────
+        if gamepad.pressed(bindings.interact) {
+            controller.triggers.insert(ControlCommand::Interact);
+        } else {
+            controller.triggers.remove(&ControlCommand::Interact);
+        }
+
         // ── Weapons ─────────────────────────────────────────────────────────
         if gamepad.just_pressed(bindings.reload) {
             reload_mw.write(ReloadRequest(entity));

@@ -25,6 +25,7 @@ use crate::player::components::{IsBuildIndicator, IsObstacle};
 use crate::general::components::{Health, Indestructible};
 use crate::general::damage::{DamageResistances, Faction};
 use crate::items::{Item, Pickup};
+use crate::loot::LootDrop;
 use crate::assets::asset_definition::{AssetDefinition, ModelType};
 use crate::towers::components::{TowerSensor, TowerShooter};
 use crate::ui::spawn_ui::AddHealthBar;
@@ -184,6 +185,8 @@ pub fn map_loader(
                 if mf.contains(MapFeatures::PlayerSpawn) {
                     spawn_player_event_writer.write(SpawnPlayer {
                         position: (col, row).to_world_coords(&tile_defs) + Vec3::new(0.0, 1.0, 0.0),
+                        slot: None,
+                        lives: None,
                     });
                 }
             }
@@ -385,6 +388,9 @@ pub fn map_loader(
                             ec.insert(Health::full(hp_i));
                             if !props.resistances.is_empty() {
                                 ec.insert(DamageResistances(props.resistances.clone()));
+                            }
+                            if let Some(table) = &props.loot_table {
+                                ec.insert(LootDrop(table.clone()));
                             }
                         }
                         None => { ec.insert(Indestructible); }

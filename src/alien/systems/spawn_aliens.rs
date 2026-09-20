@@ -1,6 +1,7 @@
 
 use crate::alien::components::general::{Alien, AlienCounter};
 use crate::general::damage::Faction;
+use crate::loot::LootDrop;
 use crate::assets::assets_plugin::GameAssets;
 use crate::game_state::score_keeper::GameTrackingEvent;
 use crate::general::components::map_components::{AlienSpawnPoint, CoolDown};
@@ -102,6 +103,7 @@ pub fn spawn_aliens(
         let id = commands.spawn((
             Alien,
             Faction::Alien,
+            LootDrop("alien".to_string()),
             alien_transform,
             WorldAssetRoot(game_assets.alien_scene.clone()),
             // WindWakerShaderBuilder::default().build(),

@@ -337,7 +337,7 @@ pub fn swap_player_model(
     if let Some(position) = models.pending_position
         && players.is_empty()
     {
-        spawn_player_mw.write(SpawnPlayer { position });
+        spawn_player_mw.write(SpawnPlayer { position, slot: None, lives: None });
         models.pending_position = None;
     }
 }

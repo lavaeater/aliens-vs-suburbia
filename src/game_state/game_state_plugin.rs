@@ -21,7 +21,8 @@ use crate::general::damage::{apply_damage, ApplyDamage, DamageRules};
 use crate::general::systems::collision_handling_system::collision_handling_system;
 use crate::general::systems::health_monitor_system::health_monitor_system;
 use crate::general::systems::touch_damage_system::touch_damage_system;
-use crate::general::systems::coin_system::{coin_pickup_system, spawn_coins_on_alien_death, TeamWallet};
+use crate::general::systems::coin_system::TeamWallet;
+use crate::loot::{spawn_loot_on_death, LootPlugin};
 use crate::general::systems::death_effect_system::{spawn_death_effects, tick_death_effects};
 use crate::general::systems::lights_systems::spawn_lights;
 use crate::general::systems::throwing_system::throwing;
@@ -76,6 +77,7 @@ impl Plugin for GamePlugin {
                 ScoreKeeperPlugin,
                 GamepadPlugin,
                 ItemsPlugin,
+                LootPlugin,
             ))
             .add_plugins((
                 SettingsPlugin,
@@ -107,9 +109,10 @@ impl Plugin for GamePlugin {
                     touch_damage_system,
                     // Every damage writer above (and in the player/AI/gore plugins) funnels
                     // into this one; it must land before the death path reads Health.
-                    apply_damage.before(spawn_coins_on_alien_death).before(spawn_death_effects),
-                    spawn_coins_on_alien_death.before(health_monitor_system),
-                    coin_pickup_system,
+                    apply_damage.before(spawn_loot_on_death).before(spawn_death_effects),
+                    spawn_loot_on_death
+                        .before(health_monitor_system)
+                        .before(crate::gore::terrain::destroy_damaged_terrain),
                     spawn_death_effects.before(health_monitor_system),
                     health_monitor_system,
                     tick_death_effects,

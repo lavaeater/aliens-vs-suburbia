@@ -12,10 +12,17 @@ pub struct EnemyProps {
     /// Per-`DamageKind` multipliers (missing = 1.0, 0.0 = immune).
     #[serde(default)]
     pub resistances: HashMap<DamageKind, f32>,
+    /// Loot table (file stem under `assets/loot`) rolled on death. Default `"alien"`.
+    #[serde(default = "default_enemy_loot")]
+    pub loot_table: Option<String>,
 }
 
+fn default_enemy_loot() -> Option<String> { Some("alien".to_string()) }
+
 impl Default for EnemyProps {
-    fn default() -> Self { Self { health: 100.0, speed: 2.0, coin_drop: 5, resistances: HashMap::new() } }
+    fn default() -> Self {
+        Self { health: 100.0, speed: 2.0, coin_drop: 5, resistances: HashMap::new(), loot_table: default_enemy_loot() }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -46,10 +53,15 @@ pub struct TerrainProps {
     /// `health: Some(_)`.
     #[serde(default)]
     pub resistances: HashMap<DamageKind, f32>,
+    /// Loot table (file stem under `assets/loot`) rolled when this breaks, e.g. `"crate"`.
+    #[serde(default)]
+    pub loot_table: Option<String>,
 }
 
 impl Default for TerrainProps {
-    fn default() -> Self { Self { blocks_enemies: true, blocks_players: false, health: None, resistances: HashMap::new() } }
+    fn default() -> Self {
+        Self { blocks_enemies: true, blocks_players: false, health: None, resistances: HashMap::new(), loot_table: None }
+    }
 }
 
 /// What a gun consumes. Each kind is a separate pool in the player's `AmmoPouch`;

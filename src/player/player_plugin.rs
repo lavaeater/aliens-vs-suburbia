@@ -3,7 +3,7 @@ use crate::general::components::map_components::Floor;
 use crate::model_settings::plugin::PlayerAssetDef;
 use crate::player::components::{WeaponsHidden, WEAPON_NODES};
 use crate::player::systems::auto_aim::{auto_aim, debug_gizmos};
-use crate::player::systems::death_revive::{detect_player_death, player_revive_system};
+use crate::player::systems::death_revive::{check_team_wipe, choose_respawn_anchor, detect_player_death, player_revive_system, reset_respawn_queue, tick_bleed_out, tick_respawns, RespawnQueue};
 use crate::player::systems::spawn_players::{fix_scene_transform, spawn_players};
 use crate::player::systems::abilities::{AbilityInput, activate_ability, tick_ability_flash, tick_cooldowns, tick_whirlwind};
 use crate::player::systems::equip::{equip_pending_weapons, keep_weapons_snapped};
@@ -32,7 +32,9 @@ impl Plugin for PlayerPlugin {
         if self.with_debug {
             app.add_systems(Update, debug_gizmos.run_if(in_state(GameState::InGame)));
         }
-        app.add_message::<ReloadRequest>()
+        app.init_resource::<RespawnQueue>()
+            .add_systems(OnEnter(GameState::InGame), reset_respawn_queue)
+            .add_message::<ReloadRequest>()
             .add_message::<SwitchWeapon>()
             .init_resource::<AbilityInput>()
             .init_resource::<TorsoTwistEnabled>()
@@ -70,6 +72,10 @@ impl Plugin for PlayerPlugin {
                     hide_player_weapon_nodes,
                     detect_player_death,
                     player_revive_system,
+                    tick_bleed_out,
+                    choose_respawn_anchor,
+                    tick_respawns,
+                    check_team_wipe.run_if(crate::playground::state::in_normal_game),
                 )
                 .run_if(in_state(GameState::InGame)),
             )

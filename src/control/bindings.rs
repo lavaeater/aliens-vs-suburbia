@@ -16,6 +16,7 @@
 //!     ability: North,
 //!     next_build_item: DPadRight,
 //!     prev_build_item: DPadLeft,
+//!     interact: East,
 //!     reload: RightTrigger,
 //!     next_weapon: DPadUp,
 //!     prev_weapon: DPadDown,
@@ -51,6 +52,10 @@ pub struct GamepadBindings {
     pub next_build_item: GamepadButton,
     #[serde(default = "default_prev_build_item")]
     pub prev_build_item: GamepadButton,
+    /// Hold to revive a downed teammate. Default Circle (shared with exit-build, which
+    /// only applies in build mode).
+    #[serde(default = "default_interact")]
+    pub interact: GamepadButton,
     /// Reload the held gun. Default R1.
     #[serde(default = "default_reload")]
     pub reload: GamepadButton,
@@ -74,6 +79,7 @@ fn default_exit_build() -> GamepadButton { GamepadButton::East }
 fn default_ability() -> GamepadButton { GamepadButton::North }
 fn default_next_build_item() -> GamepadButton { GamepadButton::DPadRight }
 fn default_prev_build_item() -> GamepadButton { GamepadButton::DPadLeft }
+fn default_interact() -> GamepadButton { GamepadButton::East }
 fn default_reload() -> GamepadButton { GamepadButton::RightTrigger }
 fn default_next_weapon() -> GamepadButton { GamepadButton::DPadUp }
 fn default_prev_weapon() -> GamepadButton { GamepadButton::DPadDown }
@@ -90,6 +96,7 @@ impl Default for GamepadBindings {
             ability: default_ability(),
             next_build_item: default_next_build_item(),
             prev_build_item: default_prev_build_item(),
+            interact: default_interact(),
             reload: default_reload(),
             next_weapon: default_next_weapon(),
             prev_weapon: default_prev_weapon(),

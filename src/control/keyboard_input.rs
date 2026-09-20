@@ -76,6 +76,9 @@ pub fn keyboard_input(
                     KeyCode::KeyR => {
                         reload_mw.write(ReloadRequest(entity));
                     }
+                    KeyCode::KeyE => {
+                        controller.triggers.insert(ControlCommand::Interact);
+                    }
                     KeyCode::Tab => {
                         switch_mw.write(SwitchWeapon { player: entity, select: WeaponSelect::Next });
                     }
@@ -105,6 +108,9 @@ pub fn keyboard_input(
                     }
                     KeyCode::Space => {
                         controller.triggers.remove(&ControlCommand::Throw);
+                    }
+                    KeyCode::KeyE => {
+                        controller.triggers.remove(&ControlCommand::Interact);
                     }
                     KeyCode::ArrowLeft => {
                         change_build_indicator.write(ChangeBuildIndicator(entity, -1));

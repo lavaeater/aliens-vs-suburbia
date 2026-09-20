@@ -221,12 +221,17 @@ the alien instead of the killer so per-player kill score never counted, tower ba
 
 ## Death
 
-**Status: partial.** Down-but-not-out exists: `detect_player_death` inserts `PlayerDead`,
-`player_revive_system` lets a living player hold `E` for 3 s within 1.8 units
-(`src/player/systems/death_revive.rs`). No lives, no respawn, no drops, no gamepad revive,
-and if *all* players are down nothing ends the level.
+**Status: done (2026-09-20).** `src/player/systems/death_revive.rs`: downed ->
+`bleed_out_secs` (10) untended -> body despawns through the gore path, guns + ammo drop as
+pickups (`drop_on_death`), a life is spent (`Lives`, from `lives_per_player` = 3) and the
+slot enters `RespawnQueue`; after `respawn_secs` (5) it respawns via `SpawnPlayer { slot,
+lives }` - beside the teammate picked with left/right (arrows/A-D or d-pad) or on the
+nearest walkable tile with no alien within 4 units. Out of lives = "OUT"; everyone out =
+`LevelState::Failed`. Revive is `ControlCommand::Interact` (E / Circle). Respawned players
+get the def's default kit (their old one is on the floor where they fell). Also fixed:
+a map with fewer spawn points than players now reuses the points.
 
-**Steps**
+**Steps** (all done)
 
 1. `Lives(u32)` component, from `GameSettings.lives_per_player` (default 3). Decrement on
    death.
@@ -251,10 +256,13 @@ and if *all* players are down nothing ends the level.
 
 ## Loot Drops
 
-**Status: missing** (coins drop unconditionally in `spawn_coins_on_alien_death`). The Kotlin
-reference is `~/projects/java/turbo-rocket-ultra/core/src/main/kotlin/gamePlay/pickups/LootTable.kt`:
-weighted roll over `contents`, `count` rolls per evaluation, `always` entries, nested tables,
-and a `NullValue` entry for "nothing".
+**Status: done (2026-09-20)** except the editor dropdown (step 5). `src/loot/`: `LootEntry
+{ Nothing, Item, Table }`, `LootTable { rolls, always, entries }`, `LootTables` loaded from
+`assets/loot/*.ron` (`alien`, `small_ammo`, `crate` shipped), rolled by
+`spawn_loot_on_death` for anything with `LootDrop(name)` the frame its health hits zero.
+`EnemyProps.loot_table` (default `"alien"`) and `TerrainProps.loot_table` name the table;
+until phase 6 every alien gets `"alien"` at spawn. The old coin systems are gone: coins are
+`Item(Coins)` pickups with a `Coin` marker for GoldDigger (this also closed *Items* step 4).
 
 **Steps**
 
@@ -522,8 +530,7 @@ one row top-left. Lives (step 2) wait for *Death*.
 2. ~~Per slot: name, health, weapon, ammo, ability.~~ Done except lives (needs *Death*)
    and real ammo numbers (needs *Ammo*).
 3. ~~Move team-wide info to a slim top bar.~~ Done.
-4. Downed state: slot dims and shows "DOWN - 8s" from `PlayerDead.bleed_out`; respawning
-   shows the countdown and the chosen anchor player's name.
+4. ~~Downed state / respawn countdown / anchor name / lives.~~ Done 2026-09-20.
 5. ASCII only (Bevy default font).
 
 ---
@@ -557,7 +564,7 @@ Ordered so every phase ends in something playtestable with friends and family.
 | 1 | Co-op that does not fight the camera | Multiplayer (1-5), Gamepad support (1), HUD Information (1-3) | **Code done 2026-09-20.** Remaining: the gamepad test session (human). |
 | 2 | One damage pipeline | Damage (1-6), Health (1-2), Towers (1-2) | **Done 2026-09-20.** 249 tests green. |
 | 3 | Guns feel different | Ammo, Weapons (1-3, 5), Items (1-3), Pickups (1-2) | **Done 2026-09-20.** Shotgun/SMG hardpoints need playground tuning. |
-| 4 | Dying matters | Death (1-7), Loot Drops, HUD Information (4) | Lives, bleed-out, drops, respawn anchors. |
+| 4 | Dying matters | Death (1-7), Loot Drops, HUD Information (4) | **Done 2026-09-20.** Tunables in `game-settings.ron`. |
 | 5 | Things go boom | Explosions, Thrown weapons, Weapons (4) | Grenades, molotovs, Bombardment rewrite. |
 | 6 | Enemy variety | At least 5 enemies, Towers (3-5) | Def-driven spawning first, then archetypes. |
 | 7 | A campaign | Maps, Stories (1-3), Transitions, On-Screen Crawls | Five maps strung together with fades and crawls. |

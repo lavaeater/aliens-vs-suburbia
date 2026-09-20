@@ -12,7 +12,7 @@ use avian3d::prelude::Position;
 use crate::assets::asset_definition::{AssetDefinition, ItemKind, ModelType};
 use crate::game_state::GameState;
 use crate::general::components::Health;
-use crate::general::systems::coin_system::{PickupRange, TeamWallet};
+use crate::general::systems::coin_system::{Coin, PickupRange, TeamWallet};
 use crate::player::ammo::AmmoPouch;
 use crate::player::components::{Player, PlayerDead};
 use crate::player::systems::loadout::{SwitchWeapon, WeaponSelect, Weapons};
@@ -98,7 +98,11 @@ pub fn spawn_items(
             emissive: LinearRgba::from(color) * 0.6,
             ..default()
         });
-        commands.spawn((base, Mesh3d(mesh), MeshMaterial3d(mat)));
+        let mut ec = commands.spawn((base, Mesh3d(mesh), MeshMaterial3d(mat)));
+        // GoldDigger vacuums coins by this marker.
+        if let ItemKind::Coins { value } = &req.kind {
+            ec.insert(Coin { value: *value });
+        }
     }
 }
 
@@ -253,6 +257,47 @@ mod tests {
         assert_eq!(w.slots.len(), 1);
         // Carried already and the def does not exist: nothing to convert into ammo.
         assert_eq!(apply_pickup(&kind, &mut h, &mut p, &mut w, &mut t), PickupOutcome::Ignored);
+    }
+
+    fn pickup_app(player_x: f32, item_x: f32) -> (App, Entity) {
+        let mut app = App::new();
+        app.init_resource::<TeamWallet>();
+        app.add_message::<ItemPickedUp>();
+        app.add_message::<SwitchWeapon>();
+        app.add_systems(Update, pickup_items);
+        app.world_mut().spawn((
+            Player,
+            Position(Vec3::new(player_x, 0.0, 0.0)),
+            PickupRange(1.8),
+            Health::default(),
+            AmmoPouch::default(),
+            Weapons::default(),
+        ));
+        let item = app
+            .world_mut()
+            .spawn((
+                Item(ItemKind::Coins { value: 5 }),
+                Pickup::default(),
+                GlobalTransform::from_translation(Vec3::new(item_x, 0.0, 0.0)),
+            ))
+            .id();
+        (app, item)
+    }
+
+    #[test]
+    fn an_item_in_range_is_collected_and_despawned() {
+        let (mut app, item) = pickup_app(0.0, 1.0);
+        app.update();
+        assert_eq!(app.world().resource::<TeamWallet>().coins, 5);
+        assert!(app.world().get::<Item>(item).is_none(), "picked up");
+    }
+
+    #[test]
+    fn an_item_out_of_range_stays_put() {
+        let (mut app, item) = pickup_app(0.0, 10.0);
+        app.update();
+        assert_eq!(app.world().resource::<TeamWallet>().coins, 0);
+        assert!(app.world().get::<Item>(item).is_some());
     }
 
     #[test]

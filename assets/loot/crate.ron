@@ -1,0 +1,9 @@
+// A breakable crate: always something useful.
+(
+    rolls: 2,
+    entries: [
+        Table(weight: 60.0, table: "small_ammo"),
+        Item(weight: 25.0, kind: HealthPickup(amount: 50.0), count: 1),
+        Item(weight: 15.0, kind: Coins(value: 5), count: 3),
+    ],
+)

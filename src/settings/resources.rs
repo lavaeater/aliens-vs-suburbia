@@ -54,6 +54,19 @@ pub struct GameSettings {
     /// Exponential smoothing rate (per second) for the camera focus point and fit zoom.
     #[serde(default = "default_focus_smoothing")]
     pub focus_smoothing: f32,
+    // Death
+    /// Respawns each player gets per level before they are out.
+    #[serde(default = "default_lives_per_player")]
+    pub lives_per_player: u32,
+    /// Seconds a downed player can be revived before they bleed out.
+    #[serde(default = "default_bleed_out_secs")]
+    pub bleed_out_secs: f32,
+    /// Seconds between bleeding out and respawning.
+    #[serde(default = "default_respawn_secs")]
+    pub respawn_secs: f32,
+    /// Whether a bleed-out drops the player's guns and ammo where they fell.
+    #[serde(default = "default_drop_on_death")]
+    pub drop_on_death: bool,
 }
 
 fn default_projection() -> ProjectionMode { ProjectionMode::Orthographic }
@@ -71,6 +84,10 @@ fn default_persp_far() -> f32 { 1000.0 }
 fn default_fit_margin() -> f32 { 3.0 }
 fn default_fit_zoom_max() -> f32 { 3.0 }
 fn default_focus_smoothing() -> f32 { 6.0 }
+fn default_lives_per_player() -> u32 { 3 }
+fn default_bleed_out_secs() -> f32 { 10.0 }
+fn default_respawn_secs() -> f32 { 5.0 }
+fn default_drop_on_death() -> bool { true }
 
 impl Default for GameSettings {
     fn default() -> Self {
@@ -90,6 +107,10 @@ impl Default for GameSettings {
             fit_margin: default_fit_margin(),
             fit_zoom_max: default_fit_zoom_max(),
             focus_smoothing: default_focus_smoothing(),
+            lives_per_player: default_lives_per_player(),
+            bleed_out_secs: default_bleed_out_secs(),
+            respawn_secs: default_respawn_secs(),
+            drop_on_death: default_drop_on_death(),
         }
     }
 }
