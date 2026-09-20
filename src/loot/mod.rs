@@ -144,6 +144,7 @@ impl Plugin for LootPlugin {
 
 /// Roll and drop for anything with [`LootDrop`] the frame it dies. Must run before the
 /// systems that despawn dead things.
+#[allow(clippy::type_complexity)]
 pub fn spawn_loot_on_death(
     mut commands: Commands,
     tables: Res<LootTables>,
