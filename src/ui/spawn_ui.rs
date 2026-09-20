@@ -694,14 +694,21 @@ pub fn add_health_bar(mut commands: Commands, mut add_health_bar_mr: MessageRead
 }
 
 pub fn sync_health_bars(
-    mut bars: Query<(&WorldFollower, &mut ProgressBar)>,
+    mut bars: Query<(&WorldFollower, &mut ProgressBar, &mut Node)>,
     health_query: Query<&Health>,
 ) {
-    for (follower, mut bar) in bars.iter_mut() {
+    for (follower, mut bar, mut node) in bars.iter_mut() {
         if let Ok(health) = health_query.get(follower.target) {
             bar.value = (health.health as f32 / health.max_health as f32).clamp(0.0, 1.0);
+            // Wider bar for tankier things, so a brute reads as a brute.
+            node.width = Val::Px(health_bar_width(health.max_health));
         }
     }
+}
+
+/// 60 px at 100 hp, clamped so swarm critters and bosses both stay readable.
+pub fn health_bar_width(max_health: i32) -> f32 {
+    (60.0 * max_health as f32 / 100.0).clamp(36.0, 160.0)
 }
 
 pub fn update_build_cost_hud(
@@ -716,19 +723,18 @@ pub fn update_build_cost_hud(
         return;
     };
 
-    let cost = if let Some(ref defs) = model_defs {
-        let key = defs.build_indicators.get(indicator.1 as usize).copied().unwrap_or("");
-        match key {
-            "tower"      => 50u32,
-            "tower_slow" => 75,
-            "tower_area" => 100,
-            _            => 0,
-        }
-    } else { 0 };
+    let option = model_defs.as_ref().and_then(|defs| defs.build_indicators.get(indicator.1.max(0) as usize));
+    let cost = option.map(|o| o.cost).unwrap_or(0);
+    let name = option.map(|o| o.name.as_str()).unwrap_or("");
+    let description = option.and_then(|o| o.tower.as_ref()).map(|t| t.description.as_str()).unwrap_or("");
 
     let coins = wallet.as_ref().map(|w| w.coins).unwrap_or(0);
     let can_afford = coins >= cost;
-    **text = format!("Cost: {} coins  (have {})", cost, coins);
+    **text = if description.is_empty() {
+        format!("{name}: {cost} coins  (have {coins})")
+    } else {
+        format!("{name} - {description}: {cost} coins  (have {coins})")
+    };
     *color = TextColor(if can_afford {
         Color::srgb(0.8, 0.8, 0.2)
     } else {

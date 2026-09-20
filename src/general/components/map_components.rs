@@ -83,7 +83,11 @@ pub struct Wall {}
 pub struct AlienGoal;
 
 pub struct ModelDefinition {
+    /// Display name and scene path. The build menu reads these through `BuildOption`;
+    /// the table keeps them so the two stay side by side when edited.
+    #[allow(dead_code)]
     pub name: &'static str,
+    #[allow(dead_code)]
     pub file: &'static str,
     pub width: f32,
     pub height: f32,
@@ -106,7 +110,58 @@ impl ModelDefinition {
 #[derive(Resource)]
 pub struct MapModelDefinitions {
     pub definitions: HashMap<&'static str, ModelDefinition>,
-    pub build_indicators: Vec<&'static str>,
+    /// What the build menu cycles through, in order.
+    pub build_indicators: Vec<BuildOption>,
+}
+
+/// One entry in the build menu: either a built-in model from `definitions` or a
+/// `Tower`-typed def file. Towers carry their props so placement can read kind and cost.
+#[derive(Debug, Clone, PartialEq)]
+pub struct BuildOption {
+    pub name: String,
+    /// Scene asset path for the preview and the built thing.
+    pub file: String,
+    pub cost: u32,
+    /// Built-in model definition key (collider size, layers). `None` = a def-driven tower
+    /// using the standard tile-sized collider.
+    pub model_key: Option<&'static str>,
+    /// Model scale for def-driven entries (built-ins are authored at scale 1).
+    pub scale: f32,
+    pub tower: Option<crate::assets::asset_definition::TowerProps>,
+}
+
+impl BuildOption {
+    pub fn builtin(name: &str, model_key: &'static str, file: &str, cost: u32, tower: Option<crate::assets::asset_definition::TowerProps>) -> Self {
+        Self { name: name.to_string(), file: file.to_string(), cost, model_key: Some(model_key), scale: 1.0, tower }
+    }
+
+    /// Every `Tower`-typed def under `assets/defs`, sorted by name.
+    pub fn scan_defs(dir: &str) -> Vec<Self> {
+        use crate::assets::asset_definition::{AssetDefinition, ModelType};
+        let mut out = Vec::new();
+        if let Ok(entries) = std::fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().and_then(|e| e.to_str()) != Some("ron") {
+                    continue;
+                }
+                let Ok(text) = std::fs::read_to_string(&path) else { continue };
+                let Ok(def) = ron::from_str::<AssetDefinition>(&text) else { continue };
+                let ModelType::Tower(props) = &def.model_type else { continue };
+                let name = path.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+                out.push(Self {
+                    name,
+                    file: format!("{}#Scene0", def.model_path),
+                    cost: props.cost,
+                    model_key: None,
+                    scale: def.scale,
+                    tower: Some(props.clone()),
+                });
+            }
+        }
+        out.sort_by(|a, b| a.name.cmp(&b.name));
+        out
+    }
 }
 
 #[derive(Component, Debug, Reflect, Default)]

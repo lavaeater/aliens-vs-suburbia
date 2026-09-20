@@ -28,9 +28,8 @@ use crate::items::{Item, Pickup};
 use crate::loot::LootDrop;
 use crate::general::explosion::ExplodesOnDeath;
 use crate::assets::asset_definition::{AssetDefinition, ModelType};
-use crate::towers::components::{TowerSensor, TowerShooter};
+use crate::towers::systems::spawn_tower_sensor;
 use crate::ui::spawn_ui::AddHealthBar;
-use avian3d::prelude::Sensor;
 use crate::player::events::building_events::{AddTile, RemoveTile};
 
 
@@ -402,8 +401,6 @@ pub fn map_loader(
                 }
                 ModelType::Tower(props) => {
                     let hp = props.health as i32;
-                    let range = props.range;
-                    let fire_rate = props.fire_rate_per_minute;
                     let mut ec = commands.spawn((
                         Name::from(format!("Tower {}:{}", placement.x, placement.y)),
                         IsObstacle,
@@ -419,18 +416,7 @@ pub fn map_loader(
                     if !props.resistances.is_empty() {
                         ec.insert(DamageResistances(props.resistances.clone()));
                     }
-                    ec.with_children(|parent| {
-                        parent.spawn((
-                            Name::from("Sensor"),
-                            Collider::cylinder(0.5, range),
-                            CollisionLayers::new([CollisionLayer::Sensor], [CollisionLayer::Alien]),
-                            Position::from(pos),
-                            TowerSensor {},
-                            Faction::Structure,
-                            TowerShooter::new(fire_rate),
-                            Sensor,
-                        ));
-                    });
+                    spawn_tower_sensor(&mut ec, props, pos);
                     map_graph.path_finding_grid.remove_vertex(tile_coord);
                     add_health_bar_mw.write(AddHealthBar { entity: ec.id(), name: "TOWER" });
                 }
@@ -477,16 +463,7 @@ pub fn map_loader(
         if !map_file.waves.is_empty()
             && let Some(ref mut wm) = wave_manager
         {
-            use crate::alien::wave_manager::WaveDef as WmWave;
-            wm.waves = map_file.waves.iter().enumerate().map(|(i, w)| WmWave {
-                alien_count: w.count as i32,
-                spawn_rate_per_minute: w.spawn_rate_per_minute,
-                delay_before: if i == 0 { 5.0 } else { 15.0 },
-            }).collect();
-            wm.current_wave = 0;
-            wm.wave_timer = 5.0;
-            wm.spawning = false;
-            wm.spawned_this_wave = 0;
+            **wm = crate::alien::wave_manager::WaveManager::from_map(&map_file.waves);
         }
     }
 }

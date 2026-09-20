@@ -289,19 +289,22 @@ until phase 6 every alien gets `"alien"` at spawn. The old coin systems are gone
 
 ## Towers
 
-**Status: partial.** `TowerShooter`, `TowerSlow`, `TowerArea` exist (`src/towers/`) with
-`TowerProps { health, cost, range, damage, fire_rate_per_minute, resistances }`. Steps 1-2
-done 2026-09-20.
+**Status: partial.** Steps 1-4 done 2026-09-20. `TowerProps.kind: TowerKind { Shooter,
+Slow { factor }, Area { tick_hz } }` + `description`; `towers::systems::spawn_tower_sensor`
+builds the sensor from props for both map-placed and built towers. The build menu is
+`MapModelDefinitions.build_indicators: Vec<BuildOption>` - the three built-in towers plus
+every `Tower`-typed def under `assets/defs` (none shipped yet) - and the HUD shows
+`name - description: cost`. **Behaviour change:** sensors were `Collider::cylinder(0.5,
+range)`, i.e. a 0.5-radius pole with `range` as its height; they are now `cylinder(range,
+1.0)`, so towers actually reach `range`. Expect towers to feel much stronger; retune
+`range` in `map_plugins.rs` / the defs.
 
 **Steps**
 
 1. ~~Route tower damage through `ApplyDamage`.~~ Done; the tower (sensor) is the source.
 2. ~~Towers as `Faction::Structure`.~~ Done, on the root and the sensor child.
-3. Tower kind in the def: `TowerProps.kind: TowerKind { Shooter, Slow, Area }` plus kind-
-   specific numbers, so the map editor and build menu can list them from defs instead of
-   code.
-4. Build menu: cycle through all `Tower`-typed defs (build items already cycle with
-   arrows/d-pad) and show cost + a one-line description in the HUD.
+3. ~~Tower kind in the def.~~ Done.
+4. ~~Build menu from defs with cost + description.~~ Done.
 5. Evaluate in play: repair (spend coins to heal), sell (refund 50%), upgrade tiers - only
    after a playtest says towers matter.
 
@@ -450,10 +453,18 @@ untested in a real session.
 
 ## At least 5 enemies
 
-**Status: partial / human.** Four `Enemy` defs exist (`Alien`, `Blue Demon`, `Demon`,
-`Bunny`) but `spawn_aliens` (`src/alien/systems/spawn_aliens.rs`) always uses
-`game_assets.alien_scene` and `Health::default()`; `WaveDef.enemy_def` is stored but never
-read by the wave manager. So today every enemy is the same alien.
+**Status: done (2026-09-20)** - six archetypes as defs, pending playtest. `WaveDef.
+enemy_def` now flows `WaveManager::from_map` -> `SpawnAlien.enemy_def` -> `spawn_from_def`
+(`src/alien/systems/spawn_aliens.rs`), which applies `EnemyProps` (health, speed,
+`touch_dps`, `resistances`, `loot_table`, `attack`, `explodes_on_death`) and tags the alien
+with `EnemyDef`. Animation graphs are per def (`src/alien/enemy_defs.rs`,
+`build_enemy_anim_graphs`, sharing `build_graph` with the player). `attack: Ranged { .. }`
+adds `RangedAttack` (shoots the nearest player in range + line of sight while walking).
+Defs: Bunny = swarm, Alien = baseline, Blue Demon = ranged, Demon = brute (bullet
+resistant), Alpaking = exploder, Alpaking Evolved = boss. `level_01.ron` cycles through
+them. Health bars scale with `max_health`. A wave with no `enemy_def` still spawns the
+built-in quaternius alien. `prefers: Players | Goal | Structures` (step 3) is **not**
+done - it needs AI changes beyond flags.
 
 **Steps**
 
@@ -576,7 +587,7 @@ Ordered so every phase ends in something playtestable with friends and family.
 | 3 | Guns feel different | Ammo, Weapons (1-3, 5), Items (1-3), Pickups (1-2) | **Done 2026-09-20.** Shotgun/SMG hardpoints need playground tuning. |
 | 4 | Dying matters | Death (1-7), Loot Drops, HUD Information (4) | **Done 2026-09-20.** Tunables in `game-settings.ron`. |
 | 5 | Things go boom | Explosions, Thrown weapons, Weapons (4) | **Done 2026-09-20.** `Grenade Launcher.ron` is the first projectile gun. |
-| 6 | Enemy variety | At least 5 enemies, Towers (3-5) | Def-driven spawning first, then archetypes. |
+| 6 | Enemy variety | At least 5 enemies, Towers (3-5) | **Done 2026-09-20** except Towers step 5 (post-playtest) and enemy `prefers`. |
 | 7 | A campaign | Maps, Stories (1-3), Transitions, On-Screen Crawls | Five maps strung together with fades and crawls. |
 | 8 | Polish | Split screen, Filters or VFX, Game setup screen, At least 4 playable characters | Split screen only if phase 1's zoom-to-fit fails in testing. Character imports can happen any time. |
 

@@ -2,9 +2,13 @@
     model_path: "packs/monsters/Alpaking.glb",
     scale: 61.818398,
     model_type: Enemy((
-        health: 100.0,
-        speed: 2.0,
-        coin_drop: 5,
+        // Exploder: rushes in and blows up when killed - kill it at range.
+        health: 60.0,
+        speed: 2.8,
+        coin_drop: 4,
+        touch_dps: 5.0,
+        explodes_on_death: Some((radius: 2.5, damage: 60, impulse: 8.0, fire: false)),
+        loot_table: Some("alien"),
     )),
     hidden_nodes: [],
     animation_mapping: {

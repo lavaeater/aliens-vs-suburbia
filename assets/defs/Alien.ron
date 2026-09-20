@@ -2,9 +2,12 @@
     model_path: "packs/monsters/Alien.glb",
     scale: 61.818398,
     model_type: Enemy((
+        // The baseline alien.
         health: 100.0,
         speed: 2.0,
         coin_drop: 5,
+        touch_dps: 10.0,
+        loot_table: Some("alien"),
     )),
     hidden_nodes: [],
     animation_mapping: {

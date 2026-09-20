@@ -18,5 +18,7 @@ pub struct SpawnPlayer {
 
 #[derive(Message, Clone)]
 pub struct SpawnAlien {
+    /// Enemy def to spawn (`assets/defs/<name>.ron`). `None` = the built-in alien.
+    pub enemy_def: Option<String>,
     pub position: Vec3,
 }

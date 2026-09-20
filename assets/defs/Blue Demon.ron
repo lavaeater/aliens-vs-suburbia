@@ -2,9 +2,13 @@
     model_path: "packs/monsters/Blue Demon.glb",
     scale: 25.040104,
     model_type: Enemy((
-        health: 100.0,
-        speed: 2.0,
-        coin_drop: 5,
+        // Ranged: hangs back and shoots.
+        health: 80.0,
+        speed: 1.8,
+        coin_drop: 6,
+        touch_dps: 8.0,
+        attack: Ranged(damage: 8, range: 9.0, fire_rate_per_minute: 30.0),
+        loot_table: Some("alien"),
     )),
     hidden_nodes: [],
     animation_mapping: {

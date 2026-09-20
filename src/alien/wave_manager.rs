@@ -10,6 +10,14 @@ pub struct WaveDef {
     pub spawn_rate_per_minute: f32,
     /// Seconds to wait after the previous wave (or level start) before this wave begins.
     pub delay_before: f32,
+    /// Enemy def path for this wave. Empty = the built-in alien.
+    pub enemy_def: String,
+}
+
+impl WaveDef {
+    pub fn enemy_def(&self) -> Option<String> {
+        (!self.enemy_def.is_empty()).then(|| self.enemy_def.clone())
+    }
 }
 
 #[derive(Resource)]
@@ -28,9 +36,9 @@ impl Default for WaveManager {
     fn default() -> Self {
         Self {
             waves: vec![
-                WaveDef { alien_count: 1, spawn_rate_per_minute:  6.0, delay_before:  60.0 },
-                WaveDef { alien_count: 15, spawn_rate_per_minute:  9.0, delay_before: 30.0 },
-                WaveDef { alien_count: 20, spawn_rate_per_minute: 12.0, delay_before: 20.0 },
+                WaveDef { alien_count: 1, spawn_rate_per_minute:  6.0, delay_before:  60.0, enemy_def: String::new() },
+                WaveDef { alien_count: 15, spawn_rate_per_minute:  9.0, delay_before: 30.0, enemy_def: String::new() },
+                WaveDef { alien_count: 20, spawn_rate_per_minute: 12.0, delay_before: 20.0, enemy_def: String::new() },
             ],
             current_wave: 0,
             wave_timer: 60.0, // initial countdown before wave 1
@@ -41,6 +49,29 @@ impl Default for WaveManager {
 }
 
 impl WaveManager {
+    /// Waves authored in a map file. The first wave starts after `first_delay` seconds,
+    /// later ones `between` seconds after the previous wave is cleared.
+    pub fn from_map(waves: &[crate::general::components::map_components::WaveDef]) -> Self {
+        const FIRST_DELAY: f32 = 5.0;
+        const BETWEEN: f32 = 15.0;
+        Self {
+            waves: waves
+                .iter()
+                .enumerate()
+                .map(|(i, w)| WaveDef {
+                    alien_count: w.count as i32,
+                    spawn_rate_per_minute: w.spawn_rate_per_minute,
+                    delay_before: if i == 0 { FIRST_DELAY } else { BETWEEN },
+                    enemy_def: w.enemy_def.clone(),
+                })
+                .collect(),
+            current_wave: 0,
+            wave_timer: FIRST_DELAY,
+            spawning: false,
+            spawned_this_wave: 0,
+        }
+    }
+
     pub fn total_aliens(&self) -> i32 {
         self.waves.iter().map(|w| w.alien_count).sum()
     }

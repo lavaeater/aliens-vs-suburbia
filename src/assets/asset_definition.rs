@@ -17,13 +17,41 @@ pub struct EnemyProps {
     /// Loot table (file stem under `assets/loot`) rolled on death. Default `"alien"`.
     #[serde(default = "default_enemy_loot")]
     pub loot_table: Option<String>,
+    /// Damage per second while overlapping a player.
+    #[serde(default = "default_touch_dps")]
+    pub touch_dps: f32,
+    #[serde(default)]
+    pub attack: EnemyAttack,
+    /// Detonate on death (exploders).
+    #[serde(default)]
+    pub explodes_on_death: Option<ExplosionProps>,
+}
+
+/// How an enemy hurts players beyond bumping into them.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub enum EnemyAttack {
+    /// Touch damage only.
+    #[default]
+    Melee,
+    /// Shoots the nearest player in range and line of sight while walking.
+    Ranged { damage: i32, range: f32, fire_rate_per_minute: f32 },
 }
 
 fn default_enemy_loot() -> Option<String> { Some("alien".to_string()) }
+fn default_touch_dps() -> f32 { 10.0 }
 
 impl Default for EnemyProps {
     fn default() -> Self {
-        Self { health: 100.0, speed: 2.0, coin_drop: 5, resistances: HashMap::new(), loot_table: default_enemy_loot() }
+        Self {
+            health: 100.0,
+            speed: 2.0,
+            coin_drop: 5,
+            resistances: HashMap::new(),
+            loot_table: default_enemy_loot(),
+            touch_dps: default_touch_dps(),
+            attack: EnemyAttack::default(),
+            explodes_on_death: None,
+        }
     }
 }
 
@@ -37,11 +65,37 @@ pub struct TowerProps {
     /// Per-`DamageKind` multipliers (missing = 1.0, 0.0 = immune).
     #[serde(default)]
     pub resistances: HashMap<DamageKind, f32>,
+    #[serde(default)]
+    pub kind: TowerKind,
+    /// One line for the build menu.
+    #[serde(default)]
+    pub description: String,
+}
+
+/// What a tower does to aliens inside its `range`.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub enum TowerKind {
+    /// Lobs balls at the nearest alien, `fire_rate_per_minute` times a minute.
+    #[default]
+    Shooter,
+    /// Multiplies alien velocity by `factor` while inside.
+    Slow { factor: f32 },
+    /// Burns everything inside for `damage` per second, applied `tick_hz` times a second.
+    Area { tick_hz: f32 },
 }
 
 impl Default for TowerProps {
     fn default() -> Self {
-        Self { health: 200.0, cost: 50, range: 4.0, damage: 20.0, fire_rate_per_minute: 30.0, resistances: HashMap::new() }
+        Self {
+            health: 200.0,
+            cost: 50,
+            range: 4.0,
+            damage: 20.0,
+            fire_rate_per_minute: 30.0,
+            resistances: HashMap::new(),
+            kind: TowerKind::default(),
+            description: String::new(),
+        }
     }
 }
 

@@ -2,9 +2,12 @@
     model_path: "packs/monsters/Bunny.glb",
     scale: 22.23718,
     model_type: Enemy((
-        health: 100.0,
-        speed: 2.0,
-        coin_drop: 5,
+        // Swarm: fast, fragile, many.
+        health: 30.0,
+        speed: 3.5,
+        coin_drop: 2,
+        touch_dps: 5.0,
+        loot_table: Some("alien"),
     )),
     hidden_nodes: [],
     animation_mapping: {

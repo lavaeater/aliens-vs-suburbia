@@ -3,8 +3,7 @@ use bevy::log::info;
 use bevy::math::{Vec2, Vec3, Vec3Swizzles};
 use bevy::prelude::{AlphaMode, Assets, Children, Color, Commands, Component, Entity, MeshMaterial3d, MessageReader, MessageWriter, Name, Query, Res, ResMut, StandardMaterial, With, Without};
 use bevy::world_serialization::{WorldAssetRoot, WorldInstance, WorldInstanceSpawner};
-use avian3d::prelude::{Collider, CollisionLayers, LockedAxes, Position, RigidBody, Rotation, Sensor};
-use bevy_wind_waker_shader::WindWakerShaderBuilder;
+use avian3d::prelude::{CollisionLayers, LockedAxes, Position, RigidBody, Rotation};
 use crate::control::components::{ControlCommand, CharacterControl};
 use crate::general::components::{CollisionLayer, Health};
 use crate::general::damage::Faction;
@@ -14,8 +13,8 @@ use crate::general::systems::coin_system::TeamWallet;
 use crate::general::systems::map_systems::TileDefinitions;
 use crate::player::components::{BuildingIndicator, IsBuildIndicator, IsBuilding, IsObstacle};
 use crate::player::events::building_events::{ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode, RemoveTile};
-use crate::towers::components::{TowerArea, TowerSensor, TowerShooter, TowerSlow};
 use crate::towers::events::BuildTower;
+use crate::towers::systems::spawn_tower_sensor;
 use crate::ui::spawn_ui::AddHealthBar;
 
 /// Tracks materials cloned from the indicator model's scene children so they can be tinted.
@@ -30,6 +29,7 @@ pub fn enter_build_mode(
     mut builder_query: Query<(&CurrentTile, &Rotation), Without<IsBuilding>>,
     asset_server: Res<AssetServer>,
     tile_definitions: Res<TileDefinitions>,
+    model_defs: Res<MapModelDefinitions>,
     mut commands: Commands,
 ) {
     for start_event in enter_build_mode_evr.read() {
@@ -39,11 +39,13 @@ pub fn enter_build_mode(
                     .get_neighbour(current_tile.tile)
                     .to_world_coords(&tile_definitions) + Vec3::new(0.0, -tile_definitions.wall_height * 2.0, 0.0);
 
+            let first = model_defs.build_indicators.first();
             let building_indicator = spawn_building_indicator(
                 &mut commands,
                 &asset_server,
                 &desired_neighbour_pos,
-                "map/obstacle.glb#Scene0",
+                first.map(|o| o.file.as_str()).unwrap_or("map/obstacle.glb#Scene0"),
+                first.map(|o| o.scale).unwrap_or(1.0),
                 &tile_definitions,
             );
             commands.entity(start_event.0).insert(BuildingIndicator(building_indicator, 0));
@@ -56,14 +58,16 @@ pub fn spawn_building_indicator(
     commands: &mut Commands,
     asset_server: &Res<AssetServer>,
     position: &Vec3,
-    file: &'static str,
+    file: &str,
+    scale: f32,
     tile_definitions: &TileDefinitions,
 ) -> Entity {
     commands.spawn((
         Name::from("BuildingIndicator"),
         IsBuildIndicator {},
         BuildIndicatorTint::default(),
-        WorldAssetRoot(asset_server.load(file)),
+        bevy::prelude::Transform::from_scale(Vec3::splat(scale)),
+        WorldAssetRoot(asset_server.load(file.to_string())),
         RigidBody::Kinematic,
         tile_definitions.create_collider(16.0, 4.0, 16.0),
         Position::from(*position),
@@ -150,15 +154,6 @@ pub fn exit_build_mode(
 }
 
 /// Tower costs by build indicator key.
-pub(crate) fn tower_cost(key: &str) -> u32 {
-    match key {
-        "tower"      => 50,
-        "tower_slow" => 75,
-        "tower_area" => 100,
-        _            => 0,
-    }
-}
-
 #[allow(clippy::too_many_arguments)]
 pub fn execute_build(
     mut execute_evr: MessageReader<ExecuteBuild>,
@@ -175,9 +170,9 @@ pub fn execute_build(
             && let Ok((position, current_tile)) = building_indicator.get(build_indicator.0)
                 && !map_graph.occupied_tiles.contains(&current_tile.tile) {
 
-                    let current_index = build_indicator.1;
-                    let current_key = model_defs.build_indicators[current_index as usize];
-                    let cost = tower_cost(current_key);
+                    let current_index = build_indicator.1.max(0) as usize;
+                    let Some(option) = model_defs.build_indicators.get(current_index) else { continue };
+                    let cost = option.cost;
 
                     // Block build if insufficient funds.
                     if let Some(ref mut w) = wallet {
@@ -187,7 +182,7 @@ pub fn execute_build(
 
                     build_tower_mw.write(BuildTower {
                         position: position.0,
-                        model_definition_key: current_key,
+                        option: current_index,
                     });
 
                     remove_tile_mw.write(RemoveTile(current_tile.tile));
@@ -230,8 +225,8 @@ pub fn change_build_indicator(
             } else {
                 building_indicator.1
             };
-            let indicator_key = model_defs.build_indicators[building_indicator.1 as usize];
-            info!("Changing indicator to {}", indicator_key);
+            let Some(option) = model_defs.build_indicators.get(building_indicator.1 as usize) else { continue };
+            info!("Changing indicator to {}", option.name);
 
             let p = position.0;
             commands.entity(building_indicator.0).despawn();
@@ -239,11 +234,8 @@ pub fn change_build_indicator(
                 &mut commands,
                 &asset_server,
                 &p,
-                model_defs
-                    .definitions
-                    .get(indicator_key)
-                    .unwrap()
-                    .file,
+                &option.file,
+                option.scale,
                 &tile_defs,
             );
         }
@@ -309,67 +301,35 @@ pub fn build_tower_system(
     tile_defs: Res<TileDefinitions>,
 ) {
     for build_tower in build_tower_mr.read() {
-        let model_def = model_defs.definitions.get(build_tower.model_definition_key).unwrap();
+        let Some(option) = model_defs.build_indicators.get(build_tower.option) else { continue };
+        let builtin = option.model_key.and_then(|k| model_defs.definitions.get(k));
+
+        let health = option.tower.as_ref().map(|t| t.health as i32).unwrap_or(100);
         let mut ec = commands.spawn((
-            Name::from(model_def.name),
+            Name::from(option.name.clone()),
             IsObstacle {},
             Faction::Structure,
-            WorldAssetRoot(asset_server.load(model_def.file)),
-            model_def.rigid_body,
-            tile_defs.create_collider(model_def.width, model_def.height, model_def.depth),
+            WorldAssetRoot(asset_server.load(option.file.clone())),
+            bevy::prelude::Transform::from_scale(Vec3::splat(option.scale)),
+            builtin.map(|d| d.rigid_body).unwrap_or(RigidBody::Kinematic),
+            match builtin {
+                Some(d) => tile_defs.create_collider(d.width, d.height, d.depth),
+                None => tile_defs.create_collider(16.0, 8.0, 16.0),
+            },
             Position::from(build_tower.position),
-            model_def.create_collision_layers(),
+            match builtin {
+                Some(d) => d.create_collision_layers(),
+                None => CollisionLayers::new([CollisionLayer::ImpassableAll], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
+            },
             CurrentTile::default(),
-            Health::default(),
+            Health::full(health),
         ));
 
-        match build_tower.model_definition_key {
-            "tower" => {
-                ec.with_children(|parent| {
-                    parent.spawn((
-                        Name::from("Sensor"),
-                        Collider::cylinder(0.5, 3.0),
-                        CollisionLayers::new([CollisionLayer::Sensor], [CollisionLayer::Alien]),
-                        Position::from(build_tower.position),
-                        TowerSensor {},
-                        Faction::Structure,
-                        TowerShooter::new(20.0),
-                        Sensor,
-                        WindWakerShaderBuilder::default().build(),
-                    ));
-                });
+        if let Some(props) = &option.tower {
+            if !props.resistances.is_empty() {
+                ec.insert(crate::general::damage::DamageResistances(props.resistances.clone()));
             }
-            "tower_slow" => {
-                ec.with_children(|parent| {
-                    parent.spawn((
-                        Name::from("Sensor"),
-                        Collider::cylinder(0.5, 2.5),
-                        CollisionLayers::new([CollisionLayer::Sensor], [CollisionLayer::Alien]),
-                        Position::from(build_tower.position),
-                        TowerSensor {},
-                        Faction::Structure,
-                        TowerSlow { factor: 0.35 },
-                        Sensor,
-                        WindWakerShaderBuilder::default().build(),
-                    ));
-                });
-            }
-            "tower_area" => {
-                ec.with_children(|parent| {
-                    parent.spawn((
-                        Name::from("Sensor"),
-                        Collider::cylinder(0.5, 2.0),
-                        CollisionLayers::new([CollisionLayer::Sensor], [CollisionLayer::Alien]),
-                        Position::from(build_tower.position),
-                        TowerSensor {},
-                        Faction::Structure,
-                        TowerArea::new(15.0, 4.0),
-                        Sensor,
-                        WindWakerShaderBuilder::default().build(),
-                    ));
-                });
-            }
-            _ => {}
+            spawn_tower_sensor(&mut ec, props, build_tower.position);
         }
 
         let id = ec.id();
@@ -381,31 +341,12 @@ pub fn build_tower_system(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::tower_cost;
-
-    #[test]
-    fn known_tower_keys_have_their_prices() {
-        assert_eq!(tower_cost("tower"), 50);
-        assert_eq!(tower_cost("tower_slow"), 75);
-        assert_eq!(tower_cost("tower_area"), 100);
-    }
-
-    #[test]
-    fn an_unknown_key_is_free() {
-        // Build indicators that aren't towers (e.g. a plain tile) cost nothing.
-        assert_eq!(tower_cost("not_a_tower"), 0);
-        assert_eq!(tower_cost(""), 0);
-    }
-}
-
-#[cfg(test)]
 mod execute_build_tests {
     use super::execute_build;
     use avian3d::prelude::Position;
     use bevy::prelude::*;
     use std::collections::{HashMap, HashSet};
-    use crate::general::components::map_components::{CurrentTile, MapModelDefinitions};
+    use crate::general::components::map_components::{BuildOption, CurrentTile, MapModelDefinitions};
     use crate::general::resources::map_resources::MapGraph;
     use crate::general::systems::coin_system::TeamWallet;
     use crate::player::components::{BuildingIndicator, IsBuildIndicator};
@@ -431,7 +372,7 @@ mod execute_build_tests {
         app.insert_resource(TeamWallet { coins });
         app.insert_resource(MapModelDefinitions {
             definitions: HashMap::new(),
-            build_indicators: vec!["tower"], // cost 50
+            build_indicators: vec![BuildOption::builtin("Ball Tower", "tower", "map/tower_balls.glb#Scene0", 50, None)],
         });
         app.insert_resource(MapGraph {
             path_finding_grid: pathfinding::grid::Grid::new(8, 8),

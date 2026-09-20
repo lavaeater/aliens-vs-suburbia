@@ -448,20 +448,11 @@
     decorations: [],
     placements: [],
     waves: [
-        (
-            enemy_def: "assets/defs/Alien.ron",
-            count: 5,
-            spawn_rate_per_minute: 10.0,
-        ),
-        (
-            enemy_def: "assets/defs/Alien.ron",
-            count: 15,
-            spawn_rate_per_minute: 15.0,
-        ),
-        (
-            enemy_def: "assets/defs/Alien.ron",
-            count: 25,
-            spawn_rate_per_minute: 20.0,
-        ),
+        (enemy_def: "assets/defs/Alien.ron", count: 5, spawn_rate_per_minute: 10.0),
+        (enemy_def: "assets/defs/Bunny.ron", count: 12, spawn_rate_per_minute: 30.0),
+        (enemy_def: "assets/defs/Alien.ron", count: 10, spawn_rate_per_minute: 15.0),
+        (enemy_def: "assets/defs/Blue Demon.ron", count: 6, spawn_rate_per_minute: 12.0),
+        (enemy_def: "assets/defs/Alpaking.ron", count: 8, spawn_rate_per_minute: 16.0),
+        (enemy_def: "assets/defs/Demon-LnfIziKv4o.ron", count: 3, spawn_rate_per_minute: 6.0),
     ],
 )

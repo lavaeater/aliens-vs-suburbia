@@ -4,7 +4,7 @@ use bevy::gltf::{Gltf, GltfAssetLabel};
 use bevy::prelude::*;
 use bevy::prelude::IntoScheduleConfigs;
 use crate::animation::animation_plugin::{
-    AnimationStore, ANIM_KEYS, clip_matches,
+    AnimationKey, AnimationStore, ANIM_KEYS, clip_matches,
     get_child_with_component_recursive,
 };
 use crate::assets::asset_definition::AssetDefinition;
@@ -219,6 +219,39 @@ fn build_player_anim_graph(
 
     *last_sig = sig;
 
+    let (graph, anims) = build_graph(def, Some(&model_settings.anim_mapping), gltf, &extra_gltfs);
+
+    let graph_handle = animation_graphs.add(graph);
+    store.anims.insert("players".to_string(), anims);
+    store.graphs.insert("players".to_string(), graph_handle.clone());
+
+    // Update AnimationGraphHandle + resume current anim on existing player entities.
+    for (player_entity, anim_key) in player_query.iter() {
+        let Some(anim_entity) = get_child_with_component_recursive(
+            player_entity, &child_query, &anim_player_query,
+        ) else { continue };
+        let Ok(mut anim_player) = anim_player_query.get_mut(anim_entity) else { continue };
+        // `try_insert`: a rebuild can land on the frame a character is being swapped out.
+        commands.entity(anim_entity).try_insert(AnimationGraphHandle(graph_handle.clone()));
+        if let Some(&idx) = store.anims.get("players").and_then(|m| m.get(&anim_key.key)) {
+            let active = anim_player.play(idx);
+            if anim_key.key.loops() {
+                active.repeat();
+            }
+        }
+    }
+}
+
+
+/// Build an animation graph for a model from its def (clip tags + bindings, legacy
+/// mapping), an optional `ModelSettings` mapping override, the model's own GLTF and any
+/// loaded external animation sources. Shared by the player and the def-driven enemies.
+pub fn build_graph(
+    def: Option<&AssetDefinition>,
+    settings_mapping: Option<&crate::model_settings::resources::AnimMapping>,
+    gltf: &Gltf,
+    extra_gltfs: &[(&String, &Gltf)],
+) -> (AnimationGraph, std::collections::HashMap<AnimationKey, AnimationNodeIndex>) {
     let mut graph = AnimationGraph::new();
     let mut anims = std::collections::HashMap::new();
 
@@ -229,7 +262,7 @@ fn build_player_anim_graph(
         let def_mapped = def
             .and_then(|d| d.resolved_clip(key.default_search()))
             .unwrap_or_default();
-        let settings_mapped = model_settings.anim_mapping.get(key);
+        let settings_mapped = settings_mapping.map(|m| m.get(key)).unwrap_or("");
         let search = if !def_mapped.is_empty() {
             def_mapped.as_str()
         } else if !settings_mapped.is_empty() {
@@ -288,25 +321,5 @@ fn build_player_anim_graph(
             anims.insert(key, graph.add_clip(h, 1.0, graph.root));
         }
     }
-
-    let graph_handle = animation_graphs.add(graph);
-    store.anims.insert("players".to_string(), anims);
-    store.graphs.insert("players".to_string(), graph_handle.clone());
-
-    // Update AnimationGraphHandle + resume current anim on existing player entities.
-    for (player_entity, anim_key) in player_query.iter() {
-        let Some(anim_entity) = get_child_with_component_recursive(
-            player_entity, &child_query, &anim_player_query,
-        ) else { continue };
-        let Ok(mut anim_player) = anim_player_query.get_mut(anim_entity) else { continue };
-        // `try_insert`: a rebuild can land on the frame a character is being swapped out.
-        commands.entity(anim_entity).try_insert(AnimationGraphHandle(graph_handle.clone()));
-        if let Some(&idx) = store.anims.get("players").and_then(|m| m.get(&anim_key.key)) {
-            let active = anim_player.play(idx);
-            if anim_key.key.loops() {
-                active.repeat();
-            }
-        }
-    }
+    (graph, anims)
 }
-

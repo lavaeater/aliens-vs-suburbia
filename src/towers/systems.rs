@@ -130,3 +130,42 @@ pub fn shoot_alien_system(
         }
     }
 }
+
+/// Add the sensor child that makes a tower *do* something, from its def props. Shared by
+/// build-mode placement and map-placed towers so a kind behaves the same either way.
+pub fn spawn_tower_sensor(
+    ec: &mut bevy::ecs::system::EntityCommands,
+    props: &crate::assets::asset_definition::TowerProps,
+    position: Vec3,
+) {
+    use crate::assets::asset_definition::TowerKind;
+    use crate::general::damage::Faction;
+    use avian3d::prelude::Sensor;
+
+    let range = props.range.max(0.5);
+    // `Collider::cylinder(radius, height)`: range is how far out the tower reaches.
+    let sensor = (
+        Name::from("Sensor"),
+        Collider::cylinder(range, 1.0),
+        CollisionLayers::new([CollisionLayer::Sensor], [CollisionLayer::Alien]),
+        Position::from(position),
+        TowerSensor {},
+        Faction::Structure,
+        Sensor,
+        WindWakerShaderBuilder::default().build(),
+    );
+
+    match &props.kind {
+        TowerKind::Shooter => {
+            ec.with_children(|parent| { parent.spawn((sensor, TowerShooter::new(props.fire_rate_per_minute))); });
+        }
+        TowerKind::Slow { factor } => {
+            let factor = *factor;
+            ec.with_children(|parent| { parent.spawn((sensor, TowerSlow { factor })); });
+        }
+        TowerKind::Area { tick_hz } => {
+            let area = TowerArea::new(props.damage, *tick_hz);
+            ec.with_children(|parent| { parent.spawn((sensor, area)); });
+        }
+    }
+}
