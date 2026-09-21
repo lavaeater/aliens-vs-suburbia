@@ -2,3 +2,29 @@ allow-unwrap-in-tests = true
 allow-expect-in-tests = true
 allow-panic-in-tests = true
 allow-indexing-slicing-in-tests = true
+# `arithmetic_side_effects` flags every operator on a non-primitive type, since it
+# cannot know what a user-defined `impl Mul` does. glam's vector/matrix/quaternion
+# maths is plain component-wise float arithmetic, so it is allow-listed here.
+#
+# The strings are matched against the type's *visible re-export path from the
+# crate being linted*, and for a crate that depends on `bevy` that path is
+# `bevy::bevy_math::X` (the crate re-export, not the `bevy::math` alias). A crate
+# that depended on `glam` or `bevy_math` directly would need `glam::X` or
+# `bevy_math::X` instead. Found by dumping MIR (`-Zdump-mir`) of a repro crate.
+arithmetic-side-effects-allowed = [
+    "bevy::bevy_math::Vec2",
+    "bevy::bevy_math::Vec3",
+    "bevy::bevy_math::Vec3A",
+    "bevy::bevy_math::Vec4",
+    "bevy::bevy_math::IVec2",
+    "bevy::bevy_math::IVec3",
+    "bevy::bevy_math::UVec2",
+    "bevy::bevy_math::UVec3",
+    "bevy::bevy_math::Mat3",
+    "bevy::bevy_math::Mat4",
+    "bevy::bevy_math::Quat",
+    "bevy::bevy_math::Dir2",
+    "bevy::bevy_math::Dir3",
+    "bevy::bevy_math::Rot2",
+    "bevy::bevy_math::Isometry3d",
+]
