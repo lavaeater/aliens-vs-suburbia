@@ -69,6 +69,9 @@ fn foot_color(foot: Foot) -> Color {
 
 /// Draw the gait: the reach the legs have, the line each foot walks along, where it is
 /// supposed to touch down and leave the ground, and where it is right now.
+// Indexed only by `Foot::index()` (0/1 over a two-variant enum) into `[T; 2]`
+// arrays -- structurally in bounds, not a real panic risk.
+#[allow(clippy::indexing_slicing)]
 pub fn draw_gait_gizmos(debug: Res<PlaygroundDebug>, mut gizmos: Gizmos, players: Query<&Legs>) {
     if !debug.gait {
         return;

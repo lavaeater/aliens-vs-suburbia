@@ -174,12 +174,11 @@ impl HardpointEditor {
 /// hardpoint is anchored to some bone and guessing the model origin instead would put the
 /// gizmo at the character's feet, far from anything.
 pub fn ensure_role<'a>(def: &'a mut AssetDefinition, role: &str) -> &'a mut Hardpoint {
-    if !def.hardpoints.contains_key(role) {
-        let inherited = def.hardpoints.values().find_map(|hp| hp.anchor.clone());
-        def.hardpoints
-            .insert(role.to_string(), Hardpoint { anchor: inherited, ..Default::default() });
-    }
-    def.hardpoints.get_mut(role).expect("just inserted")
+    let inherited = def.hardpoints.values().find_map(|hp| hp.anchor.clone());
+    def.hardpoints.entry(role.to_string()).or_insert_with(|| Hardpoint {
+        anchor: inherited,
+        ..Default::default()
+    })
 }
 
 /// Nudge one translation axis. `axis` is 0/1/2 for x/y/z.

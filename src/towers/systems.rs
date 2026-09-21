@@ -96,7 +96,7 @@ pub fn shoot_alien_system(
             }).min_by(|(_, a_pos), (_, b_pos)| {
                 let a_dist = (a_pos.0 - tower_position.0).length_squared();
                 let b_dist = (b_pos.0 - tower_position.0).length_squared();
-                a_dist.partial_cmp(&b_dist).unwrap()
+                a_dist.partial_cmp(&b_dist).unwrap_or(std::cmp::Ordering::Equal)
             });
 
             if let Some((_, alien_position)) = closest_alien {

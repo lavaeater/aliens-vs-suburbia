@@ -468,7 +468,9 @@ pub fn handle_api_responses(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
-    let rx = channels.rx.lock().unwrap();
+    // A poisoned lock still holds a usable queue; recovering it beats losing API
+    // responses because some other system panicked while holding it.
+    let rx = channels.rx.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
     loop {
         match rx.try_recv() {
             Err(_) => break,
@@ -656,9 +658,7 @@ fn result_card_clicked(
 ) {
     let Ok(card) = cards.get(trigger.event().entity) else { return; };
     let index = card.index;
-    if index >= state.results.len() { return; }
-
-    let model = state.results[index].clone();
+    let Some(model) = state.results.get(index).cloned() else { return };
     let id = model.id.clone();
     let download_url = model.download_url.clone();
 

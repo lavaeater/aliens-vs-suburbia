@@ -410,7 +410,9 @@ fn anim_mapping_row(ui: &mut UIBuilder, label: &str, t: &TextTheme, key: Animati
                 let idx = names.iter().position(|n| n == &cur)
                     .map(|i| (i + names.len() - 1) % names.len())
                     .unwrap_or(0);
-                s.anim_mapping.set(key, names[idx].clone());
+                if let Some(name) = names.get(idx) {
+                    s.anim_mapping.set(key, name.clone());
+                }
                 s.save();
             });
         row.with_child(|v| {
@@ -424,7 +426,9 @@ fn anim_mapping_row(ui: &mut UIBuilder, label: &str, t: &TextTheme, key: Animati
                 let idx = names.iter().position(|n| n == &cur)
                     .map(|i| (i + 1) % names.len())
                     .unwrap_or(0);
-                s.anim_mapping.set(key, names[idx].clone());
+                if let Some(name) = names.get(idx) {
+                    s.anim_mapping.set(key, name.clone());
+                }
                 s.save();
             });
     });
