@@ -1019,7 +1019,7 @@ pub fn rebuild_weapon_list(
     if !models.list_dirty && !changed {
         return;
     }
-    *last = equipped.clone();
+    last.clone_from(&equipped);
 
     let Ok(container) = container_q.single() else { return };
     commands.entity(container).despawn_related::<Children>();
@@ -1103,7 +1103,7 @@ pub fn rebuild_import_browser(
         **text = format!("assets/{}", models.browse_folder);
     }
     if let Ok(mut text) = status_label_q.single_mut() {
-        **text = models.status.clone();
+        (**text).clone_from(&models.status);
     }
 
     let Ok(container) = container_q.single() else { return };

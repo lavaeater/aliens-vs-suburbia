@@ -28,7 +28,7 @@ use enumflags2::BitFlags;
 struct Rng(u64);
 impl Rng {
     const fn new(seed: u64) -> Self {
-        Self(seed.wrapping_add(1).wrapping_mul(0x9e3779b97f4a7c15))
+        Self(seed.wrapping_add(1).wrapping_mul(0x9e37_79b9_7f4a_7c15))
     }
     const fn next(&mut self) -> u64 {
         let mut x = self.0;
@@ -292,7 +292,7 @@ pub fn stitch_map_with_library(
 
     // Dress the ruined suburb. Derive the scatter seed from the map seed so the props
     // are reproducible but distinct from the layout roll.
-    let decorations = scatter_decorations(seed ^ 0x5CA77E4, &tiles, ScatterOptions::default());
+    let decorations = scatter_decorations(seed ^ 0x05CA_77E4, &tiles, ScatterOptions::default());
 
     MapFile {
         generated: false,

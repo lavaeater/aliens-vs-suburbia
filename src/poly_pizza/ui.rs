@@ -724,7 +724,7 @@ pub fn update_status_label(
 ) {
     if !state.is_changed() { return; }
     for mut text in labels.iter_mut() {
-        **text = state.status.clone();
+        (**text).clone_from(&state.status);
     }
 }
 
@@ -790,7 +790,7 @@ pub fn update_tag_input_label(
         format!("{} {cursor}", state.tag_input.trim_end())
     };
     for mut text in labels.iter_mut() {
-        **text = display.clone();
+        (**text).clone_from(&display);
     }
 }
 
@@ -822,6 +822,6 @@ pub fn update_attribution_label(
         .map(|m| m.attribution.clone())
         .unwrap_or_default();
     for mut text in labels.iter_mut() {
-        **text = attribution.clone();
+        (**text).clone_from(&attribution);
     }
 }

@@ -272,19 +272,15 @@ impl ToGridNeighbour for Rotation {
         angle = if angle.is_negative() { 360 + angle } else { angle };
 
         let x: i32 = match angle {
-            0..=59 => 1,
-            60..=119 => 0,
+            0..=59 | 300..=360 => 1,
+            60..=119 | 240..=299 => 0,
             120..=239 => -1,
-            240..=299 => 0,
-            300..=360 => 1,
             _ => 1,
         } + current_tile.0 as i32;
 
         let y: i32 = match angle {
             46..=134 => -1,
-            135..=224 => 0,
             225..=314 => 1,
-            315..=360 => 0,
             _ => 0,
         } + current_tile.1 as i32;
 

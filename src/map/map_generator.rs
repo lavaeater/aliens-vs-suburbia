@@ -14,7 +14,7 @@ struct Rng(u64);
 
 impl Rng {
     const fn new(seed: u64) -> Self {
-        Self(seed.wrapping_add(1).wrapping_mul(0x9e3779b97f4a7c15))
+        Self(seed.wrapping_add(1).wrapping_mul(0x9e37_79b9_7f4a_7c15))
     }
 
     const fn next(&mut self) -> u64 {
@@ -390,7 +390,7 @@ pub fn generate_suburb_map(seed: u64, width: usize, height: usize) -> MapFile {
 
     // Dress the ruined suburb with ultraviolence props (reproducible from the seed).
     let decorations = crate::map::scatter::scatter_decorations(
-        seed ^ 0x5CA77E4,
+        seed ^ 0x05CA_77E4,
         &grid,
         crate::map::scatter::ScatterOptions::default(),
     );

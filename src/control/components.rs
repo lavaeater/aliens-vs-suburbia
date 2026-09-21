@@ -141,9 +141,8 @@ impl CharacterState {
         if has(AnimationKey::Reload)   { return AnimationKey::Reload; }
         if has(AnimationKey::Duck)     { return AnimationKey::Duck; }
         match (has(AnimationKey::Walk), has(AnimationKey::Throwing)) {
-            (true,  true)  => AnimationKey::Throwing,
-            (true,  false) => AnimationKey::Walk,
-            (false, true)  => AnimationKey::Throwing,
+            (_, true)      => AnimationKey::Throwing,
+            (true, false)  => AnimationKey::Walk,
             (false, false) => AnimationKey::Idle,
         }
     }

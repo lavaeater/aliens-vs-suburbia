@@ -218,10 +218,7 @@ pub fn destroy_the_map_action_system(
                     }
                 }
             }
-            MustDestroyTheMapState::Finished => {
-                commands.entity(entity).remove::<MustDestroyTheMap>();
-            }
-            MustDestroyTheMapState::Failed => {
+            MustDestroyTheMapState::Finished | MustDestroyTheMapState::Failed => {
                 commands.entity(entity).remove::<MustDestroyTheMap>();
             }
         }

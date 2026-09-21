@@ -208,7 +208,7 @@ pub fn update_player_bar(
             node.display = Display::Flex;
             for entity in descendants(slot_entity, &children_q) {
                 if let Ok((mut t, mut color)) = names.get_mut(entity) {
-                    **t = line.clone();
+                    (**t).clone_from(&line);
                     *color = TextColor(DIM_COLOR);
                 } else if let Ok(mut t) = health_texts.get_mut(entity) {
                     **t = String::new();
@@ -247,18 +247,18 @@ pub fn update_player_bar(
         // Walk this slot's subtree once and fill whatever labelled nodes it holds.
         for entity in descendants(slot_entity, &children_q) {
             if let Ok((mut t, mut color)) = names.get_mut(entity) {
-                **t = name_line.clone();
+                (**t).clone_from(&name_line);
                 *color = TextColor(if dead { DIM_COLOR } else { NAME_COLOR });
             } else if let Ok(mut t) = health_texts.get_mut(entity) {
                 **t = format!("{} / {}", health.health.max(0), health.max_health);
             } else if let Ok(mut t) = weapons.get_mut(entity) {
-                **t = weapon.clone();
+                (**t).clone_from(&weapon);
             } else if let Ok(mut t) = ammos.get_mut(entity) {
-                **t = ammo.clone();
+                (**t).clone_from(&ammo);
             } else if let Ok(mut t) = abilities.get_mut(entity) {
-                **t = ability_text.clone();
+                (**t).clone_from(&ability_text);
             } else if let Ok(mut t) = pickups.get_mut(entity) {
-                **t = toast.clone();
+                (**t).clone_from(&toast);
             } else if let Ok(mut bar) = bars.get_mut(entity) {
                 bar.value = fraction;
             }

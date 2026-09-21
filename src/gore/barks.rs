@@ -95,7 +95,7 @@ const LOW_HEALTH: Lines = Lines {
 
 /// Deterministic-ish pick that avoids repeating the immediately previous index.
 fn pick<'a>(state: &mut BarkState, lines: &'a [&'a str]) -> &'a str {
-    state.seed = state.seed.wrapping_mul(1664525).wrapping_add(1013904223);
+    state.seed = state.seed.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
     let mut i = (state.seed >> 16) as usize % lines.len();
     if lines.len() > 1 && i == state.last {
         i = (i + 1) % lines.len();
@@ -107,7 +107,7 @@ fn pick<'a>(state: &mut BarkState, lines: &'a [&'a str]) -> &'a str {
 /// Choose from a pool, blending zeal->haunted as atrocity rises.
 fn choose(state: &mut BarkState, lines: &Lines, kills: u32) -> &'static str {
     let haunted_frac = (kills as f32 / HAUNTED_AT as f32).clamp(0.0, 1.0);
-    state.seed = state.seed.wrapping_mul(22695477).wrapping_add(1);
+    state.seed = state.seed.wrapping_mul(22_695_477).wrapping_add(1);
     let roll = ((state.seed >> 16) & 0xffff) as f32 / 65535.0;
     let pool = if roll < haunted_frac { lines.haunted } else { lines.zeal };
     let pool = if pool.is_empty() { lines.zeal } else { pool };
@@ -182,7 +182,7 @@ pub fn bark_on_events(
         Some(choose(&mut state, &LOW_HEALTH, atrocity.kills))
     } else if player_hit {
         // Not every hit talks — roll it.
-        state.seed = state.seed.wrapping_mul(214013).wrapping_add(2531011);
+        state.seed = state.seed.wrapping_mul(214_013).wrapping_add(2_531_011);
         if (state.seed >> 24) & 1 == 0 {
             Some(choose(&mut state, &HURT, atrocity.kills))
         } else {
@@ -192,7 +192,7 @@ pub fn bark_on_events(
         Some(choose(&mut state, &MULTI_KILL, atrocity.kills))
     } else if kills_this_frame >= 1 {
         // Roughly half of kills get a shout.
-        state.seed = state.seed.wrapping_mul(214013).wrapping_add(2531011);
+        state.seed = state.seed.wrapping_mul(214_013).wrapping_add(2_531_011);
         if (state.seed >> 23) & 1 == 0 {
             Some(choose(&mut state, &KILL, atrocity.kills))
         } else {

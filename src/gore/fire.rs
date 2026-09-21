@@ -171,7 +171,7 @@ pub fn tick_fire_fields(
 
         // ── Flame puffs: small rising, fading emissive blobs. ──────────────────
         if field.flame_tick.just_finished() {
-            *rng_seed = rng_seed.wrapping_add(0x9E3779B9);
+            *rng_seed = rng_seed.wrapping_add(0x9E37_79B9);
             let mut rng = Rng(*rng_seed ^ entity.to_bits() as u32);
             let off = Vec3::new(rng.signed(), 0.0, rng.signed()) * field.radius * 0.7;
             let size = 0.25 + rng.unit() * 0.35;

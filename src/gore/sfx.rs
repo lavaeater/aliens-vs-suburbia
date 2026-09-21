@@ -151,7 +151,7 @@ pub fn play_sfx(
             continue;
         }
 
-        *seed = seed.wrapping_add(0x9E3779B9).wrapping_mul(2654435761);
+        *seed = seed.wrapping_add(0x9E37_79B9).wrapping_mul(2_654_435_761);
         let pick = (*seed >> 16) as usize % handles.len();
         let Some(handle) = handles.get(pick) else { continue };
         // +/-8% pitch and +/-2 dB so repeats don't sound identical.

@@ -225,7 +225,7 @@ pub fn shoot_weapons(
             continue;
         }
 
-        *rng_seed = rng_seed.wrapping_add(0x9E3779B9);
+        *rng_seed = rng_seed.wrapping_add(0x9E37_79B9);
         let mut rng = Rng(*rng_seed ^ player.to_bits() as u32);
 
         for _ in 0..weapon.pellets {

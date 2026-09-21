@@ -58,9 +58,9 @@ impl DamageRules {
             (None, _) | (_, None) => true,
             (Some(Faction::Player), Some(Faction::Player)) => self.friendly_fire,
             (Some(Faction::Player), Some(Faction::Structure)) => self.players_hurt_structures,
-            (Some(Faction::Alien), Some(Faction::Alien)) => false,
+            (Some(Faction::Alien), Some(Faction::Alien))
+            | (Some(Faction::Structure), Some(Faction::Structure)) => false,
             (Some(Faction::Alien), Some(Faction::Structure)) => self.aliens_hurt_structures,
-            (Some(Faction::Structure), Some(Faction::Structure)) => false,
             _ => true,
         }
     }

@@ -102,7 +102,7 @@ fn scan_folder_on_change(
 ) {
     if !model_settings.is_changed() { return; }
     if model_settings.character_folder == *last_folder { return; }
-    *last_folder = model_settings.character_folder.clone();
+    last_folder.clone_from(&model_settings.character_folder);
     char_folder.files = scan_character_folder(&model_settings.character_folder);
 }
 

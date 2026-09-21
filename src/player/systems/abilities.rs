@@ -24,11 +24,9 @@ pub enum SpecialAbility {
 impl SpecialAbility {
     pub const fn throws_to_charge(&self) -> u32 {
         match self {
-            Self::Bombardment => 10,
+            Self::Bombardment | Self::Whirlwind => 10,
             Self::Healing     =>  6,
-            Self::Whirlwind   => 10,
-            Self::GoldDigger  =>  8,
-            Self::Molotov     =>  8,
+            Self::GoldDigger | Self::Molotov => 8,
         }
     }
 
