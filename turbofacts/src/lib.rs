@@ -313,12 +313,12 @@ mod tests {
     #[test]
     fn activate_seeds_init_facts_silently() {
         let mut facts = Facts::default();
-        let mut store = StoryStore::default();
+        let mut story_store = StoryStore::default();
         let mut story = Story::new("s", vec![rule(vec![Criterion::BoolIs { key: "x".into(), expected: true }])], vec![]);
         story.init_facts = vec![("seeded".into(), FactValue::Int(7))];
-        store.add(story);
+        story_store.add(story);
 
-        store.activate(&mut facts);
+        story_store.activate(&mut facts);
         assert_eq!(facts.int("seeded"), 7);
         // seeding was silent — no dirty keys
         assert_eq!(facts.drain_dirty(), [] as [std::string::String; 0]);
@@ -348,13 +348,11 @@ mod tests {
         app.update();
 
         assert!(app.world().resource::<Facts>().bool(keys::LEVEL_COMPLETE));
-        let effects: Vec<_> = app
+        assert!(app
             .world_mut()
             .resource_mut::<bevy::ecs::message::Messages<StoryEffect>>()
             .drain()
-            .map(|e| e.effect)
-            .collect();
-        assert!(effects.contains(&"level_complete".to_string()));
+            .map(|e| e.effect).any(|x| x == "level_complete"));
     }
 
     #[test]

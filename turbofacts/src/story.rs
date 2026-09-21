@@ -29,6 +29,7 @@ impl Rule {
 /// Fires its consequences once all its rules pass. Mirrors Kotlin's
 /// `TurboStory`, including the `repeat`/`exclusive` flags, a silent initializer that seeds
 /// facts, and the fire-once latch (`finished`/`needs_init`).
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Story {
     pub name: String,

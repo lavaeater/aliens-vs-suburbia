@@ -23,7 +23,7 @@ impl NumOp {
         match self {
             Self::Lt => a < b,
             Self::Gt => a > b,
-            Self::Eq => a == b,
+            Self::Eq => (a-b).abs()< f32::EPSILON,
         }
     }
 
