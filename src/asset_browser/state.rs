@@ -301,11 +301,9 @@ impl AssetBrowserState {
     }
 
     pub fn select_attachment(&mut self, idx: usize) {
-        if idx < self.attachments.len() {
+        if let Some(attachment) = self.attachments.get(idx) {
             self.active_attachment = Some(idx);
-            if let Some(bone_idx) = self.bone_names.iter()
-                .position(|b| b == &self.attachments[idx].bone)
-            {
+            if let Some(bone_idx) = self.bone_names.iter().position(|b| b == &attachment.bone) {
                 self.selected_bone = bone_idx;
             }
             self.bones_ui_dirty = true;
@@ -339,8 +337,9 @@ impl AssetBrowserState {
     pub fn nudge_translation(&mut self, axis: usize, delta: f32) {
         if let Some(idx) = self.active_attachment
             && let Some(a) = self.attachments.get_mut(idx)
+            && let Some(v) = a.translation.get_mut(axis)
         {
-            a.translation[axis] += delta;
+            *v += delta;
             self.attachments_xform_dirty = true;
             self.attachment_ui_dirty = true;
         }
@@ -350,8 +349,9 @@ impl AssetBrowserState {
     pub fn nudge_rotation(&mut self, axis: usize, delta: f32) {
         if let Some(idx) = self.active_attachment
             && let Some(a) = self.attachments.get_mut(idx)
+            && let Some(v) = a.rotation_euler_deg.get_mut(axis)
         {
-            a.rotation_euler_deg[axis] = (a.rotation_euler_deg[axis] + delta).rem_euclid(360.0);
+            *v = (*v + delta).rem_euclid(360.0);
             self.attachments_xform_dirty = true;
             self.attachment_ui_dirty = true;
         }
@@ -427,8 +427,9 @@ impl AssetBrowserState {
     pub fn nudge_hardpoint_translation(&mut self, axis: usize, delta: f32) {
         if let Some(role) = self.active_hardpoint_role.clone()
             && let Some(h) = self.hardpoints.get_mut(&role)
+            && let Some(v) = h.translation.get_mut(axis)
         {
-            h.translation[axis] += delta;
+            *v += delta;
             self.hardpoints_ui_dirty = true;
         }
     }
@@ -436,8 +437,9 @@ impl AssetBrowserState {
     pub fn nudge_hardpoint_rotation(&mut self, axis: usize, delta: f32) {
         if let Some(role) = self.active_hardpoint_role.clone()
             && let Some(h) = self.hardpoints.get_mut(&role)
+            && let Some(v) = h.rotation_euler_deg.get_mut(axis)
         {
-            h.rotation_euler_deg[axis] = (h.rotation_euler_deg[axis] + delta).rem_euclid(360.0);
+            *v = (*v + delta).rem_euclid(360.0);
             self.hardpoints_ui_dirty = true;
         }
     }
@@ -633,7 +635,10 @@ impl AssetBrowserState {
         options.insert(0, String::new()); // unbound
         let current = self.animation_bindings.get(key).cloned().unwrap_or_default();
         let idx = options.iter().position(|o| o == &current).unwrap_or(0) as i32;
-        let next = options[(idx + delta).rem_euclid(options.len() as i32) as usize].clone();
+        // `options` always has at least the "unbound" slot inserted above, so this
+        // index is in range; `.get()` just avoids an explicit panic path for the lint.
+        let wrapped = (idx + delta).rem_euclid(options.len() as i32) as usize;
+        let next = options.get(wrapped).cloned().unwrap_or_default();
         if next.is_empty() {
             self.animation_bindings.remove(key);
         } else {
@@ -677,8 +682,12 @@ impl AssetBrowserState {
             if self.animation_bindings.is_empty() && !def.animation_mapping.is_empty() {
                 for (key, clip) in &def.animation_mapping {
                     if clip.is_empty() { continue; }
-                    self.clip_tags.entry(clip.clone()).or_insert_with(|| key.clone());
-                    self.animation_bindings.insert(key.clone(), self.clip_tags[clip].clone());
+                    let tag = self
+                        .clip_tags
+                        .entry(clip.clone())
+                        .or_insert_with(|| key.clone())
+                        .clone();
+                    self.animation_bindings.insert(key.clone(), tag);
                 }
             }
             // Normalize paths: strip leading "assets/" if present (legacy wrong prefix).
@@ -788,7 +797,9 @@ impl AssetBrowserState {
 
     pub fn visible_files(&self) -> impl Iterator<Item = (usize, &str)> {
         let end = (self.scroll_offset + WINDOW_SIZE).min(self.files.len());
-        self.files[self.scroll_offset..end]
+        self.files
+            .get(self.scroll_offset..end)
+            .unwrap_or_default()
             .iter()
             .enumerate()
             .map(move |(i, s)| (self.scroll_offset + i, s.as_str()))

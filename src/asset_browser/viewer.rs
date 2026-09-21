@@ -436,8 +436,10 @@ pub fn setup_viewer_animation(
     // Build graph with whatever clips the model itself has (may be empty).
     let mut names_by_index = vec![String::new(); gltf.animations.len()];
     for (name, handle) in &gltf.named_animations {
-        if let Some(idx) = gltf.animations.iter().position(|h| h == handle) {
-            names_by_index[idx] = name.to_string();
+        if let Some(idx) = gltf.animations.iter().position(|h| h == handle)
+            && let Some(slot) = names_by_index.get_mut(idx)
+        {
+            *slot = name.to_string();
         }
     }
     let mut graph = AnimationGraph::new();
@@ -660,7 +662,9 @@ pub fn apply_viewer_animation(
     let Ok(mut player) = anim_players.get_mut(player_entity) else { return };
 
     let idx = state.anim_index;
-    let node = state.anim_node_indices[idx];
+    let Some(&node) = state.anim_node_indices.get(idx) else {
+        return;
+    };
     player.stop_all();
     player.play(node).repeat();
     state.anim_dirty = false;
