@@ -1,4 +1,4 @@
-use bevy::platform::collections::HashMap;
+use bevy::platform::collections::{HashMap, HashSet};
 use bevy::prelude::Resource;
 
 use super::fact_value::FactValue;
@@ -10,7 +10,9 @@ pub fn fact_key(parts: &[&str]) -> String {
     parts.join(".")
 }
 
-/// The world's fact store. A flat `key -> FactValue` map plus a dirty list of keys mutated
+/// The world's fact store. 
+/// 
+/// A flat `key -> FactValue` map plus a dirty list of keys mutated
 /// since the last drain. The drain is consumed by `emit_fact_changes` to produce
 /// `FactChanged` messages (see [`crate::facts::facts_plugin`]).
 ///
@@ -129,7 +131,7 @@ impl Facts {
     }
 
     pub fn add_to_int(&mut self, key: &str, delta: i64) -> i64 {
-        let new = self.int(key) + delta;
+        let new = self.int(key).saturating_add(delta);
         self.set_int(key, new);
         new
     }
@@ -184,24 +186,34 @@ impl Facts {
 
     // --- text list ----------------------------------------------------------
 
-    fn ensure_list(&mut self, key: &str) -> &mut Vec<String> {
-        if !matches!(self.map.get(key), Some(FactValue::TextList(_))) {
-            self.map
-                .insert(key.to_string(), FactValue::TextList(Vec::new()));
-        }
-        match self.map.get_mut(key) {
-            Some(FactValue::TextList(l)) => l,
-            _ => unreachable!("ensure_list guarantees a TextList"),
+    /// Runs `f` on the text list at `key`, creating it first if the key is
+    /// missing or holds some other kind of value.
+    ///
+    /// Passing the list to a closure instead of returning `&mut Vec` is what
+    /// lets the "not a list yet" case be an ordinary branch: the closure runs
+    /// on a fresh vec which is then stored, so there is no dead `match` arm to
+    /// justify.
+    fn with_list(&mut self, key: &str, f: impl FnOnce(&mut Vec<String>)) {
+        let slot = self
+            .map
+            .entry(key.to_string())
+            .or_insert_with(|| FactValue::TextList(Vec::new()));
+        if let FactValue::TextList(list) = slot {
+            f(list);
+        } else {
+            let mut list = Vec::new();
+            f(&mut list);
+            *slot = FactValue::TextList(list);
         }
     }
 
     pub fn add_to_text_list(&mut self, key: &str, value: impl Into<String>) {
-        self.ensure_list(key).push(value.into());
+        self.with_list(key, |list| list.push(value.into()));
         self.touch(key);
     }
 
     pub fn remove_from_text_list(&mut self, key: &str, value: &str) {
-        self.ensure_list(key).retain(|v| v != value);
+        self.with_list(key, |list| list.retain(|v| v != value));
         self.touch(key);
     }
 
@@ -214,26 +226,33 @@ impl Facts {
 
     // --- text set -----------------------------------------------------------
 
-    fn ensure_set(&mut self, key: &str) -> &mut bevy::platform::collections::HashSet<String> {
-        if !matches!(self.map.get(key), Some(FactValue::TextSet(_))) {
-            self.map.insert(
-                key.to_string(),
-                FactValue::TextSet(bevy::platform::collections::HashSet::default()),
-            );
-        }
-        match self.map.get_mut(key) {
-            Some(FactValue::TextSet(s)) => s,
-            _ => unreachable!("ensure_set guarantees a TextSet"),
+    /// Runs `f` on the text set at `key`, creating it first if the key is
+    /// missing or holds some other kind of value. Same shape as `with_list`.
+    fn with_set(&mut self, key: &str, f: impl FnOnce(&mut HashSet<String>)) {
+        let slot = self
+            .map
+            .entry(key.to_string())
+            .or_insert_with(|| FactValue::TextSet(HashSet::default()));
+        if let FactValue::TextSet(set) = slot {
+            f(set);
+        } else {
+            let mut set = HashSet::default();
+            f(&mut set);
+            *slot = FactValue::TextSet(set);
         }
     }
 
     pub fn add_to_text_set(&mut self, key: &str, value: impl Into<String>) {
-        self.ensure_set(key).insert(value.into());
+        self.with_set(key, |set| {
+            set.insert(value.into());
+        });
         self.touch(key);
     }
 
     pub fn remove_from_text_set(&mut self, key: &str, value: &str) {
-        self.ensure_set(key).remove(value);
+        self.with_set(key, |set| {
+            set.remove(value);
+        });
         self.touch(key);
     }
 

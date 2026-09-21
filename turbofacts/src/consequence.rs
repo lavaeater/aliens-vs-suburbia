@@ -3,7 +3,9 @@ use serde::{Deserialize, Serialize};
 use super::fact_value::FactValue;
 use super::facts_resource::Facts;
 
-/// What a story does when its rules pass. The Rust analog of Kotlin's `Consequence`
+/// What a story does when its rules pass. 
+/// 
+/// The Rust analog of Kotlin's `Consequence`
 /// interface. Pure fact writes apply directly to [`Facts`]; side effects that need other
 /// systems (cutscenes, UI, state transitions) are surfaced as a named [`StoryEffect`] that
 /// the relevant plugin handles, keeping the facts module dependency-free.
