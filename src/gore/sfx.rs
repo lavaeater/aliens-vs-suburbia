@@ -156,13 +156,14 @@ pub fn play_sfx(
 
         *seed = seed.wrapping_add(0x9E3779B9).wrapping_mul(2654435761);
         let pick = (*seed >> 16) as usize % handles.len();
+        let Some(handle) = handles.get(pick) else { continue };
         // +/-8% pitch and +/-2 dB so repeats don't sound identical.
         let pitch = 1.0 + (((*seed >> 8) & 0xff) as f64 / 255.0 - 0.5) * 0.16;
         let gain = msg.gain_db + (((*seed >> 20) & 0xff) as f32 / 255.0 - 0.5) * 4.0;
 
         commands.spawn((
             SfxVoice,
-            SamplePlayer::new(handles[pick].clone()).with_volume(Volume::Decibels(gain)),
+            SamplePlayer::new(handle.clone()).with_volume(Volume::Decibels(gain)),
             PlaybackSettings::default().with_speed(pitch),
         ));
         live += 1;

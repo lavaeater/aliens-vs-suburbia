@@ -40,10 +40,21 @@ use crate::player::events::building_events::{AddTile, RemoveTile};
 
 
 pub fn load_map_one(mut send_event: MessageWriter<LoadMap>) {
-    let text = std::fs::read_to_string("assets/maps/level_01.ron")
-        .expect("assets/maps/level_01.ron not found");
-    let mut map: crate::general::components::map_components::MapFile =
-        ron::from_str(&text).expect("Failed to parse assets/maps/level_01.ron");
+    let text = match std::fs::read_to_string("assets/maps/level_01.ron") {
+        Ok(text) => text,
+        Err(e) => {
+            bevy::log::error!("assets/maps/level_01.ron not found: {e}");
+            return;
+        }
+    };
+    let mut map: crate::general::components::map_components::MapFile = match ron::from_str(&text)
+    {
+        Ok(map) => map,
+        Err(e) => {
+            bevy::log::error!("Failed to parse assets/maps/level_01.ron: {e}");
+            return;
+        }
+    };
     if map.generated {
         map = crate::map::map_generator::generate_suburb_map(map.seed, map.map_width, map.map_height);
     }
@@ -199,8 +210,7 @@ pub fn map_loader(
         }
 
         // ── Floor colliders (greedy rectangle merge) ──────────────────────────
-        {
-            let floor_model_def = model_defs.definitions.get("floor").unwrap();
+        if let Some(floor_model_def) = model_defs.definitions.get("floor") {
             let mut covered = vec![vec![false; cols]; rows];
             for row in 0..rows {
                 for col in 0..cols {
@@ -243,6 +253,8 @@ pub fn map_loader(
                     ));
                 }
             }
+        } else {
+            bevy::log::error!("No \"floor\" model def found; skipping floor colliders");
         }
 
         // ── Floor visual mesh (per-terrain-type coloured quads) ───────────────

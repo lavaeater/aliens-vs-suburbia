@@ -178,9 +178,15 @@ fn build_layout(
         }
     }
 
+    // Every cell was filled with `Some(chosen)` in the loop above; `unwrap_or_else`
+    // just avoids an explicit panic path while keeping the same fallback as above.
     let grid = grid
         .into_iter()
-        .map(|row| row.into_iter().map(|c| c.unwrap()).collect())
+        .map(|row| {
+            row.into_iter()
+                .map(|c| c.unwrap_or_else(|| fillers[0].clone()))
+                .collect()
+        })
         .collect();
     Layout { grid, spine_row }
 }
@@ -265,8 +271,12 @@ pub fn stitch_map_with_library(
     let border = f(MapFeatures::Floor
         | MapFeatures::ImpassableForPlayers
         | MapFeatures::ImpassableForEnemies);
-    tiles.first_mut().unwrap().fill(border);
-    tiles.last_mut().unwrap().fill(border);
+    if let Some(top) = tiles.first_mut() {
+        top.fill(border);
+    }
+    if let Some(bottom) = tiles.last_mut() {
+        bottom.fill(border);
+    }
     for row in tiles.iter_mut() {
         row[0] = border;
         row[w - 1] = border;

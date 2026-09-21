@@ -101,7 +101,7 @@ fn pick<'a>(state: &mut BarkState, lines: &'a [&'a str]) -> &'a str {
         i = (i + 1) % lines.len();
     }
     state.last = i;
-    lines[i]
+    lines.get(i).copied().unwrap_or_default()
 }
 
 /// Choose from a pool, blending zeal->haunted as atrocity rises.

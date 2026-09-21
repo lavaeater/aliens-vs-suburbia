@@ -105,6 +105,10 @@ impl MapChunk {
     /// Build a chunk from an ASCII template — `CHUNK_SIZE` rows of `CHUNK_SIZE` chars:
     /// `'.'` = floor, `'#'` = wall, `' '`/`'x'` = void. Panics on the wrong shape, so
     /// malformed built-in chunks fail loudly at first use (and in tests).
+    // Intentional panic, per the doc comment above: this is only ever called with
+    // built-in, compile-time-authored chunk templates, so a shape mistake here is a
+    // programmer error that should fail loudly and immediately, not propagate.
+    #[allow(clippy::panic)]
     pub fn from_ascii(name: &str, rows: &[&str], edges: [EdgeType; 4]) -> Self {
         Self::try_from_ascii(name, rows.iter().map(|r| r.to_string()).collect(), edges)
             .unwrap_or_else(|e| panic!("{e}"))

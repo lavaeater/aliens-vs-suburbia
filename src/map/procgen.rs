@@ -35,11 +35,12 @@ impl Polygon {
 
     /// Inclusive integer bounding box of the polygon's cells: `(min_x, min_y, max_x, max_y)`.
     pub fn bounds(&self) -> Option<(i32, i32, i32, i32)> {
-        if self.points.is_empty() { return None; }
-        let min_x = self.points.iter().map(|p| p.0).min().unwrap();
-        let max_x = self.points.iter().map(|p| p.0).max().unwrap();
-        let min_y = self.points.iter().map(|p| p.1).min().unwrap();
-        let max_y = self.points.iter().map(|p| p.1).max().unwrap();
+        // `min`/`max` return `None` on an empty iterator, so this covers empty
+        // `points` too without a separate check.
+        let min_x = self.points.iter().map(|p| p.0).min()?;
+        let max_x = self.points.iter().map(|p| p.0).max()?;
+        let min_y = self.points.iter().map(|p| p.1).min()?;
+        let max_y = self.points.iter().map(|p| p.1).max()?;
         Some((min_x, min_y, max_x.saturating_sub(1), max_y.saturating_sub(1)))
     }
 

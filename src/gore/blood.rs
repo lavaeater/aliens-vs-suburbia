@@ -86,10 +86,12 @@ fn make_blood_texture() -> Image {
             // Darker toward the middle (pooled), brighter at the thin edges.
             let dark = 0.35 + 0.25 * (r / 0.4).clamp(0.0, 1.0);
             let idx = (y * n + x) * 4;
-            data[idx] = (0.45 * dark * 255.0) as u8; // R
-            data[idx + 1] = (0.02 * 255.0) as u8; // G
-            data[idx + 2] = (0.02 * 255.0) as u8; // B
-            data[idx + 3] = (a * 255.0) as u8; // A
+            if let Some([r_px, g_px, b_px, a_px]) = data.get_mut(idx..idx + 4) {
+                *r_px = (0.45 * dark * 255.0) as u8;
+                *g_px = (0.02 * 255.0) as u8;
+                *b_px = (0.02 * 255.0) as u8;
+                *a_px = (a * 255.0) as u8;
+            }
         }
     }
 
