@@ -36,7 +36,7 @@ pub struct StoryBuilder {
 
 impl StoryBuilder {
     pub fn new(name: impl Into<String>) -> Self {
-        StoryBuilder {
+        Self {
             name: name.into(),
             description: String::new(),
             repeat: true,
@@ -52,12 +52,12 @@ impl StoryBuilder {
         self
     }
 
-    pub fn repeat(mut self, repeat: bool) -> Self {
+    pub const fn repeat(mut self, repeat: bool) -> Self {
         self.repeat = repeat;
         self
     }
 
-    pub fn exclusive(mut self, exclusive: bool) -> Self {
+    pub const fn exclusive(mut self, exclusive: bool) -> Self {
         self.exclusive = exclusive;
         self
     }

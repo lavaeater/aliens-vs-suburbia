@@ -71,6 +71,7 @@ pub fn level_failed_story() -> Story {
 }
 
 /// Too many aliens reached the goal while a level is running -> failed; emits `level_failed`.
+///
 /// A separate story from the all-players-dead loss because a story ANDs its rules — distinct
 /// lose conditions are OR'd by being distinct stories.
 pub fn level_failed_escaped_story() -> Story {

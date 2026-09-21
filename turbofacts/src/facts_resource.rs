@@ -32,7 +32,7 @@ impl Facts {
 
     /// Runs `f` with change-signalling suppressed. Used to seed facts without triggering
     /// story re-evaluation. Mirrors `TurboFactsOfTheWorld.silent`.
-    pub fn silent(&mut self, f: impl FnOnce(&mut Facts)) {
+    pub fn silent(&mut self, f: impl FnOnce(&mut Self)) {
         let was_silent = self.silent;
         self.silent = true;
         f(self);
@@ -44,7 +44,7 @@ impl Facts {
         std::mem::take(&mut self.dirty)
     }
 
-    pub fn has_dirty(&self) -> bool {
+    pub const fn has_dirty(&self) -> bool {
         !self.dirty.is_empty()
     }
 

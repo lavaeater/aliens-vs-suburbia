@@ -20,7 +20,7 @@ impl Consequence {
     /// onto `effects` for the caller to dispatch as messages.
     pub fn apply(&self, facts: &mut Facts, effects: &mut Vec<String>) {
         match self {
-            Consequence::SetFact { key, value } => match value {
+            Self::SetFact { key, value } => match value {
                 FactValue::Bool(b) => facts.set_bool(key, *b),
                 FactValue::Int(i) => facts.set_int(key, *i),
                 FactValue::Float(f) => facts.set_float(key, *f),
@@ -29,10 +29,10 @@ impl Consequence {
                     bevy::log::warn!("SetFact consequence on '{}' ignores collection values", key);
                 }
             },
-            Consequence::AddInt { key, delta } => {
+            Self::AddInt { key, delta } => {
                 facts.add_to_int(key, *delta);
             }
-            Consequence::Emit { effect } => effects.push(effect.clone()),
+            Self::Emit { effect } => effects.push(effect.clone()),
         }
     }
 }

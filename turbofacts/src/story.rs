@@ -50,7 +50,7 @@ pub struct Story {
     finished: bool,
 }
 
-fn default_true() -> bool {
+const fn default_true() -> bool {
     true
 }
 
@@ -58,7 +58,7 @@ impl Story {
     /// Builds a story with default flags (repeat=true, exclusive=false, no init facts).
     /// The [`crate::facts::builder`] DSL is the ergonomic front end for this.
     pub fn new(name: impl Into<String>, rules: Vec<Rule>, consequences: Vec<Consequence>) -> Self {
-        Story {
+        Self {
             name: name.into(),
             description: String::new(),
             repeat: true,
@@ -149,7 +149,7 @@ impl StoryStore {
         }
     }
 
-    pub fn deactivate(&mut self) {
+    pub const fn deactivate(&mut self) {
         self.active = false;
     }
 }

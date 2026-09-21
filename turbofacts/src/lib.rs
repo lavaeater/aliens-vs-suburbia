@@ -82,7 +82,7 @@ mod tests {
         let dirty = facts.drain_dirty();
         assert_eq!(dirty, vec!["a".to_string(), "b".to_string()]);
         // draining clears the list
-        assert!(facts.drain_dirty().is_empty());
+        assert_eq!(facts.drain_dirty(), [] as [std::string::String; 0]);
     }
 
     #[test]
@@ -92,7 +92,7 @@ mod tests {
             f.set_bool("a", true);
             f.set_int("b", 2);
         });
-        assert!(facts.drain_dirty().is_empty());
+        assert_eq!(facts.drain_dirty(), [] as [std::string::String; 0]);
         // and reads still work
         assert!(facts.bool("a"));
         assert_eq!(facts.int("b"), 2);
@@ -321,7 +321,7 @@ mod tests {
         store.activate(&mut facts);
         assert_eq!(facts.int("seeded"), 7);
         // seeding was silent — no dirty keys
-        assert!(facts.drain_dirty().is_empty());
+        assert_eq!(facts.drain_dirty(), [] as [std::string::String; 0]);
     }
 
     #[test]
@@ -516,7 +516,7 @@ mod tests {
         assert_eq!(loaded.text("s"), "hi");
         assert_eq!(loaded.text_list("list"), &[] as &[String]);
         // loading is silent
-        assert!(loaded.drain_dirty().is_empty());
+        assert_eq!(loaded.drain_dirty(), [] as [std::string::String; 0]);
     }
 
     #[test]
