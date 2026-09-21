@@ -20,7 +20,7 @@
 #   rustup component add rustc-codegen-cranelift-preview --toolchain nightly
 #   cargo install sccache cargo-nextest
 #
-# Keys:  c check   y clippy   a clippy-all (default)   d doc   o doc-open
+# Keys:  c check   y clippy   a clippy-all (default)   f fix   d doc   o doc-open
 #        t nextest   r run   e run-release
 #
 # `check` chains into `clippy` on success (on_success = "job:clippy"): press `c`
@@ -67,6 +67,23 @@ command = [
     "--workspace", "--all-targets",
 ]
 need_stdout = false
+
+# One-shot: apply every machine-fixable clippy suggestion across the workspace,
+# then hand over to `clippy-all` to show what is left. It moves on whether or not
+# the fix run "succeeds" - with deny-level lints still in the tree cargo exits
+# non-zero even though the fixes were written. Not a job to sit in: it edits
+# your files, so it would fire on its own edits.
+[jobs.fix]
+command = [
+    "cargo", "+nightly", "clippy",
+    "-Z", "codegen-backend", "-Z", "profile-hint-mostly-unused", "--timings",
+    "--config", 'profile.dev.package."*".hint-mostly-unused=true',
+    "--workspace", "--all-targets",
+    "--fix", "--allow-dirty", "--allow-staged",
+]
+need_stdout = false
+on_success = "job:clippy-all"
+on_failure = "job:clippy-all"
 
 # --- docs ------------------------------------------------------------------------
 
@@ -141,5 +158,6 @@ a = "job:clippy-all"
 d = "job:doc"
 o = "job:doc-open"
 t = "job:nextest"
+f = "job:fix"
 r = "job:run"
 e = "job:run-release"
