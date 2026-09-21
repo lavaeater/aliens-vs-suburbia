@@ -24,7 +24,9 @@ impl Rule {
     }
 }
 
-/// A data-driven story: fires its consequences once all its rules pass. Mirrors Kotlin's
+/// A data-driven story!
+///
+/// Fires its consequences once all its rules pass. Mirrors Kotlin's
 /// `TurboStory`, including the `repeat`/`exclusive` flags, a silent initializer that seeds
 /// facts, and the fire-once latch (`finished`/`needs_init`).
 #[derive(Clone, Debug, Serialize, Deserialize)]

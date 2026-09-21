@@ -119,6 +119,8 @@ pub fn enemy_kill_count_story() -> Story {
         .build()
 }
 
+/// Some pre-defined base stories.
+/// 
 /// The base level-flow stories that drive the live game's win/lose verdict. Mirrors Kotlin's
 /// `StoryHelper.baseStories`. The `aliens_cleared_story` is the default win condition (kill
 /// everything); maps can swap it out via RON stories for survival/objective variants.
