@@ -115,25 +115,30 @@ pub fn handle_setup_input(
         let left  = gamepad.left_stick().x < -0.5 || gamepad.pressed(GamepadButton::DPadLeft);
         let right = gamepad.left_stick().x >  0.5 || gamepad.pressed(GamepadButton::DPadRight);
 
+        let was_south = prev_gamepad_south.get(slot).copied().unwrap_or(false);
+        let was_left = prev_gamepad_left.get(slot).copied().unwrap_or(false);
+        let was_right = prev_gamepad_right.get(slot).copied().unwrap_or(false);
+
         // South: join / confirm / start (rising edge only)
-        if south && !prev_gamepad_south[slot] {
-            match state.slots[slot] {
-                SlotState::Empty => state.join(slot),
-                SlotState::Selecting { .. } => state.confirm(slot),
-                SlotState::Confirmed { .. } => {
+        if south && !was_south {
+            match state.slots.get(slot) {
+                Some(SlotState::Empty) => state.join(slot),
+                Some(SlotState::Selecting { .. }) => state.confirm(slot),
+                Some(SlotState::Confirmed { .. }) => {
                     if state.any_confirmed() {
                         roster.def_paths = state.confirmed_paths();
                         roster.devices = state.confirmed_devices();
                         next_state.set(GameState::InGame);
                     }
                 }
+                None => {}
             }
         }
-        if left  && !prev_gamepad_left[slot]  { state.cycle_prev(slot); }
-        if right && !prev_gamepad_right[slot] { state.cycle_next(slot); }
+        if left  && !was_left  { state.cycle_prev(slot); }
+        if right && !was_right { state.cycle_next(slot); }
 
-        prev_gamepad_south[slot] = south;
-        prev_gamepad_left[slot]  = left;
-        prev_gamepad_right[slot] = right;
+        if let Some(v) = prev_gamepad_south.get_mut(slot) { *v = south; }
+        if let Some(v) = prev_gamepad_left.get_mut(slot) { *v = left; }
+        if let Some(v) = prev_gamepad_right.get_mut(slot) { *v = right; }
     }
 }

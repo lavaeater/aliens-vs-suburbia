@@ -418,6 +418,9 @@ pub struct GaitState {
     swinging: [bool; 2],
 }
 
+// `Foot::index()` is a closed 0/1 mapping over a two-variant enum, and every array here
+// is `[T; 2]` indexed only by it -- structurally in bounds, not a real panic risk.
+#[allow(clippy::indexing_slicing)]
 impl GaitState {
     /// How far through the cycle, in `[0, 1)`.
     #[must_use]

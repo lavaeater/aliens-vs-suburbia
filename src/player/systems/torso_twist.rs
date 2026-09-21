@@ -186,11 +186,9 @@ pub fn resolve_twist_bones(
         }
 
         let weights = normalized_weights(&pending.bones);
-        let bones = resolved
-            .into_iter()
-            .map(|e| e.expect("checked above"))
-            .zip(weights)
-            .collect();
+        // `resolved` passed the all-`Some` check above, so `flatten` here just unwraps
+        // without an explicit panicking path.
+        let bones = resolved.into_iter().flatten().zip(weights).collect();
 
         commands
             .entity(character)

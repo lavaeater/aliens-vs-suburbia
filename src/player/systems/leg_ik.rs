@@ -323,6 +323,9 @@ fn child_of_character(bone: Entity, character: Entity, parents: &Query<&ChildOf>
 
 /// Turn a spawned skeleton into two leg chains, once it exists.
 #[allow(clippy::type_complexity)]
+// Indexed only by `Foot::index()` (0/1 over a two-variant enum) into `[T; 2]`
+// arrays / tuples -- structurally in bounds, not a real panic risk.
+#[allow(clippy::indexing_slicing)]
 pub fn resolve_legs(
     mut commands: Commands,
     mut pending: Query<(Entity, &mut PendingLegs), (With<Player>, Without<Legs>)>,
@@ -416,6 +419,9 @@ pub fn resolve_legs(
 
 /// Step the gait and bend both legs onto its feet.
 #[allow(clippy::type_complexity, clippy::too_many_arguments)]
+// Indexed only by `Foot::index()` (0/1 over a two-variant enum) into `[T; 2]`
+// arrays / tuples -- structurally in bounds, not a real panic risk.
+#[allow(clippy::indexing_slicing)]
 pub fn apply_leg_ik(
     mut commands: Commands,
     time: Res<Time>,

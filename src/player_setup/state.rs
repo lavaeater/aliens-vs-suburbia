@@ -48,25 +48,26 @@ impl Default for PlayerSetupState {
 
 impl PlayerSetupState {
     pub fn join(&mut self, slot: usize) {
-        if slot >= MAX_PLAYERS { return; }
-        if self.slots[slot] == SlotState::Empty {
-            self.slots[slot] = SlotState::Selecting { def_index: 0 };
+        let Some(state) = self.slots.get_mut(slot) else { return };
+        if *state == SlotState::Empty {
+            *state = SlotState::Selecting { def_index: 0 };
             self.dirty = true;
         }
     }
 
     pub fn confirm(&mut self, slot: usize) {
-        if slot >= MAX_PLAYERS { return; }
-        if let SlotState::Selecting { def_index } = self.slots[slot] {
+        let Some(state) = self.slots.get_mut(slot) else { return };
+        if let SlotState::Selecting { def_index } = *state {
             let path = self.player_defs.get(def_index).cloned().unwrap_or_default();
-            self.slots[slot] = SlotState::Confirmed { def_path: path };
+            *state = SlotState::Confirmed { def_path: path };
             self.dirty = true;
         }
     }
 
     pub fn cycle_next(&mut self, slot: usize) {
         if self.player_defs.is_empty() { return; }
-        if let SlotState::Selecting { ref mut def_index } = self.slots[slot] {
+        let Some(state) = self.slots.get_mut(slot) else { return };
+        if let SlotState::Selecting { def_index } = state {
             *def_index = (*def_index + 1) % self.player_defs.len();
             self.dirty = true;
         }
@@ -74,7 +75,8 @@ impl PlayerSetupState {
 
     pub fn cycle_prev(&mut self, slot: usize) {
         if self.player_defs.is_empty() { return; }
-        if let SlotState::Selecting { ref mut def_index } = self.slots[slot] {
+        let Some(state) = self.slots.get_mut(slot) else { return };
+        if let SlotState::Selecting { def_index } = state {
             let len = self.player_defs.len();
             *def_index = (*def_index + len - 1) % len;
             self.dirty = true;
@@ -102,7 +104,10 @@ impl PlayerSetupState {
     }
 
     pub fn display_name(&self, slot: usize) -> String {
-        match &self.slots[slot] {
+        let Some(state) = self.slots.get(slot) else {
+            return format!("Player {}  --  press Enter to join", slot + 1);
+        };
+        match state {
             SlotState::Empty => format!("Player {}  --  press Enter to join", slot + 1),
             SlotState::Selecting { def_index } => {
                 let name = self.player_defs.get(*def_index)

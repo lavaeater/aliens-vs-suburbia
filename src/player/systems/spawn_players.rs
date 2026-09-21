@@ -200,7 +200,7 @@ pub fn assign_spawns(requests: &[SpawnPlayer], occupied: &[usize], max_players: 
     let mut out = Vec::new();
 
     for req in requests.iter().filter(|r| r.slot.is_some()) {
-        let slot = req.slot.unwrap();
+        let Some(slot) = req.slot else { continue };
         if slot < max_players && !taken.contains(&slot) {
             taken.push(slot);
             out.push((slot, req.clone()));
@@ -216,8 +216,8 @@ pub fn assign_spawns(requests: &[SpawnPlayer], occupied: &[usize], max_players: 
         if taken.contains(&slot) {
             continue;
         }
-        let req = anonymous[i % anonymous.len()];
-        out.push((slot, req.clone()));
+        let Some(req) = anonymous.get(i % anonymous.len()) else { continue };
+        out.push((slot, (*req).clone()));
         taken.push(slot);
         i += 1;
     }
