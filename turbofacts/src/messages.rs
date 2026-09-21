@@ -2,6 +2,8 @@ use bevy::prelude::Message;
 
 use super::fact_value::FactValue;
 
+/// Emitted when a Fact is changed.
+/// 
 /// Emitted once per changed key per frame by `emit_fact_changes`, draining
 /// [`Facts`](super::Facts)'s dirty list. The canonical signal that something in the world
 /// changed — the Rust analog of the Kotlin `Message.FactUpdated`. Systems react by reading
@@ -12,7 +14,9 @@ pub struct FactChanged {
     pub value: FactValue,
 }
 
-/// A request to write a fact, for systems that hold only a `MessageWriter` and want to avoid
+/// A request to write a fact
+/// 
+/// For systems that hold only a `MessageWriter` and want to avoid
 /// `ResMut<Facts>` contention. Applied by `apply_set_fact` into the [`Facts`](super::Facts)
 /// resource. Direct `ResMut<Facts>` mutation is still fine where convenient.
 /// A named side effect requested by a story consequence (`Consequence::Emit`). Game plugins

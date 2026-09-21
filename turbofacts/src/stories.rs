@@ -1,4 +1,6 @@
-//! Built-in game stories, ported from Kotlin's `StoryHelper`. These define the basic
+//! Built-in game stories
+//! 
+//! Ported from Kotlin's `StoryHelper`. These define the basic
 //! level-flow (start / complete / failed) and a couple of win-condition variants. They are
 //! authored in code via the [`builder`](super::builder) DSL; designers can add more via RON
 //! story files (see [`super::persistence`]).
@@ -56,6 +58,8 @@ pub fn level_complete_story() -> Story {
         .build()
 }
 
+/// A story that fails if all players are dead
+/// 
 /// All players dead while a level is running -> failed; emits `level_failed`. Reads the
 /// derived `ALL_PLAYERS_DEAD` bool (which already guards against "no players yet") rather
 /// than `LIVING_PLAYER_COUNT == 0`, so the level can't fail before anyone has spawned.
