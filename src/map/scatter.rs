@@ -79,10 +79,10 @@ impl Default for ScatterOptions {
 
 struct Rng(u64);
 impl Rng {
-    fn new(seed: u64) -> Self {
-        Rng(seed.wrapping_add(1).wrapping_mul(0x9e3779b97f4a7c15))
+    const fn new(seed: u64) -> Self {
+        Self(seed.wrapping_add(1).wrapping_mul(0x9e3779b97f4a7c15))
     }
-    fn next(&mut self) -> u64 {
+    const fn next(&mut self) -> u64 {
         let mut x = self.0;
         x ^= x << 13;
         x ^= x >> 7;

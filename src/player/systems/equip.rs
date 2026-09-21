@@ -109,9 +109,7 @@ impl PendingEquip {
             weapon_grip,
             weapon_model_path: weapon.model_path,
             weapon_name: std::path::Path::new(weapon_def_path)
-                .file_stem()
-                .map(|s| s.to_string_lossy().into_owned())
-                .unwrap_or_else(|| "Weapon".to_string()),
+                .file_stem().map_or_else(|| "Weapon".to_string(), |s| s.to_string_lossy().into_owned()),
             weapon_scale: weapon.scale,
             muzzle,
             weapon_props,
@@ -264,7 +262,7 @@ fn ancestor_entities(entity: Entity, parents: &Query<&ChildOf>) -> Vec<Entity> {
 fn ancestor_names(entity: Entity, parents: &Query<&ChildOf>, names: &Query<&Name>) -> Vec<String> {
     ancestor_entities(entity, parents)
         .into_iter()
-        .map(|e| names.get(e).map(|n| n.to_string()).unwrap_or_default())
+        .map(|e| names.get(e).map(std::string::ToString::to_string).unwrap_or_default())
         .collect()
 }
 
@@ -365,20 +363,17 @@ pub fn equip_pending_weapons(
         let aim_bone = match equip.aimed.as_ref().map(|plan| plan.char_anchor.anchor.clone()) {
             None => None,
             Some(None) => Some(character),
-            Some(Some(bone)) => match find_descendant_named(character, &bone, &children, &names) {
-                Some(entity) => Some(entity),
-                None => {
-                    equip.tries += 1;
-                    if equip.tries >= EQUIP_MAX_TRIES {
-                        warn!(
-                            "anchor bone '{bone}' never appeared under the character; \
-                             not equipping {}",
-                            equip.weapon_model_path
-                        );
-                        commands.entity(character).remove::<PendingEquip>();
-                    }
-                    continue;
+            Some(Some(bone)) => if let Some(entity) = find_descendant_named(character, &bone, &children, &names) { Some(entity) } else {
+                equip.tries += 1;
+                if equip.tries >= EQUIP_MAX_TRIES {
+                    warn!(
+                        "anchor bone '{bone}' never appeared under the character; \
+                         not equipping {}",
+                        equip.weapon_model_path
+                    );
+                    commands.entity(character).remove::<PendingEquip>();
                 }
+                continue;
             },
         };
 
@@ -429,20 +424,17 @@ pub fn equip_pending_weapons(
 
         let anchor = match equip.bone.clone() {
             None => character,
-            Some(bone) => match find_descendant_named(character, &bone, &children, &names) {
-                Some(e) => e,
-                None => {
-                    equip.tries += 1;
-                    if equip.tries >= EQUIP_MAX_TRIES {
-                        warn!(
-                            "bone '{bone}' never appeared under the character; \
-                             not equipping {}",
-                            equip.weapon_model_path
-                        );
-                        commands.entity(character).remove::<PendingEquip>();
-                    }
-                    continue;
+            Some(bone) => if let Some(e) = find_descendant_named(character, &bone, &children, &names) { e } else {
+                equip.tries += 1;
+                if equip.tries >= EQUIP_MAX_TRIES {
+                    warn!(
+                        "bone '{bone}' never appeared under the character; \
+                         not equipping {}",
+                        equip.weapon_model_path
+                    );
+                    commands.entity(character).remove::<PendingEquip>();
                 }
+                continue;
             },
         };
 
@@ -494,8 +486,8 @@ pub fn keep_weapons_snapped(
 ) {
     let dt = time.delta_secs();
     for (weapon, snap) in weapons.iter() {
-        let bone_scale = global_transforms.get(snap.bone).map(|gt| gt.scale().x).unwrap_or(1.0);
-        let root_scale = global_transforms.get(snap.root).map(|gt| gt.scale().x).unwrap_or(1.0);
+        let bone_scale = global_transforms.get(snap.bone).map_or(1.0, |gt| gt.scale().x);
+        let root_scale = global_transforms.get(snap.root).map_or(1.0, |gt| gt.scale().x);
         let effective = weapon_local_scale(snap.weapon_def_scale, root_scale, bone_scale);
 
         if let Ok(mut t) = transforms.get_mut(weapon) {

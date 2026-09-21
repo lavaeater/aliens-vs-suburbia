@@ -22,23 +22,23 @@ pub enum SpecialAbility {
 }
 
 impl SpecialAbility {
-    pub fn throws_to_charge(&self) -> u32 {
+    pub const fn throws_to_charge(&self) -> u32 {
         match self {
-            SpecialAbility::Bombardment => 10,
-            SpecialAbility::Healing     =>  6,
-            SpecialAbility::Whirlwind   => 10,
-            SpecialAbility::GoldDigger  =>  8,
-            SpecialAbility::Molotov     =>  8,
+            Self::Bombardment => 10,
+            Self::Healing     =>  6,
+            Self::Whirlwind   => 10,
+            Self::GoldDigger  =>  8,
+            Self::Molotov     =>  8,
         }
     }
 
-    pub fn label(&self) -> &'static str {
+    pub const fn label(&self) -> &'static str {
         match self {
-            SpecialAbility::Bombardment => "Bombardment",
-            SpecialAbility::Healing     => "Healing",
-            SpecialAbility::Whirlwind   => "Whirlwind",
-            SpecialAbility::GoldDigger  => "Gold Digger",
-            SpecialAbility::Molotov     => "Molotov",
+            Self::Bombardment => "Bombardment",
+            Self::Healing     => "Healing",
+            Self::Whirlwind   => "Whirlwind",
+            Self::GoldDigger  => "Gold Digger",
+            Self::Molotov     => "Molotov",
         }
     }
 }
@@ -57,7 +57,7 @@ pub struct AbilityCooldown {
 }
 
 impl AbilityCooldown {
-    pub fn new(throws_needed: u32) -> Self {
+    pub const fn new(throws_needed: u32) -> Self {
         Self { charge: 0.0, throws_banked: 0.0, throws_needed }
     }
 
@@ -71,7 +71,7 @@ impl AbilityCooldown {
         self.charge >= 1.0
     }
 
-    pub fn reset(&mut self) {
+    pub const fn reset(&mut self) {
         self.charge = 0.0;
         self.throws_banked = 0.0;
     }
@@ -87,7 +87,7 @@ pub struct WhirlwindActive {
 
 // ── tick_cooldowns is a no-op now (meter fills on throws) ───────────────────
 
-pub fn tick_cooldowns(_time: Res<Time>, _query: Query<&mut AbilityCooldown>) {
+pub const fn tick_cooldowns(_time: Res<Time>, _query: Query<&mut AbilityCooldown>) {
     // Meter fills via add_throw() in the throwing system; nothing to tick.
 }
 

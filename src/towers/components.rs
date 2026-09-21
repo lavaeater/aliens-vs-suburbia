@@ -15,7 +15,7 @@ pub struct TowerShooter {
 }
 
 impl TowerShooter {
-    pub fn new(rate_of_fire_per_minute: f32) -> Self {
+    pub const fn new(rate_of_fire_per_minute: f32) -> Self {
         Self {
             cool_down: 0.0,
             rate_of_fire_per_minute,

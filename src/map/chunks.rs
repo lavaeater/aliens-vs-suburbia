@@ -38,17 +38,17 @@ pub enum Side {
 impl Side {
     /// Used by the stitcher to iterate a chunk's neighbours.
     #[allow(dead_code)]
-    pub const ALL: [Side; 4] = [Side::North, Side::East, Side::South, Side::West];
+    pub const ALL: [Self; 4] = [Self::North, Self::East, Self::South, Self::West];
 
     /// The side an adjacent chunk on this side would present back to us.
     /// Part of the connector vocabulary; used by the tagging editor (later stage).
     #[allow(dead_code)]
-    pub fn opposite(self) -> Side {
+    pub const fn opposite(self) -> Self {
         match self {
-            Side::North => Side::South,
-            Side::East => Side::West,
-            Side::South => Side::North,
-            Side::West => Side::East,
+            Self::North => Self::South,
+            Self::East => Self::West,
+            Self::South => Self::North,
+            Self::West => Self::East,
         }
     }
 }
@@ -68,15 +68,15 @@ pub enum EdgeType {
 
 impl EdgeType {
     /// Two touching edges mate iff they present the same passability class.
-    pub fn mates_with(self, other: EdgeType) -> bool {
+    pub fn mates_with(self, other: Self) -> bool {
         self == other
     }
 
     /// Whether a creature can cross this edge (road or open, not wall).
     /// Part of the connector vocabulary; used by the stitcher's validation (later stage).
     #[allow(dead_code)]
-    pub fn is_passable(self) -> bool {
-        !matches!(self, EdgeType::Wall)
+    pub const fn is_passable(self) -> bool {
+        !matches!(self, Self::Wall)
     }
 }
 
@@ -110,7 +110,7 @@ impl MapChunk {
     // programmer error that should fail loudly and immediately, not propagate.
     #[allow(clippy::panic)]
     pub fn from_ascii(name: &str, rows: &[&str], edges: [EdgeType; 4]) -> Self {
-        Self::try_from_ascii(name, rows.iter().map(|r| r.to_string()).collect(), edges)
+        Self::try_from_ascii(name, rows.iter().map(std::string::ToString::to_string).collect(), edges)
             .unwrap_or_else(|e| panic!("{e}"))
     }
 
@@ -140,13 +140,13 @@ impl MapChunk {
     }
 
     /// The connector on a given side.
-    pub fn edge(&self, side: Side) -> EdgeType {
+    pub const fn edge(&self, side: Side) -> EdgeType {
         self.edges[side as usize]
     }
 
     /// A copy rotated clockwise `quarter_turns` × 90°. Rotates both the tile grid and
     /// the connectors, so a rotated chunk still stitches correctly.
-    pub fn rotated(&self, quarter_turns: u32) -> MapChunk {
+    pub fn rotated(&self, quarter_turns: u32) -> Self {
         let mut out = self.clone();
         for _ in 0..(quarter_turns % 4) {
             out = out.rotate_cw();
@@ -155,7 +155,7 @@ impl MapChunk {
     }
 
     /// One clockwise quarter turn.
-    fn rotate_cw(&self) -> MapChunk {
+    fn rotate_cw(&self) -> Self {
         let n = CHUNK_SIZE;
         // new[r][c] = old[n-1-c][r]
         let tiles = (0..n)
@@ -169,7 +169,7 @@ impl MapChunk {
             e[Side::East as usize],  // South <- East
             e[Side::South as usize], // West  <- South
         ];
-        MapChunk { name: self.name.clone(), tiles, edges }
+        Self { name: self.name.clone(), tiles, edges }
     }
 }
 

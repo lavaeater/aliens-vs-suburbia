@@ -4,7 +4,7 @@ use crate::general::explosion::ExplosionProps;
 use crate::general::projectiles::ProjectileProps;
 use crate::gore::components::DamageKind;
 
-fn default_scale() -> f32 { 1.0 }
+const fn default_scale() -> f32 { 1.0 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EnemyProps {
@@ -38,7 +38,7 @@ pub enum EnemyAttack {
 }
 
 fn default_enemy_loot() -> Option<String> { Some("alien".to_string()) }
-fn default_touch_dps() -> f32 { 10.0 }
+const fn default_touch_dps() -> f32 { 10.0 }
 
 impl Default for EnemyProps {
     fn default() -> Self {
@@ -145,25 +145,25 @@ pub enum AmmoKind {
 
 impl AmmoKind {
     /// Most rounds of this kind a player can carry outside the magazine.
-    pub fn cap(self) -> u32 {
+    pub const fn cap(self) -> u32 {
         match self {
-            AmmoKind::Infinite => u32::MAX,
-            AmmoKind::Pistol => 120,
-            AmmoKind::Rifle => 240,
-            AmmoKind::Shells => 48,
-            AmmoKind::Grenade => 6,
-            AmmoKind::Molotov => 4,
+            Self::Infinite => u32::MAX,
+            Self::Pistol => 120,
+            Self::Rifle => 240,
+            Self::Shells => 48,
+            Self::Grenade => 6,
+            Self::Molotov => 4,
         }
     }
 
-    pub fn label(self) -> &'static str {
+    pub const fn label(self) -> &'static str {
         match self {
-            AmmoKind::Infinite => "inf",
-            AmmoKind::Pistol => "9mm",
-            AmmoKind::Rifle => "5.56",
-            AmmoKind::Shells => "shells",
-            AmmoKind::Grenade => "grenades",
-            AmmoKind::Molotov => "molotovs",
+            Self::Infinite => "inf",
+            Self::Pistol => "9mm",
+            Self::Rifle => "5.56",
+            Self::Shells => "shells",
+            Self::Grenade => "grenades",
+            Self::Molotov => "molotovs",
         }
     }
 }
@@ -185,21 +185,19 @@ impl ItemKind {
     /// Short human label for editors and the HUD.
     pub fn label(&self) -> String {
         match self {
-            ItemKind::Decorative => "decorative".into(),
-            ItemKind::HealthPickup { amount } => format!("+{amount} HP"),
-            ItemKind::AmmoPickup { kind, rounds } => format!("{rounds} {}", kind.label()),
-            ItemKind::WeaponPickup { def } => std::path::Path::new(def)
-                .file_stem()
-                .map(|s| s.to_string_lossy().into_owned())
-                .unwrap_or_else(|| "weapon".into()),
-            ItemKind::Coins { value } => format!("{value} coins"),
-            ItemKind::Key { id } => format!("key {id}"),
+            Self::Decorative => "decorative".into(),
+            Self::HealthPickup { amount } => format!("+{amount} HP"),
+            Self::AmmoPickup { kind, rounds } => format!("{rounds} {}", kind.label()),
+            Self::WeaponPickup { def } => std::path::Path::new(def)
+                .file_stem().map_or_else(|| "weapon".into(), |s| s.to_string_lossy().into_owned()),
+            Self::Coins { value } => format!("{value} coins"),
+            Self::Key { id } => format!("key {id}"),
         }
     }
 
     /// Whether players can pick this up (everything except set dressing).
-    pub fn is_pickup(&self) -> bool {
-        !matches!(self, ItemKind::Decorative)
+    pub const fn is_pickup(&self) -> bool {
+        !matches!(self, Self::Decorative)
     }
 }
 
@@ -208,7 +206,7 @@ pub struct ItemProps {
     pub kind: ItemKind,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PlayerAbility {
     #[default]
     Bombardment,
@@ -218,7 +216,7 @@ pub enum PlayerAbility {
     Molotov,
 }
 
-fn default_throw_rate() -> f32 { 60.0 }
+const fn default_throw_rate() -> f32 { 60.0 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PlayerProps {
@@ -251,18 +249,18 @@ impl Default for PlayerProps {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum WeaponHands {
     #[default]
     OneHanded,
     TwoHanded,
 }
 
-fn default_weapon_damage() -> i32 { 20 }
-fn default_fire_rate() -> f32 { 300.0 }
-fn default_weapon_range() -> f32 { 40.0 }
-fn default_spread_deg() -> f32 { 1.5 }
-fn default_pellets() -> u32 { 1 }
+const fn default_weapon_damage() -> i32 { 20 }
+const fn default_fire_rate() -> f32 { 300.0 }
+const fn default_weapon_range() -> f32 { 40.0 }
+const fn default_spread_deg() -> f32 { 1.5 }
+const fn default_pellets() -> u32 { 1 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WeaponProps {
@@ -300,8 +298,8 @@ pub struct WeaponProps {
     pub projectile: Option<ProjectileProps>,
 }
 
-fn default_magazine() -> u32 { 12 }
-fn default_reload_secs() -> f32 { 1.5 }
+const fn default_magazine() -> u32 { 12 }
+const fn default_reload_secs() -> f32 { 1.5 }
 
 impl Default for WeaponProps {
     fn default() -> Self {
@@ -332,22 +330,22 @@ pub enum ModelType {
 }
 
 impl Default for ModelType {
-    fn default() -> Self { ModelType::Player(PlayerProps::default()) }
+    fn default() -> Self { Self::Player(PlayerProps::default()) }
 }
 
 impl ModelType {
-    pub fn label(&self) -> &'static str {
+    pub const fn label(&self) -> &'static str {
         match self {
-            ModelType::Player(_)   => "Player",
-            ModelType::Tower(_)    => "Tower",
-            ModelType::Terrain(_)  => "Terrain",
-            ModelType::Item(_)     => "Item",
-            ModelType::Enemy(_)    => "Enemy",
-            ModelType::Weapon(_)   => "Weapon",
+            Self::Player(_)   => "Player",
+            Self::Tower(_)    => "Tower",
+            Self::Terrain(_)  => "Terrain",
+            Self::Item(_)     => "Item",
+            Self::Enemy(_)    => "Enemy",
+            Self::Weapon(_)   => "Weapon",
         }
     }
 
-    pub fn all_labels() -> &'static [&'static str] {
+    pub const fn all_labels() -> &'static [&'static str] {
         &["Player", "Tower", "Terrain", "Item", "Enemy", "Weapon"]
     }
 
@@ -360,12 +358,12 @@ impl ModelType {
     /// Return a default instance for each label.
     pub fn from_label(label: &str) -> Self {
         match label {
-            "Tower"   => ModelType::Tower(TowerProps::default()),
-            "Terrain" => ModelType::Terrain(TerrainProps::default()),
-            "Item"    => ModelType::Item(ItemProps::default()),
-            "Enemy"   => ModelType::Enemy(EnemyProps::default()),
-            "Weapon"  => ModelType::Weapon(WeaponProps::default()),
-            _         => ModelType::Player(PlayerProps::default()),
+            "Tower"   => Self::Tower(TowerProps::default()),
+            "Terrain" => Self::Terrain(TerrainProps::default()),
+            "Item"    => Self::Item(ItemProps::default()),
+            "Enemy"   => Self::Enemy(EnemyProps::default()),
+            "Weapon"  => Self::Weapon(WeaponProps::default()),
+            _         => Self::Player(PlayerProps::default()),
         }
     }
 }

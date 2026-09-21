@@ -176,7 +176,7 @@ pub fn map_loader(
                 if mf.contains(MapFeatures::EnemySpawn) {
                     alien_counter.max_count = 100;
                     commands.spawn((
-                        Name::from(format!("Alien Spawn Point {}:{}", col, row)),
+                        Name::from(format!("Alien Spawn Point {col}:{row}")),
                         AlienSpawnPoint::new(2.0),
                         WorldAssetRoot(game_assets.alien_construct.clone()),
                         RigidBody::Static,
@@ -189,7 +189,7 @@ pub fn map_loader(
                 if mf.contains(MapFeatures::EnemyExit) {
                     map_graph.goal = (col, row);
                     commands.spawn((
-                        Name::from(format!("Alien Goal {}:{}", col, row)),
+                        Name::from(format!("Alien Goal {col}:{row}")),
                         AlienGoal,
                         WorldAssetRoot(game_assets.alien_construct.clone()),
                         RigidBody::Static,
@@ -285,7 +285,7 @@ pub fn map_loader(
                 mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
                 mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
                 mesh.insert_indices(Indices::U32(indices));
-                let base_color = Color::srgb(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+                let base_color = Color::srgb(f32::from(r) / 255.0, f32::from(g) / 255.0, f32::from(b) / 255.0);
                 commands.spawn((
                     Name::from("Floor"),
                     Floor {},
@@ -373,7 +373,7 @@ pub fn map_loader(
                 tile_defs.floor_level + tile_defs.tile_depth,
                 tile_defs.tile_width * placement.y as f32,
             );
-            let rot = Quat::from_rotation_y(placement.rotation_steps as f32 * std::f32::consts::FRAC_PI_4);
+            let rot = Quat::from_rotation_y(f32::from(placement.rotation_steps) * std::f32::consts::FRAC_PI_4);
             let scale = Vec3::splat(def.scale);
 
             let scene_handle = asset_server.load(

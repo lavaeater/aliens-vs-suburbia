@@ -17,7 +17,7 @@ pub struct PlaygroundSession {
 }
 
 /// True while a playground session is live.
-pub fn in_playground(session: Option<Res<PlaygroundSession>>) -> bool {
+pub const fn in_playground(session: Option<Res<PlaygroundSession>>) -> bool {
     session.is_some()
 }
 

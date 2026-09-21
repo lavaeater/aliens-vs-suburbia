@@ -13,15 +13,15 @@ pub enum InputDevice {
 
 impl InputDevice {
     /// Setup screen convention: slot 0 is the keyboard, the rest are gamepads in order.
-    pub fn for_slot(slot: usize) -> Self {
+    pub const fn for_slot(slot: usize) -> Self {
         match slot {
-            0 => InputDevice::Keyboard,
-            n => InputDevice::Gamepad(n - 1),
+            0 => Self::Keyboard,
+            n => Self::Gamepad(n - 1),
         }
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum SlotState {
     Empty,
     Selecting { def_index: usize },
@@ -111,8 +111,7 @@ impl PlayerSetupState {
             SlotState::Empty => format!("Player {}  --  press Enter to join", slot + 1),
             SlotState::Selecting { def_index } => {
                 let name = self.player_defs.get(*def_index)
-                    .map(|p| def_stem(p))
-                    .unwrap_or("(no models)");
+                    .map_or("(no models)", |p| def_stem(p));
                 format!("Player {}  <  {}  >  [Enter] confirm", slot + 1, name)
             }
             SlotState::Confirmed { def_path } => {

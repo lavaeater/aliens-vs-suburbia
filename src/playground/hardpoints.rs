@@ -46,17 +46,17 @@ pub enum HardpointSide {
 }
 
 impl HardpointSide {
-    pub fn roles(self) -> &'static [&'static str] {
+    pub const fn roles(self) -> &'static [&'static str] {
         match self {
-            HardpointSide::Character => &ROLES,
-            HardpointSide::Weapon => &WEAPON_ROLES,
+            Self::Character => &ROLES,
+            Self::Weapon => &WEAPON_ROLES,
         }
     }
 
-    pub fn label(self) -> &'static str {
+    pub const fn label(self) -> &'static str {
         match self {
-            HardpointSide::Character => "character",
-            HardpointSide::Weapon => "weapon",
+            Self::Character => "character",
+            Self::Weapon => "weapon",
         }
     }
 }
@@ -146,14 +146,14 @@ impl HardpointEditor {
         self.ui_dirty = true;
     }
 
-    pub fn dirty(&self, side: HardpointSide) -> bool {
+    pub const fn dirty(&self, side: HardpointSide) -> bool {
         match side {
             HardpointSide::Character => self.character_dirty,
             HardpointSide::Weapon => self.weapon_dirty,
         }
     }
 
-    pub fn set_dirty(&mut self, side: HardpointSide, dirty: bool) {
+    pub const fn set_dirty(&mut self, side: HardpointSide, dirty: bool) {
         match side {
             HardpointSide::Character => self.character_dirty = dirty,
             HardpointSide::Weapon => self.weapon_dirty = dirty,

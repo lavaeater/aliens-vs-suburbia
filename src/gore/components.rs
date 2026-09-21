@@ -88,18 +88,18 @@ impl Ephemeral {
         }
     }
 
-    pub fn with_grow(mut self, grow_to: f32) -> Self {
+    pub const fn with_grow(mut self, grow_to: f32) -> Self {
         self.grow_to = grow_to;
         self
     }
 
-    pub fn base_scale(mut self, base_scale: Vec3) -> Self {
+    pub const fn base_scale(mut self, base_scale: Vec3) -> Self {
         self.base_scale = base_scale;
         self
     }
 
     #[allow(dead_code)]
-    pub fn no_fade(mut self) -> Self {
+    pub const fn no_fade(mut self) -> Self {
         self.fade = false;
         self
     }

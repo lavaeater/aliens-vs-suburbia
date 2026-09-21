@@ -70,8 +70,7 @@ fn mtime_of_settings() -> u64 {
         .and_then(|m| m.modified())
         .ok()
         .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
-        .map(|d| d.as_secs())
-        .unwrap_or(0)
+        .map_or(0, |d| d.as_secs())
 }
 
 fn poll_model_settings_file(
@@ -165,7 +164,7 @@ fn sync_player_anim_clips(
     if *last_id == Some(id) && !clips.names.is_empty() { return; }
     *last_id = Some(id);
 
-    let mut names: Vec<String> = gltf.named_animations.keys().map(|k| k.to_string()).collect();
+    let mut names: Vec<String> = gltf.named_animations.keys().map(std::string::ToString::to_string).collect();
     names.sort();
     clips.names = names;
 }
@@ -262,7 +261,7 @@ pub fn build_graph(
         let def_mapped = def
             .and_then(|d| d.resolved_clip(key.default_search()))
             .unwrap_or_default();
-        let settings_mapped = settings_mapping.map(|m| m.get(key)).unwrap_or("");
+        let settings_mapped = settings_mapping.map_or("", |m| m.get(key));
         let search = if !def_mapped.is_empty() {
             def_mapped.as_str()
         } else if !settings_mapped.is_empty() {

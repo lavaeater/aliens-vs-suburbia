@@ -279,7 +279,7 @@ pub enum SwapStep {
 /// immediately could race the map's spawn and leave the default model on screen with the
 /// pending swap already consumed. Waiting for a player means the swap always takes the same
 /// path it takes for a click.
-pub fn decide_swap(player_position: Option<Vec3>, frames_waited: u32) -> SwapStep {
+pub const fn decide_swap(player_position: Option<Vec3>, frames_waited: u32) -> SwapStep {
     match player_position {
         Some(position) => SwapStep::Replace(position),
         None if frames_waited < SWAP_WAIT_FRAMES => SwapStep::Wait,

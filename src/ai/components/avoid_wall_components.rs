@@ -34,7 +34,7 @@ impl CoolDown for AvoidWallsData {
 }
 
 impl AvoidWallsData {
-    pub fn new(max_forward_distance: f32, max_left_distance: f32, max_right_distance: f32, rotation_timer: f32) -> Self {
+    pub const fn new(max_forward_distance: f32, max_left_distance: f32, max_right_distance: f32, rotation_timer: f32) -> Self {
         Self {
             forward_distance: max_forward_distance,
             left_distance: max_left_distance,

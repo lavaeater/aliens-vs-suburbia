@@ -15,7 +15,7 @@ use crate::player::systems::arm_ik::{SightAlign, WeaponArms};
 use crate::player::systems::equip::{EquippedWeapon, PendingEquip};
 use crate::player::systems::shoot::Weapon;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WeaponSlot {
     /// Path to the weapon def, e.g. `assets/defs/Pistol.ron`.
     pub def_path: String,
@@ -137,13 +137,10 @@ pub fn queue_equip(commands: &mut Commands, player: Entity, loadout: &Weapons) {
         warn!("cannot equip {}: character def {} failed to load", slot.def_path, loadout.character_def_path);
         return;
     };
-    match PendingEquip::resolve(&character, &slot.def_path) {
-        Some(mut equip) => {
-            equip.rounds_in_mag = slot.rounds_in_mag;
-            commands.entity(player).insert(equip);
-        }
-        None => warn!("cannot equip {}: no grip pairing with {}", slot.def_path, loadout.character_def_path),
-    }
+    if let Some(mut equip) = PendingEquip::resolve(&character, &slot.def_path) {
+        equip.rounds_in_mag = slot.rounds_in_mag;
+        commands.entity(player).insert(equip);
+    } else { warn!("cannot equip {}: no grip pairing with {}", slot.def_path, loadout.character_def_path) }
 }
 
 #[cfg(test)]

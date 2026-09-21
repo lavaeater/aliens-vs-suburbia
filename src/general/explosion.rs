@@ -32,7 +32,7 @@ pub struct ExplosionProps {
     pub fire: bool,
 }
 
-fn default_impulse() -> f32 { 8.0 }
+const fn default_impulse() -> f32 { 8.0 }
 
 impl Default for ExplosionProps {
     fn default() -> Self {

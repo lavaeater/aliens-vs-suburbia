@@ -27,10 +27,10 @@ use enumflags2::BitFlags;
 
 struct Rng(u64);
 impl Rng {
-    fn new(seed: u64) -> Self {
-        Rng(seed.wrapping_add(1).wrapping_mul(0x9e3779b97f4a7c15))
+    const fn new(seed: u64) -> Self {
+        Self(seed.wrapping_add(1).wrapping_mul(0x9e3779b97f4a7c15))
     }
-    fn next(&mut self) -> u64 {
+    const fn next(&mut self) -> u64 {
         let mut x = self.0;
         x ^= x << 13;
         x ^= x >> 7;
@@ -277,7 +277,7 @@ pub fn stitch_map_with_library(
     if let Some(bottom) = tiles.last_mut() {
         bottom.fill(border);
     }
-    for row in tiles.iter_mut() {
+    for row in &mut tiles {
         row[0] = border;
         row[w - 1] = border;
     }

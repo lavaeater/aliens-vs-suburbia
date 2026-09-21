@@ -47,10 +47,10 @@ pub trait Opposite {
 impl Opposite for ControlDirection {
     fn opposite(&self) -> Self {
         match self {
-            ControlDirection::Forward => ControlDirection::Backward,
-            ControlDirection::Backward => ControlDirection::Forward,
-            ControlDirection::Left => ControlDirection::Right,
-            ControlDirection::Right => ControlDirection::Left,
+            Self::Forward => Self::Backward,
+            Self::Backward => Self::Forward,
+            Self::Left => Self::Right,
+            Self::Right => Self::Left,
         }
     }
 }
@@ -58,8 +58,8 @@ impl Opposite for ControlDirection {
 impl Opposite for ControlRotation {
     fn opposite(&self) -> Self {
         match self {
-            ControlRotation::Left => ControlRotation::Right,
-            ControlRotation::Right => ControlRotation::Left,
+            Self::Left => Self::Right,
+            Self::Right => Self::Left,
         }
     }
 }
@@ -156,7 +156,7 @@ impl CharacterState {
             self.state.push(state);
         }
         let next = self.resolve();
-        if next != prev { Some(next) } else { None }
+        if next == prev { None } else { Some(next) }
     }
 
     /// Remove an intent state.  Returns the resolved clip key if the visible
@@ -168,7 +168,7 @@ impl CharacterState {
             self.state.push(AnimationKey::Idle);
         }
         let next = self.resolve();
-        if next != prev { Some(next) } else { None }
+        if next == prev { None } else { Some(next) }
     }
 }
 

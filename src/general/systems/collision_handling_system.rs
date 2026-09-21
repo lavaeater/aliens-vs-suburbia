@@ -49,8 +49,8 @@ pub fn collision_handling_system(
             }
             if ball_bounces <= 2 {
                 // Spray gore from the hit, roughly along the ball's travel.
-                let target_pos = positions.get(hittable_entity).map(|p| p.0).unwrap_or(Vec3::ZERO);
-                let ball_pos = positions.get(ball_entity).map(|p| p.0).unwrap_or(target_pos);
+                let target_pos = positions.get(hittable_entity).map_or(Vec3::ZERO, |p| p.0);
+                let ball_pos = positions.get(ball_entity).map_or(target_pos, |p| p.0);
                 damage_mw.write(
                     ApplyDamage::at(hittable_entity, BALL_DAMAGE, DamageKind::Ballistic, target_pos + Vec3::Y * 0.4)
                         .from(thrower)

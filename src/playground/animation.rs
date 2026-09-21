@@ -50,12 +50,12 @@ pub struct AnimationEditor {
 }
 
 impl AnimationEditor {
-    pub fn select(&mut self, key: AnimationKey) {
+    pub const fn select(&mut self, key: AnimationKey) {
         self.selected_key = Some(key);
         self.ui_dirty = true;
     }
 
-    pub fn touch(&mut self) {
+    pub const fn touch(&mut self) {
         self.dirty = true;
         self.ui_dirty = true;
     }

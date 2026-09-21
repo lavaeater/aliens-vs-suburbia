@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 pub const SETTINGS_PATH: &str = "game-settings.ron";
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ProjectionMode {
     Orthographic,
     Perspective,
@@ -69,25 +69,25 @@ pub struct GameSettings {
     pub drop_on_death: bool,
 }
 
-fn default_projection() -> ProjectionMode { ProjectionMode::Orthographic }
-fn default_zoom() -> f32 { 8.0 }
-fn default_pitch() -> f32 { -45.0 }
-fn default_yaw() -> f32 { 45.0 }
-fn default_speed() -> f32 { 1.0 }
-fn default_player_unit() -> f32 { 1.0 }
-fn default_ortho_near() -> f32 { -1000.0 }
-fn default_ortho_far() -> f32 { 1000.0 }
-fn default_ortho_viewport_height() -> f32 { 2.0 }
-fn default_persp_fov()  -> f32 { 60.0 }
-fn default_persp_near() -> f32 { 0.1 }
-fn default_persp_far() -> f32 { 1000.0 }
-fn default_fit_margin() -> f32 { 3.0 }
-fn default_fit_zoom_max() -> f32 { 3.0 }
-fn default_focus_smoothing() -> f32 { 6.0 }
-fn default_lives_per_player() -> u32 { 3 }
-fn default_bleed_out_secs() -> f32 { 10.0 }
-fn default_respawn_secs() -> f32 { 5.0 }
-fn default_drop_on_death() -> bool { true }
+const fn default_projection() -> ProjectionMode { ProjectionMode::Orthographic }
+const fn default_zoom() -> f32 { 8.0 }
+const fn default_pitch() -> f32 { -45.0 }
+const fn default_yaw() -> f32 { 45.0 }
+const fn default_speed() -> f32 { 1.0 }
+const fn default_player_unit() -> f32 { 1.0 }
+const fn default_ortho_near() -> f32 { -1000.0 }
+const fn default_ortho_far() -> f32 { 1000.0 }
+const fn default_ortho_viewport_height() -> f32 { 2.0 }
+const fn default_persp_fov()  -> f32 { 60.0 }
+const fn default_persp_near() -> f32 { 0.1 }
+const fn default_persp_far() -> f32 { 1000.0 }
+const fn default_fit_margin() -> f32 { 3.0 }
+const fn default_fit_zoom_max() -> f32 { 3.0 }
+const fn default_focus_smoothing() -> f32 { 6.0 }
+const fn default_lives_per_player() -> u32 { 3 }
+const fn default_bleed_out_secs() -> f32 { 10.0 }
+const fn default_respawn_secs() -> f32 { 5.0 }
+const fn default_drop_on_death() -> bool { true }
 
 impl Default for GameSettings {
     fn default() -> Self {
@@ -120,10 +120,10 @@ impl GameSettings {
         let path = std::path::Path::new(SETTINGS_PATH);
         if path.exists()
             && let Ok(text) = std::fs::read_to_string(path)
-                && let Ok(settings) = ron::from_str::<GameSettings>(&text) {
+                && let Ok(settings) = ron::from_str::<Self>(&text) {
                     return settings;
                 }
-        GameSettings::default()
+        Self::default()
     }
 
     pub fn save(&self) {

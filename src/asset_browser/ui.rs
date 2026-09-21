@@ -189,7 +189,7 @@ pub fn spawn_asset_browser_ui(
              .modify_node(|mut n| n.align_self = AlignSelf::Stretch);
             c.add_button_observe("+ Add selected as source", |b| { b.width(percent(100.0)).height(px(22.0)).font_size(11.0); },
                 |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
-                    if let Some(path) = s.selected_path().map(|p| p.to_string()) {
+                    if let Some(path) = s.selected_path().map(std::string::ToString::to_string) {
                         s.add_animation_source(path);
                     }
                 });
@@ -214,7 +214,7 @@ pub fn spawn_asset_browser_ui(
              .modify_node(|mut n| n.align_self = AlignSelf::Stretch);
             c.add_button_observe("Attach selected file to bone", |b| { b.width(percent(100.0)).height(px(22.0)).font_size(11.0); },
                 |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
-                    if let Some(path) = s.selected_path().map(|p| p.to_string()) {
+                    if let Some(path) = s.selected_path().map(std::string::ToString::to_string) {
                         s.attach_selected_model(path);
                     }
                 });
@@ -610,7 +610,7 @@ pub fn rebuild_clip_tag_list(
 
             // While this clip is being edited, show the text box + suggestions.
             if is_editing {
-                let display = format!("> {}_", buffer);
+                let display = format!("> {buffer}_");
                 parent.spawn((
                     Text::new(display),
                     TextFont::default().with_font_size(11.0),
@@ -772,7 +772,7 @@ pub fn rebuild_type_picker(
                 ModelType::Terrain(p) => {
                     let blocks_e = if p.blocks_enemies { "yes" } else { "no" };
                     let blocks_p = if p.blocks_players { "yes" } else { "no" };
-                    let hp_str = p.health.map(|h| format!("{h}")).unwrap_or_else(|| "inf".to_string());
+                    let hp_str = p.health.map_or_else(|| "inf".to_string(), |h| format!("{h}"));
                     parent.spawn((
                         Text::new(format!("blocks enemies: {blocks_e}  players: {blocks_p}  HP: {hp_str}")),
                         TextFont::default().with_font_size(10.0),
@@ -1192,9 +1192,7 @@ pub fn rebuild_hardpoint_panel(
 
         // Reference-weapon preview (characters only): snap a saved weapon onto `grip`.
         if is_char {
-            let rw = ref_weapon.as_deref()
-                .map(|p| std::path::Path::new(p).file_stem().and_then(|s| s.to_str()).unwrap_or(p).to_string())
-                .unwrap_or_else(|| "none".to_string());
+            let rw = ref_weapon.as_deref().map_or_else(|| "none".to_string(), |p| std::path::Path::new(p).file_stem().and_then(|s| s.to_str()).unwrap_or(p).to_string());
             // Flag the common gotcha: chosen weapon has no `grip` hardpoint saved.
             let (suffix, col) = if ref_weapon.is_some() && !ref_has_grip {
                 ("  (no grip in def!)".to_string(), Color::srgb(1.0, 0.6, 0.4))
@@ -1219,7 +1217,7 @@ pub fn rebuild_hardpoint_panel(
                     ))
                     .with_child((Text::new("Preview selected weapon"), TextFont::default().with_font_size(10.0), TextColor(Color::srgb(0.8, 0.9, 1.0))))
                     .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
-                        if let Some(p) = s.selected_path().map(|p| p.to_string()) { s.set_ref_weapon(p); }
+                        if let Some(p) = s.selected_path().map(std::string::ToString::to_string) { s.set_ref_weapon(p); }
                     });
                     let clrbg = Color::srgba(0.2, 0.14, 0.1, 0.85);
                     row.spawn((

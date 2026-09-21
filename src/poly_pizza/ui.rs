@@ -802,8 +802,7 @@ pub fn update_save_button_label(
 ) {
     if !state.is_changed() && !library.is_changed() { return; }
     let is_saved = state.selected_model.as_ref()
-        .map(|m| library.is_saved(&m.id))
-        .unwrap_or(false);
+        .is_some_and(|m| library.is_saved(&m.id));
     let label = if is_saved { "[*] Update" } else { "[ ] Save" };
     for children in buttons.iter() {
         for child in children.iter() {

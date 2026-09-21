@@ -133,7 +133,7 @@ pub fn ammo_label(weapon: Option<&Weapon>, pouch: Option<&AmmoPouch>) -> String 
     if weapon.reloading.is_some() {
         return "RELOADING".to_string();
     }
-    let reserve = pouch.map(|p| p.rounds(weapon.ammo)).unwrap_or(0);
+    let reserve = pouch.map_or(0, |p| p.rounds(weapon.ammo));
     format!("Ammo: {} / {} {}", weapon.rounds_in_mag, reserve, weapon.ammo.label())
 }
 
@@ -150,7 +150,7 @@ pub fn track_pickup_toasts(
             toasts.0.push((slot.0, format!("+ {}", item.kind.label()), Timer::from_seconds(TOAST_SECS, TimerMode::Once)));
         }
     }
-    for (_, _, timer) in toasts.0.iter_mut() {
+    for (_, _, timer) in &mut toasts.0 {
         timer.tick(time.delta());
     }
     toasts.0.retain(|(_, _, timer)| !timer.is_finished());
@@ -194,9 +194,7 @@ pub fn update_player_bar(
             let line = if let Some(pending) = respawns.pending_for(hud_slot.0) {
                 let secs = pending.timer.remaining_secs().ceil() as u32;
                 let near = pending
-                    .anchor
-                    .map(|a| format!("near {}", slot_name(roster.as_deref(), a)))
-                    .unwrap_or_else(|| "where you fell".to_string());
+                    .anchor.map_or_else(|| "where you fell".to_string(), |a| format!("near {}", slot_name(roster.as_deref(), a)));
                 Some(format!("{name} - RESPAWN {secs}s {near}"))
             } else if respawns.is_out(hud_slot.0) {
                 Some(format!("{name} - OUT"))
@@ -237,9 +235,7 @@ pub fn update_player_bar(
         };
         let dead = dead.is_some();
         let held = equipped.and_then(|e| weapon_q.get(e.0).ok());
-        let weapon = held
-            .map(|(n, _)| n.as_str().to_string())
-            .unwrap_or_else(|| "Unarmed".to_string());
+        let weapon = held.map_or_else(|| "Unarmed".to_string(), |(n, _)| n.as_str().to_string());
         let ammo = ammo_label(held.map(|(_, w)| w), pouch);
         let toast = toasts.0.iter().find(|(s, ..)| *s == hud_slot.0).map(|(_, t, _)| t.clone()).unwrap_or_default();
         let ability_text = match (ability, meter) {

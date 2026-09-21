@@ -18,7 +18,7 @@ pub struct Score {
 }
 
 impl Score {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             kills: 0,
             shots_fired: 0,
@@ -54,7 +54,7 @@ pub struct LevelTracker {
 
 impl Default for LevelTracker {
     fn default() -> Self {
-        LevelTracker {
+        Self {
             level_name: "Level 1".to_string(),
             aliens_to_spawn: 30,
             aliens_left_to_spawn: 30,
@@ -70,7 +70,7 @@ impl Default for LevelTracker {
 
 impl LevelTracker {
     #[allow(dead_code)]
-    pub fn update(level_name: String, aliens_to_spawn: i32, spawn_rate_per_minute: f32, aliens_win_cutoff: i32) -> Self {
+    pub const fn update(level_name: String, aliens_to_spawn: i32, spawn_rate_per_minute: f32, aliens_win_cutoff: i32) -> Self {
         Self {
             level_name,
             aliens_to_spawn,

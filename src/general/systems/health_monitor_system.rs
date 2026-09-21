@@ -20,7 +20,7 @@ pub fn health_monitor_system(
             let last = last_hit.copied().unwrap_or_default();
             died_mw.write(EntityDied {
                 entity,
-                position: position.map(|p| p.0).unwrap_or(Vec3::ZERO),
+                position: position.map_or(Vec3::ZERO, |p| p.0),
                 normal: last.normal,
                 kind: last.kind,
             });

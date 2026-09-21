@@ -76,20 +76,20 @@ pub struct GamepadBindings {
     pub trigger_threshold: f32,
 }
 
-fn default_fire() -> GamepadButton { GamepadButton::RightTrigger2 }
-fn default_build_mode() -> GamepadButton { GamepadButton::West }
-fn default_execute_build() -> GamepadButton { GamepadButton::South }
-fn default_exit_build() -> GamepadButton { GamepadButton::East }
-fn default_ability() -> GamepadButton { GamepadButton::North }
-fn default_next_build_item() -> GamepadButton { GamepadButton::DPadRight }
-fn default_prev_build_item() -> GamepadButton { GamepadButton::DPadLeft }
-fn default_interact() -> GamepadButton { GamepadButton::East }
-fn default_throw_special() -> GamepadButton { GamepadButton::LeftTrigger }
-fn default_reload() -> GamepadButton { GamepadButton::RightTrigger }
-fn default_next_weapon() -> GamepadButton { GamepadButton::DPadUp }
-fn default_prev_weapon() -> GamepadButton { GamepadButton::DPadDown }
-fn default_stick_dead_zone() -> f32 { 0.2 }
-fn default_trigger_threshold() -> f32 { 0.3 }
+const fn default_fire() -> GamepadButton { GamepadButton::RightTrigger2 }
+const fn default_build_mode() -> GamepadButton { GamepadButton::West }
+const fn default_execute_build() -> GamepadButton { GamepadButton::South }
+const fn default_exit_build() -> GamepadButton { GamepadButton::East }
+const fn default_ability() -> GamepadButton { GamepadButton::North }
+const fn default_next_build_item() -> GamepadButton { GamepadButton::DPadRight }
+const fn default_prev_build_item() -> GamepadButton { GamepadButton::DPadLeft }
+const fn default_interact() -> GamepadButton { GamepadButton::East }
+const fn default_throw_special() -> GamepadButton { GamepadButton::LeftTrigger }
+const fn default_reload() -> GamepadButton { GamepadButton::RightTrigger }
+const fn default_next_weapon() -> GamepadButton { GamepadButton::DPadUp }
+const fn default_prev_weapon() -> GamepadButton { GamepadButton::DPadDown }
+const fn default_stick_dead_zone() -> f32 { 0.2 }
+const fn default_trigger_threshold() -> f32 { 0.3 }
 
 impl Default for GamepadBindings {
     fn default() -> Self {
@@ -117,11 +117,11 @@ impl GamepadBindings {
         let path = std::path::Path::new(GAMEPAD_BINDINGS_PATH);
         if path.exists()
             && let Ok(text) = std::fs::read_to_string(path)
-            && let Ok(bindings) = ron::from_str::<GamepadBindings>(&text)
+            && let Ok(bindings) = ron::from_str::<Self>(&text)
         {
             return bindings;
         }
-        GamepadBindings::default()
+        Self::default()
     }
 
     /// Load, and write the defaults out if there is no file yet, so the bindings are

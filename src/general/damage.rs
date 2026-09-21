@@ -53,7 +53,7 @@ impl Default for DamageRules {
 impl DamageRules {
     /// Whether a hit from `source` may land on `target`. Faction-less sources (fire fields,
     /// map hazards) and faction-less targets (props) are always allowed.
-    pub fn allows(&self, source: Option<Faction>, target: Option<Faction>) -> bool {
+    pub const fn allows(&self, source: Option<Faction>, target: Option<Faction>) -> bool {
         match (source, target) {
             (None, _) | (_, None) => true,
             (Some(Faction::Player), Some(Faction::Player)) => self.friendly_fire,
@@ -96,11 +96,11 @@ pub struct ApplyDamage {
 
 impl ApplyDamage {
     /// A hit at `position` with no meaningful direction (spray straight up).
-    pub fn at(target: Entity, amount: i32, kind: DamageKind, position: Vec3) -> Self {
+    pub const fn at(target: Entity, amount: i32, kind: DamageKind, position: Vec3) -> Self {
         Self { target, amount, kind, position, normal: Vec3::Y, source: None }
     }
 
-    pub fn from(mut self, source: Entity) -> Self {
+    pub const fn from(mut self, source: Entity) -> Self {
         self.source = Some(source);
         self
     }
@@ -143,7 +143,7 @@ pub fn apply_damage(
         if !rules.allows(source_faction, target_faction.copied()) {
             continue;
         }
-        let amount = scaled(req.amount, resistances.map(|r| r.multiplier(req.kind)).unwrap_or(1.0));
+        let amount = scaled(req.amount, resistances.map_or(1.0, |r| r.multiplier(req.kind)));
         if amount <= 0 {
             continue;
         }

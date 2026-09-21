@@ -100,7 +100,7 @@ pub fn build_enemy_anim_graphs(
 ) {
     let Some(mut store) = anim_store else { return };
 
-    for (path, loaded) in cache.0.iter() {
+    for (path, loaded) in &cache.0 {
         if store.graphs.contains_key(path) {
             continue;
         }
@@ -109,10 +109,7 @@ pub fn build_enemy_anim_graphs(
         let mut waiting = false;
         for source in &loaded.def.animation_sources {
             let handle: Handle<Gltf> = asset_server.load(source.clone());
-            match gltf_assets.get(&handle) {
-                Some(g) => extra.push((source, g)),
-                None => { waiting = true; break; }
-            }
+            if let Some(g) = gltf_assets.get(&handle) { extra.push((source, g)) } else { waiting = true; break; }
         }
         if waiting {
             continue;

@@ -13,11 +13,11 @@ use crate::map::MapFeatures;
 struct Rng(u64);
 
 impl Rng {
-    fn new(seed: u64) -> Self {
-        Rng(seed.wrapping_add(1).wrapping_mul(0x9e3779b97f4a7c15))
+    const fn new(seed: u64) -> Self {
+        Self(seed.wrapping_add(1).wrapping_mul(0x9e3779b97f4a7c15))
     }
 
-    fn next(&mut self) -> u64 {
+    const fn next(&mut self) -> u64 {
         let mut x = self.0;
         x ^= x << 13;
         x ^= x >> 7;
@@ -303,8 +303,8 @@ fn try_place_house(
         if !clear { continue; }
 
         // Tentatively place
-        for row_data in grid[row..row + hh].iter_mut() {
-            for cell in row_data[col..col + hw].iter_mut() {
+        for row_data in &mut grid[row..row + hh] {
+            for cell in &mut row_data[col..col + hw] {
                 *cell = 0;
             }
         }
@@ -318,8 +318,8 @@ fn try_place_house(
         }
 
         // Roll back
-        for row_data in grid[row..row + hh].iter_mut() {
-            for cell in row_data[col..col + hw].iter_mut() {
+        for row_data in &mut grid[row..row + hh] {
+            for cell in &mut row_data[col..col + hw] {
                 *cell = 1;
             }
         }

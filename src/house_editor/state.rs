@@ -37,12 +37,11 @@ impl HouseEditorState {
     /// the first node with at least 3 nodes already placed (mirrors the map editor's House
     /// tool), or via `close()`/Enter.
     pub fn add_point(&mut self, x: i32, y: i32) {
-        if let Some(&first) = self.points.first() {
-            if self.points.len() >= 3 && (x, y) == first {
+        if let Some(&first) = self.points.first()
+            && self.points.len() >= 3 && (x, y) == first {
                 self.close();
                 return;
             }
-        }
         if self.points.last() != Some(&(x, y)) {
             self.points.push((x, y));
         }

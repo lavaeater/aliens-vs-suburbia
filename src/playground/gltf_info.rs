@@ -24,7 +24,7 @@ pub struct GltfInfo {
 
 impl GltfInfo {
     /// Nothing to draw. Such a file is an animation library, not a model.
-    pub fn is_animation_only(&self) -> bool {
+    pub const fn is_animation_only(&self) -> bool {
         self.mesh_count == 0 && !self.animations.is_empty()
     }
 }
@@ -70,7 +70,7 @@ fn glb_json(bytes: &[u8]) -> Option<String> {
 /// fields, and both live at the top level of the document.
 fn parse_info(json: &str) -> Option<GltfInfo> {
     let value: serde_json::Value = serde_json::from_str(json).ok()?;
-    let mesh_count = value.get("meshes").and_then(|m| m.as_array()).map_or(0, |m| m.len());
+    let mesh_count = value.get("meshes").and_then(|m| m.as_array()).map_or(0, std::vec::Vec::len);
     let animations = value
         .get("animations")
         .and_then(|a| a.as_array())
@@ -80,9 +80,7 @@ fn parse_info(json: &str) -> Option<GltfInfo> {
                 .enumerate()
                 .map(|(index, clip)| {
                     clip.get("name")
-                        .and_then(|n| n.as_str())
-                        .map(str::to_string)
-                        .unwrap_or_else(|| format!("Animation{index}"))
+                        .and_then(|n| n.as_str()).map_or_else(|| format!("Animation{index}"), str::to_string)
                 })
                 .collect()
         })

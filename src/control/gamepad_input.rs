@@ -44,8 +44,8 @@ pub struct InputGamepad {
 }
 
 impl InputGamepad {
-    fn new(gamepad: Entity) -> Self {
-        InputGamepad { gamepad: Some(gamepad), aim_active: false }
+    const fn new(gamepad: Entity) -> Self {
+        Self { gamepad: Some(gamepad), aim_active: false }
     }
 }
 

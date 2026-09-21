@@ -36,17 +36,17 @@ pub struct PlaygroundDebug {
 }
 
 impl PlaygroundDebug {
-    pub fn toggle_skeleton(&mut self) {
+    pub const fn toggle_skeleton(&mut self) {
         self.skeleton = !self.skeleton;
         self.ui_dirty = true;
     }
 
-    pub fn toggle_hardpoints(&mut self) {
+    pub const fn toggle_hardpoints(&mut self) {
         self.hardpoints = !self.hardpoints;
         self.ui_dirty = true;
     }
 
-    pub fn toggle_gait(&mut self) {
+    pub const fn toggle_gait(&mut self) {
         self.gait = !self.gait;
         self.ui_dirty = true;
     }
@@ -60,7 +60,7 @@ impl PlaygroundDebug {
 const LEFT_COLOR: Color = Color::srgb(1.0, 0.55, 0.15);
 const RIGHT_COLOR: Color = Color::srgb(0.25, 0.7, 1.0);
 
-fn foot_color(foot: Foot) -> Color {
+const fn foot_color(foot: Foot) -> Color {
     match foot {
         Foot::Left => LEFT_COLOR,
         Foot::Right => RIGHT_COLOR,

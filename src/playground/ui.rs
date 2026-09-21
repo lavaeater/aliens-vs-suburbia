@@ -708,7 +708,7 @@ pub fn rebuild_hardpoint_panel(
             // character carry this) resolves to nothing and draws nothing, which reads as
             // the frame being missing. This is the way back.
             if hardpoint.anchor.is_some() {
-                let for_role = role.clone();
+                let for_role = role;
                 row(
                     parent,
                     "clear anchor (use model origin)".to_string(),
@@ -943,10 +943,7 @@ pub fn rebuild_model_list(
             let is_selected = selected.as_deref() == Some(def_path.as_str());
             let has_no_mesh = mesh_less.contains(&def_path);
             let mark = if is_selected { "*" } else { " " };
-            let label = match has_no_mesh {
-                false => format!("{mark} {}", def_stem(&def_path)),
-                true => format!("{mark} {} (no mesh)", def_stem(&def_path)),
-            };
+            let label = if !has_no_mesh { format!("{mark} {}", def_stem(&def_path)) } else { format!("{mark} {} (no mesh)", def_stem(&def_path)) };
             let color = if has_no_mesh {
                 Color::srgb(0.75, 0.6, 0.5)
             } else {
@@ -1149,7 +1146,7 @@ pub fn rebuild_import_browser(
                     match classify(&imported) {
                         ImportKind::Model => m.import(&imported),
                         ImportKind::AnimationLibrary => {
-                            attach_animation_source(&imported, &mut m, &mut player_def, &mut animation)
+                            attach_animation_source(&imported, &mut m, &mut player_def, &mut animation);
                         }
                     }
                     m.browser_dirty = true;

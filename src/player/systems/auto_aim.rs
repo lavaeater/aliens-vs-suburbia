@@ -39,7 +39,7 @@ pub fn auto_aim(
                     );
             if let Some(closest) = closest {
                 auto_aim.0 = (closest.translation() - player_transform.translation()).normalize();
-                auto_aim.0.y = 0.0
+                auto_aim.0.y = 0.0;
             } else {
                 auto_aim.0 = *player_transform.forward();
             }

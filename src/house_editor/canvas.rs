@@ -62,7 +62,7 @@ pub fn handle_canvas_click(
     }
 }
 
-fn wall_kind_color(kind: WallCellKind) -> Color {
+const fn wall_kind_color(kind: WallCellKind) -> Color {
     match kind {
         WallCellKind::Wall => Color::srgb(0.55, 0.42, 0.28),
         WallCellKind::Door => Color::srgb(0.25, 0.65, 0.30),

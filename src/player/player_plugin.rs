@@ -171,7 +171,7 @@ fn hide_player_weapon_nodes(
         && let Some(def) = &def_res.0
         && !def.hidden_nodes.is_empty()
     {
-        def_nodes = def.hidden_nodes.iter().map(|s| s.as_str()).collect();
+        def_nodes = def.hidden_nodes.iter().map(std::string::String::as_str).collect();
         &def_nodes
     } else {
         WEAPON_NODES

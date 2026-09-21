@@ -68,8 +68,7 @@ pub fn spawn_map_editor_ui(
             |_: On<Activate>, mut s: ResMut<MapEditorState>| {
                 let seed = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
-                    .map(|d| d.as_nanos() as u64)
-                    .unwrap_or(42);
+                    .map_or(42, |d| d.as_nanos() as u64);
                 let map = generate_suburb_map(seed, s.width, s.height);
                 s.load_from_map_file(map);
                 s.gen_seed = seed;
@@ -79,8 +78,7 @@ pub fn spawn_map_editor_ui(
             |_: On<Activate>, mut s: ResMut<MapEditorState>| {
                 let seed = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
-                    .map(|d| d.as_nanos() as u64)
-                    .unwrap_or(42);
+                    .map_or(42, |d| d.as_nanos() as u64);
                 // The editor sizes in tiles; the stitcher works in chunks. Authored
                 // chunks under assets/maps/chunks/ augment the built-in library.
                 let chunks_wide = (s.width / CHUNK_SIZE).max(2);
@@ -153,7 +151,7 @@ pub fn rebuild_palette(
     state.palette_dirty = false;
 
     if let Ok(mut t) = brush_label_q.single_mut() {
-        let name = state.selected_item().map(|i| i.display_name()).unwrap_or("-");
+        let name = state.selected_item().map_or("-", super::state::PaletteItem::display_name);
         let rot = state.rotation_steps;
         **t = if rot == 0 {
             format!("Brush: {name}")

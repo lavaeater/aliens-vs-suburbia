@@ -54,7 +54,7 @@ pub fn apply_despair(
     ambient: Option<ResMut<GlobalAmbientLight>>,
     mut cameras: Query<(Entity, Option<&mut ColorGrading>, Option<&mut DistanceFog>), With<GameCamera>>,
 ) {
-    let danger = moods.map(|m| m.danger).unwrap_or(0.0).clamp(0.0, 1.0);
+    let danger = moods.map_or(0.0, |m| m.danger).clamp(0.0, 1.0);
     let d = danger * settings.max_strength;
 
     // ── Ambient light: the room dims as dread rises. ──────────────────────────

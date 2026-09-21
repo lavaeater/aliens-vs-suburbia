@@ -38,11 +38,11 @@ pub fn alien_spawner_system(
             return;
         }
         let wave = wm.waves.get(wm.current_wave);
-        let wave_limit = wave.map(|w| w.alien_count).unwrap_or(0);
+        let wave_limit = wave.map_or(0, |w| w.alien_count);
         if wm.spawned_this_wave >= wave_limit {
             return;
         }
-        enemy_def = wave.and_then(|w| w.enemy_def());
+        enemy_def = wave.and_then(super::super::wave_manager::WaveDef::enemy_def);
     }
 
     for (position, mut alien_spawn_point) in alien_spawn_point_query.iter_mut() {

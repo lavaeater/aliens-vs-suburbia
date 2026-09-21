@@ -28,9 +28,9 @@ pub enum LootEntry {
 }
 
 impl LootEntry {
-    fn weight(&self) -> f32 {
+    const fn weight(&self) -> f32 {
         match self {
-            LootEntry::Nothing { weight } | LootEntry::Item { weight, .. } | LootEntry::Table { weight, .. } => *weight,
+            Self::Nothing { weight } | Self::Item { weight, .. } | Self::Table { weight, .. } => *weight,
         }
     }
 }
@@ -47,7 +47,7 @@ pub struct LootTable {
     pub entries: Vec<LootEntry>,
 }
 
-fn default_rolls() -> u32 { 1 }
+const fn default_rolls() -> u32 { 1 }
 
 impl Default for LootTable {
     fn default() -> Self {

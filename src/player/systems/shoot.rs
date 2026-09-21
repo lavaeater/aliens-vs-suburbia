@@ -98,7 +98,7 @@ impl Weapon {
     }
 
     /// Rounds needed to top the magazine up.
-    pub fn missing(&self) -> u32 {
+    pub const fn missing(&self) -> u32 {
         self.magazine.saturating_sub(self.rounds_in_mag)
     }
 }

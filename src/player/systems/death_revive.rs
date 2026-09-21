@@ -174,7 +174,7 @@ pub fn tick_bleed_out(
             }
         }
 
-        let lives_left = lives.map(|l| l.0).unwrap_or(settings.lives_per_player).saturating_sub(1);
+        let lives_left = lives.map_or(settings.lives_per_player, |l| l.0).saturating_sub(1);
         if lives_left > 0 {
             queue.pending.push(Respawning {
                 slot: slot.0,
@@ -237,15 +237,15 @@ pub fn choose_respawn_anchor(
     }
     let pads: Vec<&Gamepad> = gamepads.iter().collect();
 
-    for entry in queue.pending.iter_mut() {
+    for entry in &mut queue.pending {
         let step = match roster.devices.get(entry.slot) {
             Some(InputDevice::Keyboard) => {
-                (keys.just_pressed(KeyCode::ArrowRight) || keys.just_pressed(KeyCode::KeyD)) as i32
-                    - (keys.just_pressed(KeyCode::ArrowLeft) || keys.just_pressed(KeyCode::KeyA)) as i32
+                i32::from(keys.just_pressed(KeyCode::ArrowRight) || keys.just_pressed(KeyCode::KeyD))
+                    - i32::from(keys.just_pressed(KeyCode::ArrowLeft) || keys.just_pressed(KeyCode::KeyA))
             }
             Some(InputDevice::Gamepad(index)) => match (pads.get(*index), bindings.as_ref()) {
                 (Some(pad), Some(b)) => {
-                    pad.just_pressed(b.next_build_item) as i32 - pad.just_pressed(b.prev_build_item) as i32
+                    i32::from(pad.just_pressed(b.next_build_item)) - i32::from(pad.just_pressed(b.prev_build_item))
                 }
                 _ => 0,
             },
@@ -262,7 +262,7 @@ pub fn cycle_anchor(current: Option<usize>, living: &[usize], step: i32) -> Opti
     let n = living.len() as i32 + 1; // +1 for "where I fell"
     let idx = match current {
         None => 0,
-        Some(slot) => living.iter().position(|s| *s == slot).map(|p| p as i32 + 1).unwrap_or(0),
+        Some(slot) => living.iter().position(|s| *s == slot).map_or(0, |p| p as i32 + 1),
     };
     let next = (idx + step).rem_euclid(n);
     if next == 0 { None } else { living.get(next as usize - 1).copied() }
@@ -292,19 +292,16 @@ pub fn tick_respawns(
         let anchor_pos = entry
             .anchor
             .and_then(|slot| living.iter().find(|(s, _)| s.0 == slot).map(|(_, p)| p.0));
-        let position = match anchor_pos {
-            Some(p) => p + Vec3::new(0.8, 0.0, 0.8),
-            None => {
-                let walkable: Vec<Vec3> = match (map_graph.as_ref(), tile_defs.as_ref()) {
-                    (Some(graph), Some(defs)) => graph
-                        .path_finding_grid
-                        .iter()
-                        .map(|tile| tile.to_world_coords(defs))
-                        .collect(),
-                    _ => Vec::new(),
-                };
-                respawn_position(entry.death_position, &walkable, &alien_positions)
-            }
+        let position = if let Some(p) = anchor_pos { p + Vec3::new(0.8, 0.0, 0.8) } else {
+            let walkable: Vec<Vec3> = match (map_graph.as_ref(), tile_defs.as_ref()) {
+                (Some(graph), Some(defs)) => graph
+                    .path_finding_grid
+                    .iter()
+                    .map(|tile| tile.to_world_coords(defs))
+                    .collect(),
+                _ => Vec::new(),
+            };
+            respawn_position(entry.death_position, &walkable, &alien_positions)
         };
         spawn_mw.write(SpawnPlayer {
             position: position + Vec3::Y,

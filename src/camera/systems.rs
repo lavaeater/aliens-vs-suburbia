@@ -111,8 +111,7 @@ pub fn spawn_pixelated_camera(
 
     let window_size = window_q
         .single()
-        .map(|w| Vec2::new(w.width(), w.height()))
-        .unwrap_or(Vec2::new(1280.0, 720.0));
+        .map_or(Vec2::new(1280.0, 720.0), |w| Vec2::new(w.width(), w.height()));
 
     // 2D canvas camera — upscales the pixel texture to screen
     commands.spawn((

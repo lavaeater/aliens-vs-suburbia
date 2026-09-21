@@ -35,31 +35,31 @@ pub enum Foot {
 }
 
 impl Foot {
-    pub const BOTH: [Foot; 2] = [Foot::Left, Foot::Right];
+    pub const BOTH: [Self; 2] = [Self::Left, Self::Right];
 
     #[must_use]
-    pub fn index(self) -> usize {
+    pub const fn index(self) -> usize {
         match self {
-            Foot::Left => 0,
-            Foot::Right => 1,
+            Self::Left => 0,
+            Self::Right => 1,
         }
     }
 
     /// Which way this foot sits off the centreline, along the character's right.
     #[must_use]
-    pub fn lateral_sign(self) -> f32 {
+    pub const fn lateral_sign(self) -> f32 {
         match self {
-            Foot::Left => -1.0,
-            Foot::Right => 1.0,
+            Self::Left => -1.0,
+            Self::Right => 1.0,
         }
     }
 
     /// Feet are half a cycle apart: one plants as the other lifts.
     #[must_use]
-    pub fn phase_offset(self) -> f32 {
+    pub const fn phase_offset(self) -> f32 {
         match self {
-            Foot::Left => 0.5,
-            Foot::Right => 0.0,
+            Self::Left => 0.5,
+            Self::Right => 0.0,
         }
     }
 }
@@ -194,10 +194,10 @@ impl Default for GaitParams {
 /// A person standing still is at about 95%; walking, they spend most of the cycle nearer
 /// 90%, which is where the reach to take the step comes from. Also comfortably clear of
 /// the singularity at 100%, where reach goes to zero and the stride with it.
-fn default_hip_height() -> f32 { 0.9 }
+const fn default_hip_height() -> f32 { 0.9 }
 
 /// Half of a person's roughly 5%-of-leg-length hip rise and fall.
-fn default_hip_bob() -> f32 { 0.025 }
+const fn default_hip_bob() -> f32 { 0.025 }
 
 impl GaitParams {
     /// The same walk on a body `factor` times a human's size.
@@ -319,8 +319,8 @@ pub enum FootPhase {
 
 impl FootPhase {
     #[must_use]
-    pub fn is_planted(self) -> bool {
-        matches!(self, FootPhase::Planted { .. })
+    pub const fn is_planted(self) -> bool {
+        matches!(self, Self::Planted { .. })
     }
 }
 
@@ -424,14 +424,14 @@ pub struct GaitState {
 impl GaitState {
     /// How far through the cycle, in `[0, 1)`.
     #[must_use]
-    pub fn cycle(&self) -> f32 {
+    pub const fn cycle(&self) -> f32 {
         self.cycle
     }
 
     /// Where each foot is currently nailed. For the overlay; the solve uses
     /// [`GaitState::update`]'s return value.
     #[must_use]
-    pub fn plants(&self) -> [Vec3; 2] {
+    pub const fn plants(&self) -> [Vec3; 2] {
         self.plant
     }
 

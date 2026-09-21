@@ -25,11 +25,11 @@ impl PlaygroundPrefs {
         let path = std::path::Path::new(PLAYGROUND_PREFS_PATH);
         if path.exists()
             && let Ok(text) = std::fs::read_to_string(path)
-            && let Ok(prefs) = ron::from_str::<PlaygroundPrefs>(&text)
+            && let Ok(prefs) = ron::from_str::<Self>(&text)
         {
             return prefs;
         }
-        PlaygroundPrefs::default()
+        Self::default()
     }
 
     pub fn save(&self) {

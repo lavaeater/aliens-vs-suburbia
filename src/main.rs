@@ -56,8 +56,7 @@ fn create_map(
     let seed = seed.unwrap_or_else(|| {
         SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .map(|d| d.as_nanos() as u64)
-            .unwrap_or(42)
+            .map_or(42, |d| d.as_nanos() as u64)
     });
 
     let output = output.unwrap_or_else(|| {

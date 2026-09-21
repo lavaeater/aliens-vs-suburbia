@@ -80,7 +80,7 @@ pub fn draw_skeleton(
         let position = joint_transform.translation();
 
         let is_socket = highlight.is_some()
-            && names.get(joint).map(|n| Some(n.as_str()) == highlight).unwrap_or(false);
+            && names.get(joint).is_ok_and(|n| Some(n.as_str()) == highlight);
         let (mark_color, size) = if is_socket { (socket_color, 0.03) } else { (joint_color, 0.012) };
 
         gizmos.line(position - Vec3::X * size, position + Vec3::X * size, mark_color);

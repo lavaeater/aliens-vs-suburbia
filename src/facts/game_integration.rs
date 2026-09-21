@@ -74,12 +74,12 @@ fn derive_world_facts(
     set_if_changed(
         &mut facts,
         keys::ENEMY_KILL_COUNT,
-        level_tracker.aliens_killed as i64,
+        i64::from(level_tracker.aliens_killed),
     );
     set_if_changed(
         &mut facts,
         keys::ALIENS_TO_SPAWN,
-        level_tracker.aliens_to_spawn as i64,
+        i64::from(level_tracker.aliens_to_spawn),
     );
     let all_waves_done = wave_manager.as_ref().is_none_or(|wm| !wm.waves_remaining());
     let all_killed = level_tracker.aliens_to_spawn > 0
@@ -90,12 +90,12 @@ fn derive_world_facts(
     set_if_changed(
         &mut facts,
         keys::ALIENS_ESCAPED,
-        level_tracker.aliens_reached_goal as i64,
+        i64::from(level_tracker.aliens_reached_goal),
     );
     set_if_changed(
         &mut facts,
         keys::ALIENS_ESCAPED_CUTOFF,
-        level_tracker.aliens_win_cut_off as i64,
+        i64::from(level_tracker.aliens_win_cut_off),
     );
     set_bool_if_changed(
         &mut facts,
@@ -106,10 +106,10 @@ fn derive_world_facts(
     // Score aggregates (summed across players) for HUD/telemetry/future stories.
     let shots_fired: u32 = scores.iter().map(|s| s.shots_fired).sum();
     let shots_hit: u32 = scores.iter().map(|s| s.shots_hit).sum();
-    set_if_changed(&mut facts, keys::SHOTS_FIRED, shots_fired as i64);
-    set_if_changed(&mut facts, keys::SHOTS_HIT, shots_hit as i64);
+    set_if_changed(&mut facts, keys::SHOTS_FIRED, i64::from(shots_fired));
+    set_if_changed(&mut facts, keys::SHOTS_HIT, i64::from(shots_hit));
 
-    set_if_changed(&mut facts, keys::COINS, wallet.coins as i64);
+    set_if_changed(&mut facts, keys::COINS, i64::from(wallet.coins));
 
     // Wave progression.
     if let Some(wm) = wave_manager {

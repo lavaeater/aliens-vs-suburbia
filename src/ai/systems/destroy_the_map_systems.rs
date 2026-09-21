@@ -137,52 +137,50 @@ pub fn destroy_the_map_action_system(
                         if path.is_empty() {
                             must_destroy_data.path_of_destruction = None;
                             must_destroy_data.state = MustDestroyTheMapState::DestroyingThing;
-                        } else {
-                            if let Some(next_tile) = path.first() {
-                                match &must_destroy_data.target_tile {
-                                    None => {
-                                        must_destroy_data.state = MustDestroyTheMapState::Failed;
+                        } else if let Some(next_tile) = path.first() {
+                            match &must_destroy_data.target_tile {
+                                None => {
+                                    must_destroy_data.state = MustDestroyTheMapState::Failed;
+                                    must_destroy_data.path_of_destruction = None;
+                                }
+                                Some(target_tile) => {
+                                    if target_tile == next_tile {
                                         must_destroy_data.path_of_destruction = None;
-                                    }
-                                    Some(target_tile) => {
-                                        if target_tile == next_tile {
-                                            must_destroy_data.path_of_destruction = None;
-                                            must_destroy_data.state = MustDestroyTheMapState::DestroyingThing;
-                                        } else if map_graph.path_finding_grid.has_vertex(*next_tile) {
-                                            let next_tile_position = next_tile.to_world_coords(&tile_definitions).xz();
-                                            let alien_position_vector2 = alien_position.0.xz();
-                                            let alien_direction_vector2 = alien_rotation.0.mul_vec3(Vec3::new(0.0, 0.0, -1.0)).xz();
-                                            let alien_to_goal_direction = next_tile_position - alien_position_vector2;
-                                            let distance = alien_to_goal_direction.length();
-                                            if distance < 0.25 && let Some((_, rest)) = path.split_first() {
-                                                must_destroy_data.path_of_destruction = Some(rest.to_vec());
+                                        must_destroy_data.state = MustDestroyTheMapState::DestroyingThing;
+                                    } else if map_graph.path_finding_grid.has_vertex(*next_tile) {
+                                        let next_tile_position = next_tile.to_world_coords(&tile_definitions).xz();
+                                        let alien_position_vector2 = alien_position.0.xz();
+                                        let alien_direction_vector2 = alien_rotation.0.mul_vec3(Vec3::new(0.0, 0.0, -1.0)).xz();
+                                        let alien_to_goal_direction = next_tile_position - alien_position_vector2;
+                                        let distance = alien_to_goal_direction.length();
+                                        if distance < 0.25 && let Some((_, rest)) = path.split_first() {
+                                            must_destroy_data.path_of_destruction = Some(rest.to_vec());
+                                        } else {
+                                            let angle = alien_direction_vector2.angle_to(alien_to_goal_direction).to_degrees();
+                                            controller.rotations.clear();
+                                            controller.directions.clear();
+                                            let angle_speed_value = 90.0;
+                                            let angle_forward_value = 15.0;
+                                            if angle.abs() < angle_speed_value {
+                                                controller.turn_speed = controller.max_turn_speed * (angle.abs() / angle_speed_value);
                                             } else {
-                                                let angle = alien_direction_vector2.angle_to(alien_to_goal_direction).to_degrees();
-                                                controller.rotations.clear();
-                                                controller.directions.clear();
-                                                let angle_speed_value = 90.0;
-                                                let angle_forward_value = 15.0;
-                                                if angle.abs() < angle_speed_value {
-                                                    controller.turn_speed = controller.max_turn_speed * (angle.abs() / angle_speed_value);
+                                                controller.turn_speed = controller.max_turn_speed;
+                                            }
+                                            if angle.abs() > 1.0 {
+                                                if angle > 0.0 {
+                                                    controller.rotations.insert(ControlRotation::Right);
                                                 } else {
-                                                    controller.turn_speed = controller.max_turn_speed;
-                                                }
-                                                if angle.abs() > 1.0 {
-                                                    if angle > 0.0 {
-                                                        controller.rotations.insert(ControlRotation::Right);
-                                                    } else {
-                                                        controller.rotations.insert(ControlRotation::Left);
-                                                    }
-                                                }
-                                                if angle.abs() < angle_forward_value {
-                                                    controller.directions.insert(ControlDirection::Forward);
+                                                    controller.rotations.insert(ControlRotation::Left);
                                                 }
                                             }
-                                        } else {
-                                            must_destroy_data.path_of_destruction = None;
-                                            must_destroy_data.target_tile = None;
-                                            must_destroy_data.state = MustDestroyTheMapState::Failed;
+                                            if angle.abs() < angle_forward_value {
+                                                controller.directions.insert(ControlDirection::Forward);
+                                            }
                                         }
+                                    } else {
+                                        must_destroy_data.path_of_destruction = None;
+                                        must_destroy_data.target_tile = None;
+                                        must_destroy_data.state = MustDestroyTheMapState::Failed;
                                     }
                                 }
                             }

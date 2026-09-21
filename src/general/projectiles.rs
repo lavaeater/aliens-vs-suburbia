@@ -68,8 +68,8 @@ pub struct ProjectileProps {
     pub fuse_secs: Option<f32>,
 }
 
-fn default_speed() -> f32 { 18.0 }
-fn default_true() -> bool { true }
+const fn default_speed() -> f32 { 18.0 }
+const fn default_true() -> bool { true }
 
 impl Default for ProjectileProps {
     fn default() -> Self {
@@ -94,22 +94,22 @@ pub enum ThrowableKind {
 }
 
 impl ThrowableKind {
-    pub fn ammo(self) -> AmmoKind {
+    pub const fn ammo(self) -> AmmoKind {
         match self {
-            ThrowableKind::Grenade => AmmoKind::Grenade,
-            ThrowableKind::Molotov => AmmoKind::Molotov,
+            Self::Grenade => AmmoKind::Grenade,
+            Self::Molotov => AmmoKind::Molotov,
         }
     }
 
     pub fn props(self) -> ProjectileProps {
         match self {
-            ThrowableKind::Grenade => ProjectileProps {
+            Self::Grenade => ProjectileProps {
                 speed: 0.0,
                 gravity: true,
                 impact: Impact::Explode(ExplosionProps { radius: 2.5, damage: 90, impulse: 9.0, fire: false }),
                 fuse_secs: Some(GRENADE_FUSE_SECS),
             },
-            ThrowableKind::Molotov => ProjectileProps {
+            Self::Molotov => ProjectileProps {
                 speed: 0.0,
                 gravity: true,
                 impact: Impact::Fire(FireProps::default()),
@@ -120,7 +120,7 @@ impl ThrowableKind {
 
     /// Grenades first, molotovs when those run out. `None` = nothing to throw.
     pub fn pick(pouch: &AmmoPouch) -> Option<Self> {
-        [ThrowableKind::Grenade, ThrowableKind::Molotov]
+        [Self::Grenade, Self::Molotov]
             .into_iter()
             .find(|k| pouch.rounds(k.ammo()) > 0)
     }

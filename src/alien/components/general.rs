@@ -13,11 +13,11 @@ use avian3d::prelude::{
 };
 use crate::CurrentTile;
 
-fn locked_axes()-> LockedAxes {
+const fn locked_axes()-> LockedAxes {
     LockedAxes::new().lock_rotation_x().lock_rotation_z()
 }
 
-#[derive(Component, Default, Reflect, Clone, Copy, Debug, PartialEq)]
+#[derive(Component, Default, Reflect, Clone, Copy, Debug, PartialEq, Eq)]
 #[type_path = "avs"]
 #[require(
     Name::from("Alien"),
@@ -73,7 +73,7 @@ pub struct AlienSightShape {
 
 impl Default for AlienSightShape {
     fn default() -> Self {
-        AlienSightShape {
+        Self {
             shape: Collider::cone(5.0, 4.0),
             rotation: Quat::from_euler(EulerRot::YXZ, 0.0, -90.0, 0.0),
             range: 5.0,
@@ -88,7 +88,7 @@ pub struct AlienCounter {
 }
 
 impl AlienCounter {
-    pub fn new(max_count: i32) -> Self {
+    pub const fn new(max_count: i32) -> Self {
         Self {
             count: 0,
             max_count,

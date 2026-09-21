@@ -199,7 +199,7 @@ pub fn aim_weapons(
 
         // The character's model root carries how big the character is drawn; the weapon
         // tracks that rather than whatever scale the rig baked into its bones.
-        let root_scale = globals.get(aimed.model_root).map(|gt| gt.scale().x).unwrap_or(1.0);
+        let root_scale = globals.get(aimed.model_root).map_or(1.0, |gt| gt.scale().x);
         let world_scale = aimed.def_scale * root_scale;
 
         let anchor_world = bone.transform_point(aimed.anchor_offset);

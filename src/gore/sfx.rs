@@ -32,26 +32,26 @@ pub enum SfxKind {
 }
 
 impl SfxKind {
-    fn prefix(self) -> &'static str {
+    const fn prefix(self) -> &'static str {
         match self {
-            SfxKind::Hit => "hit",
-            SfxKind::Death => "death",
-            SfxKind::Gib => "gib",
-            SfxKind::Fire => "fire",
-            SfxKind::Shoot => "shoot",
-            SfxKind::Bark => "bark",
-            SfxKind::Heartbeat => "heartbeat",
+            Self::Hit => "hit",
+            Self::Death => "death",
+            Self::Gib => "gib",
+            Self::Fire => "fire",
+            Self::Shoot => "shoot",
+            Self::Bark => "bark",
+            Self::Heartbeat => "heartbeat",
         }
     }
 
-    const ALL: [SfxKind; 7] = [
-        SfxKind::Hit,
-        SfxKind::Death,
-        SfxKind::Gib,
-        SfxKind::Fire,
-        SfxKind::Shoot,
-        SfxKind::Bark,
-        SfxKind::Heartbeat,
+    const ALL: [Self; 7] = [
+        Self::Hit,
+        Self::Death,
+        Self::Gib,
+        Self::Fire,
+        Self::Shoot,
+        Self::Bark,
+        Self::Heartbeat,
     ];
 }
 
@@ -79,28 +79,25 @@ const MAX_VOICES: usize = 24;
 pub fn setup_sfx_bank(asset_server: Res<AssetServer>, mut commands: Commands) {
     let mut bank = SfxBank::default();
 
-    match std::fs::read_dir("assets/sfx") {
-        Ok(entries) => {
-            let mut loaded = 0usize;
-            for entry in entries.flatten() {
-                let name = entry.file_name().to_string_lossy().to_string();
-                let lower = name.to_lowercase();
-                if !lower.ends_with(".wav") {
-                    continue;
-                }
-                if let Some(kind) = SfxKind::ALL.into_iter().find(|k| lower.starts_with(k.prefix())) {
-                    let handle = asset_server.load(format!("sfx/{name}"));
-                    bank.samples.entry(kind).or_default().push(handle);
-                    loaded += 1;
-                }
+    if let Ok(entries) = std::fs::read_dir("assets/sfx") {
+        let mut loaded = 0usize;
+        for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            let lower = name.to_lowercase();
+            if !lower.ends_with(".wav") {
+                continue;
             }
-            if loaded > 0 {
-                info!("gore sfx: loaded {loaded} samples from assets/sfx/");
+            if let Some(kind) = SfxKind::ALL.into_iter().find(|k| lower.starts_with(k.prefix())) {
+                let handle = asset_server.load(format!("sfx/{name}"));
+                bank.samples.entry(kind).or_default().push(handle);
+                loaded += 1;
             }
         }
-        Err(_) => {
-            // No assets/sfx dir yet — that's fine, the game just runs quiet.
+        if loaded > 0 {
+            info!("gore sfx: loaded {loaded} samples from assets/sfx/");
         }
+    } else {
+        // No assets/sfx dir yet — that's fine, the game just runs quiet.
     }
 
     commands.insert_resource(bank);
@@ -158,7 +155,7 @@ pub fn play_sfx(
         let pick = (*seed >> 16) as usize % handles.len();
         let Some(handle) = handles.get(pick) else { continue };
         // +/-8% pitch and +/-2 dB so repeats don't sound identical.
-        let pitch = 1.0 + (((*seed >> 8) & 0xff) as f64 / 255.0 - 0.5) * 0.16;
+        let pitch = 1.0 + (f64::from((*seed >> 8) & 0xff) / 255.0 - 0.5) * 0.16;
         let gain = msg.gain_db + (((*seed >> 20) & 0xff) as f32 / 255.0 - 0.5) * 4.0;
 
         commands.spawn((

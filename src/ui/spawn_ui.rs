@@ -375,7 +375,7 @@ pub fn spawn_model_panel(commands: Commands, theme: &LavaTheme) {
     ui.build();
 }
 
-fn key_label(key: AnimationKey) -> &'static str {
+const fn key_label(key: AnimationKey) -> &'static str {
     match key {
         AnimationKey::Idle      => "Idle",
         AnimationKey::IdleShoot => "Idle Shoot",
@@ -408,8 +408,7 @@ fn anim_mapping_row(ui: &mut UIBuilder, label: &str, t: &TextTheme, key: Animati
                 if names.is_empty() { return; }
                 let cur = s.anim_mapping.get(key).to_string();
                 let idx = names.iter().position(|n| n == &cur)
-                    .map(|i| (i + names.len() - 1) % names.len())
-                    .unwrap_or(0);
+                    .map_or(0, |i| (i + names.len() - 1) % names.len());
                 if let Some(name) = names.get(idx) {
                     s.anim_mapping.set(key, name.clone());
                 }
@@ -424,8 +423,7 @@ fn anim_mapping_row(ui: &mut UIBuilder, label: &str, t: &TextTheme, key: Animati
                 if names.is_empty() { return; }
                 let cur = s.anim_mapping.get(key).to_string();
                 let idx = names.iter().position(|n| n == &cur)
-                    .map(|i| (i + 1) % names.len())
-                    .unwrap_or(0);
+                    .map_or(0, |i| (i + 1) % names.len());
                 if let Some(name) = names.get(idx) {
                     s.anim_mapping.set(key, name.clone());
                 }
@@ -586,9 +584,7 @@ pub fn update_model_labels(
     for (setting, mut text) in labels.iter_mut() {
         **text = match setting {
             ModelSetting::CharacterName => folder.files
-                .get(settings.character_index)
-                .map(|f| CharacterFolder::display_name(f).to_string())
-                .unwrap_or_else(|| "-".to_string()),
+                .get(settings.character_index).map_or_else(|| "-".to_string(), |f| CharacterFolder::display_name(f).to_string()),
             ModelSetting::Scale   => format!("{:.2}",  settings.scale),
             ModelSetting::OffsetY => format!("{:.2}",  settings.translation_y),
             ModelSetting::RotY    => format!("{:.0}deg", settings.rotation_y_degrees),
@@ -728,11 +724,11 @@ pub fn update_build_cost_hud(
     };
 
     let option = model_defs.as_ref().and_then(|defs| defs.build_indicators.get(indicator.1.max(0) as usize));
-    let cost = option.map(|o| o.cost).unwrap_or(0);
-    let name = option.map(|o| o.name.as_str()).unwrap_or("");
-    let description = option.and_then(|o| o.tower.as_ref()).map(|t| t.description.as_str()).unwrap_or("");
+    let cost = option.map_or(0, |o| o.cost);
+    let name = option.map_or("", |o| o.name.as_str());
+    let description = option.and_then(|o| o.tower.as_ref()).map_or("", |t| t.description.as_str());
 
-    let coins = wallet.as_ref().map(|w| w.coins).unwrap_or(0);
+    let coins = wallet.as_ref().map_or(0, |w| w.coins);
     let can_afford = coins >= cost;
     **text = if description.is_empty() {
         format!("{name}: {cost} coins  (have {coins})")
@@ -781,7 +777,7 @@ pub fn update_alien_meter(
     let fraction = (escaped as f32 / cutoff as f32).clamp(0.0, 1.0);
 
     if let Ok(mut text) = meter_text.single_mut() {
-        **text = format!("Aliens escaped: {} / {}", escaped, cutoff);
+        **text = format!("Aliens escaped: {escaped} / {cutoff}");
     }
     if let Ok(mut bar) = meter_bar.single_mut() {
         bar.value = fraction;

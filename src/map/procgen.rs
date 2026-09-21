@@ -20,7 +20,7 @@ use crate::map::MapFeatures;
 /// A closed polygon in tile-grid coordinates. `points` are corner coordinates in
 /// continuous grid space (e.g. `(0, 0)` to `(6, 4)` describes a 6x4-tile rectangle);
 /// cell `(x, y)` is considered "inside" using its center `(x + 0.5, y + 0.5)`.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Polygon {
     pub points: Vec<(i32, i32)>,
 }
@@ -113,12 +113,12 @@ pub enum WallCellKind { Wall, Door, Window }
 pub enum Facing { North, East, South, West }
 
 impl Facing {
-    pub fn rotation_steps(self) -> u8 {
+    pub const fn rotation_steps(self) -> u8 {
         match self {
-            Facing::North => 0,
-            Facing::East => 2,
-            Facing::South => 4,
-            Facing::West => 6,
+            Self::North => 0,
+            Self::East => 2,
+            Self::South => 4,
+            Self::West => 6,
         }
     }
 }

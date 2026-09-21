@@ -214,7 +214,7 @@ impl Default for AssetBrowserState {
 }
 
 impl AssetBrowserState {
-    pub fn reset_for_enter(&mut self) {
+    pub const fn reset_for_enter(&mut self) {
         self.viewer_entity = None;
         self.load_requested = false;
         self.list_dirty = true;
@@ -265,25 +265,25 @@ impl AssetBrowserState {
         self.hardpoints_ui_dirty = true;
     }
 
-    pub fn toggle_skeleton(&mut self) {
+    pub const fn toggle_skeleton(&mut self) {
         self.show_skeleton = !self.show_skeleton;
     }
 
     // ── Weapon attachments ──────────────────────────────────────────────────────
 
     pub fn selected_bone_name(&self) -> Option<&str> {
-        self.bone_names.get(self.selected_bone).map(|s| s.as_str())
+        self.bone_names.get(self.selected_bone).map(std::string::String::as_str)
     }
 
     /// Cycle the highlighted socket bone.
-    pub fn cycle_bone(&mut self, delta: i32) {
+    pub const fn cycle_bone(&mut self, delta: i32) {
         if self.bone_names.is_empty() { return; }
         let n = self.bone_names.len() as i32;
         self.selected_bone = (self.selected_bone as i32 + delta).rem_euclid(n) as usize;
         self.bones_ui_dirty = true;
     }
 
-    pub fn set_selected_bone(&mut self, idx: usize) {
+    pub const fn set_selected_bone(&mut self, idx: usize) {
         if idx < self.bone_names.len() {
             self.selected_bone = idx;
             self.bones_ui_dirty = true;
@@ -293,7 +293,7 @@ impl AssetBrowserState {
     /// Attach `model_path` to the currently highlighted bone and make it the active
     /// (nudge-editable) attachment.
     pub fn attach_selected_model(&mut self, model_path: String) {
-        let Some(bone) = self.selected_bone_name().map(|s| s.to_string()) else { return };
+        let Some(bone) = self.selected_bone_name().map(std::string::ToString::to_string) else { return };
         self.attachments.push(Attachment { bone, model_path, ..Default::default() });
         self.active_attachment = Some(self.attachments.len() - 1);
         self.attachments_struct_dirty = true;
@@ -323,7 +323,7 @@ impl AssetBrowserState {
 
     /// Re-parent the active attachment to the currently highlighted bone.
     pub fn set_active_attachment_bone(&mut self) {
-        let Some(bone) = self.selected_bone_name().map(|s| s.to_string()) else { return };
+        let Some(bone) = self.selected_bone_name().map(std::string::ToString::to_string) else { return };
         if let Some(idx) = self.active_attachment
             && let Some(a) = self.attachments.get_mut(idx)
         {
@@ -375,12 +375,12 @@ impl AssetBrowserState {
 
     // ── Hardpoints ──────────────────────────────────────────────────────────────
 
-    pub fn toggle_hardpoints(&mut self) {
+    pub const fn toggle_hardpoints(&mut self) {
         self.show_hardpoints = !self.show_hardpoints;
     }
 
     /// Characters anchor hardpoints to bones; weapons anchor to the model origin.
-    pub fn is_character_model(&self) -> bool {
+    pub const fn is_character_model(&self) -> bool {
         matches!(self.model_type, ModelType::Player(_) | ModelType::Enemy(_))
     }
 
@@ -389,7 +389,7 @@ impl AssetBrowserState {
     pub fn select_hardpoint_role(&mut self, role: &str) {
         if !self.hardpoints.contains_key(role) {
             let anchor = if self.is_character_model() {
-                self.selected_bone_name().map(|s| s.to_string())
+                self.selected_bone_name().map(std::string::ToString::to_string)
             } else {
                 None
             };
@@ -406,7 +406,7 @@ impl AssetBrowserState {
 
     /// Re-anchor the active hardpoint to the currently highlighted bone.
     pub fn set_active_hardpoint_bone(&mut self) {
-        let bone = self.selected_bone_name().map(|s| s.to_string());
+        let bone = self.selected_bone_name().map(std::string::ToString::to_string);
         if let Some(role) = self.active_hardpoint_role.clone()
             && let Some(h) = self.hardpoints.get_mut(&role)
         {
@@ -449,7 +449,7 @@ impl AssetBrowserState {
     pub fn set_ref_weapon(&mut self, path: String) {
         let def = AssetDefinition::load(&path);
         self.hardpoint_ref_grip = def.as_ref().and_then(|d| d.hardpoints.get("grip").cloned());
-        self.hardpoint_ref_scale = def.map(|d| d.scale).unwrap_or(1.0);
+        self.hardpoint_ref_scale = def.map_or(1.0, |d| d.scale);
         self.hardpoint_ref_weapon = Some(path);
         self.hardpoint_preview_dirty = true;
     }
@@ -742,21 +742,21 @@ impl AssetBrowserState {
         self.tags_dirty = true;
     }
 
-    pub fn anim_next(&mut self) {
+    pub const fn anim_next(&mut self) {
         if self.anim_count > 0 {
             self.anim_index = (self.anim_index + 1) % self.anim_count;
             self.anim_dirty = true;
         }
     }
 
-    pub fn anim_prev(&mut self) {
+    pub const fn anim_prev(&mut self) {
         if self.anim_count > 0 {
             self.anim_index = (self.anim_index + self.anim_count - 1) % self.anim_count;
             self.anim_dirty = true;
         }
     }
 
-    pub fn move_up(&mut self) {
+    pub const fn move_up(&mut self) {
         if self.selected > 0 {
             self.selected -= 1;
             if self.selected < self.scroll_offset {
@@ -766,7 +766,7 @@ impl AssetBrowserState {
         }
     }
 
-    pub fn move_down(&mut self) {
+    pub const fn move_down(&mut self) {
         if self.selected + 1 < self.files.len() {
             self.selected += 1;
             if self.selected >= self.scroll_offset + WINDOW_SIZE {
@@ -776,7 +776,7 @@ impl AssetBrowserState {
         }
     }
 
-    pub fn page_up(&mut self) {
+    pub const fn page_up(&mut self) {
         let step = WINDOW_SIZE / 2;
         self.selected = self.selected.saturating_sub(step);
         if self.selected < self.scroll_offset {
@@ -806,7 +806,7 @@ impl AssetBrowserState {
     }
 
     pub fn selected_path(&self) -> Option<&str> {
-        self.files.get(self.selected).map(|s| s.as_str())
+        self.files.get(self.selected).map(std::string::String::as_str)
     }
 }
 

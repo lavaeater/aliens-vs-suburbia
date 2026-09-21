@@ -29,7 +29,7 @@ const TEX_SIZE: u32 = 64;
 /// Deterministic little PRNG so the texture looks organic without pulling in a dep.
 struct Rng(u32);
 impl Rng {
-    fn next(&mut self) -> u32 {
+    const fn next(&mut self) -> u32 {
         // xorshift32
         let mut x = self.0;
         x ^= x << 13;
@@ -52,7 +52,7 @@ fn make_blood_texture() -> Image {
 
     // A few droplets: (cx, cy, radius) in [0,1] texel space.
     let mut droplets = [(0.0f32, 0.0f32, 0.0f32); 6];
-    for d in droplets.iter_mut() {
+    for d in &mut droplets {
         let ang = rng.f32() * std::f32::consts::TAU;
         let dist = 0.28 + rng.f32() * 0.20;
         d.0 = 0.5 + ang.cos() * dist;

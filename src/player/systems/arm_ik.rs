@@ -379,7 +379,7 @@ pub fn align_sights(
         let weapon_world = owner.mul_transform(weapon_local);
         let target = weapon_world.mul_transform(sight.weapon_frame).rotation();
 
-        let Ok(parent) = parents.get(sight.bone).map(|p| p.parent()) else { continue };
+        let Ok(parent) = parents.get(sight.bone).map(ChildOf::parent) else { continue };
         let Ok(parent_world) = globals.get(parent).copied() else { continue };
         let Ok(bone_local) = transforms.get(sight.bone).copied() else { continue };
 

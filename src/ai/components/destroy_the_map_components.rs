@@ -26,7 +26,7 @@ pub struct MustDestroyTheMap {
 }
 
 impl MustDestroyTheMap {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             path_of_destruction: None,
             state: MustDestroyTheMapState::NotStarted,

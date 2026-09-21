@@ -147,7 +147,7 @@ pub struct ModelSettings {
 }
 
 fn default_character_folder() -> String { DEFAULT_CHARACTER_FOLDER.to_string() }
-fn default_scale() -> f32 { 1.0 }
+const fn default_scale() -> f32 { 1.0 }
 
 impl Default for ModelSettings {
     fn default() -> Self {
@@ -173,11 +173,11 @@ impl ModelSettings {
 
     pub fn load() -> Self {
         if let Ok(text) = std::fs::read_to_string(MODEL_SETTINGS_PATH)
-            && let Ok(s) = ron::from_str::<ModelSettings>(&text)
+            && let Ok(s) = ron::from_str::<Self>(&text)
         {
             return s;
         }
-        ModelSettings::default()
+        Self::default()
     }
 
     pub fn save(&self) {

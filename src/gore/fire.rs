@@ -183,9 +183,7 @@ pub fn tick_fire_fields(
                 ..default()
             });
             let fa = fire_assets.as_ref();
-            let mesh = fa
-                .map(|a| a.flame_mesh.clone())
-                .unwrap_or_else(|| meshes.add(Mesh::from(Sphere::new(0.5))));
+            let mesh = fa.map_or_else(|| meshes.add(Mesh::from(Sphere::new(0.5))), |a| a.flame_mesh.clone());
             commands.spawn((
                 Mesh3d(mesh),
                 MeshMaterial3d(mat),

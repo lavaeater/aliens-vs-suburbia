@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use bevy::prelude::{Entity, Resource};
 use crate::poly_pizza::types::PizzaModel;
 
-#[derive(Default, PartialEq, Clone, Copy)]
+#[derive(Default, PartialEq, Eq, Clone, Copy)]
 pub enum InputFocus {
     #[default]
     Keyword,

@@ -169,7 +169,7 @@ pub fn resolve_twist_bones(
             .collect();
 
         // All-or-nothing: a half-resolved chain would twist unevenly.
-        if resolved.iter().any(|e| e.is_none()) {
+        if resolved.iter().any(std::option::Option::is_none) {
             pending.tries += 1;
             if pending.tries >= RESOLVE_MAX_TRIES {
                 let missing: Vec<&str> = pending

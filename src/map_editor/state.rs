@@ -17,7 +17,7 @@ pub const TILE_WALL_ALIEN: u64 =
     MapFeatures::Floor as u64 | MapFeatures::ImpassableForEnemies as u64;
 pub const TILE_VOID: u64 = 0;
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum PaletteTab {
     Terrain,
     Tower,
@@ -27,27 +27,27 @@ pub enum PaletteTab {
 }
 
 impl PaletteTab {
-    pub fn all() -> &'static [PaletteTab] {
+    pub const fn all() -> &'static [Self] {
         &[
-            PaletteTab::Terrain,
-            PaletteTab::Tower,
-            PaletteTab::Item,
-            PaletteTab::Enemy,
-            PaletteTab::Special,
+            Self::Terrain,
+            Self::Tower,
+            Self::Item,
+            Self::Enemy,
+            Self::Special,
         ]
     }
-    pub fn label(&self) -> &'static str {
+    pub const fn label(&self) -> &'static str {
         match self {
-            PaletteTab::Terrain => "Terrain",
-            PaletteTab::Tower => "Tower",
-            PaletteTab::Item => "Item",
-            PaletteTab::Enemy => "Enemy",
-            PaletteTab::Special => "Special",
+            Self::Terrain => "Terrain",
+            Self::Tower => "Tower",
+            Self::Item => "Item",
+            Self::Enemy => "Enemy",
+            Self::Special => "Special",
         }
     }
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum EditorTool {
     Paint,
     /// Click-drag a rectangle; on release it's resolved into a wall ring with doors and
@@ -69,8 +69,8 @@ pub enum PaletteItem {
 impl PaletteItem {
     pub fn display_name(&self) -> &str {
         match self {
-            PaletteItem::Def { name, .. } => name,
-            PaletteItem::Special { label, .. } => label,
+            Self::Def { name, .. } => name,
+            Self::Special { label, .. } => label,
         }
     }
 }
@@ -333,7 +333,7 @@ impl MapEditorState {
         self.house_points.clear();
     }
 
-    pub fn rotate_brush(&mut self) {
+    pub const fn rotate_brush(&mut self) {
         self.rotation_steps = (self.rotation_steps + 1) % 8;
         self.palette_dirty = true; // refresh label with new rotation angle
     }

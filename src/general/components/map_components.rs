@@ -41,10 +41,10 @@ pub struct DecorationItem {
     pub scale: f32,
 }
 
-fn default_scale() -> f32 { 1.0 }
+const fn default_scale() -> f32 { 1.0 }
 
-fn default_map_width() -> usize { 14 }
-fn default_map_height() -> usize { 24 }
+const fn default_map_width() -> usize { 14 }
+const fn default_map_height() -> usize { 24 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct MapFile {
@@ -178,7 +178,7 @@ pub struct AlienSpawnPoint {
 }
 
 impl AlienSpawnPoint {
-    pub fn new(spawn_rate_per_minute: f32) -> Self {
+    pub const fn new(spawn_rate_per_minute: f32) -> Self {
         Self {
             spawn_rate_per_minute,
             spawn_cool_down: 0.0

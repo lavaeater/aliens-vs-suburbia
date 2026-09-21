@@ -28,7 +28,7 @@ pub struct Ball {
 }
 
 impl Ball {
-    pub(crate) fn new(entity: Entity) -> Self {
+    pub(crate) const fn new(entity: Entity) -> Self {
         Self {
             entity: Some(entity),
             bounces: 0,
@@ -60,7 +60,7 @@ pub enum CollisionLayer {
     PlayerAimSensor,
 }
 
-#[derive(Component, Clone, Debug, PartialEq, Reflect)]
+#[derive(Component, Clone, Debug, PartialEq, Eq, Reflect)]
 #[reflect(Component, Default)]
  #[type_path = "avs"]
 pub struct Attack {
@@ -76,7 +76,7 @@ impl Default for Attack {
 }
 
 
-#[derive(Component, Clone, Copy, Debug, PartialEq, Reflect)]
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Reflect)]
 #[reflect(Component, Default)]
  #[type_path = "avs"]
 pub struct Health {
@@ -94,13 +94,13 @@ impl Default for Health {
 }
 
 impl Health {
-    pub fn full(max_health: i32) -> Self {
+    pub const fn full(max_health: i32) -> Self {
         Self { health: max_health, max_health }
     }
 
     /// Subtract `amount` and report whether this blow was lethal (health now <= 0).
     /// Only `general::damage::apply_damage` should call this in gameplay code.
-    pub fn apply(&mut self, amount: i32) -> bool {
+    pub const fn apply(&mut self, amount: i32) -> bool {
         self.health -= amount;
         self.health <= 0
     }
@@ -110,7 +110,7 @@ impl Health {
         self.health = (self.health + amount).min(self.max_health);
     }
 
-    pub fn is_dead(&self) -> bool {
+    pub const fn is_dead(&self) -> bool {
         self.health <= 0
     }
 }

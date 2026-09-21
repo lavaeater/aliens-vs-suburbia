@@ -168,7 +168,7 @@ fn suburbia_chords() -> Vec<Chord> {
                 Note::new(-1, 0.5), // G# low
                 Note::new(14, 0.3), // B high
             ],
-            scale.clone(),
+            scale,
         ),
     ]
 }
@@ -230,7 +230,7 @@ fn setup_band(mut commands: Commands, asset_server: Res<AssetServer>) {
     let mut drums = SuperDrummer::new(vec![
         create_drummer_only(kick.clone(), 0.0, generate_kick_beat()),
         create_drummer_only(snare.clone(), -2.0, generate_snare_beat()),
-        create_drummer_only(hihat.clone(), -8.0, generate_hihat_beat()),
+        create_drummer_only(hihat, -8.0, generate_hihat_beat()),
     ]);
     drums.auto_time_feel = true;
     drums.half_time_drums = vec![

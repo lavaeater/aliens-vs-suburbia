@@ -13,7 +13,7 @@ pub mod procgen;
 
 #[bitflags(default = Nothing)]
 #[repr(u64)]
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum MapFeatures {
   Nothing, // Clear flags
   Water, // Terrain type indicator

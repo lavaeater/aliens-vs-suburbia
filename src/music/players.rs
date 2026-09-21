@@ -57,7 +57,7 @@ impl MusicPlayer for ChordStabs {
             return;
         }
         let hit = match (beat.beat, beat.sixteenth) {
-            (1, 2) | (3, 2) => true,
+            (1 | 3, 2) => true,
             (2, 2) => base_intensity > 0.8,
             _ => false,
         };

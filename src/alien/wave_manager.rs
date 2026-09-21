@@ -91,7 +91,7 @@ impl WaveManager {
         self.waves.iter().map(|w| w.alien_count).sum()
     }
 
-    pub fn waves_remaining(&self) -> bool {
+    pub const fn waves_remaining(&self) -> bool {
         self.current_wave < self.waves.len()
     }
 

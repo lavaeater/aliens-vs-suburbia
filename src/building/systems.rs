@@ -44,8 +44,8 @@ pub fn enter_build_mode(
                 &mut commands,
                 &asset_server,
                 &desired_neighbour_pos,
-                first.map(|o| o.file.as_str()).unwrap_or("map/obstacle.glb#Scene0"),
-                first.map(|o| o.scale).unwrap_or(1.0),
+                first.map_or("map/obstacle.glb#Scene0", |o| o.file.as_str()),
+                first.map_or(1.0, |o| o.scale),
                 &tile_definitions,
             );
             commands.entity(start_event.0).insert(BuildingIndicator(building_indicator, 0));
@@ -79,7 +79,7 @@ pub fn spawn_building_indicator(
 
 fn collect_descendants(entity: Entity, children_q: &Query<&Children>, out: &mut Vec<Entity>) {
     if let Ok(children) = children_q.get(entity) {
-        for child in children.iter() {
+        for child in children {
             out.push(*child);
             collect_descendants(*child, children_q, out);
         }
@@ -304,14 +304,14 @@ pub fn build_tower_system(
         let Some(option) = model_defs.build_indicators.get(build_tower.option) else { continue };
         let builtin = option.model_key.and_then(|k| model_defs.definitions.get(k));
 
-        let health = option.tower.as_ref().map(|t| t.health as i32).unwrap_or(100);
+        let health = option.tower.as_ref().map_or(100, |t| t.health as i32);
         let mut ec = commands.spawn((
             Name::from(option.name.clone()),
             IsObstacle {},
             Faction::Structure,
             WorldAssetRoot(asset_server.load(option.file.clone())),
             bevy::prelude::Transform::from_scale(Vec3::splat(option.scale)),
-            builtin.map(|d| d.rigid_body).unwrap_or(RigidBody::Kinematic),
+            builtin.map_or(RigidBody::Kinematic, |d| d.rigid_body),
             match builtin {
                 Some(d) => tile_defs.create_collider(d.width, d.height, d.depth),
                 None => tile_defs.create_collider(16.0, 8.0, 16.0),

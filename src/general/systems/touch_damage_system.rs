@@ -30,8 +30,8 @@ pub fn touch_damage_system(
             }
             let Ok(target_pos) = creatures.get(hit) else { continue };
             // Blood sprays off the victim, away from the thing mauling them.
-            let vpos = target_pos.map(|p| p.0).unwrap_or(Vec3::ZERO);
-            let apos = damager_pos.map(|p| p.0).unwrap_or(vpos);
+            let vpos = target_pos.map_or(Vec3::ZERO, |p| p.0);
+            let apos = damager_pos.map_or(vpos, |p| p.0);
             damage_mw.write(
                 ApplyDamage::at(hit, amount, DamageKind::Blunt, vpos + Vec3::Y * 0.4)
                     .from(damager)

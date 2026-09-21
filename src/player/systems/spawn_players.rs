@@ -35,7 +35,7 @@ pub struct FixSceneTransform {
 }
 
 impl FixSceneTransform {
-    pub fn new(translation: Vec3, rotation: Quat, scale: Vec3) -> Self {
+    pub const fn new(translation: Vec3, rotation: Quat, scale: Vec3) -> Self {
         Self {
             translation,
             rotation,
@@ -60,8 +60,7 @@ pub fn spawn_players(
     mut respawn_queue: ResMut<RespawnQueue>,
 ) {
     let max_players = roster.as_ref()
-        .map(|r| r.def_paths.len().max(1))
-        .unwrap_or(1);
+        .map_or(1, |r| r.def_paths.len().max(1));
     let occupied: Vec<usize> = existing_players.iter().map(|s| s.0).collect();
     let requests: Vec<SpawnPlayer> = spawn_player_event_reader.read().cloned().collect();
     let assignments = assign_spawns(&requests, &occupied, max_players);
@@ -86,7 +85,7 @@ pub fn spawn_players(
 
         let (roster_ability, roster_throw_rate) = player_props.as_ref()
             .map(|props| {
-                use crate::assets::asset_definition::PlayerAbility::*;
+                use crate::assets::asset_definition::PlayerAbility::{Bombardment, Healing, Whirlwind, GoldDigger, Molotov};
                 use crate::player::systems::abilities::SpecialAbility;
                 let ability = match props.ability {
                     Bombardment => SpecialAbility::Bombardment,
@@ -121,20 +120,20 @@ pub fn spawn_players(
             let s = &*model_settings;
             // Load scene from roster def if available; also sync game_assets and
             // player_asset_def so build_player_anim_graph uses the right GLTF.
-            let scene = roster_def.clone()
-                .map(|def| {
-                    let scene = asset_server.load(GltfAssetLabel::Scene(0).from_asset(def.model_path.clone()));
-                    // Slot 0 drives the shared animation graph — keep game_assets in sync.
-                    if slot == 0 {
-                        game_assets.player_scene = scene.clone();
-                        game_assets.player_gltf = asset_server.load(def.model_path.clone());
-                        if matches!(def.model_type, ModelType::Player(_)) {
-                            player_asset_def.0 = Some(def);
-                        }
+            let scene = if let Some(def) = roster_def.clone() {
+                let scene = asset_server.load(GltfAssetLabel::Scene(0).from_asset(def.model_path.clone()));
+                // Slot 0 drives the shared animation graph — keep game_assets in sync.
+                if slot == 0 {
+                    game_assets.player_scene = scene.clone();
+                    game_assets.player_gltf = asset_server.load(def.model_path.clone());
+                    if matches!(def.model_type, ModelType::Player(_)) {
+                        player_asset_def.0 = Some(def);
                     }
-                    scene
-                })
-                .unwrap_or_else(|| game_assets.player_scene.clone());
+                }
+                scene
+            } else {
+                game_assets.player_scene.clone()
+            };
             commands.spawn((
                 FixSceneTransform::new(
                     Vec3::new(s.translation_x, s.translation_y, s.translation_z),
@@ -225,8 +224,8 @@ pub fn assign_spawns(requests: &[SpawnPlayer], occupied: &[usize], max_players: 
 }
 
 /// Cycles through abilities by slot so each player starts with a different one.
-fn ability_for_slot(slot: usize) -> crate::player::systems::abilities::SpecialAbility {
-    use crate::player::systems::abilities::SpecialAbility::*;
+const fn ability_for_slot(slot: usize) -> crate::player::systems::abilities::SpecialAbility {
+    use crate::player::systems::abilities::SpecialAbility::{Bombardment, Healing, Whirlwind, GoldDigger};
     match slot % 4 {
         0 => Bombardment,
         1 => Healing,

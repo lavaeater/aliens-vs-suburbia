@@ -243,8 +243,8 @@ pub fn rebuild_hardpoint_preview(
     let scene: Handle<WorldAsset> = asset_server.load(GltfAssetLabel::Scene(0).from_asset(ref_path));
     // Cancel the rig's baked bone scale and track the character's rendered scale, so
     // the weapon isn't collapsed by a tiny bone world scale (mesh2motion bakes ~0.0136).
-    let bone_scale = global_transforms.get(bone_ent).map(|gt| gt.scale().x).unwrap_or(1.0);
-    let root_scale = root_q.single().map(|gt| gt.scale().x).unwrap_or(1.0);
+    let bone_scale = global_transforms.get(bone_ent).map_or(1.0, |gt| gt.scale().x);
+    let root_scale = root_q.single().map_or(1.0, |gt| gt.scale().x);
     let effective = weapon_local_scale(state.hardpoint_ref_scale, root_scale, bone_scale);
     state.hardpoint_preview_scale = effective;
     let t = snap_transform(&char_grip, &ref_grip, effective);
@@ -317,7 +317,7 @@ pub fn handle_model_load(
         commands.entity(old).despawn();
     }
 
-    if let Some(path) = state.selected_path().map(|s| s.to_string()) {
+    if let Some(path) = state.selected_path().map(std::string::ToString::to_string) {
         // Pre-populate hidden_nodes and anim_mapping from existing definition.
         state.load_definition();
         let handle: Handle<WorldAsset> = asset_server.load(
@@ -410,7 +410,7 @@ pub fn setup_viewer_animation(
     // and nothing would animate (this bit larger models like amy.glb hardest, since
     // they lose the load-vs-spawn race). Retry next frame by leaving gltf_handle set.
     let existing_player = get_child_with_component_recursive(viewer_entity, &child_query, &anim_players);
-    let scene_spawned = child_query.get(viewer_entity).map(|c| !c.is_empty()).unwrap_or(false);
+    let scene_spawned = child_query.get(viewer_entity).is_ok_and(|c| !c.is_empty());
     if existing_player.is_none() {
         if !gltf.animations.is_empty() {
             return; // has embedded anims; its player hasn't spawned yet
@@ -505,10 +505,8 @@ pub fn merge_extra_anim_clips(
 
     for (idx, handle) in state.extra_gltf_handles.iter().enumerate() {
         let Some(gltf) = gltf_assets.get(handle) else { continue };
-        let stem = state.animation_sources.get(idx)
-            .map(|p| std::path::Path::new(p)
-                .file_stem().and_then(|s| s.to_str()).unwrap_or("ext").to_string())
-            .unwrap_or_else(|| format!("ext{idx}"));
+        let stem = state.animation_sources.get(idx).map_or_else(|| format!("ext{idx}"), |p| std::path::Path::new(p)
+                .file_stem().and_then(|s| s.to_str()).unwrap_or("ext").to_string());
         for (name, clip_handle) in &gltf.named_animations {
             let prefixed = format!("{stem}|{name}");
             if !state.anim_names.contains(&prefixed) {
@@ -669,7 +667,7 @@ pub fn apply_viewer_animation(
     player.play(node).repeat();
     state.anim_dirty = false;
 
-    let name = state.anim_names.get(idx).filter(|s| !s.is_empty()).map(|s| s.as_str());
+    let name = state.anim_names.get(idx).filter(|s| !s.is_empty()).map(std::string::String::as_str);
     let label_text = match name {
         Some(n) => format!("[{}/{}] {}", idx + 1, state.anim_count, n),
         None => format!("[{}/{}]", idx + 1, state.anim_count),
