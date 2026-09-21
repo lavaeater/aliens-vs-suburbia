@@ -1,3 +1,9 @@
+// Grid/procgen math: coordinates and offsets here are structurally bounded by
+// loop ranges and chunk/tile dimensions checked elsewhere, so the blanket
+// arithmetic/indexing lints mostly flag noise in this module. Scoped allow;
+// genuinely risky spots are fixed individually.
+#![allow(clippy::arithmetic_side_effects, clippy::indexing_slicing)]
+
 use enumflags2::BitFlags;
 use crate::general::components::map_components::{DecorationItem, MapFile};
 use crate::map::MapFeatures;

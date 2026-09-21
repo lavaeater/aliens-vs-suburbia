@@ -45,7 +45,12 @@ pub(crate) mod settings;
 pub(crate) mod towers;
 pub(crate) mod ui;
 
-fn create_map(seed: Option<u64>, width: usize, height: usize, output: Option<String>) {
+fn create_map(
+    seed: Option<u64>,
+    width: usize,
+    height: usize,
+    output: Option<String>,
+) -> Result<(), String> {
     use std::time::{SystemTime, UNIX_EPOCH};
 
     let seed = seed.unwrap_or_else(|| {
@@ -69,12 +74,13 @@ fn create_map(seed: Option<u64>, width: usize, height: usize, output: Option<Str
 
     let pretty = ron::ser::PrettyConfig::new().depth_limit(4);
     let out = ron::ser::to_string_pretty(&map, pretty)
-        .unwrap_or_else(|e| panic!("Serialization failed: {e}"));
-    std::fs::write(&output, out).unwrap_or_else(|e| panic!("Cannot write {output}: {e}"));
+        .map_err(|e| format!("Serialization failed: {e}"))?;
+    std::fs::write(&output, out).map_err(|e| format!("Cannot write {output}: {e}"))?;
     println!("Created {output}  (seed={seed} width={width} height={height})");
+    Ok(())
 }
 
-fn parse_create_map_args(args: &[String]) -> Option<()> {
+fn parse_create_map_args(args: &[String]) -> Option<Result<(), String>> {
     if !args.iter().any(|a| a == "--create-map") {
         return None;
     }
@@ -84,8 +90,8 @@ fn parse_create_map_args(args: &[String]) -> Option<()> {
     let mut output: Option<String> = None;
 
     let mut i = 0;
-    while i < args.len() {
-        match args[i].as_str() {
+    while let Some(arg) = args.get(i) {
+        match arg.as_str() {
             "--seed" => {
                 seed = args.get(i + 1).and_then(|v| v.parse().ok());
                 i += 2;
@@ -113,8 +119,7 @@ fn parse_create_map_args(args: &[String]) -> Option<()> {
             }
         }
     }
-    create_map(seed, width, height, output);
-    Some(())
+    Some(create_map(seed, width, height, output))
 }
 
 fn print_help() {
@@ -135,23 +140,34 @@ fn print_help() {
     println!("  --output <path>  Output file path (default: assets/maps/map_N.ron)");
 }
 
-fn main() {
+fn main() -> std::process::ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
 
     if args.iter().any(|a| a == "--help" || a == "-h") {
         print_help();
-        return;
+        return std::process::ExitCode::SUCCESS;
     }
 
-    if parse_create_map_args(&args).is_some() {
-        return;
+    if let Some(result) = parse_create_map_args(&args) {
+        return match result {
+            Ok(()) => std::process::ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("{e}");
+                std::process::ExitCode::FAILURE
+            }
+        };
     }
 
     #[cfg(feature = "map-editor")]
     if args.iter().any(|a| a == "--map-editor") {
         let file = args.iter().skip_while(|a| *a != "--file").nth(1).cloned();
-        map_editor_tui::run(file).unwrap();
-        return;
+        return match map_editor_tui::run(file) {
+            Ok(()) => std::process::ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("{e}");
+                std::process::ExitCode::FAILURE
+            }
+        };
     }
 
     // Boot straight into the playground, skipping the menu. Handy when iterating on the
@@ -201,4 +217,5 @@ fn main() {
     }
 
     app.run();
+    std::process::ExitCode::SUCCESS
 }

@@ -106,7 +106,7 @@ pub fn spawn_aliens(
         return;
     }
     for spawn_alien in spawn_alien_mr.read() {
-        alien_counter.count.saturating_add(1);
+        alien_counter.count = alien_counter.count.saturating_add(1);
 
         // Def-driven enemy: model, stats and behaviour from the wave's def.
         if let Some(path) = &spawn_alien.enemy_def

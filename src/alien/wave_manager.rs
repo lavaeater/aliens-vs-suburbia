@@ -2,7 +2,6 @@ use crate::alien::components::general::AlienCounter;
 use crate::game_state::score_keeper::{LevelState, LevelTracker};
 use crate::general::components::map_components::AlienSpawnPoint;
 use bevy::prelude::*;
-use pathfinding::num_traits::SaturatingAdd;
 
 /// Definition for one wave of alien spawns.
 #[derive(Clone)]
@@ -152,7 +151,9 @@ pub fn wave_system(
     } else {
         manager.wave_timer -= dt;
         if manager.wave_timer <= 0.0 {
-            let wave = &manager.waves[manager.current_wave];
+            let Some(wave) = manager.waves.get(manager.current_wave) else {
+                return;
+            };
             let rate = wave.spawn_rate_per_minute;
             for mut sp in spawn_points.iter_mut() {
                 sp.spawn_rate_per_minute = rate;
@@ -168,7 +169,10 @@ pub fn wave_system(
 #[allow(dead_code)]
 pub fn count_wave_spawn(mut manager: ResMut<WaveManager>, tracker: Res<LevelTracker>) {
     // Sync spawned_this_wave from the global spawned count.
-    let wave_offset: i32 = manager.waves[..manager.current_wave]
+    let wave_offset: i32 = manager
+        .waves
+        .get(..manager.current_wave)
+        .unwrap_or_default()
         .iter()
         .map(|w| w.alien_count)
         .sum();

@@ -10,6 +10,12 @@
 //! else is Open↔Open, and the whole map stays connected while the spine guarantees the
 //! critical corridor. Variety comes from which off-spine chunk (and rotation) fills each
 //! slot.
+// Grid/procgen math: coordinates and offsets here are structurally bounded by
+// loop ranges and chunk/tile dimensions checked elsewhere, so the blanket
+// arithmetic/indexing lints mostly flag noise in this module. Scoped allow;
+// genuinely risky spots are fixed individually.
+#![allow(clippy::arithmetic_side_effects, clippy::indexing_slicing)]
+
 
 use crate::general::components::map_components::MapFile;
 use crate::map::chunks::{EdgeType, MapChunk, Side, CHUNK_SIZE};

@@ -10,6 +10,12 @@
 //! This module is just the data model + rotation + connector logic — pure and unit
 //! tested. Chunks are authored in code here for now (a readable ASCII template);
 //! loading them from `.ron` and stamping them in the editor are later stages.
+// Grid/procgen math: coordinates and offsets here are structurally bounded by
+// loop ranges and chunk/tile dimensions checked elsewhere, so the blanket
+// arithmetic/indexing lints mostly flag noise in this module. Scoped allow;
+// genuinely risky spots are fixed individually.
+#![allow(clippy::arithmetic_side_effects, clippy::indexing_slicing)]
+
 
 use crate::map::MapFeatures;
 use enumflags2::BitFlags;

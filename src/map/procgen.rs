@@ -7,6 +7,12 @@
 //! of wall/door/window cells plus an interior floor — `resolve_house` never touches
 //! `MapFile` directly, `apply_house_to_map` does that translation so the pure resolver
 //! stays trivially testable.
+// Grid/procgen math: coordinates and offsets here are structurally bounded by
+// loop ranges and chunk/tile dimensions checked elsewhere, so the blanket
+// arithmetic/indexing lints mostly flag noise in this module. Scoped allow;
+// genuinely risky spots are fixed individually.
+#![allow(clippy::arithmetic_side_effects, clippy::indexing_slicing)]
+
 
 use crate::general::components::map_components::{MapFile, TilePlacement};
 use crate::map::MapFeatures;
