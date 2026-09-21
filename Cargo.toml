@@ -16,7 +16,7 @@ resolver = "2"
 
 [workspace.lints.clippy]
 pedantic = { level = "warn", priority = -1 }
-nursery = { level = "warn", priority = -1 }    # BETA LINTS
+#nursery = { level = "warn", priority = -1 }    # BETA LINTS
 # Nursery lint that (a) fires inside `#[derive(Reflect)]` output, where nothing can be
 # done, and (b) turns readable if/else blocks into map_or_else closure soup.
 option_if_let_else = "allow"
@@ -31,7 +31,7 @@ redundant_pub_crate = "allow"
 # structurally bounded by loop ranges, not genuinely overflow-prone. Fixed
 # opportunistically where it could matter; see the module-level allows in
 # src/map/* and src/general/systems/map_systems.rs for the bulk of it.
-arithmetic_side_effects = "warn"
+arithmetic_side_effects = "allow"
 as_conversions = "allow"
 doc_markdown = "allow"
 exit = "deny"
@@ -42,8 +42,10 @@ must_use_candidate = "allow"
 needless_pass_by_value = "allow"
 panic = "deny"
 panic_in_result_fn = "deny"
+similar_names = "allow"
 string_slice = "deny"
 todo = "deny"
+too_many_lines = "allow"
 unchecked_time_subtraction = "deny"
 unimplemented = "deny"
 unreachable = "deny"

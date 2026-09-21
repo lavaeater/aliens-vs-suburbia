@@ -125,7 +125,6 @@ pub fn destroy_the_map_action_system(
                     }
                 } else {
                     must_destroy_data.state = MustDestroyTheMapState::Failed;
-                    continue;                    
                 }
             }
             MustDestroyTheMapState::MovingTowardsThingToDestroy => {
