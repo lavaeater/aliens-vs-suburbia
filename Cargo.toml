@@ -3,6 +3,9 @@ name = "aliens-vs-suburbia"
 version = "0.1.0"
 edition = "2024"
 
+[lints]
+workspace = true
+
 # The root package is itself a member; list the local crates whose tests should also run
 # under `cargo test` / `cargo nextest run` from the workspace root.
 [workspace]
@@ -14,23 +17,25 @@ resolver = "2"
 [workspace.lints.clippy]
 pedantic = { level = "warn", priority = -1 }
 nursery = { level = "deny", priority = -1 }    # BETA LINTS
-must_use_candidate = "allow"
-missing_errors_doc = "allow"
-unwrap_used = "deny"
+arithmetic_side_effects = "deny"
+as_conversions = "deny"
+doc_markdown = "allow"
+exit = "deny"
 expect_used = "deny"
 indexing_slicing = "deny"
-arithmetic_side_effects = "deny"
-unreachable = "deny"
-unimplemented = "deny"
-unchecked_time_subtraction = "deny"
-todo = "deny"
-string_slice = "deny"
-panic_in_result_fn = "deny"
+missing_errors_doc = "allow"
+must_use_candidate = "allow"
+needless_pass_by_value = "allow"
 panic = "deny"
-exit = "deny"
-as_conversions = "deny"
-
-
+panic_in_result_fn = "deny"
+string_slice = "deny"
+todo = "deny"
+unchecked_time_subtraction = "deny"
+unimplemented = "deny"
+unreachable = "deny"
+unwrap_used = "deny"
+used_underscore_binding = "allow"
+wildcard_imports = "allow"
 
 [dependencies]
 bevy = { version = "0.19.0", features = ["wayland", "3d", "ui", "bevy_feathers", "webp"] }
@@ -67,3 +72,22 @@ bevy_seedling = { git = "https://github.com/corvusprudens/bevy_seedling", rev = 
 # Enable max optimisations for dependencies, but not for our code:h
 [profile.dev.package."*"]
 opt-level = 3
+
+# Enable more optimization in the release profile at the cost of compile time.
+[profile.release]
+# Compile the entire crate as one unit.
+# Slows compile times, marginal improvements.
+codegen-units = 1
+# Do a second optimization pass over the entire program, including dependencies.
+# Slows compile times, marginal improvements.
+lto = "thin"
+
+# Optimize for size in the wasm-release profile to reduce load times and bandwidth usage on web.
+[profile.wasm-release]
+# Default to release profile values.
+inherits = "release"
+# Optimize with size in mind (also try "z", sometimes it is better).
+# Slightly slows compile times, great improvements to file size and runtime performance.
+opt-level = "s"
+# Strip all debugging information from the binary to slightly reduce file size.
+strip = "debuginfo"

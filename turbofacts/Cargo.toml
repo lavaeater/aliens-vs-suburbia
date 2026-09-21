@@ -3,6 +3,9 @@ name = "turbofacts"
 version = "0.1.0"
 edition = "2024"
 
+[lints]
+workspace = true
+
 [dependencies]
 bevy = { version = "0.19", default-features = false, features = ["bevy_log"] }
 serde = { version = "1", features = ["derive"] }
