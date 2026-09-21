@@ -20,6 +20,7 @@ pub struct Polygon {
 }
 
 impl Polygon {
+    #[allow(dead_code)]
     pub fn rectangle(x0: i32, y0: i32, x1: i32, y1: i32) -> Self {
         let (x0, x1) = (x0.min(x1), x0.max(x1));
         let (y0, y1) = (y0.min(y1), y0.max(y1));
@@ -309,6 +310,7 @@ pub fn apply_house(
 }
 
 /// Convenience wrapper of [`apply_house`] for a whole `MapFile`.
+#[allow(dead_code)]
 pub fn apply_house_to_map(result: &HouseResolveResult, spec: &HouseSpec, map: &mut MapFile) {
     apply_house(result, spec, map.map_width, map.map_height, &mut map.tiles, &mut map.placements);
 }
