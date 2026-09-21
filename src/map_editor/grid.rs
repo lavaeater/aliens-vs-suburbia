@@ -244,8 +244,9 @@ pub fn update_house_preview(
     // Edges between consecutive placed nodes (the closing edge is only implied once the
     // polygon is actually resolved, so it isn't drawn here).
     for pair in state.house_points.windows(2) {
-        let (x0, y0) = cell_center(pair[0].0, pair[0].1);
-        let (x1, y1) = cell_center(pair[1].0, pair[1].1);
+        let [p0, p1] = pair else { continue };
+        let (x0, y0) = cell_center(p0.0, p0.1);
+        let (x1, y1) = cell_center(p1.0, p1.1);
         let (left, top, width, height) = if (x1 - x0).abs() >= (y1 - y0).abs() {
             (x0.min(x1), y0 - EDGE_THICKNESS * 0.5, (x1 - x0).abs(), EDGE_THICKNESS)
         } else {

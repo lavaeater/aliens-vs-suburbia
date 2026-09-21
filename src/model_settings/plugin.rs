@@ -275,8 +275,10 @@ pub fn build_graph(
         // OR simply a GLTF clip name that itself contains '|' (e.g. "CharacterArmature|Idle").
         // Try external sources first; fall back to the model's own GLTF either way.
         let handle = if let Some(pipe) = search.find('|') {
-            let stem = &search[..pipe];
-            let clip_fragment = &search[pipe + 1..];
+            // `pipe` is the byte offset of an ASCII '|', so both slice points fall on
+            // char boundaries; `.get()` just avoids the panicking index operator.
+            let stem = search.get(..pipe).unwrap_or_default();
+            let clip_fragment = search.get(pipe + 1..).unwrap_or_default();
             // Try to find a matching external GLTF by stem first.
             let ext_handle = extra_gltfs.iter()
                 .find(|(path, _)| {

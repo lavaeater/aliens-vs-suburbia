@@ -215,7 +215,9 @@ impl MapEditorState {
         };
 
         if let Some((tile_v, maybe_path)) = action {
-            self.tiles[uy][ux] = tile_v;
+            let Some(row) = self.tiles.get_mut(uy) else { return };
+            let Some(cell) = row.get_mut(ux) else { return };
+            *cell = tile_v;
             if let Some(path) = maybe_path {
                 let rot = self.rotation_steps;
                 self.placements.retain(|p| !(p.x == x && p.y == y));
@@ -235,7 +237,13 @@ impl MapEditorState {
         if x < 0 || y < 0 || x >= self.width as i32 || y >= self.height as i32 {
             return;
         }
-        self.tiles[y as usize][x as usize] = 0;
+        if let Some(cell) = self
+            .tiles
+            .get_mut(y as usize)
+            .and_then(|row| row.get_mut(x as usize))
+        {
+            *cell = 0;
+        }
         self.placements.retain(|p| !(p.x == x && p.y == y));
         self.grid_dirty = true;
     }

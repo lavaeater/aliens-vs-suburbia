@@ -243,7 +243,7 @@ pub fn join_folder(current: &str, name: &str) -> String {
 /// Step one level up. The root is its own parent, so repeated "up" is harmless.
 pub fn parent_folder(current: &str) -> String {
     match current.rfind('/') {
-        Some(i) => current[..i].to_string(),
+        Some(i) => current.get(..i).unwrap_or_default().to_string(),
         None => String::new(),
     }
 }

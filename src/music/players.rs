@@ -74,9 +74,10 @@ impl MusicPlayer for ChordStabs {
             .collect();
         for (i, note) in strong.iter().enumerate() {
             let idx = (beat.bar_count as usize + beat.beat as usize + i) % self.samples.len();
+            let Some(sample) = self.samples.get(idx) else { continue };
             spawn_note(
                 commands,
-                &self.samples[idx],
+                sample,
                 self.volume - i as f32 * 2.0,
                 note.midi_note_diff,
             );

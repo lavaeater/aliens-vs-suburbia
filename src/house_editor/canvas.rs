@@ -96,8 +96,9 @@ pub fn redraw_canvas(
     const EDGE_COLOR: Color = Color::srgba(1.0, 1.0, 1.0, 0.85);
     const EDGE_THICKNESS: f32 = 3.0;
     for pair in state.points.windows(2) {
-        let (x0, y0) = world_to_screen(window, pair[0].0, pair[0].1);
-        let (x1, y1) = world_to_screen(window, pair[1].0, pair[1].1);
+        let [p0, p1] = pair else { continue };
+        let (x0, y0) = world_to_screen(window, p0.0, p0.1);
+        let (x1, y1) = world_to_screen(window, p1.0, p1.1);
         let (left, top, width, height) = if (x1 - x0).abs() >= (y1 - y0).abs() {
             (x0.min(x1), y0 - EDGE_THICKNESS * 0.5, (x1 - x0).abs(), EDGE_THICKNESS)
         } else {
