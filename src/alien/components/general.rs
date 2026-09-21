@@ -83,12 +83,12 @@ impl Default for AlienSightShape {
 
 #[derive(Resource, Clone, Debug)]
 pub struct AlienCounter {
-    pub count: u32,
-    pub max_count: u32,
+    pub count: i32,
+    pub max_count: i32,
 }
 
 impl AlienCounter {
-    pub fn new(max_count: u32) -> Self {
+    pub fn new(max_count: i32) -> Self {
         Self {
             count: 0,
             max_count,

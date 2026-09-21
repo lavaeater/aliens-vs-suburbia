@@ -60,7 +60,7 @@ pub fn alien_spawner_system(
 /// touch damage, loot, resistances, attack and death behaviour.
 fn spawn_from_def(commands: &mut Commands, path: &str, loaded: &LoadedEnemyDef, position: Vec3) -> Entity {
     let ModelType::Enemy(props) = &loaded.def.model_type else {
-        unreachable!("EnemyDefCache only holds Enemy defs");
+        unreachable!("");
     };
     let mut ec = commands.spawn((
         Alien,

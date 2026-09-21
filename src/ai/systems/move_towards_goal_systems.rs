@@ -57,7 +57,10 @@ pub fn move_towards_goal_system(
                     }
                     Some(path) => {
                         info!("Found path! {:?}", &path);
-                        move_towards_goal_data.path = Some(path.0[1..].to_vec());
+                        let Some((_, rest)) = path.0.split_first() else {
+                            return;
+                        };
+                        move_towards_goal_data.path = Some(rest.to_vec());
                     }
                 }
             }
@@ -69,50 +72,51 @@ pub fn move_towards_goal_system(
                     alien_reached_goal_mw.write(AgentReachedGoal(entity));
                 } else {
                     info!("Path has some steps left!");
-                    let next_tile = path[0];
-                    if map_graph.path_finding_grid.has_vertex(next_tile) {
-                        info!("Found the next tile");
-                        let next_tile_position = next_tile.to_world_coords(&tile_definitions).xz();
-                        let alien_position_vector2 = alien_position.0.xz();
-                        let alien_direction_vector2 = alien_rotation.0.mul_vec3(Vec3::new(0.0, 0.0, -1.0)).xz();
-                        let alien_to_goal_direction = next_tile_position - alien_position_vector2;
-                        let distance = alien_to_goal_direction.length();
-                        if distance < 0.5 {
-                            info!("Distance was sooo short, lets move to next!");
-                            move_towards_goal_data.path = Some(path[1..].to_vec());
-                            continue;
-                        }
-
-                        let angle = alien_direction_vector2.angle_to(alien_to_goal_direction).to_degrees();
-                        info!(
-                            "Steering: alien_pos={:.2?} tile_pos={:.2?} facing={:.2?} to_goal={:.2?} angle={:.1}deg dist={:.2}",
-                            alien_position.0.xz(), next_tile_position,
-                            alien_direction_vector2, alien_to_goal_direction,
-                            angle, distance
-                        );
-                        controller.rotations.clear();
-                        controller.directions.clear();
-                        let angle_speed_value = 90.0;
-                        let angle_forward_value = 15.0;
-                        if angle.abs() < angle_speed_value {
-                            controller.turn_speed = controller.max_turn_speed * (angle.abs() / angle_speed_value);
-                        } else {
-                            controller.turn_speed = controller.max_turn_speed;
-                        }
-                        if angle.abs() > 1.0 {
-                            if angle > 0.0 {
-                                controller.rotations.insert(ControlRotation::Left);
-                            } else {
-                                controller.rotations.insert(ControlRotation::Right);
+                    if let Some(next_tile) = path.first() {
+                        if map_graph.path_finding_grid.has_vertex(*next_tile) {
+                            info!("Found the next tile");
+                            let next_tile_position = next_tile.to_world_coords(&tile_definitions).xz();
+                            let alien_position_vector2 = alien_position.0.xz();
+                            let alien_direction_vector2 = alien_rotation.0.mul_vec3(Vec3::new(0.0, 0.0, -1.0)).xz();
+                            let alien_to_goal_direction = next_tile_position - alien_position_vector2;
+                            let distance = alien_to_goal_direction.length();
+                            if distance < 0.5 && let Some((_, rest)) = path.split_first() {
+                                info!("Distance was sooo short, lets move to next!");
+                                move_towards_goal_data.path = Some(rest.to_vec());
+                                continue;
                             }
+
+                            let angle = alien_direction_vector2.angle_to(alien_to_goal_direction).to_degrees();
+                            info!(
+                                "Steering: alien_pos={:.2?} tile_pos={:.2?} facing={:.2?} to_goal={:.2?} angle={:.1}deg dist={:.2}",
+                                alien_position.0.xz(), next_tile_position,
+                                alien_direction_vector2, alien_to_goal_direction,
+                                angle, distance
+                            );
+                            controller.rotations.clear();
+                            controller.directions.clear();
+                            let angle_speed_value = 90.0;
+                            let angle_forward_value = 15.0;
+                            if angle.abs() < angle_speed_value {
+                                controller.turn_speed = controller.max_turn_speed * (angle.abs() / angle_speed_value);
+                            } else {
+                                controller.turn_speed = controller.max_turn_speed;
+                            }
+                            if angle.abs() > 1.0 {
+                                if angle > 0.0 {
+                                    controller.rotations.insert(ControlRotation::Left);
+                                } else {
+                                    controller.rotations.insert(ControlRotation::Right);
+                                }
+                            }
+                            if angle.abs() < angle_forward_value {
+                                info!("We can move forward!");
+                                controller.directions.insert(ControlDirection::Forward);
+                            }
+                        } else {
+                            info!("Couldn't find next tile on map!");
+                            move_towards_goal_data.path = None;
                         }
-                        if angle.abs() < angle_forward_value {
-                            info!("We can move forward!");
-                            controller.directions.insert(ControlDirection::Forward);
-                        }
-                    } else {
-                        info!("Couldn't find next tile on map!");
-                        move_towards_goal_data.path = None;
                     }
                 }
             }
@@ -128,7 +132,7 @@ pub fn agent_reached_goal_handler(
 ) {
     for AgentReachedGoal(alien) in reached_goal_mr.read() {
         info!("this little alien reached its goal");
-        alien_counter.count -= 1;
+        alien_counter.count = alien_counter.count.saturating_sub(1);
         commands.entity(*alien).despawn();
         game_tracking_mw.write(GameTrackingEvent::AlienReachedGoal);
     }
