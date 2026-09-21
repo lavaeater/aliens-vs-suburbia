@@ -17,7 +17,7 @@ use bevy::world_serialization::WorldAsset;
 
 use crate::alien::components::general::Alien;
 use crate::animation::animation_plugin::{get_child_with_component_recursive, AnimationStore, CurrentAnimationKey};
-use crate::assets::asset_definition::{AssetDefinition, EnemyAttack, ModelType};
+use crate::assets::asset_definition::{AssetDefinition, EnemyAttack, EnemyProps, ModelType};
 use crate::general::components::{CollisionLayer, Health};
 use crate::general::damage::ApplyDamage;
 use crate::gore::components::{DamageKind, Ephemeral};
@@ -27,6 +27,9 @@ use crate::player::components::{Player, PlayerDead};
 /// A loaded enemy def with the handles spawning needs.
 pub struct LoadedEnemyDef {
     pub def: AssetDefinition,
+    /// The `ModelType::Enemy` payload of `def`, extracted at load time so that holding a
+    /// `LoadedEnemyDef` is itself the proof that the def is an enemy def.
+    pub props: EnemyProps,
     pub scene: Handle<WorldAsset>,
     pub gltf: Handle<Gltf>,
 }
@@ -39,13 +42,14 @@ impl EnemyDefCache {
     pub fn get_or_load(&mut self, path: &str, asset_server: &AssetServer) -> Option<&LoadedEnemyDef> {
         if !self.0.contains_key(path) {
             let def = AssetDefinition::load_from_def_path(path)?;
-            if !matches!(def.model_type, ModelType::Enemy(_)) {
+            let ModelType::Enemy(props) = &def.model_type else {
                 warn!("{path} is not an Enemy def");
                 return None;
-            }
+            };
+            let props = props.clone();
             let scene = asset_server.load(GltfAssetLabel::Scene(0).from_asset(def.model_path.clone()));
             let gltf = asset_server.load(def.model_path.clone());
-            self.0.insert(path.to_string(), LoadedEnemyDef { def, scene, gltf });
+            self.0.insert(path.to_string(), LoadedEnemyDef { def, props, scene, gltf });
         }
         self.0.get(path)
     }

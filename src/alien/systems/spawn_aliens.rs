@@ -15,7 +15,6 @@ use bevy::prelude::{
 use avian3d::prelude::Collider;
 use crate::alien::enemy_defs::{EnemyDef, EnemyDefCache, LoadedEnemyDef, RangedAttack};
 use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
-use crate::assets::asset_definition::ModelType;
 use crate::control::components::CharacterControl;
 use crate::general::components::{Health, TouchDamage};
 use crate::general::damage::DamageResistances;
@@ -24,6 +23,7 @@ use crate::player::systems::spawn_players::FixSceneTransform;
 use bevy::world_serialization::WorldAssetRoot;
 use std::f32::consts::PI;
 use avian3d::prelude::Position;
+use crate::alien::wave_manager::WaveManager;
 
 pub fn alien_spawner_system(
     time_res: Res<Time>,
@@ -59,9 +59,7 @@ pub fn alien_spawner_system(
 /// AI, physics and collision layers; the def overrides model, scale, health, speed,
 /// touch damage, loot, resistances, attack and death behaviour.
 fn spawn_from_def(commands: &mut Commands, path: &str, loaded: &LoadedEnemyDef, position: Vec3) -> Entity {
-    let ModelType::Enemy(props) = &loaded.def.model_type else {
-        unreachable!("");
-    };
+    let props = &loaded.props;
     let mut ec = commands.spawn((
         Alien,
         Faction::Alien,
@@ -100,7 +98,7 @@ pub fn spawn_aliens(
     mut add_health_bar_mw: MessageWriter<AddHealthBar>,
     game_assets: Res<GameAssets>,
     mut game_tracking_mw: MessageWriter<GameTrackingEvent>,
-    mut wave_manager: Option<ResMut<crate::alien::wave_manager::WaveManager>>,
+    mut wave_manager: Option<ResMut<WaveManager>>,
     mut def_cache: ResMut<EnemyDefCache>,
     asset_server: Res<AssetServer>,
 ) {
@@ -108,7 +106,7 @@ pub fn spawn_aliens(
         return;
     }
     for spawn_alien in spawn_alien_mr.read() {
-        alien_counter.count += 1;
+        alien_counter.count.saturating_add(1);
 
         // Def-driven enemy: model, stats and behaviour from the wave's def.
         if let Some(path) = &spawn_alien.enemy_def
@@ -118,7 +116,7 @@ pub fn spawn_aliens(
             add_health_bar_mw.write(AddHealthBar { entity: id, name: "ALIEN" });
             game_tracking_mw.write(GameTrackingEvent::AlienSpawned);
             if let Some(ref mut wm) = wave_manager {
-                wm.spawned_this_wave += 1;
+                wm.spawned_this_wave = wm.spawned_this_wave.saturating_add(1);
             }
             continue;
         }
@@ -184,7 +182,7 @@ pub fn spawn_aliens(
         game_tracking_mw.write(GameTrackingEvent::AlienSpawned);
 
         if let Some(ref mut wm) = wave_manager {
-            wm.spawned_this_wave += 1;
+            wm.spawned_this_wave = wm.spawned_this_wave.saturating_add(1);
         }
     }
 }
