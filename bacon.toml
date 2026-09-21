@@ -8,7 +8,8 @@
 #   * cranelift as the dev-profile codegen backend
 #     (CARGO_PROFILE_DEV_CODEGEN_BACKEND + `-Z codegen-backend`; release keeps LLVM)
 #   * sccache in front of rustc (RUSTC_WRAPPER)
-#   * the parallel rustc frontend (`-Zthreads`, one per core - nproc says 16)
+#   * the parallel rustc frontend (`-Z threads=8`; rustc recommends 8 as the sweet spot)
+#   * `--timings` on every job: a report lands in target/cargo-timings/ each run
 #   * `-Zhint-mostly-unused` for dependencies only, via the cargo profile key
 #     `hint-mostly-unused` (`-Z profile-hint-mostly-unused` + `--config`), which is
 #     where it pays off: bevy is huge and we touch a sliver of it. Applying it to
@@ -35,14 +36,14 @@ default_job = "clippy-all"
 CARGO_TERM_COLOR = "always"
 RUSTC_WRAPPER = "sccache"
 CARGO_PROFILE_DEV_CODEGEN_BACKEND = "cranelift"
-RUSTFLAGS = "-Zthreads=16"
+RUSTFLAGS = "-Z threads=8"
 
 # --- static analysis -----------------------------------------------------------
 
 [jobs.check]
 command = [
     "cargo", "+nightly", "check",
-    "-Z", "codegen-backend", "-Z", "profile-hint-mostly-unused",
+    "-Z", "codegen-backend", "-Z", "profile-hint-mostly-unused", "--timings",
     "--config", 'profile.dev.package."*".hint-mostly-unused=true',
     "--workspace", "--all-targets",
 ]
@@ -53,7 +54,7 @@ on_success = "job:clippy"
 [jobs.clippy]
 command = [
     "cargo", "+nightly", "clippy",
-    "-Z", "codegen-backend", "-Z", "profile-hint-mostly-unused",
+    "-Z", "codegen-backend", "-Z", "profile-hint-mostly-unused", "--timings",
     "--config", 'profile.dev.package."*".hint-mostly-unused=true',
 ]
 need_stdout = false
@@ -61,7 +62,7 @@ need_stdout = false
 [jobs.clippy-all]
 command = [
     "cargo", "+nightly", "clippy",
-    "-Z", "codegen-backend", "-Z", "profile-hint-mostly-unused",
+    "-Z", "codegen-backend", "-Z", "profile-hint-mostly-unused", "--timings",
     "--config", 'profile.dev.package."*".hint-mostly-unused=true',
     "--workspace", "--all-targets",
 ]
@@ -72,7 +73,7 @@ need_stdout = false
 [jobs.doc]
 command = [
     "cargo", "+nightly", "doc",
-    "-Z", "codegen-backend", "-Z", "profile-hint-mostly-unused",
+    "-Z", "codegen-backend", "-Z", "profile-hint-mostly-unused", "--timings",
     "--config", 'profile.dev.package."*".hint-mostly-unused=true',
     "--no-deps",
 ]
@@ -83,7 +84,7 @@ need_stdout = false
 [jobs.doc-open]
 command = [
     "cargo", "+nightly", "doc",
-    "-Z", "codegen-backend", "-Z", "profile-hint-mostly-unused",
+    "-Z", "codegen-backend", "-Z", "profile-hint-mostly-unused", "--timings",
     "--config", 'profile.dev.package."*".hint-mostly-unused=true',
     "--no-deps", "--open",
 ]
@@ -95,7 +96,7 @@ on_success = "back"
 [jobs.nextest]
 command = [
     "cargo", "+nightly", "nextest", "run",
-    "-Z", "codegen-backend", "-Z", "profile-hint-mostly-unused",
+    "-Z", "codegen-backend", "-Z", "profile-hint-mostly-unused", "--timings",
     "--config", 'profile.dev.package."*".hint-mostly-unused=true',
     "--workspace",
 ]
@@ -110,7 +111,7 @@ analyzer = "nextest"
 [jobs.run]
 command = [
     "cargo", "+nightly", "run",
-    "-Z", "codegen-backend", "-Z", "profile-hint-mostly-unused",
+    "-Z", "codegen-backend", "-Z", "profile-hint-mostly-unused", "--timings",
     "--config", 'profile.dev.package."*".hint-mostly-unused=true',
 ]
 need_stdout = true
@@ -124,7 +125,7 @@ on_change_strategy = "kill_then_restart"
 [jobs.run-release]
 command = [
     "cargo", "+nightly", "run",
-    "-Z", "codegen-backend", "-Z", "profile-hint-mostly-unused",
+    "-Z", "codegen-backend", "-Z", "profile-hint-mostly-unused", "--timings",
     "--config", 'profile.dev.package."*".hint-mostly-unused=true',
     "--release",
 ]
