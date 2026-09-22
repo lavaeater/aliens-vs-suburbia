@@ -396,10 +396,7 @@ pub fn setup_viewer_animation(
     child_query: Query<&Children>,
     mut anim_players: Query<&mut AnimationPlayer>,
 ) {
-    let gltf_handle = match state.gltf_handle.clone() {
-        Some(h) => h,
-        None => return,
-    };
+    let Some(gltf_handle) = state.gltf_handle.clone() else { return };
     let Some(gltf) = gltf_assets.get(&gltf_handle) else { return };
     let Some(viewer_entity) = state.viewer_entity else { return };
 

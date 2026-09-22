@@ -114,7 +114,7 @@ impl PlaygroundModels {
 
     /// Remember this model for next time. Called once the swap is actually applied, so a
     /// def that fails to load is not the one you come back to.
-    fn remember(&self, def_path: &str) {
+    fn remember(def_path: &str) {
         PlaygroundPrefs { last_model_def: Some(def_path.to_string()) }.save();
     }
 
@@ -328,7 +328,7 @@ pub fn swap_player_model(
             def_paths: vec![def_path.clone()],
             devices: vec![InputDevice::Keyboard],
         });
-        models.remember(&def_path);
+        PlaygroundModels::remember(&def_path);
         models.selected = Some(def_path);
         models.pending_position = Some(position);
         return;

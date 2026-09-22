@@ -6,7 +6,10 @@ use lava_ui_builder::{LavaTheme, TextTheme, UIBuilder};
 use crate::game_state::GameState;
 use crate::poly_pizza::async_bridge::{ApiChannels, ApiRequest, ApiResponse};
 use crate::poly_pizza::client::SearchFilters;
-use crate::poly_pizza::state::PolyPizzaState;
+use crate::poly_pizza::state::{
+    PolyPizzaState, find_thumb_asset_path, glb_asset_path, glb_cache_path, has_cached_thumb,
+    thumb_cache_path,
+};
 use crate::poly_pizza::viewer::spawn_viewer_model;
 use crate::ui::spawn_ui::StateMarker;
 
@@ -350,8 +353,8 @@ pub fn spawn_polypizza_screen(
                  mut state: ResMut<PolyPizzaState>,
                  mut library: ResMut<crate::poly_pizza::library::ModelLibrary>| {
                     if let Some(model) = state.selected_model.clone() {
-                        let local_glb = if state.glb_cache_path(&model.id).exists() {
-                            Some(state.glb_asset_path(&model.id))
+                        let local_glb = if glb_cache_path(&model.id).exists() {
+                            Some(glb_asset_path(&model.id))
                         } else {
                             None
                         };
@@ -502,7 +505,7 @@ pub fn handle_api_responses(
                 ApiResponse::DownloadComplete { id } => {
                     state.viewer_downloading = false;
                     if state.selected_model.as_ref().map(|m| m.id.as_str()) == Some(&id) {
-                        let handle = asset_server.load(state.glb_asset_path(&id));
+                        let handle = asset_server.load(glb_asset_path(&id));
                         let entity = spawn_viewer_model(&mut commands, handle, state.toon_shader);
                         state.viewer_entity = Some(entity);
                         state.status = "Model loaded".to_string();
@@ -526,13 +529,13 @@ fn queue_thumbnail_downloads(state: &mut PolyPizzaState, channels: &ApiChannels)
     let to_fetch: Vec<_> = state.results.iter()
         .filter(|m| {
             !state.downloading_thumbnails.contains(&m.id)
-                && !state.has_cached_thumb(&m.id)
+                && !has_cached_thumb(&m.id)
         })
         .map(|m| (m.id.clone(), m.thumbnail_url.clone()))
         .collect();
 
     for (id, url) in to_fetch {
-        let dest = state.thumb_cache_path(&id, &url);
+        let dest = thumb_cache_path(&id, &url);
         state.downloading_thumbnails.insert(id.clone());
         channels.tx.send(ApiRequest::DownloadThumbnail { id, url, dest }).ok();
     }
@@ -574,7 +577,7 @@ pub fn rebuild_results_ui(
             animated: m.animated.unwrap_or(false),
             saved: library.is_saved(&m.id),
             model_id: m.id.clone(),
-            thumb_asset: state.find_thumb_asset_path(&m.id),
+            thumb_asset: find_thumb_asset_path(&m.id),
         }
     }).collect();
 
@@ -669,7 +672,7 @@ fn result_card_clicked(
     state.viewer_needs_load = true;
 
     // If not cached, kick off the download now
-    let dest = state.glb_cache_path(&id);
+    let dest = glb_cache_path(&id);
     if !dest.exists() {
         state.viewer_downloading = true;
         state.status = "Downloading model...".to_string();

@@ -33,6 +33,23 @@ redundant_pub_crate = "allow"
 # src/map/* and src/general/systems/map_systems.rs for the bulk of it.
 arithmetic_side_effects = "allow"
 as_conversions = "allow"
+# Grid <-> world maths casts between f32/i32/usize constantly. The try_from/from
+# rewrites these lints ask for are noise for values bounded by the map size.
+cast_precision_loss = "allow"
+cast_possible_truncation = "allow"
+cast_sign_loss = "allow"
+cast_possible_wrap = "allow"
+# Local helper fns/consts declared next to their use site read fine.
+items_after_statements = "allow"
+# Bevy systems and component flag structs legitimately carry many bools.
+struct_excessive_bools = "allow"
+# Wants `&self` getters on small Copy components taken by value. Bevy queries hand
+# out references; `self`-by-value reads as an oddity for a few bytes that the
+# compiler copies anyway.
+trivially_copy_pass_by_ref = "allow"
+# Wants `assert_eq!(x, [] as [T; 0])` in place of `assert!(x.is_empty())`. The
+# turbofish-heavy rewrite is harder to read than what it replaces.
+assert_is_empty = "allow"
 doc_markdown = "allow"
 exit = "deny"
 expect_used = "deny"

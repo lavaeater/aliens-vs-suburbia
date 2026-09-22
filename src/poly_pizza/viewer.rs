@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy::world_serialization::WorldAssetRoot;
 use bevy_wind_waker_shader::WindWakerShaderBuilder;
-use crate::poly_pizza::state::PolyPizzaState;
+use crate::poly_pizza::state::{PolyPizzaState, glb_asset_path, glb_cache_path};
 use crate::ui::spawn_ui::StateMarker;
 
 #[derive(Component)]
@@ -68,10 +68,10 @@ pub fn handle_viewer_load(
         commands.entity(old).despawn();
     }
 
-    let cache_path = state.glb_cache_path(&model.id);
+    let cache_path = glb_cache_path(&model.id);
     if cache_path.exists() {
         // Already cached — load directly
-        let asset_path = state.glb_asset_path(&model.id);
+        let asset_path = glb_asset_path(&model.id);
         let handle = asset_server.load(asset_path);
         let entity = spawn_viewer_model(&mut commands, handle, state.toon_shader);
         state.viewer_entity = Some(entity);
@@ -128,9 +128,9 @@ pub fn handle_toon_toggle(
     if let Some(old) = state.viewer_entity.take() {
         commands.entity(old).despawn();
     }
-    let cache_path = state.glb_cache_path(&model.id);
+    let cache_path = glb_cache_path(&model.id);
     if cache_path.exists() {
-        let handle = asset_server.load(state.glb_asset_path(&model.id));
+        let handle = asset_server.load(glb_asset_path(&model.id));
         let entity = spawn_viewer_model(&mut commands, handle, state.toon_shader);
         state.viewer_entity = Some(entity);
     }

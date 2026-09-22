@@ -62,16 +62,16 @@ const LANDMARK: &[Prop] = &[
 #[derive(Clone, Copy)]
 pub struct ScatterOptions {
     /// Chance a floor tile gets a ground-clutter/gore prop.
-    pub ground_chance: f32,
+    pub ground: f32,
     /// Chance a floor tile gets a piece of cover.
-    pub cover_chance: f32,
+    pub cover: f32,
     /// Chance a floor tile gets a big landmark (kept low — they're large).
-    pub landmark_chance: f32,
+    pub landmark: f32,
 }
 
 impl Default for ScatterOptions {
     fn default() -> Self {
-        Self { ground_chance: 0.16, cover_chance: 0.05, landmark_chance: 0.015 }
+        Self { ground: 0.16, cover: 0.05, landmark: 0.015 }
     }
 }
 
@@ -130,11 +130,11 @@ pub fn scatter_decorations(seed: u64, tiles: &[Vec<u64>], opts: ScatterOptions) 
             }
             // One roll, split across the three tiers by precedence.
             let roll = rng.f32();
-            let palette = if roll < opts.landmark_chance {
+            let palette = if roll < opts.landmark {
                 LANDMARK
-            } else if roll < opts.landmark_chance + opts.cover_chance {
+            } else if roll < opts.landmark + opts.cover {
                 COVER
-            } else if roll < opts.landmark_chance + opts.cover_chance + opts.ground_chance {
+            } else if roll < opts.landmark + opts.cover + opts.ground {
                 GROUND
             } else {
                 continue;
@@ -199,7 +199,7 @@ mod tests {
     fn nothing_lands_on_walls_void_or_spawn_goal() {
         let g = test_grid();
         // High density to stress it.
-        let opts = ScatterOptions { ground_chance: 0.9, cover_chance: 0.05, landmark_chance: 0.02 };
+        let opts = ScatterOptions { ground: 0.9, cover: 0.05, landmark: 0.02 };
         let decs = scatter_decorations(3, &g, opts);
         assert!(!decs.is_empty(), "something should be placed on the interior floor");
         for d in &decs {
@@ -211,15 +211,15 @@ mod tests {
     #[test]
     fn zero_chance_scatters_nothing() {
         let g = test_grid();
-        let opts = ScatterOptions { ground_chance: 0.0, cover_chance: 0.0, landmark_chance: 0.0 };
+        let opts = ScatterOptions { ground: 0.0, cover: 0.0, landmark: 0.0 };
         assert!(scatter_decorations(1, &g, opts).is_empty());
     }
 
     #[test]
     fn higher_density_places_more_props() {
         let g = test_grid();
-        let sparse = scatter_decorations(5, &g, ScatterOptions { ground_chance: 0.05, cover_chance: 0.0, landmark_chance: 0.0 });
-        let dense = scatter_decorations(5, &g, ScatterOptions { ground_chance: 0.8, cover_chance: 0.0, landmark_chance: 0.0 });
+        let sparse = scatter_decorations(5, &g, ScatterOptions { ground: 0.05, cover: 0.0, landmark: 0.0 });
+        let dense = scatter_decorations(5, &g, ScatterOptions { ground: 0.8, cover: 0.0, landmark: 0.0 });
         assert!(dense.len() > sparse.len(), "more density -> more props ({} vs {})", dense.len(), sparse.len());
     }
 
@@ -227,7 +227,11 @@ mod tests {
     fn every_palette_entry_has_a_real_path_and_positive_scale() {
         for palette in [GROUND, COVER, LANDMARK] {
             for &(model, scale) in palette {
-                assert!(model.ends_with(".glb"), "'{model}' should be a glb path");
+                let ext = std::path::Path::new(model).extension();
+                assert!(
+                    ext.is_some_and(|ext| ext.eq_ignore_ascii_case("glb")),
+                    "'{model}' should be a glb path"
+                );
                 assert!(model.starts_with("packs/"), "'{model}' should be assets-relative");
                 assert!(scale > 0.0, "'{model}' needs a positive scale");
             }

@@ -201,7 +201,11 @@ pub fn nudge_rotation(hardpoint: &mut Hardpoint, axis: usize, delta_degrees: f32
 pub fn wrap_degrees(degrees: f32) -> f32 {
     let wrapped = (degrees + 180.0).rem_euclid(360.0) - 180.0;
     // rem_euclid maps exactly -180 onto -180; prefer +180 so a half-turn reads naturally.
-    if wrapped == -180.0 { 180.0 } else { wrapped }
+    // rem_euclid lands exactly on -180.0 here; this is an identity test, not a
+    // tolerance test.
+    #[allow(clippy::float_cmp)]
+    let half_turn = wrapped == -180.0;
+    if half_turn { 180.0 } else { wrapped }
 }
 
 /// Push the edited `grip` into the live weapon so it moves with the gizmo.

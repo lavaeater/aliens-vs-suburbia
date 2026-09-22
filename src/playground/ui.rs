@@ -943,7 +943,7 @@ pub fn rebuild_model_list(
             let is_selected = selected.as_deref() == Some(def_path.as_str());
             let has_no_mesh = mesh_less.contains(&def_path);
             let mark = if is_selected { "*" } else { " " };
-            let label = if !has_no_mesh { format!("{mark} {}", def_stem(&def_path)) } else { format!("{mark} {} (no mesh)", def_stem(&def_path)) };
+            let label = if has_no_mesh { format!("{mark} {} (no mesh)", def_stem(&def_path)) } else { format!("{mark} {}", def_stem(&def_path)) };
             let color = if has_no_mesh {
                 Color::srgb(0.75, 0.6, 0.5)
             } else {

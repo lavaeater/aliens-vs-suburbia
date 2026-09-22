@@ -84,7 +84,10 @@ pub fn setup_sfx_bank(asset_server: Res<AssetServer>, mut commands: Commands) {
         for entry in entries.flatten() {
             let name = entry.file_name().to_string_lossy().to_string();
             let lower = name.to_lowercase();
-            if !lower.ends_with(".wav") {
+            let is_wav = std::path::Path::new(&name)
+                .extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("wav"));
+            if !is_wav {
                 continue;
             }
             if let Some(kind) = SfxKind::ALL.into_iter().find(|k| lower.starts_with(k.prefix())) {

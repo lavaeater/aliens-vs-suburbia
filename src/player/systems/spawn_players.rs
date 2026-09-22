@@ -83,8 +83,9 @@ pub fn spawn_players(
             _ => None,
         });
 
-        let (roster_ability, roster_throw_rate) = player_props.as_ref()
-            .map(|props| {
+        let (roster_ability, roster_throw_rate) = player_props.as_ref().map_or_else(
+            || (ability_for_slot(slot), 60.0),
+            |props| {
                 use crate::assets::asset_definition::PlayerAbility::{Bombardment, Healing, Whirlwind, GoldDigger, Molotov};
                 use crate::player::systems::abilities::SpecialAbility;
                 let ability = match props.ability {
@@ -95,8 +96,8 @@ pub fn spawn_players(
                     Molotov     => SpecialAbility::Molotov,
                 };
                 (ability, props.throw_rate_per_minute)
-            })
-            .unwrap_or_else(|| (ability_for_slot(slot), 60.0));
+            },
+        );
 
         // Everything this character carries; the first is snapped onto the `grip`
         // hardpoint now, the rest wait in the loadout for a switch.
@@ -112,7 +113,7 @@ pub fn spawn_players(
             .zip(roster_def.as_ref())
             .and_then(|(weapon_slot, def)| PendingEquip::resolve(def, &weapon_slot.def_path));
         let pouch = AmmoPouch::from_loadout(
-            player_props.as_ref().map(|p| p.starting_ammo.as_slice()).unwrap_or(&[]),
+            player_props.as_ref().map_or(&[][..], |p| p.starting_ammo.as_slice()),
         );
 
         let player = {

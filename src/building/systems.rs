@@ -271,6 +271,9 @@ impl ToGridNeighbour for Rotation {
 
         angle = if angle.is_negative() { 360 + angle } else { angle };
 
+        // The explicit ranges spell out the compass; the catch-all only covers
+        // angles the normalisation above already rules out.
+        #[allow(clippy::match_same_arms)]
         let x: i32 = match angle {
             0..=59 | 300..=360 => 1,
             60..=119 | 240..=299 => 0,

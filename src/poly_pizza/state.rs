@@ -71,43 +71,43 @@ impl PolyPizzaState {
         self.status = String::new();
         self.tag_input = String::new();
     }
+}
 
-    pub fn glb_cache_path(&self, id: &str) -> PathBuf {
-        PathBuf::from("assets/poly_pizza_cache").join(format!("{id}.glb"))
-    }
+pub fn glb_cache_path(id: &str) -> PathBuf {
+    PathBuf::from("assets/poly_pizza_cache").join(format!("{id}.glb"))
+}
 
-    pub fn glb_asset_path(&self, id: &str) -> String {
-        format!("poly_pizza_cache/{id}.glb#Scene0")
-    }
+pub fn glb_asset_path(id: &str) -> String {
+    format!("poly_pizza_cache/{id}.glb#Scene0")
+}
 
-    /// Returns the on-disk path for a thumbnail, using the correct extension.
-    pub fn thumb_cache_path(&self, id: &str, url: &str) -> PathBuf {
-        let ext = thumb_ext(url);
-        PathBuf::from("assets/poly_pizza_cache/thumbs").join(format!("{id}.{ext}"))
-    }
+/// Returns the on-disk path for a thumbnail, using the correct extension.
+pub fn thumb_cache_path(id: &str, url: &str) -> PathBuf {
+    let ext = thumb_ext(url);
+    PathBuf::from("assets/poly_pizza_cache/thumbs").join(format!("{id}.{ext}"))
+}
 
-    /// Scans for a cached thumbnail with any supported extension.
-    pub fn find_thumb_asset_path(&self, id: &str) -> Option<String> {
-        for ext in ["webp", "jpg", "png"] {
-            let p = PathBuf::from("assets/poly_pizza_cache/thumbs").join(format!("{id}.{ext}"));
-            if p.exists() {
-                return Some(format!("poly_pizza_cache/thumbs/{id}.{ext}"));
-            }
+/// Scans for a cached thumbnail with any supported extension.
+pub fn find_thumb_asset_path(id: &str) -> Option<String> {
+    for ext in ["webp", "jpg", "png"] {
+        let p = PathBuf::from("assets/poly_pizza_cache/thumbs").join(format!("{id}.{ext}"));
+        if p.exists() {
+            return Some(format!("poly_pizza_cache/thumbs/{id}.{ext}"));
         }
-        None
     }
+    None
+}
 
-    pub fn has_cached_thumb(&self, id: &str) -> bool {
-        for ext in ["webp", "jpg", "png"] {
-            if PathBuf::from("assets/poly_pizza_cache/thumbs")
-                .join(format!("{id}.{ext}"))
-                .exists()
-            {
-                return true;
-            }
+pub fn has_cached_thumb(id: &str) -> bool {
+    for ext in ["webp", "jpg", "png"] {
+        if PathBuf::from("assets/poly_pizza_cache/thumbs")
+            .join(format!("{id}.{ext}"))
+            .exists()
+        {
+            return true;
         }
-        false
     }
+    false
 }
 
 pub fn thumb_ext(url: &str) -> &'static str {

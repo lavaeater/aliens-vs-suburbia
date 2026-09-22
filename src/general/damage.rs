@@ -53,6 +53,7 @@ impl Default for DamageRules {
 impl DamageRules {
     /// Whether a hit from `source` may land on `target`. Faction-less sources (fire fields,
     /// map hazards) and faction-less targets (props) are always allowed.
+    #[allow(clippy::match_same_arms)] // the faction-less arm is documented behaviour, not a fallthrough
     pub const fn allows(&self, source: Option<Faction>, target: Option<Faction>) -> bool {
         match (source, target) {
             (None, _) | (_, None) => true,

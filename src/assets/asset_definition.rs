@@ -37,6 +37,8 @@ pub enum EnemyAttack {
     Ranged { damage: i32, range: f32, fire_rate_per_minute: f32 },
 }
 
+// Serde default for an `Option<String>` field, so the wrapper is the point.
+#[allow(clippy::unnecessary_wraps)]
 fn default_enemy_loot() -> Option<String> { Some("alien".to_string()) }
 const fn default_touch_dps() -> f32 { 10.0 }
 

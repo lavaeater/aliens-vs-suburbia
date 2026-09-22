@@ -134,7 +134,7 @@ mod tests {
     fn character(world: &mut World, joint_count: usize) -> (Entity, Vec<Entity>) {
         let joints: Vec<Entity> = (0..joint_count).map(|_| world.spawn_empty().id()).collect();
         let mesh = world
-            .spawn(SkinnedMesh { inverse_bindposes: Default::default(), joints: joints.clone() })
+            .spawn(SkinnedMesh { inverse_bindposes: Handle::default(), joints: joints.clone() })
             .id();
         let root = world.spawn_empty().add_child(mesh).id();
         (root, joints)

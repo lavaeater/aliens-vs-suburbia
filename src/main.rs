@@ -61,6 +61,8 @@ fn create_map(
 
     let output = output.unwrap_or_else(|| {
         let dir = std::path::Path::new("assets/maps");
+        // Bounded by the first filename that is free, and by u32::MAX regardless.
+        #[allow(clippy::maybe_infinite_iter)]
         let n = (1u32..)
             .find(|n| !dir.join(format!("map_{n}.ron")).exists())
             .unwrap_or(1);

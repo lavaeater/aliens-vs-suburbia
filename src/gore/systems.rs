@@ -20,7 +20,10 @@ pub fn tick_ephemeral(
         eph.timer.tick(time.delta());
         let t = eph.timer.fraction();
 
-        if eph.grow_to != 1.0 {
+        // 1.0 is the "no growth" sentinel, written literally, never computed.
+        #[allow(clippy::float_cmp)]
+        let grows = eph.grow_to != 1.0;
+        if grows {
             let s = 1.0 + (eph.grow_to - 1.0) * t;
             transform.scale = eph.base_scale * s;
         }

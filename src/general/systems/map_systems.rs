@@ -259,7 +259,8 @@ pub fn map_loader(
 
         // ── Floor visual mesh (per-terrain-type coloured quads) ───────────────
         {
-            let mut terrain_quads: std::collections::HashMap<[u8; 3], TerrainQuadMesh> = Default::default();
+            let mut terrain_quads: std::collections::HashMap<[u8; 3], TerrainQuadMesh> =
+                std::collections::HashMap::default();
             let tw = tile_defs.tile_width;
             let y_floor = tile_defs.floor_level;
             #[allow(clippy::needless_range_loop)]

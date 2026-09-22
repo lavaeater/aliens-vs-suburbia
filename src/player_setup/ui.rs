@@ -124,14 +124,12 @@ pub fn handle_setup_input(
             match state.slots.get(slot) {
                 Some(SlotState::Empty) => state.join(slot),
                 Some(SlotState::Selecting { .. }) => state.confirm(slot),
-                Some(SlotState::Confirmed { .. }) => {
-                    if state.any_confirmed() {
-                        roster.def_paths = state.confirmed_paths();
-                        roster.devices = state.confirmed_devices();
-                        next_state.set(GameState::InGame);
-                    }
+                Some(SlotState::Confirmed { .. }) if state.any_confirmed() => {
+                    roster.def_paths = state.confirmed_paths();
+                    roster.devices = state.confirmed_devices();
+                    next_state.set(GameState::InGame);
                 }
-                None => {}
+                _ => {}
             }
         }
         if left  && !was_left  { state.cycle_prev(slot); }
