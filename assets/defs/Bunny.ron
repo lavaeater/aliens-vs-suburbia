@@ -1,6 +1,6 @@
 (
     model_path: "packs/monsters/Bunny.glb",
-    scale: 22.23718,
+    scale: 0.222372,
     model_type: Enemy((
         // Swarm: fast, fragile, many.
         health: 30.0,

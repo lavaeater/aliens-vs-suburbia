@@ -1,6 +1,6 @@
 (
     model_path: "packs/monsters/Blue Demon.glb",
-    scale: 25.040104,
+    scale: 0.463710,
     model_type: Enemy((
         // Ranged: hangs back and shoots.
         health: 80.0,

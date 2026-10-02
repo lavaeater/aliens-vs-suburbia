@@ -1,6 +1,6 @@
 (
     model_path: "packs/monsters/Alien.glb",
-    scale: 61.818398,
+    scale: 0.618184,
     model_type: Enemy((
         // The baseline alien.
         health: 100.0,

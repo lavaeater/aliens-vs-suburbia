@@ -12,7 +12,8 @@ use bevy::prelude::*;
 use crate::alien::components::general::Alien;
 use crate::general::components::Health;
 use crate::general::damage::ApplyDamage;
-use crate::gore::components::{DamageKind, Ephemeral, GoreBudget};
+use crate::general::systems::map_systems::TileDefinitions;
+use crate::gore::components::{DECAL_LIFT, DamageKind, Ephemeral, GoreBudget};
 use crate::player::components::Player;
 
 /// Start a fire field. Position is on the ground; radius/duration/dps shape it.
@@ -139,6 +140,7 @@ pub fn tick_fire_fields(
     targets: Query<(Entity, &Position, Has<Alien>, Has<Player>), With<Health>>,
     mut damage_mw: MessageWriter<ApplyDamage>,
     mut rng_seed: Local<u32>,
+    tile_defs: Res<TileDefinitions>,
 ) {
     let dt = time.delta();
     for (entity, mut field, transform) in fields.iter_mut() {
@@ -200,7 +202,7 @@ pub fn tick_fire_fields(
                     .spawn((
                         Mesh3d(fa.scorch_mesh.clone()),
                         MeshMaterial3d(fa.scorch_material.clone()),
-                        Transform::from_xyz(center.x, 0.02, center.z)
+                        Transform::from_xyz(center.x, tile_defs.floor_level + DECAL_LIFT, center.z)
                             .with_scale(Vec3::splat(field.radius * 2.2)),
                     ))
                     .id();
@@ -223,6 +225,7 @@ mod tests {
     use crate::game_state::score_keeper::GameTrackingEvent;
     use crate::general::components::Health;
     use crate::general::damage::{apply_damage, ApplyDamage, DamageRules};
+    use crate::general::systems::map_systems::TileDefinitions;
     use crate::gore::components::{DamageDealt, DamageKind, GoreBudget};
 
     #[derive(Resource, Default)]
@@ -246,6 +249,8 @@ mod tests {
         app.init_resource::<GoreBudget>();
         app.init_resource::<Assets<Mesh>>();
         app.init_resource::<Assets<StandardMaterial>>();
+        // Scorch marks are placed on the floor plane, so the tile metrics have to exist.
+        app.insert_resource(TileDefinitions::new(1.0, 32.0, 9.5, 1.0));
         // No FireAssets resource -> flame puffs use the mesh fallback; fine for a test.
         app.add_systems(Update, (tick_fire_fields, apply_damage, catch).chain());
 

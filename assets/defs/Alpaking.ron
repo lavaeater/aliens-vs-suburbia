@@ -1,6 +1,6 @@
 (
     model_path: "packs/monsters/Alpaking.glb",
-    scale: 61.818398,
+    scale: 0.618184,
     model_type: Enemy((
         // Exploder: rushes in and blows up when killed - kill it at range.
         health: 60.0,

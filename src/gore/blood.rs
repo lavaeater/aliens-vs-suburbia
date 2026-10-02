@@ -10,7 +10,8 @@ use bevy::image::Image;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
-use crate::gore::components::{DamageDealt, DamageKind, Ephemeral, GoreBudget};
+use crate::general::systems::map_systems::TileDefinitions;
+use crate::gore::components::{DECAL_LIFT, DamageDealt, DamageKind, Ephemeral, GoreBudget};
 
 /// Shared, pre-built blood art. Materials are shared where they can be (opaque
 /// ground decals) and cloned where the puff needs its own fading alpha.
@@ -143,6 +144,7 @@ pub fn spawn_blood_on_damage(
     mut meshes: ResMut<Assets<Mesh>>,
     mut budget: ResMut<GoreBudget>,
     blood: Option<Res<BloodAssets>>,
+    tile_defs: Res<TileDefinitions>,
 ) {
     let Some(blood) = blood else { return };
 
@@ -178,7 +180,8 @@ pub fn spawn_blood_on_damage(
         ));
 
         // ── Ground stain: persistent, budget-capped. Flat quad just above the floor,
-        //    directly under the hit (maps are flat, so y≈0 works without a raycast). ─
+        //    directly under the hit (maps are flat, so the floor plane works without a
+        //    raycast -- but that plane is `floor_level`, not 0). ───────────────────────
         let yaw = (hit.position.x * 12.9898 + hit.position.z * 78.233).sin() * 43_758.547;
         let yaw = (yaw - yaw.floor()) * std::f32::consts::TAU;
         let size = (0.6 + mag * 0.5) * (0.8 + 0.4 * (yaw / std::f32::consts::TAU));
@@ -186,7 +189,7 @@ pub fn spawn_blood_on_damage(
             .spawn((
                 Mesh3d(blood.decal_mesh.clone()),
                 MeshMaterial3d(blood.decal_material.clone()),
-                Transform::from_xyz(hit.position.x, 0.02, hit.position.z)
+                Transform::from_xyz(hit.position.x, tile_defs.floor_level + DECAL_LIFT, hit.position.z)
                     .with_rotation(Quat::from_rotation_y(yaw))
                     .with_scale(Vec3::splat(size)),
             ))

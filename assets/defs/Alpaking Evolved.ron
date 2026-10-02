@@ -1,6 +1,6 @@
 (
     model_path: "packs/monsters/Alpaking Evolved.glb",
-    scale: 67.27158,
+    scale: 0.672716,
     model_type: Enemy((
         // Boss brute.
         health: 900.0,

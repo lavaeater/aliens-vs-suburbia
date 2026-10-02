@@ -105,6 +105,14 @@ impl Ephemeral {
     }
 }
 
+/// How far a ground decal sits above the floor plane. Enough to clear the floor quad
+/// without reading as floating; the materials also carry a `depth_bias`.
+///
+/// The floor is **not** at `y = 0` -- `TileDefinitions::floor_level` is
+/// `-wall_height * 2.0` (about -0.59 at the shipped tile sizes), so a decal placed at a
+/// hardcoded `y` hovers in mid-air and reads as a dark patch offset from whatever bled.
+pub const DECAL_LIFT: f32 = 0.02;
+
 /// A cap on how many persistent gore entities can live at once, so a big wave can't
 /// spawn thousands of decals/gibs and tank the frame. Recycles oldest-first.
 #[derive(Resource)]

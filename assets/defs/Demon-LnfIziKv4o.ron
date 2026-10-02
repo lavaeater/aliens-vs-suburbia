@@ -1,6 +1,6 @@
 (
     model_path: "packs/monsters/Demon-LnfIziKv4o.glb",
-    scale: 5.449333,
+    scale: 1.121500,
     model_type: Enemy((
         // Brute: slow, tanky, shrugs off bullets, wrecks walls.
         health: 400.0,
