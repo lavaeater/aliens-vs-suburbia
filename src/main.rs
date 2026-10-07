@@ -4,12 +4,12 @@ use crate::game_state::game_state_plugin::GamePlugin;
 use crate::general::components::Health;
 use crate::general::components::map_components::CurrentTile;
 use avian3d::prelude::{PhysicsDebugPlugin, PhysicsGizmos, PhysicsPlugins};
+use bevy::app::{App, PluginGroup, Startup};
 use bevy::gizmos::AppGizmoBuilder;
 use bevy::gizmos::config::GizmoConfig;
 use bevy::log::LogPlugin;
-use bevy::{DefaultPlugins, log};
-use bevy::app::{App, PluginGroup, Startup};
 use bevy::prelude::{Commands, NextState, ResMut};
+use bevy::{DefaultPlugins, log};
 use bevy_skein::SkeinPlugin;
 use bevy_wind_waker_shader::flat::FlatShaderPlugin;
 use camera::components::CameraOffset;
@@ -214,11 +214,13 @@ fn main() -> std::process::ExitCode {
     }
 
     if straight_to_playground {
-        app.add_systems(Startup, |mut commands: Commands,
-                                             mut next: ResMut<NextState<game_state::GameState>>| {
-            commands.init_resource::<playground::state::PlaygroundSession>();
-            next.set(game_state::GameState::InGame);
-        });
+        app.add_systems(
+            Startup,
+            |mut commands: Commands, mut next: ResMut<NextState<game_state::GameState>>| {
+                commands.init_resource::<playground::state::PlaygroundSession>();
+                next.set(game_state::GameState::InGame);
+            },
+        );
     }
 
     app.run();

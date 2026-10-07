@@ -20,6 +20,7 @@ use crate::player::systems::torso_twist::PendingTorsoTwist;
 use crate::player_setup::state::InputDevice;
 use crate::settings::resources::GameSettings;
 use crate::ui::spawn_ui::AddHealthBar;
+use avian3d::interpolation::TransformInterpolation;
 use avian3d::prelude::Collider;
 use bevy::asset::AssetServer;
 use bevy::gltf::GltfAssetLabel;
@@ -155,7 +156,9 @@ pub fn spawn_players(
                     WorldAssetRoot(scene),
                     pos,
                     Collider::cuboid(0.5, 0.5, 0.45),
-                    // TransformInterpolation,
+                    // Physics ticks at 20 Hz; without easing the body (and the camera that
+                    // follows it) visibly steps between ticks.
+                    TransformInterpolation,
                     PlayerBundle::with_throw_rate(
                         "player",
                         [CollisionLayer::Player],

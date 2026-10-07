@@ -2,10 +2,10 @@ use crate::camera::components::{CameraFocus, CameraShake};
 use crate::camera::systems::{apply_camera_settings, camera_follow, spawn_camera};
 use crate::game_state::GameState;
 use crate::settings::resources::GameSettings;
-use avian3d::prelude::PhysicsSystems;
 use bevy::app::{App, Plugin, PostUpdate, Update};
 use bevy::ecs::schedule::SystemCondition;
 use bevy::prelude::{IntoScheduleConfigs, OnEnter, ResMut, in_state, resource_changed};
+use bevy::transform::TransformSystems;
 
 pub struct StatefulCameraPlugin;
 
@@ -23,8 +23,10 @@ impl Plugin for StatefulCameraPlugin {
             )
             .add_systems(
                 PostUpdate,
+                // Physics runs in `FixedPostUpdate`, so the only ordering that matters here
+                // is landing before propagation; later and the camera renders a frame stale.
                 camera_follow
-                    .after(PhysicsSystems::Writeback)
+                    .before(TransformSystems::Propagate)
                     .run_if(in_state(GameState::InGame)),
             )
             .add_systems(

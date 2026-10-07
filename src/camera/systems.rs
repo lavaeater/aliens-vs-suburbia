@@ -4,14 +4,14 @@ use crate::camera::components::{
 use crate::player::components::PlayerDead;
 use crate::settings::resources::{GameSettings, ProjectionMode};
 use avian3d::interpolation::TransformInterpolation;
-use avian3d::prelude::Position;
 use bevy::camera::visibility::RenderLayers;
 use bevy::camera::{ImageRenderTarget, Projection, RenderTarget, ScalingMode};
 use bevy::image::ImageSampler;
 use bevy::math::{Quat, Rect, Vec2, Vec3};
 use bevy::prelude::{
     Assets, Camera, Camera2d, Camera3d, Commands, Has, Image, Name, OrthographicProjection,
-    PerspectiveProjection, Query, Res, ResMut, Sprite, Time, Transform, Window, With, default,
+    PerspectiveProjection, Query, Res, ResMut, Sprite, Time, Transform, Window, With, Without,
+    default,
 };
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages};
 use bevy::window::PrimaryWindow;
@@ -157,9 +157,12 @@ pub fn resize_pixel_canvas(
 /// Aim the camera at the weighted centroid of every [`CameraTarget`] and pull back until
 /// they all fit. Writes the smoothed result into [`CameraFocus`] for other systems.
 ///
-/// Runs after physics writeback so `Position` is this frame's. The centroid and the fit
-/// factor are both exponentially smoothed so a player joining, dying or sprinting off does
-/// not snap the view.
+/// Follows the targets' `Transform`, not `Position`: physics ticks at 20 Hz, and only the
+/// interpolated `Transform` (eased before `Update`) moves every frame. Tracking `Position`
+/// steps the camera with the physics and makes the player jitter against it.
+///
+/// The centroid and the fit factor are both exponentially smoothed so a player joining,
+/// dying or sprinting off does not snap the view.
 #[allow(clippy::type_complexity)]
 pub fn camera_follow(
     time: Res<Time>,
@@ -167,11 +170,11 @@ pub fn camera_follow(
     mut focus: ResMut<CameraFocus>,
     mut shake: ResMut<CameraShake>,
     mut camera_query: Query<(&mut Transform, &mut Projection, &CameraOffset), With<GameCamera>>,
-    targets: Query<(&Position, &CameraTarget, Has<PlayerDead>)>,
+    targets: Query<(&Transform, &CameraTarget, Has<PlayerDead>), Without<GameCamera>>,
 ) {
     let Some((raw_center, radius)) = focus_of(targets.iter().map(|(p, t, dead)| {
         // A downed player still matters, just less: the living ones need the room.
-        (p.0, if dead { t.weight * 0.5 } else { t.weight })
+        (p.translation, if dead { t.weight * 0.5 } else { t.weight })
     })) else {
         return;
     };

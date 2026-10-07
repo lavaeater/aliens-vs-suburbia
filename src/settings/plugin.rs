@@ -30,9 +30,9 @@ impl Plugin for SettingsPlugin {
 /// pull the camera in or out from the keyboard. Narrow FOV plus a long distance is
 /// what produces a near-orthographic look, so the two need tuning against each other.
 fn settings_keyboard_system(keys: Res<ButtonInput<KeyCode>>, mut settings: ResMut<GameSettings>) {
-  use crate::settings::resources::ProjectionMode;
+    use crate::settings::resources::ProjectionMode;
 
-  let mut changed = false;
+    let mut changed = false;
 
     if keys.just_pressed(KeyCode::KeyP) {
         settings.projection = match settings.projection {

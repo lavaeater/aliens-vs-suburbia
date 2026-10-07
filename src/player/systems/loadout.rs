@@ -171,9 +171,9 @@ pub fn queue_equip(commands: &mut Commands, player: Entity, loadout: &Weapons) {
 
 #[cfg(test)]
 mod tests {
-  use super::*;
+    use super::*;
 
-  fn loadout() -> Weapons {
+    fn loadout() -> Weapons {
         Weapons::new(
             "c.ron",
             [
