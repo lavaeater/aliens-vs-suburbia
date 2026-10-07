@@ -13,7 +13,6 @@
 // genuinely risky spots are fixed individually.
 #![allow(clippy::arithmetic_side_effects, clippy::indexing_slicing)]
 
-
 use crate::general::components::map_components::{MapFile, TilePlacement};
 use crate::map::MapFeatures;
 
@@ -30,7 +29,9 @@ impl Polygon {
     pub fn rectangle(x0: i32, y0: i32, x1: i32, y1: i32) -> Self {
         let (x0, x1) = (x0.min(x1), x0.max(x1));
         let (y0, y1) = (y0.min(y1), y0.max(y1));
-        Self { points: vec![(x0, y0), (x1, y0), (x1, y1), (x0, y1)] }
+        Self {
+            points: vec![(x0, y0), (x1, y0), (x1, y1), (x0, y1)],
+        }
     }
 
     /// Inclusive integer bounding box of the polygon's cells: `(min_x, min_y, max_x, max_y)`.
@@ -41,7 +42,12 @@ impl Polygon {
         let max_x = self.points.iter().map(|p| p.0).max()?;
         let min_y = self.points.iter().map(|p| p.1).min()?;
         let max_y = self.points.iter().map(|p| p.1).max()?;
-        Some((min_x, min_y, max_x.saturating_sub(1), max_y.saturating_sub(1)))
+        Some((
+            min_x,
+            min_y,
+            max_x.saturating_sub(1),
+            max_y.saturating_sub(1),
+        ))
     }
 
     /// Even-odd point-in-polygon test against a cell's center.
@@ -55,7 +61,9 @@ impl Polygon {
             let (xj, yj) = (self.points[j].0 as f32, self.points[j].1 as f32);
             if (yi > py) != (yj > py) {
                 let x_intersect = xi + (py - yi) / (yj - yi) * (xj - xi);
-                if px < x_intersect { inside = !inside; }
+                if px < x_intersect {
+                    inside = !inside;
+                }
             }
             j = i;
         }
@@ -75,7 +83,10 @@ pub struct WindowRule {
 
 impl Default for WindowRule {
     fn default() -> Self {
-        Self { min_len_for_window: 2.0, max_per_wall_len: 4.0 }
+        Self {
+            min_len_for_window: 2.0,
+            max_per_wall_len: 4.0,
+        }
     }
 }
 
@@ -105,12 +116,21 @@ impl HouseSpec {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum WallCellKind { Wall, Door, Window }
+pub enum WallCellKind {
+    Wall,
+    Door,
+    Window,
+}
 
 /// Cardinal direction the wall cell faces (which side is exterior). Maps to the
 /// existing 45-degree `rotation_steps` convention used by `TilePlacement`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Facing { North, East, South, West }
+pub enum Facing {
+    North,
+    East,
+    South,
+    West,
+}
 
 impl Facing {
     pub const fn rotation_steps(self) -> u8 {
@@ -141,13 +161,22 @@ pub struct HouseResolveResult {
 
 impl HouseResolveResult {
     pub fn door_count(&self) -> usize {
-        self.wall_cells.iter().filter(|c| c.kind == WallCellKind::Door).count()
+        self.wall_cells
+            .iter()
+            .filter(|c| c.kind == WallCellKind::Door)
+            .count()
     }
     pub fn window_count(&self) -> usize {
-        self.wall_cells.iter().filter(|c| c.kind == WallCellKind::Window).count()
+        self.wall_cells
+            .iter()
+            .filter(|c| c.kind == WallCellKind::Window)
+            .count()
     }
     pub fn wall_count(&self) -> usize {
-        self.wall_cells.iter().filter(|c| c.kind == WallCellKind::Wall).count()
+        self.wall_cells
+            .iter()
+            .filter(|c| c.kind == WallCellKind::Wall)
+            .count()
     }
 }
 
@@ -163,7 +192,8 @@ fn group_runs(boundary: &[(i32, i32, Facing)]) -> Vec<Run> {
 
     // North/South runs are contiguous along x for a fixed y; East/West along y for a fixed x.
     for facing in [Facing::North, Facing::South] {
-        let mut cells: Vec<(i32, i32)> = boundary.iter()
+        let mut cells: Vec<(i32, i32)> = boundary
+            .iter()
             .filter(|(_, _, f)| *f == facing)
             .map(|(x, y, _)| (*x, *y))
             .collect();
@@ -171,13 +201,19 @@ fn group_runs(boundary: &[(i32, i32, Facing)]) -> Vec<Run> {
         let mut i = 0;
         while i < cells.len() {
             let mut j = i + 1;
-            while j < cells.len() && cells[j].1 == cells[i].1 && cells[j].0 == cells[j - 1].0 + 1 { j += 1; }
-            runs.push(Run { facing, cells: cells[i..j].to_vec() });
+            while j < cells.len() && cells[j].1 == cells[i].1 && cells[j].0 == cells[j - 1].0 + 1 {
+                j += 1;
+            }
+            runs.push(Run {
+                facing,
+                cells: cells[i..j].to_vec(),
+            });
             i = j;
         }
     }
     for facing in [Facing::East, Facing::West] {
-        let mut cells: Vec<(i32, i32)> = boundary.iter()
+        let mut cells: Vec<(i32, i32)> = boundary
+            .iter()
             .filter(|(_, _, f)| *f == facing)
             .map(|(x, y, _)| (*x, *y))
             .collect();
@@ -185,8 +221,13 @@ fn group_runs(boundary: &[(i32, i32, Facing)]) -> Vec<Run> {
         let mut i = 0;
         while i < cells.len() {
             let mut j = i + 1;
-            while j < cells.len() && cells[j].0 == cells[i].0 && cells[j].1 == cells[j - 1].1 + 1 { j += 1; }
-            runs.push(Run { facing, cells: cells[i..j].to_vec() });
+            while j < cells.len() && cells[j].0 == cells[i].0 && cells[j].1 == cells[j - 1].1 + 1 {
+                j += 1;
+            }
+            runs.push(Run {
+                facing,
+                cells: cells[i..j].to_vec(),
+            });
             i = j;
         }
     }
@@ -196,7 +237,9 @@ fn group_runs(boundary: &[(i32, i32, Facing)]) -> Vec<Run> {
 /// Evenly spaces `count` feature slots inside a run of `len` cells, preferring the
 /// interior of the run over its corner-adjacent ends.
 fn evenly_spaced_indices(len: usize, count: usize) -> Vec<usize> {
-    if count == 0 || len == 0 { return Vec::new(); }
+    if count == 0 || len == 0 {
+        return Vec::new();
+    }
     let step = len as f32 / (count + 1) as f32;
     let mut out: Vec<usize> = (1..=count)
         .map(|i| ((i as f32 * step).round() as usize).min(len - 1))
@@ -209,24 +252,37 @@ fn evenly_spaced_indices(len: usize, count: usize) -> Vec<usize> {
 /// floor, without touching `MapFile`/Bevy. Pure and deterministic.
 pub fn resolve_house(polygon: &Polygon, spec: &HouseSpec) -> HouseResolveResult {
     let mut result = HouseResolveResult::default();
-    let Some((min_x, min_y, max_x, max_y)) = polygon.bounds() else { return result };
+    let Some((min_x, min_y, max_x, max_y)) = polygon.bounds() else {
+        return result;
+    };
 
     let inside = |x: i32, y: i32| -> bool {
-        if x < min_x || y < min_y || x > max_x || y > max_y { false }
-        else { polygon.contains_cell(x, y) }
+        if x < min_x || y < min_y || x > max_x || y > max_y {
+            false
+        } else {
+            polygon.contains_cell(x, y)
+        }
     };
 
     let mut boundary: Vec<(i32, i32, Facing)> = Vec::new();
     for y in min_y..=max_y {
         for x in min_x..=max_x {
-            if !inside(x, y) { continue; }
+            if !inside(x, y) {
+                continue;
+            }
             // Priority order N, E, S, W: a corner cell is exterior on two sides but
             // gets a single facing/placement, matching the doc's "simplest case" tone.
-            let facing = if !inside(x, y - 1) { Some(Facing::North) }
-                else if !inside(x + 1, y) { Some(Facing::East) }
-                else if !inside(x, y + 1) { Some(Facing::South) }
-                else if !inside(x - 1, y) { Some(Facing::West) }
-                else { None };
+            let facing = if !inside(x, y - 1) {
+                Some(Facing::North)
+            } else if !inside(x + 1, y) {
+                Some(Facing::East)
+            } else if !inside(x, y + 1) {
+                Some(Facing::South)
+            } else if !inside(x - 1, y) {
+                Some(Facing::West)
+            } else {
+                None
+            };
 
             match facing {
                 Some(f) => boundary.push((x, y, f)),
@@ -236,30 +292,53 @@ pub fn resolve_house(polygon: &Polygon, spec: &HouseSpec) -> HouseResolveResult 
     }
 
     let runs = group_runs(&boundary);
-    let longest_run_idx = runs.iter().enumerate()
+    let longest_run_idx = runs
+        .iter()
+        .enumerate()
         .max_by_key(|(_, r)| r.cells.len())
         .map(|(i, _)| i);
 
     for (idx, run) in runs.iter().enumerate() {
         let len = run.cells.len();
-        let capacity = if (len as f32) < spec.window_rule.min_len_for_window { 0 }
-            else { (len as f32 / spec.window_rule.max_per_wall_len).floor() as usize };
+        let capacity = if (len as f32) < spec.window_rule.min_len_for_window {
+            0
+        } else {
+            (len as f32 / spec.window_rule.max_per_wall_len).floor() as usize
+        };
 
         let doors_here = if Some(idx) == longest_run_idx {
             (spec.door_count as usize).min(capacity)
-        } else { 0 };
+        } else {
+            0
+        };
         let windows_here = capacity - doors_here;
 
         let feature_slots = evenly_spaced_indices(len, doors_here + windows_here);
         for (slot_i, &cell_idx) in feature_slots.iter().enumerate() {
             let (x, y) = run.cells[cell_idx];
-            let kind = if slot_i < doors_here { WallCellKind::Door } else { WallCellKind::Window };
-            result.wall_cells.push(WallCell { x, y, kind, facing: run.facing });
+            let kind = if slot_i < doors_here {
+                WallCellKind::Door
+            } else {
+                WallCellKind::Window
+            };
+            result.wall_cells.push(WallCell {
+                x,
+                y,
+                kind,
+                facing: run.facing,
+            });
         }
         let feature_cells: std::collections::HashSet<usize> = feature_slots.into_iter().collect();
         for (i, &(x, y)) in run.cells.iter().enumerate() {
-            if feature_cells.contains(&i) { continue; }
-            result.wall_cells.push(WallCell { x, y, kind: WallCellKind::Wall, facing: run.facing });
+            if feature_cells.contains(&i) {
+                continue;
+            }
+            result.wall_cells.push(WallCell {
+                x,
+                y,
+                kind: WallCellKind::Wall,
+                facing: run.facing,
+            });
         }
     }
 
@@ -282,21 +361,30 @@ pub fn apply_house(
         | MapFeatures::ImpassableForPlayers as u64
         | MapFeatures::ImpassableForEnemies as u64;
 
-    let in_bounds = |x: i32, y: i32| x >= 0 && y >= 0 && (x as usize) < width && (y as usize) < height;
+    let in_bounds =
+        |x: i32, y: i32| x >= 0 && y >= 0 && (x as usize) < width && (y as usize) < height;
 
     for &(x, y) in &result.floor_cells {
-        if !in_bounds(x, y) { continue; }
+        if !in_bounds(x, y) {
+            continue;
+        }
         tiles[y as usize][x as usize] = TILE_FLOOR;
         placements.retain(|p| !(p.x == x && p.y == y));
     }
 
     for cell in &result.wall_cells {
-        if !in_bounds(cell.x, cell.y) { continue; }
+        if !in_bounds(cell.x, cell.y) {
+            continue;
+        }
         placements.retain(|p| !(p.x == cell.x && p.y == cell.y));
 
         let def_path = match cell.kind {
             WallCellKind::Wall => Some(spec.wall_def.clone()),
-            WallCellKind::Window => Some(spec.window_def.clone().unwrap_or_else(|| spec.wall_def.clone())),
+            WallCellKind::Window => Some(
+                spec.window_def
+                    .clone()
+                    .unwrap_or_else(|| spec.wall_def.clone()),
+            ),
             WallCellKind::Door => spec.door_def.clone(),
         };
 
@@ -319,7 +407,14 @@ pub fn apply_house(
 /// Convenience wrapper of [`apply_house`] for a whole `MapFile`.
 #[allow(dead_code)]
 pub fn apply_house_to_map(result: &HouseResolveResult, spec: &HouseSpec, map: &mut MapFile) {
-    apply_house(result, spec, map.map_width, map.map_height, &mut map.tiles, &mut map.placements);
+    apply_house(
+        result,
+        spec,
+        map.map_width,
+        map.map_height,
+        &mut map.tiles,
+        &mut map.placements,
+    );
 }
 
 #[cfg(test)]
@@ -346,11 +441,23 @@ mod tests {
         let result = resolve_house(&poly, &spec());
 
         assert_eq!(result.door_count(), 1, "exactly the requested door count");
-        assert_eq!(result.window_count(), 1, "short 2-tile sides are below min_len_for_window");
+        assert_eq!(
+            result.window_count(),
+            1,
+            "short 2-tile sides are below min_len_for_window"
+        );
         assert_eq!(result.wall_count(), 14);
 
-        let door = result.wall_cells.iter().find(|c| c.kind == WallCellKind::Door).unwrap();
-        assert_eq!(door.facing, Facing::North, "door goes on the longer of the two tied-longest runs, found first");
+        let door = result
+            .wall_cells
+            .iter()
+            .find(|c| c.kind == WallCellKind::Door)
+            .unwrap();
+        assert_eq!(
+            door.facing,
+            Facing::North,
+            "door goes on the longer of the two tied-longest runs, found first"
+        );
     }
 
     #[test]
@@ -374,7 +481,9 @@ mod tests {
     #[test]
     fn l_shape_boundary_matches_bruteforce_containment() {
         // A 6x4 block with a 2x3 notch hanging off the bottom-right (4..6, 4..7).
-        let poly = Polygon { points: vec![(0, 0), (6, 0), (6, 7), (4, 7), (4, 4), (0, 4)] };
+        let poly = Polygon {
+            points: vec![(0, 0), (6, 0), (6, 7), (4, 7), (4, 4), (0, 4)],
+        };
         let mut s = spec();
         s.door_count = 1;
         let result = resolve_house(&poly, &s);
@@ -383,25 +492,47 @@ mod tests {
         let mut total_inside = 0;
         for y in min_y..=max_y {
             for x in min_x..=max_x {
-                if poly.contains_cell(x, y) { total_inside += 1; }
+                if poly.contains_cell(x, y) {
+                    total_inside += 1;
+                }
             }
         }
-        assert_eq!(result.floor_cells.len() + result.wall_cells.len(), total_inside);
+        assert_eq!(
+            result.floor_cells.len() + result.wall_cells.len(),
+            total_inside
+        );
 
         for cell in &result.wall_cells {
             let neighbors_outside = [
-                (cell.x - 1, cell.y), (cell.x + 1, cell.y), (cell.x, cell.y - 1), (cell.x, cell.y + 1),
-            ].iter().filter(|&&(nx, ny)| !poly.contains_cell(nx, ny)).count();
-            assert!(neighbors_outside >= 1, "wall cell ({}, {}) should border the outside", cell.x, cell.y);
+                (cell.x - 1, cell.y),
+                (cell.x + 1, cell.y),
+                (cell.x, cell.y - 1),
+                (cell.x, cell.y + 1),
+            ]
+            .iter()
+            .filter(|&&(nx, ny)| !poly.contains_cell(nx, ny))
+            .count();
+            assert!(
+                neighbors_outside >= 1,
+                "wall cell ({}, {}) should border the outside",
+                cell.x,
+                cell.y
+            );
         }
         for &(x, y) in &result.floor_cells {
             for (nx, ny) in [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)] {
-                assert!(poly.contains_cell(nx, ny), "floor cell ({x}, {y}) should be fully interior");
+                assert!(
+                    poly.contains_cell(nx, ny),
+                    "floor cell ({x}, {y}) should be fully interior"
+                );
             }
         }
 
         assert!(result.door_count() >= 1);
-        assert!(result.window_count() >= 1, "a shape this size should get at least one window somewhere");
+        assert!(
+            result.window_count() >= 1,
+            "a shape this size should get at least one window somewhere"
+        );
     }
 
     #[test]
@@ -419,13 +550,33 @@ mod tests {
         };
         apply_house_to_map(&result, &s, &mut map);
 
-        let door = result.wall_cells.iter().find(|c| c.kind == WallCellKind::Door).unwrap();
+        let door = result
+            .wall_cells
+            .iter()
+            .find(|c| c.kind == WallCellKind::Door)
+            .unwrap();
         let tile = map.tiles[door.y as usize][door.x as usize];
-        assert_eq!(tile & (MapFeatures::ImpassableForPlayers as u64), 0, "door tile must stay passable");
-        assert!(map.placements.iter().any(|p| p.x == door.x && p.y == door.y && p.def_path == "assets/defs/door.ron"));
+        assert_eq!(
+            tile & (MapFeatures::ImpassableForPlayers as u64),
+            0,
+            "door tile must stay passable"
+        );
+        assert!(
+            map.placements
+                .iter()
+                .any(|p| p.x == door.x && p.y == door.y && p.def_path == "assets/defs/door.ron")
+        );
 
-        let wall = result.wall_cells.iter().find(|c| c.kind == WallCellKind::Wall).unwrap();
+        let wall = result
+            .wall_cells
+            .iter()
+            .find(|c| c.kind == WallCellKind::Wall)
+            .unwrap();
         let wall_tile = map.tiles[wall.y as usize][wall.x as usize];
-        assert_ne!(wall_tile & (MapFeatures::ImpassableForPlayers as u64), 0, "plain wall tile blocks players");
+        assert_ne!(
+            wall_tile & (MapFeatures::ImpassableForPlayers as u64),
+            0,
+            "plain wall tile blocks players"
+        );
     }
 }

@@ -1,12 +1,12 @@
-use bevy::math::Vec3;
-use bevy::prelude::{Entity, MessageWriter, Or, Query, Res, Time, With, Without};
-use avian3d::prelude::{CollidingEntities, Position};
 use crate::alien::components::general::Alien;
 use crate::general::components::{Health, TouchDamage};
 use crate::general::damage::ApplyDamage;
 use crate::gore::components::DamageKind;
 use crate::player::components::Player;
 use crate::player::components::PlayerDead;
+use avian3d::prelude::{CollidingEntities, Position};
+use bevy::math::Vec3;
+use bevy::prelude::{Entity, MessageWriter, Or, Query, Res, Time, With, Without};
 
 /// Anything with [`TouchDamage`] grinds down the creatures it overlaps. Which creatures
 /// it may hurt (an alien mauling a player, a whirlwinding player shredding aliens, never a
@@ -15,7 +15,14 @@ use crate::player::components::PlayerDead;
 pub fn touch_damage_system(
     time: Res<Time>,
     damagers: Query<(Entity, &CollidingEntities, &TouchDamage, Option<&Position>)>,
-    creatures: Query<Option<&Position>, (With<Health>, Or<(With<Player>, With<Alien>)>, Without<PlayerDead>)>,
+    creatures: Query<
+        Option<&Position>,
+        (
+            With<Health>,
+            Or<(With<Player>, With<Alien>)>,
+            Without<PlayerDead>,
+        ),
+    >,
     mut damage_mw: MessageWriter<ApplyDamage>,
 ) {
     let dt = time.delta_secs();
@@ -28,7 +35,9 @@ pub fn touch_damage_system(
             if hit == damager {
                 continue;
             }
-            let Ok(target_pos) = creatures.get(hit) else { continue };
+            let Ok(target_pos) = creatures.get(hit) else {
+                continue;
+            };
             // Blood sprays off the victim, away from the thing mauling them.
             let vpos = target_pos.map_or(Vec3::ZERO, |p| p.0);
             let apos = damager_pos.map_or(vpos, |p| p.0);
@@ -44,15 +53,15 @@ pub fn touch_damage_system(
 #[cfg(test)]
 mod tests {
     use super::touch_damage_system;
+    use crate::game_state::score_keeper::GameTrackingEvent;
+    use crate::general::components::{Health, TouchDamage};
+    use crate::general::damage::{ApplyDamage, DamageRules, apply_damage};
+    use crate::gore::components::{DamageDealt, DamageKind};
+    use crate::player::components::Player;
     use avian3d::prelude::{CollidingEntities, Position};
     use bevy::ecs::entity::EntityHashSet;
     use bevy::prelude::*;
     use std::time::Duration;
-    use crate::game_state::score_keeper::GameTrackingEvent;
-    use crate::general::components::{Health, TouchDamage};
-    use crate::general::damage::{apply_damage, ApplyDamage, DamageRules};
-    use crate::gore::components::{DamageDealt, DamageKind};
-    use crate::player::components::Player;
 
     #[derive(Resource, Default)]
     struct Caught(Vec<DamageDealt>);
@@ -82,7 +91,14 @@ mod tests {
 
         let player = app
             .world_mut()
-            .spawn((Player, Health { health: 100, max_health: 100 }, Position(Vec3::ZERO)))
+            .spawn((
+                Player,
+                Health {
+                    health: 100,
+                    max_health: 100,
+                },
+                Position(Vec3::ZERO),
+            ))
             .id();
         app.world_mut().spawn((
             TouchDamage { dps: 100.0 },
@@ -91,7 +107,9 @@ mod tests {
         ));
 
         // 0.3s at 100 dps -> 30 damage.
-        app.world_mut().resource_mut::<Time>().advance_by(Duration::from_millis(300));
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(Duration::from_millis(300));
         app.update();
 
         assert_eq!(app.world().get::<Health>(player).unwrap().health, 70);
@@ -114,12 +132,25 @@ mod tests {
 
         let player = app
             .world_mut()
-            .spawn((Player, Health { health: 100, max_health: 100 }, Position(Vec3::ZERO)))
+            .spawn((
+                Player,
+                Health {
+                    health: 100,
+                    max_health: 100,
+                },
+                Position(Vec3::ZERO),
+            ))
             .id();
         // Toucher overlaps nobody.
-        app.world_mut().spawn((TouchDamage { dps: 100.0 }, overlapping([]), Position(Vec3::ZERO)));
+        app.world_mut().spawn((
+            TouchDamage { dps: 100.0 },
+            overlapping([]),
+            Position(Vec3::ZERO),
+        ));
 
-        app.world_mut().resource_mut::<Time>().advance_by(Duration::from_millis(300));
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(Duration::from_millis(300));
         app.update();
 
         assert_eq!(app.world().get::<Health>(player).unwrap().health, 100);

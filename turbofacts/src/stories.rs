@@ -1,5 +1,5 @@
 //! Built-in game stories
-//! 
+//!
 //! Ported from Kotlin's `StoryHelper`. These define the basic
 //! level-flow (start / complete / failed) and a couple of win-condition variants. They are
 //! authored in code via the [`builder`](super::builder) DSL; designers can add more via RON
@@ -50,8 +50,7 @@ pub fn aliens_cleared_story() -> Story {
 pub fn level_complete_story() -> Story {
     story("Level Complete")
         .rule("complete", |r| {
-            r.is_true(keys::LEVEL_STARTED)
-                .is_true(keys::LEVEL_COMPLETE);
+            r.is_true(keys::LEVEL_STARTED).is_true(keys::LEVEL_COMPLETE);
         })
         .set_true(keys::GOTO_NEXT_LEVEL)
         .emit("level_complete")
@@ -59,7 +58,7 @@ pub fn level_complete_story() -> Story {
 }
 
 /// A story that fails if all players are dead
-/// 
+///
 /// All players dead while a level is running -> failed; emits `level_failed`. Reads the
 /// derived `ALL_PLAYERS_DEAD` bool (which already guards against "no players yet") rather
 /// than `LIVING_PLAYER_COUNT == 0`, so the level can't fail before anyone has spawned.
@@ -120,7 +119,7 @@ pub fn enemy_kill_count_story() -> Story {
 }
 
 /// Some pre-defined base stories.
-/// 
+///
 /// The base level-flow stories that drive the live game's win/lose verdict. Mirrors Kotlin's
 /// `StoryHelper.baseStories`. The `aliens_cleared_story` is the default win condition (kill
 /// everything); maps can swap it out via RON stories for survival/objective variants.

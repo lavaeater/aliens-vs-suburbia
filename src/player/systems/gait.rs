@@ -87,7 +87,10 @@ pub struct KneeLimits {
 
 impl Default for KneeLimits {
     fn default() -> Self {
-        Self { straightest_deg: 175.0, most_bent_deg: 40.0 }
+        Self {
+            straightest_deg: 175.0,
+            most_bent_deg: 40.0,
+        }
     }
 }
 
@@ -194,10 +197,14 @@ impl Default for GaitParams {
 /// A person standing still is at about 95%; walking, they spend most of the cycle nearer
 /// 90%, which is where the reach to take the step comes from. Also comfortably clear of
 /// the singularity at 100%, where reach goes to zero and the stride with it.
-const fn default_hip_height() -> f32 { 0.9 }
+const fn default_hip_height() -> f32 {
+    0.9
+}
 
 /// Half of a person's roughly 5%-of-leg-length hip rise and fall.
-const fn default_hip_bob() -> f32 { 0.025 }
+const fn default_hip_bob() -> f32 {
+    0.025
+}
 
 impl GaitParams {
     /// The same walk on a body `factor` times a human's size.
@@ -280,7 +287,9 @@ impl GaitParams {
 /// and says it where the reason lives.
 #[must_use]
 pub fn horizontal_reach(furthest: f32, hip_height: f32) -> f32 {
-    (furthest * furthest - hip_height * hip_height).max(0.0).sqrt()
+    (furthest * furthest - hip_height * hip_height)
+        .max(0.0)
+        .sqrt()
 }
 
 /// How far the hips sit above their mean height at this point in the cycle.
@@ -330,9 +339,13 @@ pub fn foot_phase(cycle: f32, foot: Foot, duty_factor: f32) -> FootPhase {
     let duty = duty_factor.clamp(0.01, 0.99);
     let local = (cycle + foot.phase_offset()).rem_euclid(1.0);
     if local < duty {
-        FootPhase::Planted { progress: local / duty }
+        FootPhase::Planted {
+            progress: local / duty,
+        }
     } else {
-        FootPhase::Swinging { progress: (local - duty) / (1.0 - duty) }
+        FootPhase::Swinging {
+            progress: (local - duty) / (1.0 - duty),
+        }
     }
 }
 
@@ -371,9 +384,7 @@ pub fn plant_target(
 ) -> Vec3 {
     let lead =
         (swing_remaining + params.duty_factor * 0.5 + params.stride_bias) * params.stride_length;
-    hip_ground
-        + forward * lead
-        + right * (foot.lateral_sign() * params.stance_width * 0.5)
+    hip_ground + forward * lead + right * (foot.lateral_sign() * params.stance_width * 0.5)
 }
 
 /// The nearest point to `plant` that the leg can actually stand on, horizontally.
@@ -444,10 +455,14 @@ impl GaitState {
     /// Start with both feet planted either side of `hip_ground`.
     #[must_use]
     pub fn standing(hip_ground: Vec3, right: Vec3, params: &GaitParams) -> Self {
-        let plant = Foot::BOTH.map(|foot| {
-            hip_ground + right * (foot.lateral_sign() * params.stance_width * 0.5)
-        });
-        Self { cycle: 0.0, plant, swing_from: plant, swinging: [false; 2] }
+        let plant = Foot::BOTH
+            .map(|foot| hip_ground + right * (foot.lateral_sign() * params.stance_width * 0.5));
+        Self {
+            cycle: 0.0,
+            plant,
+            swing_from: plant,
+            swinging: [false; 2],
+        }
     }
 
     /// Advance the cycle and return where both feet go this frame, indexed by
@@ -507,13 +522,7 @@ impl GaitState {
     /// is followed rather than ignored. The easing absorbs it: the target's influence is
     /// weighted by `eased`, so a late change moves the foot least when it is closest to
     /// landing.
-    fn swing_end(
-        &self,
-        ctx: &GaitContext,
-        params: &GaitParams,
-        foot: Foot,
-        progress: f32,
-    ) -> Vec3 {
+    fn swing_end(&self, ctx: &GaitContext, params: &GaitParams, foot: Foot, progress: f32) -> Vec3 {
         let i = foot.index();
         let target = plant_target(
             ctx.hip_ground.with_y(ctx.ground_y),
@@ -572,21 +581,39 @@ mod tests {
     fn a_knee_that_locks_straight_spans_the_whole_leg() {
         // The degenerate case the old code assumed: 180 degrees is `upper + lower`, and
         // folded flat is the difference between the two bones.
-        let locked = KneeLimits { straightest_deg: 180.0, most_bent_deg: 0.0 };
+        let locked = KneeLimits {
+            straightest_deg: 180.0,
+            most_bent_deg: 0.0,
+        };
         let (nearest, furthest) = locked.span(0.4, 0.5);
-        assert!((furthest - 0.9).abs() < 1e-4, "straight should be 0.9, was {furthest}");
+        assert!(
+            (furthest - 0.9).abs() < 1e-4,
+            "straight should be 0.9, was {furthest}"
+        );
         // Folded flat is the difference between the bones. Not exactly, because `span`
         // holds the angle a degree off zero -- a leg folded onto itself is a degenerate
         // triangle and the solve has no plane to bend in.
-        assert!((nearest - 0.1).abs() < 1e-3, "folded should be about 0.1, was {nearest}");
+        assert!(
+            (nearest - 0.1).abs() < 1e-3,
+            "folded should be about 0.1, was {nearest}"
+        );
     }
 
     #[test]
     fn a_real_knee_is_shorter_than_the_sum_of_its_bones() {
         let (nearest, furthest) = KneeLimits::default().span(0.425, 0.425);
-        assert!(furthest < 0.85, "a knee that cannot lock cannot reach {furthest}");
-        assert!(furthest > 0.84, "5 degrees off straight should cost very little reach");
-        assert!(nearest > 0.2, "a knee that stops folding keeps the ankle away from the hip");
+        assert!(
+            furthest < 0.85,
+            "a knee that cannot lock cannot reach {furthest}"
+        );
+        assert!(
+            furthest > 0.84,
+            "5 degrees off straight should cost very little reach"
+        );
+        assert!(
+            nearest > 0.2,
+            "a knee that stops folding keeps the ankle away from the hip"
+        );
     }
 
     #[test]
@@ -594,11 +621,17 @@ mod tests {
         // The whole reason the limit is an input to the plan rather than a clamp on the
         // output: it decides how long a stride the character can take.
         let bent = GaitParams {
-            knee: KneeLimits { straightest_deg: 150.0, ..Default::default() },
+            knee: KneeLimits {
+                straightest_deg: 150.0,
+                ..Default::default()
+            },
             ..Default::default()
         };
         let straight = GaitParams {
-            knee: KneeLimits { straightest_deg: 178.0, ..Default::default() },
+            knee: KneeLimits {
+                straightest_deg: 178.0,
+                ..Default::default()
+            },
             ..Default::default()
         };
         let hip = 0.75;
@@ -645,9 +678,17 @@ mod tests {
             }
             was_planted = planted;
         }
-        assert!(prints.len() > 4, "expected several footfalls, got {}", prints.len());
+        assert!(
+            prints.len() > 4,
+            "expected several footfalls, got {}",
+            prints.len()
+        );
         // Skip the first, which starts from the standing pose.
-        let steps: Vec<f32> = prints.windows(2).skip(1).map(|w| w[0].distance(w[1])).collect();
+        let steps: Vec<f32> = prints
+            .windows(2)
+            .skip(1)
+            .map(|w| w[0].distance(w[1]))
+            .collect();
         steps.iter().sum::<f32>() / steps.len() as f32
     }
 
@@ -668,7 +709,10 @@ mod tests {
         // The cycle is driven by distance, so a footfall lands one stride after the last
         // one whether the character is strolling or sprinting. Anything else means the feet
         // are keeping their own time and skating over the ground to do it.
-        let params = GaitParams { stride_bias: 0.0, ..Default::default() };
+        let params = GaitParams {
+            stride_bias: 0.0,
+            ..Default::default()
+        };
         let fast = measured_step_length(&params, 3.0);
         let slow = measured_step_length(&params, 0.15);
         let crawl = measured_step_length(&params, 0.05);
@@ -690,7 +734,10 @@ mod tests {
     #[test]
     fn a_negative_bias_puts_the_footfalls_further_back() {
         // What the character sees as the body riding further forward over its feet.
-        let params = GaitParams { stride_bias: -0.2, ..Default::default() };
+        let params = GaitParams {
+            stride_bias: -0.2,
+            ..Default::default()
+        };
         let centred = GaitParams::default();
         let biased_target =
             plant_target(Vec3::ZERO, Vec3::NEG_Z, Vec3::X, Foot::Left, &params, 0.0);
@@ -716,10 +763,12 @@ mod tests {
         // reach clamp drags it forward mid-stance, which is a skid.
         let leg = 0.85;
         let hip = 0.8;
-        let params = GaitParams { stride_bias: -0.3, ..Default::default() };
+        let params = GaitParams {
+            stride_bias: -0.3,
+            ..Default::default()
+        };
         let fitted = params.fit_to_reach(leg * 0.5, leg * 0.5, hip);
-        let furthest =
-            (fitted.duty_factor * 0.5 + fitted.stride_bias.abs()) * fitted.stride_length;
+        let furthest = (fitted.duty_factor * 0.5 + fitted.stride_bias.abs()) * fitted.stride_length;
         let lateral = fitted.stance_width * 0.5;
         let needed = (furthest * furthest + lateral * lateral).sqrt();
         assert!(
@@ -733,7 +782,10 @@ mod tests {
     fn a_step_is_never_lifted_higher_than_the_knee_can_fold() {
         // A foot lifted toward the hips has to fold the knee to follow it, and the knee
         // stops folding at some point: the ankle can get no nearer the hip than that.
-        let params = GaitParams { step_height: 5.0, ..Default::default() };
+        let params = GaitParams {
+            step_height: 5.0,
+            ..Default::default()
+        };
         let hip = 0.8;
         let fitted = params.fit_to_reach(0.425, 0.425, hip);
         let nearest = params.knee.span(0.425, 0.425).0;
@@ -759,7 +811,10 @@ mod tests {
         // Hips at 0.7 of a 0.85 leg: standing tall enough that the knee is nowhere near
         // either limit. (At 0.3 it would be squatting, with the knee close enough to its
         // fold that the foot can barely lift -- correctly clamped, but not this test.)
-        let params = GaitParams { stride_length: 0.4, ..Default::default() };
+        let params = GaitParams {
+            stride_length: 0.4,
+            ..Default::default()
+        };
         let fitted = params.fit_to_reach(0.425, 0.425, 0.7);
         assert_eq!(fitted, params);
     }
@@ -807,8 +862,14 @@ mod tests {
     #[test]
     fn a_walk_always_has_a_foot_down_and_a_run_does_not() {
         // The duty factor is the whole difference between the two gaits.
-        let walk = GaitParams { duty_factor: 0.6, ..Default::default() };
-        let run = GaitParams { duty_factor: 0.4, ..Default::default() };
+        let walk = GaitParams {
+            duty_factor: 0.6,
+            ..Default::default()
+        };
+        let run = GaitParams {
+            duty_factor: 0.4,
+            ..Default::default()
+        };
 
         let planted = |params: &GaitParams, cycle: f32| {
             Foot::BOTH
@@ -856,7 +917,10 @@ mod tests {
             }
         }
 
-        assert!(planted_positions.len() > 10, "expected a long stance to sample");
+        assert!(
+            planted_positions.len() > 10,
+            "expected a long stance to sample"
+        );
         let first = planted_positions[0];
         for p in &planted_positions {
             assert!(
@@ -882,8 +946,16 @@ mod tests {
         assert!(end.abs_diff_eq(to, 1e-6));
         // Over 1% of the swing, an eased curve covers far less than the 1% a linear one
         // would.
-        assert!(just_after.z < 0.001, "liftoff was not eased: {}", just_after.z);
-        assert!(just_before.z > 0.999, "touchdown was not eased: {}", just_before.z);
+        assert!(
+            just_after.z < 0.001,
+            "liftoff was not eased: {}",
+            just_after.z
+        );
+        assert!(
+            just_before.z > 0.999,
+            "touchdown was not eased: {}",
+            just_before.z
+        );
     }
 
     #[test]
@@ -932,7 +1004,10 @@ mod tests {
             }
             was_planted = planted;
         }
-        assert_eq!(touchdowns, 2, "each foot should plant once per stride length travelled");
+        assert_eq!(
+            touchdowns, 2,
+            "each foot should plant once per stride length travelled"
+        );
     }
 
     #[test]
@@ -954,7 +1029,10 @@ mod tests {
             gait.update(&ctx(hip, 0.0), &params);
         }
         let phase = foot_phase(gait.cycle, Foot::Left, params.duty_factor);
-        assert!(phase.is_planted(), "the airborne foot never landed: {phase:?}");
+        assert!(
+            phase.is_planted(),
+            "the airborne foot never landed: {phase:?}"
+        );
 
         // And once down, standing still starts no new step.
         let settled = gait.cycle;
@@ -975,8 +1053,14 @@ mod tests {
         let right = plant_target(Vec3::ZERO, Vec3::Z, Vec3::X, Foot::Right, &params, 0.0);
 
         assert!(left.z > 0.0, "the foot should land ahead of the hip");
-        assert!((left.z - right.z).abs() < 1e-6, "both feet lead by the same distance");
-        assert!(left.x < 0.0 && right.x > 0.0, "left foot left, right foot right");
+        assert!(
+            (left.z - right.z).abs() < 1e-6,
+            "both feet lead by the same distance"
+        );
+        assert!(
+            left.x < 0.0 && right.x > 0.0,
+            "left foot left, right foot right"
+        );
         assert!((right.x - left.x - params.stance_width).abs() < 1e-6);
 
         // Still to swing means still further to lead.
@@ -1009,7 +1093,9 @@ mod tests {
             let feet = gait.update(&c, &params);
             let planted = foot_phase(gait.cycle, Foot::Left, params.duty_factor).is_planted();
             if planted {
-                if tick > 40 && let Some(prev) = previous {
+                if tick > 40
+                    && let Some(prev) = previous
+                {
                     airborne_before_touchdown = Some(prev);
                     touchdown = Some(feet[i]);
                     break;

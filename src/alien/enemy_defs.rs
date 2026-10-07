@@ -16,7 +16,9 @@ use bevy::prelude::*;
 use bevy::world_serialization::WorldAsset;
 
 use crate::alien::components::general::Alien;
-use crate::animation::animation_plugin::{get_child_with_component_recursive, AnimationStore, CurrentAnimationKey};
+use crate::animation::animation_plugin::{
+    AnimationStore, CurrentAnimationKey, get_child_with_component_recursive,
+};
 use crate::assets::asset_definition::{AssetDefinition, EnemyAttack, EnemyProps, ModelType};
 use crate::general::components::{CollisionLayer, Health};
 use crate::general::damage::ApplyDamage;
@@ -39,7 +41,11 @@ pub struct LoadedEnemyDef {
 pub struct EnemyDefCache(pub HashMap<String, LoadedEnemyDef>);
 
 impl EnemyDefCache {
-    pub fn get_or_load(&mut self, path: &str, asset_server: &AssetServer) -> Option<&LoadedEnemyDef> {
+    pub fn get_or_load(
+        &mut self,
+        path: &str,
+        asset_server: &AssetServer,
+    ) -> Option<&LoadedEnemyDef> {
         if !self.0.contains_key(path) {
             let def = AssetDefinition::load_from_def_path(path)?;
             let ModelType::Enemy(props) = &def.model_type else {
@@ -47,9 +53,18 @@ impl EnemyDefCache {
                 return None;
             };
             let props = props.clone();
-            let scene = asset_server.load(GltfAssetLabel::Scene(0).from_asset(def.model_path.clone()));
+            let scene =
+                asset_server.load(GltfAssetLabel::Scene(0).from_asset(def.model_path.clone()));
             let gltf = asset_server.load(def.model_path.clone());
-            self.0.insert(path.to_string(), LoadedEnemyDef { def, props, scene, gltf });
+            self.0.insert(
+                path.to_string(),
+                LoadedEnemyDef {
+                    def,
+                    props,
+                    scene,
+                    gltf,
+                },
+            );
         }
         self.0.get(path)
     }
@@ -72,10 +87,18 @@ impl RangedAttack {
     pub fn from_attack(attack: &EnemyAttack) -> Option<Self> {
         match attack {
             EnemyAttack::Melee => None,
-            EnemyAttack::Ranged { damage, range, fire_rate_per_minute } => Some(Self {
+            EnemyAttack::Ranged {
+                damage,
+                range,
+                fire_rate_per_minute,
+            } => Some(Self {
                 damage: *damage,
                 range: *range,
-                shot_interval: if *fire_rate_per_minute > 0.0 { 60.0 / fire_rate_per_minute } else { 2.0 },
+                shot_interval: if *fire_rate_per_minute > 0.0 {
+                    60.0 / fire_rate_per_minute
+                } else {
+                    2.0
+                },
                 cooldown: 1.0,
             }),
         }
@@ -104,12 +127,19 @@ pub fn build_enemy_anim_graphs(
         if store.graphs.contains_key(path) {
             continue;
         }
-        let Some(gltf) = gltf_assets.get(&loaded.gltf) else { continue };
+        let Some(gltf) = gltf_assets.get(&loaded.gltf) else {
+            continue;
+        };
         let mut extra = Vec::new();
         let mut waiting = false;
         for source in &loaded.def.animation_sources {
             let handle: Handle<Gltf> = asset_server.load(source.clone());
-            if let Some(g) = gltf_assets.get(&handle) { extra.push((source, g)) } else { waiting = true; break; }
+            if let Some(g) = gltf_assets.get(&handle) {
+                extra.push((source, g))
+            } else {
+                waiting = true;
+                break;
+            }
         }
         if waiting {
             continue;
@@ -123,13 +153,23 @@ pub fn build_enemy_anim_graphs(
 
     // Late binding: aliens already animated but without a graph (spawned before it existed).
     for (alien, def, key) in aliens.iter() {
-        let Some(graph_handle) = store.graphs.get(&def.0) else { continue };
-        let Some(anim_entity) = get_child_with_component_recursive(alien, &child_query, &anim_player_query) else { continue };
+        let Some(graph_handle) = store.graphs.get(&def.0) else {
+            continue;
+        };
+        let Some(anim_entity) =
+            get_child_with_component_recursive(alien, &child_query, &anim_player_query)
+        else {
+            continue;
+        };
         if graph_handles.contains(anim_entity) {
             continue;
         }
-        let Ok(mut player) = anim_player_query.get_mut(anim_entity) else { continue };
-        commands.entity(anim_entity).try_insert(AnimationGraphHandle(graph_handle.clone()));
+        let Ok(mut player) = anim_player_query.get_mut(anim_entity) else {
+            continue;
+        };
+        commands
+            .entity(anim_entity)
+            .try_insert(AnimationGraphHandle(graph_handle.clone()));
         if let Some(&idx) = store.anims.get(&def.0).and_then(|m| m.get(&key.key)) {
             let active = player.play(idx);
             if key.key.loops() {
@@ -161,7 +201,10 @@ pub fn ranged_attacks(
         let Some((player, player_pos)) = players
             .iter()
             .filter(|(_, p)| p.0.distance(alien_pos.0) <= attack.range)
-            .min_by(|(_, a), (_, b)| a.0.distance_squared(alien_pos.0).total_cmp(&b.0.distance_squared(alien_pos.0)))
+            .min_by(|(_, a), (_, b)| {
+                a.0.distance_squared(alien_pos.0)
+                    .total_cmp(&b.0.distance_squared(alien_pos.0))
+            })
         else {
             continue;
         };
@@ -169,11 +212,18 @@ pub fn ranged_attacks(
         let to = player_pos.0 + Vec3::Y * 0.4;
         let delta = to - from;
         let Ok(dir) = Dir3::new(delta) else { continue };
-        if spatial.cast_ray(from, dir, delta.length(), true, &walls).is_some() {
+        if spatial
+            .cast_ray(from, dir, delta.length(), true, &walls)
+            .is_some()
+        {
             continue; // wall in the way
         }
         attack.cooldown = attack.shot_interval;
-        damage_mw.write(ApplyDamage::at(player, attack.damage, DamageKind::Ballistic, to).from(alien).along(delta));
+        damage_mw.write(
+            ApplyDamage::at(player, attack.damage, DamageKind::Ballistic, to)
+                .from(alien)
+                .along(delta),
+        );
 
         // A thin green streak so the player can see where it came from.
         let mat = materials.add(StandardMaterial {
@@ -205,7 +255,12 @@ mod tests {
 
     #[test]
     fn ranged_interval_comes_from_fire_rate() {
-        let r = RangedAttack::from_attack(&EnemyAttack::Ranged { damage: 8, range: 9.0, fire_rate_per_minute: 30.0 }).unwrap();
+        let r = RangedAttack::from_attack(&EnemyAttack::Ranged {
+            damage: 8,
+            range: 9.0,
+            fire_rate_per_minute: 30.0,
+        })
+        .unwrap();
         assert!((r.shot_interval - 2.0).abs() < 1e-6);
         assert_eq!(r.damage, 8);
     }

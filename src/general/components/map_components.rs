@@ -1,7 +1,7 @@
-use bevy::prelude::*;
-use std::collections::HashMap;
 use avian3d::prelude::{CollisionLayers, LayerMask, RigidBody};
+use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// A user-placed model (from an AssetDefinition) on a specific grid tile.
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -26,7 +26,11 @@ pub struct WaveDef {
 
 impl Default for WaveDef {
     fn default() -> Self {
-        Self { enemy_def: String::new(), count: 10, spawn_rate_per_minute: 20.0 }
+        Self {
+            enemy_def: String::new(),
+            count: 10,
+            spawn_rate_per_minute: 20.0,
+        }
     }
 }
 
@@ -41,10 +45,16 @@ pub struct DecorationItem {
     pub scale: f32,
 }
 
-const fn default_scale() -> f32 { 1.0 }
+const fn default_scale() -> f32 {
+    1.0
+}
 
-const fn default_map_width() -> usize { 14 }
-const fn default_map_height() -> usize { 24 }
+const fn default_map_width() -> usize {
+    14
+}
+const fn default_map_height() -> usize {
+    24
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct MapFile {
@@ -79,7 +89,7 @@ pub struct Wall {}
 
 #[derive(Component, Default, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "avs"]
+#[type_path = "avs"]
 pub struct AlienGoal;
 
 pub struct ModelDefinition {
@@ -97,8 +107,8 @@ pub struct ModelDefinition {
     pub mask: LayerMask,
 }
 
-#[derive(Hash, PartialEq, Eq, Clone, Reflect,Component, Default)]
- #[type_path = "avs"]
+#[derive(Hash, PartialEq, Eq, Clone, Reflect, Component, Default)]
+#[type_path = "avs"]
 pub struct Tower {}
 
 impl ModelDefinition {
@@ -131,8 +141,21 @@ pub struct BuildOption {
 }
 
 impl BuildOption {
-    pub fn builtin(name: &str, model_key: &'static str, file: &str, cost: u32, tower: Option<crate::assets::asset_definition::TowerProps>) -> Self {
-        Self { name: name.to_string(), file: file.to_string(), cost, model_key: Some(model_key), scale: 1.0, tower }
+    pub fn builtin(
+        name: &str,
+        model_key: &'static str,
+        file: &str,
+        cost: u32,
+        tower: Option<crate::assets::asset_definition::TowerProps>,
+    ) -> Self {
+        Self {
+            name: name.to_string(),
+            file: file.to_string(),
+            cost,
+            model_key: Some(model_key),
+            scale: 1.0,
+            tower,
+        }
     }
 
     /// Every `Tower`-typed def under `assets/defs`, sorted by name.
@@ -145,10 +168,18 @@ impl BuildOption {
                 if path.extension().and_then(|e| e.to_str()) != Some("ron") {
                     continue;
                 }
-                let Ok(text) = std::fs::read_to_string(&path) else { continue };
-                let Ok(def) = ron::from_str::<AssetDefinition>(&text) else { continue };
-                let ModelType::Tower(props) = &def.model_type else { continue };
-                let name = path.file_stem().map_or_default(|s| s.to_string_lossy().into_owned());
+                let Ok(text) = std::fs::read_to_string(&path) else {
+                    continue;
+                };
+                let Ok(def) = ron::from_str::<AssetDefinition>(&text) else {
+                    continue;
+                };
+                let ModelType::Tower(props) = &def.model_type else {
+                    continue;
+                };
+                let name = path
+                    .file_stem()
+                    .map_or_default(|s| s.to_string_lossy().into_owned());
                 out.push(Self {
                     name,
                     file: format!("{}#Scene0", def.model_path),
@@ -166,22 +197,22 @@ impl BuildOption {
 
 #[derive(Component, Debug, Reflect, Default)]
 pub struct CurrentTile {
-    pub tile: (usize, usize)
+    pub tile: (usize, usize),
 }
 
 #[derive(Component, Debug, Reflect, Default)]
 #[reflect(Component, Default)]
- #[type_path = "avs"]
+#[type_path = "avs"]
 pub struct AlienSpawnPoint {
     pub spawn_rate_per_minute: f32,
-    pub spawn_cool_down: f32
+    pub spawn_cool_down: f32,
 }
 
 impl AlienSpawnPoint {
     pub const fn new(spawn_rate_per_minute: f32) -> Self {
         Self {
             spawn_rate_per_minute,
-            spawn_cool_down: 0.0
+            spawn_cool_down: 0.0,
         }
     }
 }
@@ -202,8 +233,7 @@ impl CoolDown for AlienSpawnPoint {
     }
 }
 
-
 #[derive(Component, Default, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "avs"]
+#[type_path = "avs"]
 pub struct Floor {}

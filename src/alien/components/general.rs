@@ -1,6 +1,4 @@
-use bevy::math::{EulerRot, Quat};
-use bevy::prelude::*;
-use bevy::reflect::Reflect;
+use crate::CurrentTile;
 use crate::ai::components::avoid_wall_components::AvoidWallsData;
 use crate::ai::components::move_towards_goal_components::MoveTowardsGoalData;
 use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
@@ -8,12 +6,13 @@ use crate::control::components::{CharacterControl, KinematicMovement};
 use crate::general::components::{Attack, CollisionLayer, Health, HittableTarget, TouchDamage};
 use crate::player::systems::spawn_players::FixSceneTransform;
 use avian3d::prelude::{
-    AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes,
-    RigidBody
+    AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody,
 };
-use crate::CurrentTile;
+use bevy::math::{EulerRot, Quat};
+use bevy::prelude::*;
+use bevy::reflect::Reflect;
 
-const fn locked_axes()-> LockedAxes {
+const fn locked_axes() -> LockedAxes {
     LockedAxes::new().lock_rotation_x().lock_rotation_z()
 }
 

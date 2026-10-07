@@ -37,9 +37,18 @@ const TWIST_RESPONSIVENESS: f32 = 18.0;
 /// accumulates gradually instead of hinging at the waist.
 pub fn default_aim_bones() -> Vec<AimBone> {
     vec![
-        AimBone { bone: "mixamorigSpine".into(), weight: 0.2 },
-        AimBone { bone: "mixamorigSpine1".into(), weight: 0.35 },
-        AimBone { bone: "mixamorigSpine2".into(), weight: 0.45 },
+        AimBone {
+            bone: "mixamorigSpine".into(),
+            weight: 0.2,
+        },
+        AimBone {
+            bone: "mixamorigSpine1".into(),
+            weight: 0.35,
+        },
+        AimBone {
+            bone: "mixamorigSpine2".into(),
+            weight: 0.45,
+        },
     ]
 }
 
@@ -63,7 +72,11 @@ pub struct PendingTorsoTwist {
 
 impl PendingTorsoTwist {
     pub fn new(bones: Vec<AimBone>) -> Self {
-        let bones = if bones.is_empty() { default_aim_bones() } else { bones };
+        let bones = if bones.is_empty() {
+            default_aim_bones()
+        } else {
+            bones
+        };
         Self { bones, tries: 0 }
     }
 }
@@ -192,7 +205,10 @@ pub fn resolve_twist_bones(
 
         commands
             .entity(character)
-            .insert(TorsoTwist { bones, current: 0.0 })
+            .insert(TorsoTwist {
+                bones,
+                current: 0.0,
+            })
             .remove::<PendingTorsoTwist>();
     }
 }
@@ -205,7 +221,10 @@ pub fn resolve_twist_bones(
 pub fn apply_torso_twist(
     time: Res<Time>,
     enabled: Res<TorsoTwistEnabled>,
-    mut characters: Query<(&Transform, &AutoAim, &mut TorsoTwist), (With<Player>, Without<PlayerDead>)>,
+    mut characters: Query<
+        (&Transform, &AutoAim, &mut TorsoTwist),
+        (With<Player>, Without<PlayerDead>),
+    >,
     global_transforms: Query<&GlobalTransform>,
     parents: Query<&ChildOf>,
     mut bone_transforms: Query<&mut Transform, Without<Player>>,
@@ -218,7 +237,9 @@ pub fn apply_torso_twist(
         let forward = body.rotation * Vec3::NEG_Z;
         let target = if enabled.0 {
             let limit = TWIST_LIMIT_DEGREES.to_radians();
-            yaw_between(forward, aim.0).unwrap_or(0.0).clamp(-limit, limit)
+            yaw_between(forward, aim.0)
+                .unwrap_or(0.0)
+                .clamp(-limit, limit)
         } else {
             // Ease back to neutral when switched off rather than popping.
             0.0
@@ -228,9 +249,15 @@ pub fn apply_torso_twist(
         twist.current += (target - twist.current) * (1.0 - (-TWIST_RESPONSIVENESS * dt).exp());
 
         for &(bone, share) in &twist.bones {
-            let Ok(parent) = parents.get(bone) else { continue };
-            let Ok(parent_world) = global_transforms.get(parent.parent()) else { continue };
-            let Ok(mut local) = bone_transforms.get_mut(bone) else { continue };
+            let Ok(parent) = parents.get(bone) else {
+                continue;
+            };
+            let Ok(parent_world) = global_transforms.get(parent.parent()) else {
+                continue;
+            };
+            let Ok(mut local) = bone_transforms.get_mut(bone) else {
+                continue;
+            };
 
             // `local.rotation` is this frame's animated pose (we run right after
             // `animate_targets`); `parent_world` is last frame's, which is fine — see
@@ -262,7 +289,12 @@ pub fn toggle_torso_twist(keys: Res<ButtonInput<KeyCode>>, mut enabled: ResMut<T
 #[allow(clippy::type_complexity)]
 pub fn face_movement_direction(
     mut players: Query<
-        (&Transform, &mut avian3d::prelude::AngularVelocity, &AutoAim, &CharacterControl),
+        (
+            &Transform,
+            &mut avian3d::prelude::AngularVelocity,
+            &AutoAim,
+            &CharacterControl,
+        ),
         (With<Player>, Without<PlayerDead>),
     >,
 ) {
@@ -306,7 +338,10 @@ mod tests {
     fn assert_same_rotation(a: Quat, b: Quat, msg: &str) {
         for axis in [Vec3::X, Vec3::Y, Vec3::Z] {
             let (ra, rb) = (a * axis, b * axis);
-            assert!((ra - rb).length() < 1e-5, "{msg}: {axis:?} -> {ra:?} vs {rb:?}");
+            assert!(
+                (ra - rb).length() < 1e-5,
+                "{msg}: {axis:?} -> {ra:?} vs {rb:?}"
+            );
         }
     }
 
@@ -314,7 +349,11 @@ mod tests {
     fn twisting_by_zero_leaves_the_animated_pose_alone() {
         let parent = Quat::from_rotation_y(0.7);
         let local = Quat::from_rotation_x(0.3);
-        assert_same_rotation(twisted_local(parent, local, 0.0), local, "no twist, no change");
+        assert_same_rotation(
+            twisted_local(parent, local, 0.0),
+            local,
+            "no twist, no change",
+        );
     }
 
     #[test]
@@ -349,7 +388,10 @@ mod tests {
         let flat = |v: Vec3| Vec3::new(v.x, 0.0, v.z).normalize();
         // The bone's heading rotates by the same yaw the body would have turned.
         let expected = Quat::from_rotation_y(yaw) * flat(before);
-        assert!((flat(after) - flat(expected)).length() < 1e-5, "torso heading must follow the aim");
+        assert!(
+            (flat(after) - flat(expected)).length() < 1e-5,
+            "torso heading must follow the aim"
+        );
     }
 
     #[test]
@@ -402,42 +444,81 @@ mod tests {
     fn yaw_between_is_signed_by_the_right_hand_rule_about_up() {
         // Facing up the screen (-Z) and aiming right (+X) is a right turn: negative.
         let yaw = yaw_between(Vec3::NEG_Z, Vec3::X).expect("well-defined");
-        assert!((yaw + FRAC_PI_2).abs() < 1e-5, "expected -90 deg, got {}", yaw.to_degrees());
+        assert!(
+            (yaw + FRAC_PI_2).abs() < 1e-5,
+            "expected -90 deg, got {}",
+            yaw.to_degrees()
+        );
 
         let yaw = yaw_between(Vec3::NEG_Z, Vec3::NEG_X).expect("well-defined");
-        assert!((yaw - FRAC_PI_2).abs() < 1e-5, "expected +90 deg, got {}", yaw.to_degrees());
+        assert!(
+            (yaw - FRAC_PI_2).abs() < 1e-5,
+            "expected +90 deg, got {}",
+            yaw.to_degrees()
+        );
     }
 
     #[test]
     fn yaw_between_ignores_height_and_rejects_degenerate_input() {
         let yaw = yaw_between(Vec3::new(0.0, 5.0, -1.0), Vec3::new(1.0, -3.0, 0.0))
             .expect("flattens to well-defined vectors");
-        assert!((yaw + FRAC_PI_2).abs() < 1e-5, "vertical components must not matter");
+        assert!(
+            (yaw + FRAC_PI_2).abs() < 1e-5,
+            "vertical components must not matter"
+        );
 
-        assert!(yaw_between(Vec3::Y, Vec3::X).is_none(), "straight up has no heading");
-        assert!(yaw_between(Vec3::NEG_Z, Vec3::ZERO).is_none(), "no aim, no angle");
+        assert!(
+            yaw_between(Vec3::Y, Vec3::X).is_none(),
+            "straight up has no heading"
+        );
+        assert!(
+            yaw_between(Vec3::NEG_Z, Vec3::ZERO).is_none(),
+            "no aim, no angle"
+        );
     }
 
     #[test]
     fn weights_are_normalized_to_sum_to_one() {
         let bones = vec![
-            AimBone { bone: "a".into(), weight: 2.0 },
-            AimBone { bone: "b".into(), weight: 3.0 },
-            AimBone { bone: "c".into(), weight: 5.0 },
+            AimBone {
+                bone: "a".into(),
+                weight: 2.0,
+            },
+            AimBone {
+                bone: "b".into(),
+                weight: 3.0,
+            },
+            AimBone {
+                bone: "c".into(),
+                weight: 5.0,
+            },
         ];
         let w = normalized_weights(&bones);
-        assert!((w.iter().sum::<f32>() - 1.0).abs() < 1e-6, "shares must total the whole twist");
+        assert!(
+            (w.iter().sum::<f32>() - 1.0).abs() < 1e-6,
+            "shares must total the whole twist"
+        );
         assert!((w[2] - 0.5).abs() < 1e-6, "proportions are preserved");
     }
 
     #[test]
     fn degenerate_weights_fall_back_to_an_even_split() {
         let bones = vec![
-            AimBone { bone: "a".into(), weight: 0.0 },
-            AimBone { bone: "b".into(), weight: 0.0 },
+            AimBone {
+                bone: "a".into(),
+                weight: 0.0,
+            },
+            AimBone {
+                bone: "b".into(),
+                weight: 0.0,
+            },
         ];
         let w = normalized_weights(&bones);
-        assert_eq!(w, vec![0.5, 0.5], "a zeroed config still twists rather than doing nothing");
+        assert_eq!(
+            w,
+            vec![0.5, 0.5],
+            "a zeroed config still twists rather than doing nothing"
+        );
     }
 
     // ── ECS wiring ──────────────────────────────────────────────────────────
@@ -450,15 +531,29 @@ mod tests {
     fn spawn_rig(app: &mut App, aim: Vec3) -> (Entity, Vec<Entity>) {
         let character = app
             .world_mut()
-            .spawn((Player, AutoAim(aim), Transform::default(), CharacterControl::new(1.0, 1.0, 60.0)))
+            .spawn((
+                Player,
+                AutoAim(aim),
+                Transform::default(),
+                CharacterControl::new(1.0, 1.0, 60.0),
+            ))
             .id();
 
         let mut parent = character;
         let mut bones = Vec::new();
-        for name in ["mixamorigHips", "mixamorigSpine", "mixamorigSpine1", "mixamorigSpine2"] {
+        for name in [
+            "mixamorigHips",
+            "mixamorigSpine",
+            "mixamorigSpine1",
+            "mixamorigSpine2",
+        ] {
             let bone = app
                 .world_mut()
-                .spawn((Name::new(name), Transform::default(), GlobalTransform::default()))
+                .spawn((
+                    Name::new(name),
+                    Transform::default(),
+                    GlobalTransform::default(),
+                ))
                 .id();
             app.world_mut().entity_mut(parent).add_child(bone);
             parent = bone;
@@ -478,12 +573,23 @@ mod tests {
 
         app.update();
 
-        let twist = app.world().entity(character).get::<TorsoTwist>().expect("chain resolved");
+        let twist = app
+            .world()
+            .entity(character)
+            .get::<TorsoTwist>()
+            .expect("chain resolved");
         // bones[0] is Hips, which is not part of the twist chain.
         let resolved: Vec<Entity> = twist.bones.iter().map(|(e, _)| *e).collect();
-        assert_eq!(resolved, bones[1..].to_vec(), "Spine/Spine1/Spine2, in order");
+        assert_eq!(
+            resolved,
+            bones[1..].to_vec(),
+            "Spine/Spine1/Spine2, in order"
+        );
         assert!(
-            app.world().entity(character).get::<PendingTorsoTwist>().is_none(),
+            app.world()
+                .entity(character)
+                .get::<PendingTorsoTwist>()
+                .is_none(),
             "the pending marker is cleared once resolved"
         );
     }
@@ -496,13 +602,22 @@ mod tests {
         let (a, a_bones) = spawn_rig(&mut app, Vec3::NEG_Z);
         let (b, b_bones) = spawn_rig(&mut app, Vec3::NEG_Z);
         for c in [a, b] {
-            app.world_mut().entity_mut(c).insert(PendingTorsoTwist::new(Vec::new()));
+            app.world_mut()
+                .entity_mut(c)
+                .insert(PendingTorsoTwist::new(Vec::new()));
         }
 
         app.update();
 
         let got = |c: Entity, app: &App| -> Vec<Entity> {
-            app.world().entity(c).get::<TorsoTwist>().unwrap().bones.iter().map(|(e, _)| *e).collect()
+            app.world()
+                .entity(c)
+                .get::<TorsoTwist>()
+                .unwrap()
+                .bones
+                .iter()
+                .map(|(e, _)| *e)
+                .collect()
         };
         assert_eq!(got(a, &app), a_bones[1..].to_vec());
         assert_eq!(got(b, &app), b_bones[1..].to_vec());
@@ -513,10 +628,12 @@ mod tests {
         let mut app = App::new();
         app.add_systems(Update, resolve_twist_bones);
         let (character, _) = spawn_rig(&mut app, Vec3::NEG_Z);
-        app.world_mut().entity_mut(character).insert(PendingTorsoTwist::new(vec![AimBone {
-            bone: "no_such_bone".into(),
-            weight: 1.0,
-        }]));
+        app.world_mut()
+            .entity_mut(character)
+            .insert(PendingTorsoTwist::new(vec![AimBone {
+                bone: "no_such_bone".into(),
+                weight: 1.0,
+            }]));
 
         for _ in 0..RESOLVE_MAX_TRIES {
             app.update();
@@ -556,7 +673,12 @@ mod tests {
         // Two seconds of smoothing is ample for an 18/s response.
         tick(&mut app, 125);
 
-        let total = app.world().entity(character).get::<TorsoTwist>().unwrap().current;
+        let total = app
+            .world()
+            .entity(character)
+            .get::<TorsoTwist>()
+            .unwrap()
+            .current;
         assert!(
             (total.abs().to_degrees() - TWIST_LIMIT_DEGREES).abs() < 1.0,
             "twist should sit at the clamp, got {} deg",
@@ -589,8 +711,16 @@ mod tests {
             .insert(PendingTorsoTwist::new(Vec::new()));
         tick(&mut app, 125);
 
-        let rot = app.world().entity(bones[3]).get::<Transform>().unwrap().rotation;
-        assert!((rot * Vec3::NEG_Z - Vec3::NEG_Z).length() < 1e-3, "spine stays neutral when off");
+        let rot = app
+            .world()
+            .entity(bones[3])
+            .get::<Transform>()
+            .unwrap()
+            .rotation;
+        assert!(
+            (rot * Vec3::NEG_Z - Vec3::NEG_Z).length() < 1e-3,
+            "spine stays neutral when off"
+        );
     }
 
     #[test]
@@ -598,6 +728,9 @@ mod tests {
         let bones = default_aim_bones();
         assert_eq!(bones.len(), 3);
         let w = normalized_weights(&bones);
-        assert!(w[0] < w[1] && w[1] < w[2], "the bend should accumulate up the spine");
+        assert!(
+            w[0] < w[1] && w[1] < w[2],
+            "the bend should accumulate up the spine"
+        );
     }
 }

@@ -76,16 +76,36 @@ pub fn draw_skeleton(
     let socket_color = Color::srgb(1.0, 0.3, 0.9);
 
     for &joint in joints {
-        let Ok(joint_transform) = transforms.get(joint) else { continue };
+        let Ok(joint_transform) = transforms.get(joint) else {
+            continue;
+        };
         let position = joint_transform.translation();
 
         let is_socket = highlight.is_some()
-            && names.get(joint).is_ok_and(|n| Some(n.as_str()) == highlight);
-        let (mark_color, size) = if is_socket { (socket_color, 0.03) } else { (joint_color, 0.012) };
+            && names
+                .get(joint)
+                .is_ok_and(|n| Some(n.as_str()) == highlight);
+        let (mark_color, size) = if is_socket {
+            (socket_color, 0.03)
+        } else {
+            (joint_color, 0.012)
+        };
 
-        gizmos.line(position - Vec3::X * size, position + Vec3::X * size, mark_color);
-        gizmos.line(position - Vec3::Y * size, position + Vec3::Y * size, mark_color);
-        gizmos.line(position - Vec3::Z * size, position + Vec3::Z * size, mark_color);
+        gizmos.line(
+            position - Vec3::X * size,
+            position + Vec3::X * size,
+            mark_color,
+        );
+        gizmos.line(
+            position - Vec3::Y * size,
+            position + Vec3::Y * size,
+            mark_color,
+        );
+        gizmos.line(
+            position - Vec3::Z * size,
+            position + Vec3::Z * size,
+            mark_color,
+        );
 
         // Skip the skeleton root, whose parent is a non-joint scene node.
         if let Ok(child_of) = parents.get(joint)
@@ -112,17 +132,37 @@ pub fn draw_hardpoints(
     resolve_anchor: impl Fn(&Option<String>) -> Option<Entity>,
 ) {
     for (role, hardpoint) in hardpoints {
-        let Some(anchor) = resolve_anchor(&hardpoint.anchor) else { continue };
-        let Ok(anchor_transform) = transforms.get(anchor) else { continue };
+        let Some(anchor) = resolve_anchor(&hardpoint.anchor) else {
+            continue;
+        };
+        let Ok(anchor_transform) = transforms.get(anchor) else {
+            continue;
+        };
 
         let frame = frame_from_euler(hardpoint.translation, hardpoint.rotation_euler_deg);
         let position = anchor_transform.transform_point(Vec3::from(frame.translation));
         let rotation = anchor_transform.rotation() * frame.rotation;
-        let size = if Some(role.as_str()) == active { 0.09 } else { 0.055 };
+        let size = if Some(role.as_str()) == active {
+            0.09
+        } else {
+            0.055
+        };
 
-        gizmos.line(position, position + rotation * Vec3::X * size, Color::srgb(1.0, 0.25, 0.25));
-        gizmos.line(position, position + rotation * Vec3::Y * size, Color::srgb(0.25, 1.0, 0.25));
-        gizmos.line(position, position + rotation * Vec3::Z * size, Color::srgb(0.35, 0.55, 1.0));
+        gizmos.line(
+            position,
+            position + rotation * Vec3::X * size,
+            Color::srgb(1.0, 0.25, 0.25),
+        );
+        gizmos.line(
+            position,
+            position + rotation * Vec3::Y * size,
+            Color::srgb(0.25, 1.0, 0.25),
+        );
+        gizmos.line(
+            position,
+            position + rotation * Vec3::Z * size,
+            Color::srgb(0.35, 0.55, 1.0),
+        );
     }
 }
 
@@ -134,7 +174,10 @@ mod tests {
     fn character(world: &mut World, joint_count: usize) -> (Entity, Vec<Entity>) {
         let joints: Vec<Entity> = (0..joint_count).map(|_| world.spawn_empty().id()).collect();
         let mesh = world
-            .spawn(SkinnedMesh { inverse_bindposes: Handle::default(), joints: joints.clone() })
+            .spawn(SkinnedMesh {
+                inverse_bindposes: Handle::default(),
+                joints: joints.clone(),
+            })
             .id();
         let root = world.spawn_empty().add_child(mesh).id();
         (root, joints)
@@ -156,7 +199,10 @@ mod tests {
         let found = joints_under(player, &children_q, &skinned_q);
         assert_eq!(found.len(), 3);
         assert!(player_joints.iter().all(|j| found.contains(j)));
-        assert!(dummy_joints.iter().all(|j| !found.contains(j)), "no other character's bones");
+        assert!(
+            dummy_joints.iter().all(|j| !found.contains(j)),
+            "no other character's bones"
+        );
     }
 
     /// A character whose scene has not spawned yet has no skinned mesh below it; the

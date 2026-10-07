@@ -1,11 +1,11 @@
-use bevy::gltf::{Gltf, GltfNode};
-use bevy::prelude::*;
-use bevy::camera::primitives::Aabb;
 use crate::animation::animation_plugin::get_child_with_component_recursive;
 use crate::asset_browser::state::{AssetBrowserState, CHARACTER_NODE_PREFIX};
-use crate::assets::hardpoint::{snap_transform, weapon_local_scale};
 use crate::asset_browser::ui::{AssetAnimLabel, HeightDisplay};
+use crate::assets::hardpoint::{snap_transform, weapon_local_scale};
 use crate::ui::spawn_ui::StateMarker;
+use bevy::camera::primitives::Aabb;
+use bevy::gltf::{Gltf, GltfNode};
+use bevy::prelude::*;
 
 #[derive(Component)]
 pub struct AssetBrowserViewerCamera;
@@ -41,10 +41,14 @@ pub fn draw_skeleton_gizmos(
     names: Query<&Name>,
     parents: Query<&ChildOf>,
 ) {
-    if !state.show_skeleton { return; }
+    if !state.show_skeleton {
+        return;
+    }
     // Only one model is ever loaded here, so every skinned mesh in the world is part of it.
     let joints = crate::assets::gizmos::all_joints(&skinned_q);
-    if joints.is_empty() { return; }
+    if joints.is_empty() {
+        return;
+    }
     crate::assets::gizmos::draw_skeleton(
         &mut gizmos,
         &joints,
@@ -60,7 +64,12 @@ fn attachment_transform(a: &crate::asset_browser::state::Attachment) -> Transfor
     let [rx, ry, rz] = a.rotation_euler_deg;
     Transform {
         translation: Vec3::from(a.translation),
-        rotation: Quat::from_euler(EulerRot::XYZ, rx.to_radians(), ry.to_radians(), rz.to_radians()),
+        rotation: Quat::from_euler(
+            EulerRot::XYZ,
+            rx.to_radians(),
+            ry.to_radians(),
+            rz.to_radians(),
+        ),
         scale: Vec3::splat(a.scale),
     }
 }
@@ -72,7 +81,9 @@ pub fn collect_bone_names(
     skinned_q: Query<&bevy::mesh::skinning::SkinnedMesh>,
     names: Query<&Name>,
 ) {
-    if !state.bone_names.is_empty() { return; }
+    if !state.bone_names.is_empty() {
+        return;
+    }
     let mut set: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
     for sm in skinned_q.iter() {
         for &j in &sm.joints {
@@ -81,7 +92,9 @@ pub fn collect_bone_names(
             }
         }
     }
-    if set.is_empty() { return; }
+    if set.is_empty() {
+        return;
+    }
     state.bone_names = set.into_iter().collect();
     state.bones_ui_dirty = true;
     state.attachments_struct_dirty = true; // bones now resolvable → (re)spawn previews
@@ -96,7 +109,9 @@ pub fn rebuild_attachment_scenes(
     skinned_q: Query<&bevy::mesh::skinning::SkinnedMesh>,
     names: Query<&Name>,
 ) {
-    if !state.attachments_struct_dirty { return; }
+    if !state.attachments_struct_dirty {
+        return;
+    }
 
     // Map bone name -> entity from the skinned mesh joints.
     let mut bone_map: std::collections::HashMap<String, Entity> = std::collections::HashMap::new();
@@ -113,7 +128,10 @@ pub fn rebuild_attachment_scenes(
     }
 
     // Despawn stale previews.
-    for e in std::mem::take(&mut state.attachment_preview_entities).into_iter().flatten() {
+    for e in std::mem::take(&mut state.attachment_preview_entities)
+        .into_iter()
+        .flatten()
+    {
         commands.entity(e).despawn();
     }
 
@@ -125,10 +143,11 @@ pub fn rebuild_attachment_scenes(
             continue;
         }
         if let Some(&bone_ent) = bone_map.get(&a.bone) {
-            let scene: Handle<WorldAsset> = asset_server.load(
-                GltfAssetLabel::Scene(0).from_asset(a.model_path.clone()),
-            );
-            let e = commands.spawn((WorldAssetRoot(scene), attachment_transform(a), StateMarker)).id();
+            let scene: Handle<WorldAsset> =
+                asset_server.load(GltfAssetLabel::Scene(0).from_asset(a.model_path.clone()));
+            let e = commands
+                .spawn((WorldAssetRoot(scene), attachment_transform(a), StateMarker))
+                .id();
             commands.entity(bone_ent).add_child(e);
             preview.push(Some(e));
         } else {
@@ -146,10 +165,14 @@ pub fn apply_attachment_transforms(
     mut state: ResMut<AssetBrowserState>,
     mut transforms: Query<&mut Transform>,
 ) {
-    if !state.attachments_xform_dirty { return; }
+    if !state.attachments_xform_dirty {
+        return;
+    }
     state.attachments_xform_dirty = false;
 
-    let updates: Vec<(Entity, Transform)> = state.attachments.iter()
+    let updates: Vec<(Entity, Transform)> = state
+        .attachments
+        .iter()
         .zip(state.attachment_preview_entities.iter())
         .filter_map(|(a, e)| (*e).map(|ent| (ent, attachment_transform(a))))
         .collect();
@@ -187,8 +210,12 @@ pub fn draw_hardpoint_gizmos(
     names: Query<&Name>,
     transforms: Query<&GlobalTransform>,
 ) {
-    if !state.show_hardpoints || state.hardpoints.is_empty() { return; }
-    let Some(viewer) = state.viewer_entity else { return };
+    if !state.show_hardpoints || state.hardpoints.is_empty() {
+        return;
+    }
+    let Some(viewer) = state.viewer_entity else {
+        return;
+    };
     let joints = crate::assets::gizmos::all_joints(&skinned_q);
     let bones = crate::assets::gizmos::bone_map(&joints, &names);
     crate::assets::gizmos::draw_hardpoints(
@@ -215,7 +242,9 @@ pub fn rebuild_hardpoint_preview(
     global_transforms: Query<&GlobalTransform>,
     root_q: Query<&GlobalTransform, With<AssetBrowserViewerModel>>,
 ) {
-    if !state.hardpoint_preview_dirty { return; }
+    if !state.hardpoint_preview_dirty {
+        return;
+    }
 
     if let Some(e) = state.hardpoint_preview_entity.take() {
         commands.entity(e).despawn();
@@ -240,10 +269,13 @@ pub fn rebuild_hardpoint_preview(
         return; // skeleton not ready yet — retry next frame (keep dirty)
     };
 
-    let scene: Handle<WorldAsset> = asset_server.load(GltfAssetLabel::Scene(0).from_asset(ref_path));
+    let scene: Handle<WorldAsset> =
+        asset_server.load(GltfAssetLabel::Scene(0).from_asset(ref_path));
     // Cancel the rig's baked bone scale and track the character's rendered scale, so
     // the weapon isn't collapsed by a tiny bone world scale (mesh2motion bakes ~0.0136).
-    let bone_scale = global_transforms.get(bone_ent).map_or(1.0, |gt| gt.scale().x);
+    let bone_scale = global_transforms
+        .get(bone_ent)
+        .map_or(1.0, |gt| gt.scale().x);
     let root_scale = root_q.single().map_or(1.0, |gt| gt.scale().x);
     let effective = weapon_local_scale(state.hardpoint_ref_scale, root_scale, bone_scale);
     state.hardpoint_preview_scale = effective;
@@ -260,10 +292,15 @@ pub fn apply_hardpoint_preview_transform(
     state: Res<AssetBrowserState>,
     mut transforms: Query<&mut Transform>,
 ) {
-    let Some(e) = state.hardpoint_preview_entity else { return };
-    let (Some(char_grip), Some(ref_grip)) =
-        (state.hardpoints.get("grip"), state.hardpoint_ref_grip.as_ref())
-    else { return };
+    let Some(e) = state.hardpoint_preview_entity else {
+        return;
+    };
+    let (Some(char_grip), Some(ref_grip)) = (
+        state.hardpoints.get("grip"),
+        state.hardpoint_ref_grip.as_ref(),
+    ) else {
+        return;
+    };
     if let Ok(mut t) = transforms.get_mut(e) {
         *t = snap_transform(char_grip, ref_grip, state.hardpoint_preview_scale);
     }
@@ -273,15 +310,20 @@ pub fn spawn_asset_browser_cameras(mut commands: Commands) {
     commands.spawn((
         Camera2d,
         IsDefaultUiCamera,
-        Camera { order: 1, ..Default::default() },
+        Camera {
+            order: 1,
+            ..Default::default()
+        },
         StateMarker,
     ));
-    let cam = commands.spawn((
-        Camera3d::default(),
-        Transform::from_xyz(0.0, 1.0, 2.5).looking_at(Vec3::new(0.0, 0.5, 0.0), Vec3::Y),
-        AssetBrowserViewerCamera,
-        StateMarker,
-    )).id();
+    let cam = commands
+        .spawn((
+            Camera3d::default(),
+            Transform::from_xyz(0.0, 1.0, 2.5).looking_at(Vec3::new(0.0, 0.5, 0.0), Vec3::Y),
+            AssetBrowserViewerCamera,
+            StateMarker,
+        ))
+        .id();
     commands.entity(cam).entry::<Camera>().and_modify(|mut c| {
         c.order = 0;
         c.clear_color = ClearColorConfig::Custom(Color::srgb(0.06, 0.06, 0.10));
@@ -310,7 +352,9 @@ pub fn handle_model_load(
     mut state: ResMut<AssetBrowserState>,
     asset_server: Res<AssetServer>,
 ) {
-    if !state.load_requested { return; }
+    if !state.load_requested {
+        return;
+    }
     state.load_requested = false;
 
     if let Some(old) = state.viewer_entity.take() {
@@ -320,9 +364,8 @@ pub fn handle_model_load(
     if let Some(path) = state.selected_path().map(std::string::ToString::to_string) {
         // Pre-populate hidden_nodes and anim_mapping from existing definition.
         state.load_definition();
-        let handle: Handle<WorldAsset> = asset_server.load(
-            GltfAssetLabel::Scene(0).from_asset(path.clone()),
-        );
+        let handle: Handle<WorldAsset> =
+            asset_server.load(GltfAssetLabel::Scene(0).from_asset(path.clone()));
         let entity = spawn_viewer_model(&mut commands, handle);
         state.viewer_entity = Some(entity);
         state.reset_anim();
@@ -331,12 +374,14 @@ pub fn handle_model_load(
 }
 
 fn spawn_viewer_model(commands: &mut Commands, handle: Handle<WorldAsset>) -> Entity {
-    commands.spawn((
-        WorldAssetRoot(handle),
-        Transform::from_xyz(0.0, 0.0, 0.0),
-        AssetBrowserViewerModel,
-        StateMarker,
-    )).id()
+    commands
+        .spawn((
+            WorldAssetRoot(handle),
+            Transform::from_xyz(0.0, 0.0, 0.0),
+            AssetBrowserViewerModel,
+            StateMarker,
+        ))
+        .id()
 }
 
 pub fn orbit_viewer(
@@ -346,11 +391,16 @@ pub fn orbit_viewer(
 ) {
     let dragging = mouse_button.pressed(MouseButton::Left);
     for motion in mouse_motion.read() {
-        if !dragging { continue; }
+        if !dragging {
+            continue;
+        }
         for mut transform in model_query.iter_mut() {
             transform.rotate_y(motion.delta.x * 0.012);
             let right = transform.right().as_vec3();
-            transform.rotate_axis(Dir3::new_unchecked(right.normalize()), motion.delta.y * 0.008);
+            transform.rotate_axis(
+                Dir3::new_unchecked(right.normalize()),
+                motion.delta.y * 0.008,
+            );
         }
     }
 }
@@ -359,13 +409,18 @@ pub fn zoom_viewer(
     mut cameras: Query<&mut Transform, With<AssetBrowserViewerCamera>>,
     mut scroll: MessageReader<bevy::input::mouse::MouseWheel>,
     windows: Query<&Window>,
-    panels: Query<(&bevy::ui::ComputedNode, &bevy::ui::UiGlobalTransform), With<AssetBrowserViewerPanel>>,
+    panels: Query<
+        (&bevy::ui::ComputedNode, &bevy::ui::UiGlobalTransform),
+        With<AssetBrowserViewerPanel>,
+    >,
 ) {
     let mut delta = 0.0f32;
     for ev in scroll.read() {
         delta -= ev.y;
     }
-    if delta == 0.0 { return; }
+    if delta == 0.0 {
+        return;
+    }
 
     // Only zoom when the cursor is over the 3D viewer panel, so scrolling the
     // clip-tag list (or other left-panel lists) doesn't also move the camera.
@@ -382,7 +437,9 @@ pub fn zoom_viewer(
         }
     }
 
-    let Ok(mut transform) = cameras.single_mut() else { return };
+    let Ok(mut transform) = cameras.single_mut() else {
+        return;
+    };
     let forward = transform.forward().as_vec3();
     transform.translation += forward * delta * 0.3;
 }
@@ -396,9 +453,15 @@ pub fn setup_viewer_animation(
     child_query: Query<&Children>,
     mut anim_players: Query<&mut AnimationPlayer>,
 ) {
-    let Some(gltf_handle) = state.gltf_handle.clone() else { return };
-    let Some(gltf) = gltf_assets.get(&gltf_handle) else { return };
-    let Some(viewer_entity) = state.viewer_entity else { return };
+    let Some(gltf_handle) = state.gltf_handle.clone() else {
+        return;
+    };
+    let Some(gltf) = gltf_assets.get(&gltf_handle) else {
+        return;
+    };
+    let Some(viewer_entity) = state.viewer_entity else {
+        return;
+    };
 
     // The Scene spawns its entity hierarchy a frame or more after the Gltf asset
     // finishes loading. If the model has embedded animations, its AnimationPlayer
@@ -406,7 +469,8 @@ pub fn setup_viewer_animation(
     // up — otherwise we'd bind our graph to a freshly inserted, target-less player
     // and nothing would animate (this bit larger models like amy.glb hardest, since
     // they lose the load-vs-spawn race). Retry next frame by leaving gltf_handle set.
-    let existing_player = get_child_with_component_recursive(viewer_entity, &child_query, &anim_players);
+    let existing_player =
+        get_child_with_component_recursive(viewer_entity, &child_query, &anim_players);
     let scene_spawned = child_query.get(viewer_entity).is_ok_and(|c| !c.is_empty());
     if existing_player.is_none() {
         if !gltf.animations.is_empty() {
@@ -418,9 +482,12 @@ pub fn setup_viewer_animation(
     }
 
     // Collect mesh node names from the Gltf hierarchy.
-    let mut mesh_nodes: Vec<String> = gltf.named_nodes.iter()
+    let mut mesh_nodes: Vec<String> = gltf
+        .named_nodes
+        .iter()
         .filter_map(|(name, handle)| {
-            gltf_node_assets.get(handle)
+            gltf_node_assets
+                .get(handle)
                 .filter(|n| n.mesh.is_some())
                 .map(|_| name.to_string())
         })
@@ -440,23 +507,28 @@ pub fn setup_viewer_animation(
         }
     }
     let mut graph = AnimationGraph::new();
-    let nodes: Vec<AnimationNodeIndex> = gltf.animations.iter()
+    let nodes: Vec<AnimationNodeIndex> = gltf
+        .animations
+        .iter()
         .map(|clip| graph.add_clip(clip.clone(), 1.0, graph.root))
         .collect();
     let graph_handle = animation_graphs.add(graph);
 
     // Use the scene's own AnimationPlayer (found above), or — only for models with
     // no embedded animations — insert one on the viewer root so external clips can play.
-    let player_entity = existing_player
-        .unwrap_or_else(|| {
-            commands.entity(viewer_entity).insert(AnimationPlayer::default());
-            viewer_entity
-        });
+    let player_entity = existing_player.unwrap_or_else(|| {
+        commands
+            .entity(viewer_entity)
+            .insert(AnimationPlayer::default());
+        viewer_entity
+    });
 
     if let Ok(mut player) = anim_players.get_mut(player_entity) {
         player.stop_all();
     }
-    commands.entity(player_entity).insert(AnimationGraphHandle(graph_handle.clone()));
+    commands
+        .entity(player_entity)
+        .insert(AnimationGraphHandle(graph_handle.clone()));
 
     state.anim_player_entity = Some(player_entity);
     state.viewer_graph_handle = Some(graph_handle);
@@ -473,11 +545,15 @@ pub fn load_extra_animation_sources(
     mut state: ResMut<AssetBrowserState>,
     asset_server: Res<AssetServer>,
 ) {
-    if !state.sources_dirty { return; }
+    if !state.sources_dirty {
+        return;
+    }
     state.sources_dirty = false;
 
     // Reload all handles from scratch to keep them in sync with the source list.
-    state.extra_gltf_handles = state.animation_sources.iter()
+    state.extra_gltf_handles = state
+        .animation_sources
+        .iter()
         .map(|path| asset_server.load(path.clone()))
         .collect();
 }
@@ -491,23 +567,45 @@ pub fn merge_extra_anim_clips(
     last_merged_count: Local<usize>,
 ) {
     // Only run after the main model graph has been built.
-    let Some(graph_handle) = state.viewer_graph_handle.clone() else { return };
-    let Some(mut graph) = animation_graphs.get_mut(&graph_handle) else { return };
+    let Some(graph_handle) = state.viewer_graph_handle.clone() else {
+        return;
+    };
+    let Some(mut graph) = animation_graphs.get_mut(&graph_handle) else {
+        return;
+    };
 
     let mut any_new = false;
 
     // Collect new clips outside of state borrow.
-    struct NewClip { stem: String, name: String, handle: Handle<AnimationClip> }
+    struct NewClip {
+        stem: String,
+        name: String,
+        handle: Handle<AnimationClip>,
+    }
     let mut new_clips: Vec<NewClip> = Vec::new();
 
     for (idx, handle) in state.extra_gltf_handles.iter().enumerate() {
-        let Some(gltf) = gltf_assets.get(handle) else { continue };
-        let stem = state.animation_sources.get(idx).map_or_else(|| format!("ext{idx}"), |p| std::path::Path::new(p)
-                .file_stem().and_then(|s| s.to_str()).unwrap_or("ext").to_string());
+        let Some(gltf) = gltf_assets.get(handle) else {
+            continue;
+        };
+        let stem = state.animation_sources.get(idx).map_or_else(
+            || format!("ext{idx}"),
+            |p| {
+                std::path::Path::new(p)
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("ext")
+                    .to_string()
+            },
+        );
         for (name, clip_handle) in &gltf.named_animations {
             let prefixed = format!("{stem}|{name}");
             if !state.anim_names.contains(&prefixed) {
-                new_clips.push(NewClip { stem: stem.clone(), name: name.to_string(), handle: clip_handle.clone() });
+                new_clips.push(NewClip {
+                    stem: stem.clone(),
+                    name: name.to_string(),
+                    handle: clip_handle.clone(),
+                });
             }
         }
     }
@@ -525,7 +623,9 @@ pub fn merge_extra_anim_clips(
     if any_new {
         // Reinstall the updated graph on the player entity.
         if let Some(player_entity) = state.anim_player_entity {
-            commands.entity(player_entity).insert(AnimationGraphHandle(graph_handle));
+            commands
+                .entity(player_entity)
+                .insert(AnimationGraphHandle(graph_handle));
         }
         state.tags_dirty = true;
     }
@@ -541,20 +641,35 @@ pub fn compute_model_height(
     aabb_q: Query<(&Aabb, &GlobalTransform)>,
     children_q: Query<&Children>,
 ) {
-    if state.model_raw_height > 0.0 { return; } // already measured
-    let Some(viewer_entity) = state.viewer_entity else { return };
+    if state.model_raw_height > 0.0 {
+        return;
+    } // already measured
+    let Some(viewer_entity) = state.viewer_entity else {
+        return;
+    };
 
     // Count frames to let Bevy populate Aabb on all spawned mesh children.
     const SETTLE_FRAMES: u32 = 8;
     state.aabb_settle_frames += 1;
-    if state.aabb_settle_frames < SETTLE_FRAMES { return; }
+    if state.aabb_settle_frames < SETTLE_FRAMES {
+        return;
+    }
 
     let mut min_y = f32::MAX;
     let mut max_y = f32::MIN;
     let mut found = false;
-    collect_aabbs(viewer_entity, &children_q, &aabb_q, &mut min_y, &mut max_y, &mut found);
+    collect_aabbs(
+        viewer_entity,
+        &children_q,
+        &aabb_q,
+        &mut min_y,
+        &mut max_y,
+        &mut found,
+    );
 
-    if !found || max_y <= min_y { return; }
+    if !found || max_y <= min_y {
+        return;
+    }
 
     // Model is always at scale=1.0 here (apply_viewer_scale hasn't run yet).
     state.model_raw_height = max_y - min_y;
@@ -601,10 +716,18 @@ fn collect_aabbs(
 pub fn apply_viewer_scale(
     mut state: ResMut<AssetBrowserState>,
     mut model_q: Query<&mut Transform, With<AssetBrowserViewerModel>>,
-    mut camera_q: Query<&mut Transform, (With<AssetBrowserViewerCamera>, Without<AssetBrowserViewerModel>)>,
+    mut camera_q: Query<
+        &mut Transform,
+        (
+            With<AssetBrowserViewerCamera>,
+            Without<AssetBrowserViewerModel>,
+        ),
+    >,
     mut label_q: Query<&mut Text, With<HeightDisplay>>,
 ) {
-    if !state.height_dirty || state.model_raw_height <= 0.0 { return; }
+    if !state.height_dirty || state.model_raw_height <= 0.0 {
+        return;
+    }
     state.height_dirty = false;
 
     let scale = state.computed_scale();
@@ -631,11 +754,15 @@ pub fn apply_node_visibility(
     mut state: ResMut<AssetBrowserState>,
     mut named_entities: Query<(&Name, &mut Visibility)>,
 ) {
-    if !state.nodes_dirty { return; }
+    if !state.nodes_dirty {
+        return;
+    }
     state.nodes_dirty = false;
 
     for (name, mut vis) in named_entities.iter_mut() {
-        if name.starts_with(CHARACTER_NODE_PREFIX) { continue; }
+        if name.starts_with(CHARACTER_NODE_PREFIX) {
+            continue;
+        }
         if state.mesh_nodes.iter().any(|n| n == name.as_str()) {
             *vis = if state.hidden_nodes.contains(name.as_str()) {
                 Visibility::Hidden
@@ -651,10 +778,16 @@ pub fn apply_viewer_animation(
     mut anim_players: Query<&mut AnimationPlayer>,
     mut anim_label: Query<&mut Text, With<AssetAnimLabel>>,
 ) {
-    if !state.anim_dirty || state.anim_node_indices.is_empty() { return; }
+    if !state.anim_dirty || state.anim_node_indices.is_empty() {
+        return;
+    }
 
-    let Some(player_entity) = state.anim_player_entity else { return };
-    let Ok(mut player) = anim_players.get_mut(player_entity) else { return };
+    let Some(player_entity) = state.anim_player_entity else {
+        return;
+    };
+    let Ok(mut player) = anim_players.get_mut(player_entity) else {
+        return;
+    };
 
     let idx = state.anim_index;
     let Some(&node) = state.anim_node_indices.get(idx) else {
@@ -664,7 +797,11 @@ pub fn apply_viewer_animation(
     player.play(node).repeat();
     state.anim_dirty = false;
 
-    let name = state.anim_names.get(idx).filter(|s| !s.is_empty()).map(std::string::String::as_str);
+    let name = state
+        .anim_names
+        .get(idx)
+        .filter(|s| !s.is_empty())
+        .map(std::string::String::as_str);
     let label_text = match name {
         Some(n) => format!("[{}/{}] {}", idx + 1, state.anim_count, n),
         None => format!("[{}/{}]", idx + 1, state.anim_count),
@@ -675,12 +812,19 @@ pub fn apply_viewer_animation(
 }
 
 pub fn sync_viewer_viewport(
-    panels: Query<(&bevy::ui::ComputedNode, &bevy::ui::UiGlobalTransform), With<AssetBrowserViewerPanel>>,
+    panels: Query<
+        (&bevy::ui::ComputedNode, &bevy::ui::UiGlobalTransform),
+        With<AssetBrowserViewerPanel>,
+    >,
     mut cameras: Query<&mut Camera, With<AssetBrowserViewerCamera>>,
     windows: Query<&Window>,
 ) {
-    let Ok((node, transform)) = panels.single() else { return };
-    let Ok(mut camera) = cameras.single_mut() else { return };
+    let Ok((node, transform)) = panels.single() else {
+        return;
+    };
+    let Ok(mut camera) = cameras.single_mut() else {
+        return;
+    };
     let Ok(window) = windows.single() else { return };
 
     let phys_size = node.size();
@@ -694,7 +838,9 @@ pub fn sync_viewer_viewport(
     let w = (phys_size.x as u32).min(win_w.saturating_sub(x));
     let h = (phys_size.y as u32).min(win_h.saturating_sub(y));
 
-    if w == 0 || h == 0 { return; }
+    if w == 0 || h == 0 {
+        return;
+    }
 
     camera.viewport = Some(bevy::camera::Viewport {
         physical_position: bevy::math::UVec2::new(x, y),

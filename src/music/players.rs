@@ -2,7 +2,7 @@ use bevy::asset::Handle;
 use bevy::prelude::Commands;
 use bevy_seedling::prelude::{AudioSample, PlaybackSettings, SamplePlayer, Volume};
 use rusty_music::clock::Beat;
-use rusty_music::musicians::{midi_diff_to_pitch, Chord, MusicPlayer, Note, Sampler, TonalPlayer};
+use rusty_music::musicians::{Chord, MusicPlayer, Note, Sampler, TonalPlayer, midi_diff_to_pitch};
 
 fn spawn_note(
     commands: &mut Commands,
@@ -74,7 +74,9 @@ impl MusicPlayer for ChordStabs {
             .collect();
         for (i, note) in strong.iter().enumerate() {
             let idx = (beat.bar_count as usize + beat.beat as usize + i) % self.samples.len();
-            let Some(sample) = self.samples.get(idx) else { continue };
+            let Some(sample) = self.samples.get(idx) else {
+                continue;
+            };
             spawn_note(
                 commands,
                 sample,
@@ -95,15 +97,24 @@ pub struct UfoStingers {
 
 impl MusicPlayer for UfoStingers {
     fn play(&mut self, beat: Beat, commands: &mut Commands, base_intensity: f32, chord: &Chord) {
-        if beat.beat == 0 && beat.sixteenth == 0 && beat.bar_count.is_multiple_of(2)
+        if beat.beat == 0
+            && beat.sixteenth == 0
+            && beat.bar_count.is_multiple_of(2)
             && let Some(note) = TonalPlayer::get_scale_note(chord, 1.0 - base_intensity)
         {
             spawn_note(commands, &self.ufo, self.volume, note.midi_note_diff);
         }
-        if base_intensity > 0.5 && beat.sixteenth == 3 && beat.beat.is_multiple_of(2)
+        if base_intensity > 0.5
+            && beat.sixteenth == 3
+            && beat.beat.is_multiple_of(2)
             && let Some(note) = TonalPlayer::get_chord_note(chord, 0.5)
         {
-            spawn_note(commands, &self.sid, self.volume - 4.0, note.midi_note_diff + 12);
+            spawn_note(
+                commands,
+                &self.sid,
+                self.volume - 4.0,
+                note.midi_note_diff + 12,
+            );
         }
     }
 }

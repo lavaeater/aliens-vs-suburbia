@@ -13,9 +13,9 @@
 //! the browser authoring UI + runtime snap in the next steps.
 #![allow(dead_code)]
 
+use crate::assets::asset_definition::Hardpoint;
 use bevy::math::{EulerRot, Isometry3d, Quat, Vec3};
 use bevy::prelude::Transform;
-use crate::assets::asset_definition::Hardpoint;
 
 /// The frame of a stored [`Hardpoint`] as an [`Isometry3d`].
 pub fn hardpoint_frame(h: &Hardpoint) -> Isometry3d {
@@ -72,7 +72,11 @@ pub fn weapon_world(
 /// - `weapon_def_scale`: the weapon def's `scale`.
 /// - `char_root_scale`: the character model root's world scale (how big it renders).
 /// - `bone_world_scale`: the grip bone's world scale (root scale times rig-baked scale).
-pub fn weapon_local_scale(weapon_def_scale: f32, char_root_scale: f32, bone_world_scale: f32) -> f32 {
+pub fn weapon_local_scale(
+    weapon_def_scale: f32,
+    char_root_scale: f32,
+    bone_world_scale: f32,
+) -> f32 {
     if bone_world_scale.abs() < 1e-6 {
         return weapon_def_scale;
     }
@@ -119,7 +123,10 @@ mod tests {
         // The weapon's resulting *world* scale is bone_world * local, which must equal
         // weapon_def_scale * char_root_scale (tracks the character, not the rig).
         let world = 0.0136 * local;
-        assert!((world - 0.172 * 1.333).abs() < 1e-4, "world scale = {world}");
+        assert!(
+            (world - 0.172 * 1.333).abs() < 1e-4,
+            "world scale = {world}"
+        );
         // And it's much bigger than naively using the def scale under the tiny bone.
         assert!(local > 1.0);
     }
@@ -158,7 +165,10 @@ mod tests {
         let weapon_grip = frame_from_euler([0.0, 0.3, 0.0], [0.0, 45.0, 0.0]);
 
         let placed = weapon_local(grip_offset, weapon_grip) * weapon_grip;
-        assert!(approx_eq(placed, grip_offset), "weapon grip did not land on character grip");
+        assert!(
+            approx_eq(placed, grip_offset),
+            "weapon grip did not land on character grip"
+        );
     }
 
     #[test]

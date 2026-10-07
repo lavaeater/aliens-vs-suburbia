@@ -38,7 +38,12 @@ pub struct CameraFocus {
 
 impl Default for CameraFocus {
     fn default() -> Self {
-        Self { center: Vec3::ZERO, radius: 0.0, fit: 1.0, primed: false }
+        Self {
+            center: Vec3::ZERO,
+            radius: 0.0,
+            fit: 1.0,
+            primed: false,
+        }
     }
 }
 

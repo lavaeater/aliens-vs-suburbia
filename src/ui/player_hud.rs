@@ -5,14 +5,14 @@
 //! reload), "RELOADING" mid-reload, and briefly what was just picked up.
 
 use bevy::prelude::*;
-use lava_ui_builder::{progress_bar, LavaTheme, ProgressBar, TextStyle, UIBuilder};
+use lava_ui_builder::{LavaTheme, ProgressBar, TextStyle, UIBuilder, progress_bar};
 
 use crate::general::components::Health;
 use crate::items::ItemPickedUp;
 use crate::player::ammo::AmmoPouch;
 use crate::player::components::{Lives, Player, PlayerDead, PlayerSlot};
-use crate::player::systems::death_revive::RespawnQueue;
 use crate::player::systems::abilities::{AbilityCooldown, SpecialAbility};
+use crate::player::systems::death_revive::RespawnQueue;
 use crate::player::systems::equip::EquippedWeapon;
 use crate::player::systems::shoot::Weapon;
 use crate::player_setup::state::PlayerRoster;
@@ -80,7 +80,8 @@ pub fn spawn_player_bar(mut commands: Commands, theme: Res<LavaTheme>) {
             c.modify_node(|mut n| n.flex_basis = Val::Px(0.0));
 
             c.with_child(|c| {
-                c.with_text("", Some(TextStyle::size_color(16.0, NAME_COLOR))).insert(HudSlotName);
+                c.with_text("", Some(TextStyle::size_color(16.0, NAME_COLOR)))
+                    .insert(HudSlotName);
             });
             c.with_child(|c| {
                 c.display_flex().align_items_center().column_gap_px(6.0);
@@ -95,20 +96,28 @@ pub fn spawn_player_bar(mut commands: Commands, theme: Res<LavaTheme>) {
                     .insert(HudSlotHealthBar);
                 });
                 c.with_child(|c| {
-                    c.with_text("", Some(TextStyle::size_color(12.0, AMMO_COLOR))).insert(HudSlotHealthText);
+                    c.with_text("", Some(TextStyle::size_color(12.0, AMMO_COLOR)))
+                        .insert(HudSlotHealthText);
                 });
             });
             c.with_child(|c| {
-                c.with_text("", Some(TextStyle::size_color(13.0, WEAPON_COLOR))).insert(HudSlotWeapon);
+                c.with_text("", Some(TextStyle::size_color(13.0, WEAPON_COLOR)))
+                    .insert(HudSlotWeapon);
             });
             c.with_child(|c| {
-                c.with_text("", Some(TextStyle::size_color(13.0, AMMO_COLOR))).insert(HudSlotAmmo);
+                c.with_text("", Some(TextStyle::size_color(13.0, AMMO_COLOR)))
+                    .insert(HudSlotAmmo);
             });
             c.with_child(|c| {
-                c.with_text("", Some(TextStyle::size_color(13.0, ABILITY_COLOR))).insert(HudSlotAbility);
+                c.with_text("", Some(TextStyle::size_color(13.0, ABILITY_COLOR)))
+                    .insert(HudSlotAbility);
             });
             c.with_child(|c| {
-                c.with_text("", Some(TextStyle::size_color(12.0, Color::srgb(0.6, 1.0, 0.6)))).insert(HudSlotPickup);
+                c.with_text(
+                    "",
+                    Some(TextStyle::size_color(12.0, Color::srgb(0.6, 1.0, 0.6))),
+                )
+                .insert(HudSlotPickup);
             });
         });
     }
@@ -120,13 +129,19 @@ pub fn spawn_player_bar(mut commands: Commands, theme: Res<LavaTheme>) {
 pub fn slot_name(roster: Option<&PlayerRoster>, slot: usize) -> String {
     roster
         .and_then(|r| r.def_paths.get(slot))
-        .and_then(|p| std::path::Path::new(p).file_stem().map(|s| s.to_string_lossy().into_owned()))
+        .and_then(|p| {
+            std::path::Path::new(p)
+                .file_stem()
+                .map(|s| s.to_string_lossy().into_owned())
+        })
         .unwrap_or_else(|| format!("Player {}", slot + 1))
 }
 
 /// Ammo line for the held gun.
 pub fn ammo_label(weapon: Option<&Weapon>, pouch: Option<&AmmoPouch>) -> String {
-    let Some(weapon) = weapon else { return String::new() };
+    let Some(weapon) = weapon else {
+        return String::new();
+    };
     if !weapon.uses_ammo() {
         return "Ammo: inf".to_string();
     }
@@ -134,7 +149,12 @@ pub fn ammo_label(weapon: Option<&Weapon>, pouch: Option<&AmmoPouch>) -> String 
         return "RELOADING".to_string();
     }
     let reserve = pouch.map_or(0, |p| p.rounds(weapon.ammo));
-    format!("Ammo: {} / {} {}", weapon.rounds_in_mag, reserve, weapon.ammo.label())
+    format!(
+        "Ammo: {} / {} {}",
+        weapon.rounds_in_mag,
+        reserve,
+        weapon.ammo.label()
+    )
 }
 
 /// Collect pickups into per-slot toasts and expire old ones.
@@ -147,7 +167,11 @@ pub fn track_pickup_toasts(
     for item in picked.read() {
         if let Ok(slot) = slots.get(item.player) {
             toasts.0.retain(|(s, ..)| *s != slot.0);
-            toasts.0.push((slot.0, format!("+ {}", item.kind.label()), Timer::from_seconds(TOAST_SECS, TimerMode::Once)));
+            toasts.0.push((
+                slot.0,
+                format!("+ {}", item.kind.label()),
+                Timer::from_seconds(TOAST_SECS, TimerMode::Once),
+            ));
         }
     }
     for (_, _, timer) in &mut toasts.0 {
@@ -161,7 +185,11 @@ pub fn ability_label(ability: &SpecialAbility, meter: &AbilityCooldown) -> Strin
     if meter.ready() {
         format!("[Q] {} - READY", ability.label())
     } else {
-        format!("[Q] {} - {}%", ability.label(), (meter.charge * 100.0) as u32)
+        format!(
+            "[Q] {} - {}%",
+            ability.label(),
+            (meter.charge * 100.0) as u32
+        )
     }
 }
 
@@ -169,7 +197,16 @@ pub fn ability_label(ability: &SpecialAbility, meter: &AbilityCooldown) -> Strin
 pub fn update_player_bar(
     roster: Option<Res<PlayerRoster>>,
     players: Query<
-        (&PlayerSlot, &Health, Option<&EquippedWeapon>, Option<&AmmoPouch>, Option<&SpecialAbility>, Option<&AbilityCooldown>, Option<&PlayerDead>, Option<&Lives>),
+        (
+            &PlayerSlot,
+            &Health,
+            Option<&EquippedWeapon>,
+            Option<&AmmoPouch>,
+            Option<&SpecialAbility>,
+            Option<&AbilityCooldown>,
+            Option<&PlayerDead>,
+            Option<&Lives>,
+        ),
         With<Player>,
     >,
     weapon_q: Query<(&Name, &Weapon)>,
@@ -177,12 +214,72 @@ pub fn update_player_bar(
     respawns: Res<RespawnQueue>,
     mut slots: Query<(Entity, &PlayerHudSlot, &mut Node)>,
     children_q: Query<&Children>,
-    mut names: Query<(&mut Text, &mut TextColor), (With<HudSlotName>, Without<HudSlotHealthText>, Without<HudSlotWeapon>, Without<HudSlotAmmo>, Without<HudSlotAbility>, Without<HudSlotPickup>)>,
-    mut health_texts: Query<&mut Text, (With<HudSlotHealthText>, Without<HudSlotName>, Without<HudSlotWeapon>, Without<HudSlotAmmo>, Without<HudSlotAbility>, Without<HudSlotPickup>)>,
-    mut weapons: Query<&mut Text, (With<HudSlotWeapon>, Without<HudSlotName>, Without<HudSlotHealthText>, Without<HudSlotAmmo>, Without<HudSlotAbility>, Without<HudSlotPickup>)>,
-    mut ammos: Query<&mut Text, (With<HudSlotAmmo>, Without<HudSlotName>, Without<HudSlotHealthText>, Without<HudSlotWeapon>, Without<HudSlotAbility>, Without<HudSlotPickup>)>,
-    mut abilities: Query<&mut Text, (With<HudSlotAbility>, Without<HudSlotName>, Without<HudSlotHealthText>, Without<HudSlotWeapon>, Without<HudSlotAmmo>, Without<HudSlotPickup>)>,
-    mut pickups: Query<&mut Text, (With<HudSlotPickup>, Without<HudSlotName>, Without<HudSlotHealthText>, Without<HudSlotWeapon>, Without<HudSlotAmmo>, Without<HudSlotAbility>)>,
+    mut names: Query<
+        (&mut Text, &mut TextColor),
+        (
+            With<HudSlotName>,
+            Without<HudSlotHealthText>,
+            Without<HudSlotWeapon>,
+            Without<HudSlotAmmo>,
+            Without<HudSlotAbility>,
+            Without<HudSlotPickup>,
+        ),
+    >,
+    mut health_texts: Query<
+        &mut Text,
+        (
+            With<HudSlotHealthText>,
+            Without<HudSlotName>,
+            Without<HudSlotWeapon>,
+            Without<HudSlotAmmo>,
+            Without<HudSlotAbility>,
+            Without<HudSlotPickup>,
+        ),
+    >,
+    mut weapons: Query<
+        &mut Text,
+        (
+            With<HudSlotWeapon>,
+            Without<HudSlotName>,
+            Without<HudSlotHealthText>,
+            Without<HudSlotAmmo>,
+            Without<HudSlotAbility>,
+            Without<HudSlotPickup>,
+        ),
+    >,
+    mut ammos: Query<
+        &mut Text,
+        (
+            With<HudSlotAmmo>,
+            Without<HudSlotName>,
+            Without<HudSlotHealthText>,
+            Without<HudSlotWeapon>,
+            Without<HudSlotAbility>,
+            Without<HudSlotPickup>,
+        ),
+    >,
+    mut abilities: Query<
+        &mut Text,
+        (
+            With<HudSlotAbility>,
+            Without<HudSlotName>,
+            Without<HudSlotHealthText>,
+            Without<HudSlotWeapon>,
+            Without<HudSlotAmmo>,
+            Without<HudSlotPickup>,
+        ),
+    >,
+    mut pickups: Query<
+        &mut Text,
+        (
+            With<HudSlotPickup>,
+            Without<HudSlotName>,
+            Without<HudSlotHealthText>,
+            Without<HudSlotWeapon>,
+            Without<HudSlotAmmo>,
+            Without<HudSlotAbility>,
+        ),
+    >,
     mut bars: Query<&mut ProgressBar, With<HudSlotHealthBar>>,
 ) {
     for (slot_entity, hud_slot, mut node) in slots.iter_mut() {
@@ -193,8 +290,10 @@ pub fn update_player_bar(
         let Some((_, health, equipped, pouch, ability, meter, dead, lives)) = player else {
             let line = if let Some(pending) = respawns.pending_for(hud_slot.0) {
                 let secs = pending.timer.remaining_secs().ceil() as u32;
-                let near = pending
-                    .anchor.map_or_else(|| "where you fell".to_string(), |a| format!("near {}", slot_name(roster.as_deref(), a)));
+                let near = pending.anchor.map_or_else(
+                    || "where you fell".to_string(),
+                    |a| format!("near {}", slot_name(roster.as_deref(), a)),
+                );
                 Some(format!("{name} - RESPAWN {secs}s {near}"))
             } else if respawns.is_out(hud_slot.0) {
                 Some(format!("{name} - OUT"))
@@ -237,7 +336,11 @@ pub fn update_player_bar(
         let held = equipped.and_then(|e| weapon_q.get(e.0).ok());
         let weapon = held.map_or_else(|| "Unarmed".to_string(), |(n, _)| n.as_str().to_string());
         let ammo = ammo_label(held.map(|(_, w)| w), pouch);
-        let toast = toasts.0.iter().find(|(s, ..)| *s == hud_slot.0).map_or_default(|(_, t, _)| t.clone());
+        let toast = toasts
+            .0
+            .iter()
+            .find(|(s, ..)| *s == hud_slot.0)
+            .map_or_default(|(_, t, _)| t.clone());
         let ability_text = match (ability, meter) {
             (Some(a), Some(m)) => ability_label(a, m),
             _ => String::new(),
@@ -288,13 +391,19 @@ mod tests {
 
     #[test]
     fn slot_name_is_the_def_stem() {
-        let roster = PlayerRoster { def_paths: vec!["assets/defs/amy.ron".into()], devices: vec![] };
+        let roster = PlayerRoster {
+            def_paths: vec!["assets/defs/amy.ron".into()],
+            devices: vec![],
+        };
         assert_eq!(slot_name(Some(&roster), 0), "amy");
     }
 
     #[test]
     fn missing_roster_or_slot_falls_back_to_a_number() {
-        let roster = PlayerRoster { def_paths: vec![], devices: vec![] };
+        let roster = PlayerRoster {
+            def_paths: vec![],
+            devices: vec![],
+        };
         assert_eq!(slot_name(Some(&roster), 1), "Player 2");
         assert_eq!(slot_name(None, 0), "Player 1");
     }

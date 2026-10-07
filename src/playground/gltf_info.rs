@@ -70,7 +70,10 @@ fn glb_json(bytes: &[u8]) -> Option<String> {
 /// fields, and both live at the top level of the document.
 fn parse_info(json: &str) -> Option<GltfInfo> {
     let value: serde_json::Value = serde_json::from_str(json).ok()?;
-    let mesh_count = value.get("meshes").and_then(|m| m.as_array()).map_or(0, std::vec::Vec::len);
+    let mesh_count = value
+        .get("meshes")
+        .and_then(|m| m.as_array())
+        .map_or(0, std::vec::Vec::len);
     let animations = value
         .get("animations")
         .and_then(|a| a.as_array())
@@ -80,11 +83,15 @@ fn parse_info(json: &str) -> Option<GltfInfo> {
                 .enumerate()
                 .map(|(index, clip)| {
                     clip.get("name")
-                        .and_then(|n| n.as_str()).map_or_else(|| format!("Animation{index}"), str::to_string)
+                        .and_then(|n| n.as_str())
+                        .map_or_else(|| format!("Animation{index}"), str::to_string)
                 })
                 .collect()
         });
-    Some(GltfInfo { mesh_count, animations })
+    Some(GltfInfo {
+        mesh_count,
+        animations,
+    })
 }
 
 #[cfg(test)]

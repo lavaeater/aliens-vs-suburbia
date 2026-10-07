@@ -1,6 +1,6 @@
-use std::collections::{HashSet};
 use bevy::prelude::Resource;
 use pathfinding::grid::Grid;
+use std::collections::HashSet;
 
 #[derive(Resource)]
 pub struct MapGraph {

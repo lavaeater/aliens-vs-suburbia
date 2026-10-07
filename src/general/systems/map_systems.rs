@@ -4,40 +4,44 @@
 // genuinely risky spots are fixed individually.
 #![allow(clippy::arithmetic_side_effects, clippy::indexing_slicing)]
 
-use bevy::asset::AssetServer;
-use bevy::math::{Quat, Vec3};
-use bevy::asset::RenderAssetUsages;
-use bevy::pbr::StandardMaterial;
-use bevy::prelude::{Assets, Color, Commands, Has, Mesh, Mesh3d, MeshMaterial3d, MessageReader, MessageWriter, Name, Query, Res, ResMut, Resource, Transform};
-use bevy::mesh::{Indices, PrimitiveTopology};
-use bevy::world_serialization::WorldAssetRoot;
-use avian3d::prelude::{Collider, CollisionLayers, Position, RigidBody};
-use pathfinding::grid::Grid;
-use std::collections::HashSet;
 use crate::alien::components::general::AlienCounter;
+use crate::assets::assets_plugin::GameAssets;
+use crate::building::systems::ToWorldCoordinates;
 use crate::general::components::CollisionLayer;
-use crate::general::components::map_components::{AlienGoal, AlienSpawnPoint, CurrentTile, Floor, MapModelDefinitions};
+use crate::general::components::map_components::{
+    AlienGoal, AlienSpawnPoint, CurrentTile, Floor, MapModelDefinitions,
+};
 use crate::general::events::map_events::{LoadMap, SpawnPlayer};
 use crate::general::resources::map_resources::MapGraph;
-use crate::settings::resources::GameSettings;
-use bevy_wind_waker_shader::WindWakerShaderBuilder;
-use crate::assets::assets_plugin::GameAssets;
 use crate::map::{BitFlags, MapFeatures};
-use crate::building::systems::ToWorldCoordinates;
+use crate::settings::resources::GameSettings;
+use avian3d::prelude::{Collider, CollisionLayers, Position, RigidBody};
+use bevy::asset::AssetServer;
+use bevy::asset::RenderAssetUsages;
+use bevy::math::{Quat, Vec3};
+use bevy::mesh::{Indices, PrimitiveTopology};
+use bevy::pbr::StandardMaterial;
+use bevy::prelude::{
+    Assets, Color, Commands, Has, Mesh, Mesh3d, MeshMaterial3d, MessageReader, MessageWriter, Name,
+    Query, Res, ResMut, Resource, Transform,
+};
+use bevy::world_serialization::WorldAssetRoot;
+use bevy_wind_waker_shader::WindWakerShaderBuilder;
+use pathfinding::grid::Grid;
+use std::collections::HashSet;
 
 /// Positions, normals, UVs and indices accumulated per terrain color while building floor meshes.
 type TerrainQuadMesh = (Vec<[f32; 3]>, Vec<[f32; 3]>, Vec<[f32; 2]>, Vec<u32>);
-use crate::player::components::{IsBuildIndicator, IsObstacle};
+use crate::assets::asset_definition::{AssetDefinition, ModelType};
 use crate::general::components::{Health, Indestructible};
 use crate::general::damage::{DamageResistances, Faction};
+use crate::general::explosion::ExplodesOnDeath;
 use crate::items::{Item, Pickup};
 use crate::loot::LootDrop;
-use crate::general::explosion::ExplodesOnDeath;
-use crate::assets::asset_definition::{AssetDefinition, ModelType};
+use crate::player::components::{IsBuildIndicator, IsObstacle};
+use crate::player::events::building_events::{AddTile, RemoveTile};
 use crate::towers::systems::spawn_tower_sensor;
 use crate::ui::spawn_ui::AddHealthBar;
-use crate::player::events::building_events::{AddTile, RemoveTile};
-
 
 pub fn load_map_one(mut send_event: MessageWriter<LoadMap>) {
     let text = match std::fs::read_to_string("assets/maps/level_01.ron") {
@@ -47,8 +51,7 @@ pub fn load_map_one(mut send_event: MessageWriter<LoadMap>) {
             return;
         }
     };
-    let mut map: crate::general::components::map_components::MapFile = match ron::from_str(&text)
-    {
+    let mut map: crate::general::components::map_components::MapFile = match ron::from_str(&text) {
         Ok(map) => map,
         Err(e) => {
             bevy::log::error!("Failed to parse assets/maps/level_01.ron: {e}");
@@ -56,7 +59,8 @@ pub fn load_map_one(mut send_event: MessageWriter<LoadMap>) {
         }
     };
     if map.generated {
-        map = crate::map::map_generator::generate_suburb_map(map.seed, map.map_width, map.map_height);
+        map =
+            crate::map::map_generator::generate_suburb_map(map.seed, map.map_width, map.map_height);
     }
     send_event.write(LoadMap { map });
 }
@@ -65,7 +69,6 @@ pub fn load_map_showcase(mut send_event: MessageWriter<LoadMap>) {
     let map = crate::map::map_generator::generate_showcase_map(42);
     send_event.write(LoadMap { map });
 }
-
 
 #[derive(Resource)]
 pub struct TileDefinitions {
@@ -76,15 +79,12 @@ pub struct TileDefinitions {
     pub tile_width: f32,
     pub wall_height: f32,
     pub tile_depth: f32,
-    pub floor_level: f32
+    pub floor_level: f32,
 }
 
 #[allow(dead_code)]
 impl TileDefinitions {
-    pub fn new(tile_size: f32,
-               tile_basis: f32,
-               wall_basis: f32,
-               tile_depth_basis: f32) -> Self {
+    pub fn new(tile_size: f32, tile_basis: f32, wall_basis: f32, tile_depth_basis: f32) -> Self {
         let tile_unit = tile_size / tile_basis;
         let tile_width = tile_basis * tile_unit;
         let wall_height = wall_basis * tile_unit;
@@ -101,21 +101,38 @@ impl TileDefinitions {
     }
 
     pub fn create_collider(&self, width: f32, height: f32, depth: f32) -> Collider {
-        Collider::cuboid(width * self.tile_unit * 2.0, height * self.tile_unit * 2.0, depth * self.tile_unit * 2.0)
+        Collider::cuboid(
+            width * self.tile_unit * 2.0,
+            height * self.tile_unit * 2.0,
+            depth * self.tile_unit * 2.0,
+        )
     }
 
     pub fn get_floor_position(&self, x: i32, y: i32) -> Vec3 {
-        Vec3::new(self.tile_width * x as f32, self.floor_level, self.tile_width * y as f32)
+        Vec3::new(
+            self.tile_width * x as f32,
+            self.floor_level,
+            self.tile_width * y as f32,
+        )
     }
-    
 }
 
 fn terrain_color_key(mf: BitFlags<MapFeatures>) -> [u8; 3] {
-    if mf.contains(MapFeatures::Water)  { return [38,  90, 179]; }
-    if mf.contains(MapFeatures::Mud)    { return [115, 82,  46]; }
-    if mf.contains(MapFeatures::Snow)   { return [209, 224, 235]; }
-    if mf.contains(MapFeatures::Rock)   { return [ 97,  89,  77]; }
-    if mf.contains(MapFeatures::Grass)  { return [ 56, 140,  56]; }
+    if mf.contains(MapFeatures::Water) {
+        return [38, 90, 179];
+    }
+    if mf.contains(MapFeatures::Mud) {
+        return [115, 82, 46];
+    }
+    if mf.contains(MapFeatures::Snow) {
+        return [209, 224, 235];
+    }
+    if mf.contains(MapFeatures::Rock) {
+        return [97, 89, 77];
+    }
+    if mf.contains(MapFeatures::Grass) {
+        return [56, 140, 56];
+    }
     [140, 133, 122] // Floor (default)
 }
 
@@ -167,11 +184,17 @@ pub fn map_loader(
                 let for_enemies = mf.contains(MapFeatures::ImpassableForEnemies);
 
                 floor_set.insert((col as i32, row as i32));
-                if !for_enemies { map_graph.path_finding_grid.add_vertex((col, row)); }
+                if !for_enemies {
+                    map_graph.path_finding_grid.add_vertex((col, row));
+                }
 
-                if for_players && for_enemies      { imp_all_set.insert((col as i32, row as i32)); }
-                else if for_players                { imp_player_set.insert((col as i32, row as i32)); }
-                else if for_enemies                { imp_alien_set.insert((col as i32, row as i32)); }
+                if for_players && for_enemies {
+                    imp_all_set.insert((col as i32, row as i32));
+                } else if for_players {
+                    imp_player_set.insert((col as i32, row as i32));
+                } else if for_enemies {
+                    imp_alien_set.insert((col as i32, row as i32));
+                }
 
                 if mf.contains(MapFeatures::EnemySpawn) {
                     alien_counter.max_count = 100;
@@ -182,8 +205,14 @@ pub fn map_loader(
                         RigidBody::Static,
                         WindWakerShaderBuilder::default().build(),
                         Collider::cuboid(0.5, 0.5, 0.45),
-                        Position::from((col, row).to_world_coords(&tile_defs) + Vec3::new(0.0, -tile_defs.wall_height, 0.0)),
-                        CollisionLayers::new([CollisionLayer::AlienSpawnPoint], [CollisionLayer::Player]),
+                        Position::from(
+                            (col, row).to_world_coords(&tile_defs)
+                                + Vec3::new(0.0, -tile_defs.wall_height, 0.0),
+                        ),
+                        CollisionLayers::new(
+                            [CollisionLayer::AlienSpawnPoint],
+                            [CollisionLayer::Player],
+                        ),
                     ));
                 }
                 if mf.contains(MapFeatures::EnemyExit) {
@@ -195,8 +224,18 @@ pub fn map_loader(
                         RigidBody::Static,
                         WindWakerShaderBuilder::default().build(),
                         Collider::cuboid(0.5, 0.5, 0.45),
-                        Position::from((col, row).to_world_coords(&tile_defs) + Vec3::new(0.0, -tile_defs.wall_height, 0.0)),
-                        CollisionLayers::new([CollisionLayer::AlienGoal], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
+                        Position::from(
+                            (col, row).to_world_coords(&tile_defs)
+                                + Vec3::new(0.0, -tile_defs.wall_height, 0.0),
+                        ),
+                        CollisionLayers::new(
+                            [CollisionLayer::AlienGoal],
+                            [
+                                CollisionLayer::Ball,
+                                CollisionLayer::Alien,
+                                CollisionLayer::Player,
+                            ],
+                        ),
                     ));
                 }
                 if mf.contains(MapFeatures::PlayerSpawn) {
@@ -214,23 +253,38 @@ pub fn map_loader(
             let mut covered = vec![vec![false; cols]; rows];
             for row in 0..rows {
                 for col in 0..cols {
-                    if covered[row][col] || !floor_set.contains(&(col as i32, row as i32)) { continue; }
+                    if covered[row][col] || !floor_set.contains(&(col as i32, row as i32)) {
+                        continue;
+                    }
                     let mut max_col = col;
-                    while max_col + 1 < cols && floor_set.contains(&((max_col + 1) as i32, row as i32)) && !covered[row][max_col + 1] {
+                    while max_col + 1 < cols
+                        && floor_set.contains(&((max_col + 1) as i32, row as i32))
+                        && !covered[row][max_col + 1]
+                    {
                         max_col += 1;
                     }
                     let mut max_row = row;
                     'extend_floor: loop {
-                        if max_row + 1 >= rows { break; }
+                        if max_row + 1 >= rows {
+                            break;
+                        }
                         #[allow(clippy::needless_range_loop)]
                         for c in col..=max_col {
-                            if !floor_set.contains(&(c as i32, (max_row + 1) as i32)) || covered[max_row + 1][c] { break 'extend_floor; }
+                            if !floor_set.contains(&(c as i32, (max_row + 1) as i32))
+                                || covered[max_row + 1][c]
+                            {
+                                break 'extend_floor;
+                            }
                         }
                         max_row += 1;
                     }
-                    
+
                     #[allow(clippy::needless_range_loop)]
-                    for r in row..=max_row { for c in col..=max_col { covered[r][c] = true; } }
+                    for r in row..=max_row {
+                        for c in col..=max_col {
+                            covered[r][c] = true;
+                        }
+                    }
                     let w = (max_col - col + 1) as f32;
                     let h = (max_row - row + 1) as f32;
                     // Sunk by its own half-height so the slab's *top* is the visual floor
@@ -243,10 +297,17 @@ pub fn map_loader(
                         tile_defs.tile_width * (row + max_row) as f32 / 2.0,
                     );
                     commands.spawn((
-                        Name::from(format!("Floor Collider {}:{} {}x{}", col, row, w as i32, h as i32)),
+                        Name::from(format!(
+                            "Floor Collider {}:{} {}x{}",
+                            col, row, w as i32, h as i32
+                        )),
                         Floor {},
                         floor_model_def.rigid_body,
-                        tile_defs.create_collider(floor_model_def.width * w, floor_model_def.height, floor_model_def.depth * h),
+                        tile_defs.create_collider(
+                            floor_model_def.width * w,
+                            floor_model_def.height,
+                            floor_model_def.depth * h,
+                        ),
                         Position::from(center),
                         floor_model_def.create_collision_layers(),
                         WindWakerShaderBuilder::default().build(),
@@ -267,31 +328,59 @@ pub fn map_loader(
             for row in 0..rows {
                 for col in 0..cols {
                     let raw = m[row][col];
-                    if raw == 0 { continue; }
+                    if raw == 0 {
+                        continue;
+                    }
                     let mf = BitFlags::<MapFeatures>::from_bits_truncate(raw);
                     let color_key = terrain_color_key(mf);
                     let entry = terrain_quads.entry(color_key).or_default();
                     let base = entry.0.len() as u32;
                     let (x0, x1) = (tw * (col as f32 - 0.5), tw * (col as f32 + 0.5));
                     let (z0, z1) = (tw * (row as f32 - 0.5), tw * (row as f32 + 0.5));
-                    entry.0.extend_from_slice(&[[x0,y_floor,z0],[x1,y_floor,z0],[x1,y_floor,z1],[x0,y_floor,z1]]);
-                    entry.1.extend_from_slice(&[[0.0,1.0,0.0];4]);
-                    entry.2.extend_from_slice(&[[0.0,0.0],[1.0,0.0],[1.0,1.0],[0.0,1.0]]);
-                    entry.3.extend_from_slice(&[base,base+2,base+1, base,base+3,base+2]);
+                    entry.0.extend_from_slice(&[
+                        [x0, y_floor, z0],
+                        [x1, y_floor, z0],
+                        [x1, y_floor, z1],
+                        [x0, y_floor, z1],
+                    ]);
+                    entry.1.extend_from_slice(&[[0.0, 1.0, 0.0]; 4]);
+                    entry
+                        .2
+                        .extend_from_slice(&[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]);
+                    entry.3.extend_from_slice(&[
+                        base,
+                        base + 2,
+                        base + 1,
+                        base,
+                        base + 3,
+                        base + 2,
+                    ]);
                 }
             }
-            for ([r,g,b], (positions, normals, uvs, indices)) in terrain_quads {
-                let mut mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD);
+            for ([r, g, b], (positions, normals, uvs, indices)) in terrain_quads {
+                let mut mesh = Mesh::new(
+                    PrimitiveTopology::TriangleList,
+                    RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
+                );
                 mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
                 mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
                 mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
                 mesh.insert_indices(Indices::U32(indices));
-                let base_color = Color::srgb(f32::from(r) / 255.0, f32::from(g) / 255.0, f32::from(b) / 255.0);
+                let base_color = Color::srgb(
+                    f32::from(r) / 255.0,
+                    f32::from(g) / 255.0,
+                    f32::from(b) / 255.0,
+                );
                 commands.spawn((
                     Name::from("Floor"),
                     Floor {},
                     Mesh3d(meshes.add(mesh)),
-                    MeshMaterial3d(materials.add(StandardMaterial { base_color, perceptual_roughness: 1.0, metallic: 0.0, ..Default::default() })),
+                    MeshMaterial3d(materials.add(StandardMaterial {
+                        base_color,
+                        perceptual_roughness: 1.0,
+                        metallic: 0.0,
+                        ..Default::default()
+                    })),
                 ));
             }
         }
@@ -305,34 +394,69 @@ pub fn map_loader(
         let tw = tile_defs.tile_width;
 
         let imp_configs: [(&HashSet<(i32, i32)>, CollisionLayers); 3] = [
-            (&imp_all_set,    CollisionLayers::new([CollisionLayer::ImpassableAll],    [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player])),
-            (&imp_player_set, CollisionLayers::new([CollisionLayer::ImpassablePlayer], [CollisionLayer::Player])),
-            (&imp_alien_set,  CollisionLayers::new([CollisionLayer::ImpassableAlien],  [CollisionLayer::Alien])),
+            (
+                &imp_all_set,
+                CollisionLayers::new(
+                    [CollisionLayer::ImpassableAll],
+                    [
+                        CollisionLayer::Ball,
+                        CollisionLayer::Alien,
+                        CollisionLayer::Player,
+                    ],
+                ),
+            ),
+            (
+                &imp_player_set,
+                CollisionLayers::new([CollisionLayer::ImpassablePlayer], [CollisionLayer::Player]),
+            ),
+            (
+                &imp_alien_set,
+                CollisionLayers::new([CollisionLayer::ImpassableAlien], [CollisionLayer::Alien]),
+            ),
         ];
 
         for (set, layers) in &imp_configs {
             let mut covered = vec![vec![false; cols]; rows];
             for row in 0..rows {
                 for col in 0..cols {
-                    if covered[row][col] || !set.contains(&(col as i32, row as i32)) { continue; }
+                    if covered[row][col] || !set.contains(&(col as i32, row as i32)) {
+                        continue;
+                    }
                     let mut max_col = col;
-                    while max_col + 1 < cols && set.contains(&((max_col + 1) as i32, row as i32)) && !covered[row][max_col + 1] {
+                    while max_col + 1 < cols
+                        && set.contains(&((max_col + 1) as i32, row as i32))
+                        && !covered[row][max_col + 1]
+                    {
                         max_col += 1;
                     }
                     let mut max_row = row;
                     'extend_imp: loop {
-                        if max_row + 1 >= rows { break; }
+                        if max_row + 1 >= rows {
+                            break;
+                        }
                         #[allow(clippy::needless_range_loop)]
                         for c in col..=max_col {
-                            if !set.contains(&(c as i32, (max_row + 1) as i32)) || covered[max_row + 1][c] { break 'extend_imp; }
+                            if !set.contains(&(c as i32, (max_row + 1) as i32))
+                                || covered[max_row + 1][c]
+                            {
+                                break 'extend_imp;
+                            }
                         }
                         max_row += 1;
                     }
                     #[allow(clippy::needless_range_loop)]
-                    for r in row..=max_row { for c in col..=max_col { covered[r][c] = true; } }
+                    for r in row..=max_row {
+                        for c in col..=max_col {
+                            covered[r][c] = true;
+                        }
+                    }
                     let w = (max_col - col + 1) as f32;
                     let h = (max_row - row + 1) as f32;
-                    let center = Vec3::new(tw * (col + max_col) as f32 / 2.0, block_y, tw * (row + max_row) as f32 / 2.0);
+                    let center = Vec3::new(
+                        tw * (col + max_col) as f32 / 2.0,
+                        block_y,
+                        tw * (row + max_row) as f32 / 2.0,
+                    );
                     commands.spawn((
                         RigidBody::Static,
                         Collider::cuboid(tw * w, block_half_h, tw * h),
@@ -366,20 +490,25 @@ pub fn map_loader(
 
         // Spawn editor-placed model defs.
         for placement in &map_file.placements {
-            let Ok(text) = std::fs::read_to_string(&placement.def_path) else { continue };
-            let Ok(def) = ron::from_str::<AssetDefinition>(&text) else { continue };
+            let Ok(text) = std::fs::read_to_string(&placement.def_path) else {
+                continue;
+            };
+            let Ok(def) = ron::from_str::<AssetDefinition>(&text) else {
+                continue;
+            };
 
             let pos = Vec3::new(
                 tile_defs.tile_width * placement.x as f32,
                 tile_defs.floor_level + tile_defs.tile_depth,
                 tile_defs.tile_width * placement.y as f32,
             );
-            let rot = Quat::from_rotation_y(f32::from(placement.rotation_steps) * std::f32::consts::FRAC_PI_4);
+            let rot = Quat::from_rotation_y(
+                f32::from(placement.rotation_steps) * std::f32::consts::FRAC_PI_4,
+            );
             let scale = Vec3::splat(def.scale);
 
-            let scene_handle = asset_server.load(
-                bevy::gltf::GltfAssetLabel::Scene(0).from_asset(def.model_path.clone())
-            );
+            let scene_handle = asset_server
+                .load(bevy::gltf::GltfAssetLabel::Scene(0).from_asset(def.model_path.clone()));
 
             let tile_coord = (placement.x as usize, placement.y as usize);
 
@@ -388,7 +517,9 @@ pub fn map_loader(
                     let mut ec = commands.spawn((
                         Name::from(format!("Placement {}:{}", placement.x, placement.y)),
                         WorldAssetRoot(scene_handle),
-                        Transform::from_translation(pos).with_rotation(rot).with_scale(scale),
+                        Transform::from_translation(pos)
+                            .with_rotation(rot)
+                            .with_scale(scale),
                         CurrentTile { tile: tile_coord },
                         RigidBody::Static,
                     ));
@@ -397,7 +528,14 @@ pub fn map_loader(
                             IsObstacle,
                             Faction::Structure,
                             tile_defs.create_collider(16.0, 8.0, 16.0),
-                            CollisionLayers::new([CollisionLayer::ImpassableAll], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
+                            CollisionLayers::new(
+                                [CollisionLayer::ImpassableAll],
+                                [
+                                    CollisionLayer::Ball,
+                                    CollisionLayer::Alien,
+                                    CollisionLayer::Player,
+                                ],
+                            ),
                         ));
                         map_graph.path_finding_grid.remove_vertex(tile_coord);
                     }
@@ -415,7 +553,9 @@ pub fn map_loader(
                                 ec.insert(ExplodesOnDeath(blast.clone()));
                             }
                         }
-                        None => { ec.insert(Indestructible); }
+                        None => {
+                            ec.insert(Indestructible);
+                        }
                     }
                 }
                 ModelType::Tower(props) => {
@@ -425,9 +565,18 @@ pub fn map_loader(
                         IsObstacle,
                         Faction::Structure,
                         WorldAssetRoot(scene_handle),
-                        Transform::from_translation(pos).with_rotation(rot).with_scale(scale),
+                        Transform::from_translation(pos)
+                            .with_rotation(rot)
+                            .with_scale(scale),
                         tile_defs.create_collider(16.0, 8.0, 16.0),
-                        CollisionLayers::new([CollisionLayer::ImpassableAll], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
+                        CollisionLayers::new(
+                            [CollisionLayer::ImpassableAll],
+                            [
+                                CollisionLayer::Ball,
+                                CollisionLayer::Alien,
+                                CollisionLayer::Player,
+                            ],
+                        ),
                         RigidBody::Static,
                         CurrentTile { tile: tile_coord },
                         Health::full(hp),
@@ -437,13 +586,18 @@ pub fn map_loader(
                     }
                     spawn_tower_sensor(&mut ec, props, pos);
                     map_graph.path_finding_grid.remove_vertex(tile_coord);
-                    add_health_bar_mw.write(AddHealthBar { entity: ec.id(), name: "TOWER" });
+                    add_health_bar_mw.write(AddHealthBar {
+                        entity: ec.id(),
+                        name: "TOWER",
+                    });
                 }
                 ModelType::Item(props) => {
                     let mut ec = commands.spawn((
                         Name::from(format!("Item {}:{}", placement.x, placement.y)),
                         WorldAssetRoot(scene_handle),
-                        Transform::from_translation(pos).with_rotation(rot).with_scale(scale),
+                        Transform::from_translation(pos)
+                            .with_rotation(rot)
+                            .with_scale(scale),
                     ));
                     // Anything but set dressing is collectable where it was placed.
                     if props.kind.is_pickup() {
@@ -455,7 +609,9 @@ pub fn map_loader(
                     commands.spawn((
                         Name::from(format!("Item {}:{}", placement.x, placement.y)),
                         WorldAssetRoot(scene_handle),
-                        Transform::from_translation(pos).with_rotation(rot).with_scale(scale),
+                        Transform::from_translation(pos)
+                            .with_rotation(rot)
+                            .with_scale(scale),
                     ));
                 }
             }
@@ -494,7 +650,12 @@ pub fn update_current_tile_system(
 ) {
     map_graph.occupied_tiles.clear();
     for (position, mut current_tile, is_build_indicator) in current_tile_query.iter_mut() {
-        current_tile.tile = ((((position.0.x + tile_definitions.tile_width / 2.0) / tile_definitions.tile_size) as usize), (((position.0.z + tile_definitions.tile_width / 2.0) / tile_definitions.tile_size) as usize));
+        current_tile.tile = (
+            (((position.0.x + tile_definitions.tile_width / 2.0) / tile_definitions.tile_size)
+                as usize),
+            (((position.0.z + tile_definitions.tile_width / 2.0) / tile_definitions.tile_size)
+                as usize),
+        );
         if !is_build_indicator {
             map_graph.occupied_tiles.insert(current_tile.tile);
         }
@@ -506,14 +667,13 @@ pub fn remove_tile_from_map(
     mut map_graph: ResMut<MapGraph>,
 ) {
     for remove_tile_event in remove_tile_evr.read() {
-        map_graph.path_finding_grid.remove_vertex(remove_tile_event.0);
+        map_graph
+            .path_finding_grid
+            .remove_vertex(remove_tile_event.0);
     }
 }
 
-pub fn add_tile_to_map(
-    mut add_tile_evr: MessageReader<AddTile>,
-    mut map_graph: ResMut<MapGraph>,
-) {
+pub fn add_tile_to_map(mut add_tile_evr: MessageReader<AddTile>, mut map_graph: ResMut<MapGraph>) {
     for add_tile_event in add_tile_evr.read() {
         map_graph.path_finding_grid.add_vertex(add_tile_event.0);
         map_graph.path_reopened = true;

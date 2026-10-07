@@ -5,13 +5,11 @@
 //! Chunks are procedural (small dark-red cuboids) so there's no art dependency — a
 //! generic "man-beast" gore burst. Per-enemy gib sets can come later via `EnemyProps`.
 
-use avian3d::prelude::{
-    AngularVelocity, Collider, CollisionLayers, LinearVelocity, RigidBody,
-};
+use avian3d::prelude::{AngularVelocity, Collider, CollisionLayers, LinearVelocity, RigidBody};
 use bevy::prelude::*;
 
 use crate::general::components::CollisionLayer;
-use crate::gore::components::{Ephemeral, EntityDied, GoreBudget};
+use crate::gore::components::{EntityDied, Ephemeral, GoreBudget};
 
 /// Shared gib mesh + material, built once at startup.
 #[derive(Resource)]

@@ -12,7 +12,6 @@
 // genuinely risky spots are fixed individually.
 #![allow(clippy::arithmetic_side_effects, clippy::indexing_slicing)]
 
-
 use crate::general::components::map_components::DecorationItem;
 use crate::map::MapFeatures;
 use enumflags2::BitFlags;
@@ -71,7 +70,11 @@ pub struct ScatterOptions {
 
 impl Default for ScatterOptions {
     fn default() -> Self {
-        Self { ground: 0.16, cover: 0.05, landmark: 0.015 }
+        Self {
+            ground: 0.16,
+            cover: 0.05,
+            landmark: 0.015,
+        }
     }
 }
 
@@ -119,7 +122,11 @@ fn is_dressable(bits: u64) -> bool {
 /// Scatter decorations across the dressable floor of `tiles`. Deterministic for a seed.
 /// At most one prop per tile (landmark > cover > ground precedence, so big things win
 /// their tile). `x = col`, `y = row` to match `DecorationItem` / the tile layout.
-pub fn scatter_decorations(seed: u64, tiles: &[Vec<u64>], opts: ScatterOptions) -> Vec<DecorationItem> {
+pub fn scatter_decorations(
+    seed: u64,
+    tiles: &[Vec<u64>],
+    opts: ScatterOptions,
+) -> Vec<DecorationItem> {
     let mut rng = Rng::new(seed);
     let mut out = Vec::new();
 
@@ -199,28 +206,64 @@ mod tests {
     fn nothing_lands_on_walls_void_or_spawn_goal() {
         let g = test_grid();
         // High density to stress it.
-        let opts = ScatterOptions { ground: 0.9, cover: 0.05, landmark: 0.02 };
+        let opts = ScatterOptions {
+            ground: 0.9,
+            cover: 0.05,
+            landmark: 0.02,
+        };
         let decs = scatter_decorations(3, &g, opts);
-        assert!(!decs.is_empty(), "something should be placed on the interior floor");
+        assert!(
+            !decs.is_empty(),
+            "something should be placed on the interior floor"
+        );
         for d in &decs {
             let bits = g[d.y as usize][d.x as usize];
-            assert!(is_dressable(bits), "decoration landed on a non-dressable tile at {:?}", (d.x, d.y));
+            assert!(
+                is_dressable(bits),
+                "decoration landed on a non-dressable tile at {:?}",
+                (d.x, d.y)
+            );
         }
     }
 
     #[test]
     fn zero_chance_scatters_nothing() {
         let g = test_grid();
-        let opts = ScatterOptions { ground: 0.0, cover: 0.0, landmark: 0.0 };
+        let opts = ScatterOptions {
+            ground: 0.0,
+            cover: 0.0,
+            landmark: 0.0,
+        };
         assert!(scatter_decorations(1, &g, opts).is_empty());
     }
 
     #[test]
     fn higher_density_places_more_props() {
         let g = test_grid();
-        let sparse = scatter_decorations(5, &g, ScatterOptions { ground: 0.05, cover: 0.0, landmark: 0.0 });
-        let dense = scatter_decorations(5, &g, ScatterOptions { ground: 0.8, cover: 0.0, landmark: 0.0 });
-        assert!(dense.len() > sparse.len(), "more density -> more props ({} vs {})", dense.len(), sparse.len());
+        let sparse = scatter_decorations(
+            5,
+            &g,
+            ScatterOptions {
+                ground: 0.05,
+                cover: 0.0,
+                landmark: 0.0,
+            },
+        );
+        let dense = scatter_decorations(
+            5,
+            &g,
+            ScatterOptions {
+                ground: 0.8,
+                cover: 0.0,
+                landmark: 0.0,
+            },
+        );
+        assert!(
+            dense.len() > sparse.len(),
+            "more density -> more props ({} vs {})",
+            dense.len(),
+            sparse.len()
+        );
     }
 
     #[test]
@@ -232,7 +275,10 @@ mod tests {
                     ext.is_some_and(|ext| ext.eq_ignore_ascii_case("glb")),
                     "'{model}' should be a glb path"
                 );
-                assert!(model.starts_with("packs/"), "'{model}' should be assets-relative");
+                assert!(
+                    model.starts_with("packs/"),
+                    "'{model}' should be assets-relative"
+                );
                 assert!(scale > 0.0, "'{model}' needs a positive scale");
             }
         }

@@ -3,14 +3,14 @@ mod commands;
 mod input;
 mod ui;
 
-use std::io;
 use crossterm::{
     event::{self, Event, KeyEventKind},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use ratatui::{backend::CrosstermBackend, Terminal};
 use input::Action;
+use ratatui::{Terminal, backend::CrosstermBackend};
+use std::io;
 
 pub fn run(file_path: Option<String>) -> io::Result<()> {
     enable_raw_mode()?;
@@ -33,7 +33,7 @@ pub fn run(file_path: Option<String>) -> io::Result<()> {
                 let size = terminal.size()?;
                 let cell_w = 2usize;
                 let canvas_h = (size.height as usize).saturating_sub(6); // borders + status
-                let canvas_w = (size.width as usize).saturating_sub(2);  // borders
+                let canvas_w = (size.width as usize).saturating_sub(2); // borders
                 let viewport_cols = canvas_w / cell_w;
                 let viewport_rows = canvas_h;
 

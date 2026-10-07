@@ -1,9 +1,9 @@
+use crate::poly_pizza::client::{self, SearchFilters};
+use crate::poly_pizza::types::{ListResponse, SearchResponse, UserResponse};
+use bevy::prelude::Resource;
 use std::path::PathBuf;
 use std::sync::Mutex;
 use std::sync::mpsc::{Receiver, Sender, channel};
-use bevy::prelude::Resource;
-use crate::poly_pizza::client::{self, SearchFilters};
-use crate::poly_pizza::types::{ListResponse, SearchResponse, UserResponse};
 
 #[derive(Resource)]
 pub struct PolyPizzaConfig {
@@ -12,13 +12,26 @@ pub struct PolyPizzaConfig {
 }
 
 pub enum ApiRequest {
-    SearchKeyword { keyword: String, filters: SearchFilters },
-    SearchFilters { filters: SearchFilters },
+    SearchKeyword {
+        keyword: String,
+        filters: SearchFilters,
+    },
+    SearchFilters {
+        filters: SearchFilters,
+    },
     #[allow(dead_code)]
     GetList(String),
     GetUser(String),
-    DownloadGlb { id: String, url: String, dest: PathBuf },
-    DownloadThumbnail { id: String, url: String, dest: PathBuf },
+    DownloadGlb {
+        id: String,
+        url: String,
+        dest: PathBuf,
+    },
+    DownloadThumbnail {
+        id: String,
+        url: String,
+        dest: PathBuf,
+    },
 }
 
 pub enum ApiResponse {
@@ -58,12 +71,10 @@ pub fn spawn_api_thread(api_key: String) -> ApiChannels {
                                 Err(e) => ApiResponse::Error(e.to_string()),
                             }
                         }
-                        ApiRequest::GetList(id) => {
-                            match client::get_list(&api_key, &id) {
-                                Ok(r) => ApiResponse::ListResults(r),
-                                Err(e) => ApiResponse::Error(e.to_string()),
-                            }
-                        }
+                        ApiRequest::GetList(id) => match client::get_list(&api_key, &id) {
+                            Ok(r) => ApiResponse::ListResults(r),
+                            Err(e) => ApiResponse::Error(e.to_string()),
+                        },
                         ApiRequest::GetUser(username) => {
                             match client::get_user(&api_key, &username) {
                                 Ok(r) => ApiResponse::UserResults(r),
@@ -91,5 +102,8 @@ pub fn spawn_api_thread(api_key: String) -> ApiChannels {
         }
     });
 
-    ApiChannels { tx: req_tx, rx: Mutex::new(resp_rx) }
+    ApiChannels {
+        tx: req_tx,
+        rx: Mutex::new(resp_rx),
+    }
 }

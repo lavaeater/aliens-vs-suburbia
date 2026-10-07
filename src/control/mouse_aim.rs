@@ -19,13 +19,22 @@ use crate::player::components::{AutoAim, Player, PlayerDead};
 pub fn mouse_aim(
     windows: Query<&Window, With<PrimaryWindow>>,
     cameras: Query<(&Camera, &GlobalTransform), With<GameCamera>>,
-    mut players: Query<(&GlobalTransform, &mut AutoAim), (With<Player>, With<InputKeyboard>, Without<PlayerDead>)>,
+    mut players: Query<
+        (&GlobalTransform, &mut AutoAim),
+        (With<Player>, With<InputKeyboard>, Without<PlayerDead>),
+    >,
 ) {
     let Ok(window) = windows.single() else { return };
-    let Some(cursor) = window.cursor_position() else { return };
+    let Some(cursor) = window.cursor_position() else {
+        return;
+    };
     // The active window-rendering game camera (the pixelated render-texture cam is dead code).
-    let Some((camera, cam_tf)) = cameras.iter().find(|(c, _)| c.is_active) else { return };
-    let Ok(ray) = camera.viewport_to_world(cam_tf, cursor) else { return };
+    let Some((camera, cam_tf)) = cameras.iter().find(|(c, _)| c.is_active) else {
+        return;
+    };
+    let Ok(ray) = camera.viewport_to_world(cam_tf, cursor) else {
+        return;
+    };
 
     for (player_tf, mut aim) in players.iter_mut() {
         if let Some(dir) = ground_aim_from_ray(ray, player_tf.translation()) {
@@ -52,9 +61,15 @@ mod tests {
     #[test]
     fn ray_straight_down_aims_from_player_to_the_hit_point() {
         // Cursor ray drops straight down onto (2, 0, 0); player sits at the origin.
-        let ray = Ray3d { origin: Vec3::new(2.0, 10.0, 0.0), direction: Dir3::NEG_Y };
+        let ray = Ray3d {
+            origin: Vec3::new(2.0, 10.0, 0.0),
+            direction: Dir3::NEG_Y,
+        };
         let dir = ground_aim_from_ray(ray, Vec3::ZERO).expect("ray meets the ground");
-        assert!((dir - Vec3::X).length() < 1e-5, "aim points +X toward the hit, got {dir:?}");
+        assert!(
+            (dir - Vec3::X).length() < 1e-5,
+            "aim points +X toward the hit, got {dir:?}"
+        );
     }
 
     #[test]
@@ -71,13 +86,22 @@ mod tests {
 
     #[test]
     fn ray_parallel_to_the_ground_has_no_aim() {
-        let ray = Ray3d { origin: Vec3::new(0.0, 5.0, 0.0), direction: Dir3::X };
+        let ray = Ray3d {
+            origin: Vec3::new(0.0, 5.0, 0.0),
+            direction: Dir3::X,
+        };
         assert!(ground_aim_from_ray(ray, Vec3::ZERO).is_none());
     }
 
     #[test]
     fn ray_landing_on_the_player_has_no_aim() {
-        let ray = Ray3d { origin: Vec3::new(0.0, 10.0, 0.0), direction: Dir3::NEG_Y };
-        assert!(ground_aim_from_ray(ray, Vec3::ZERO).is_none(), "zero-length direction is rejected");
+        let ray = Ray3d {
+            origin: Vec3::new(0.0, 10.0, 0.0),
+            direction: Dir3::NEG_Y,
+        };
+        assert!(
+            ground_aim_from_ray(ray, Vec3::ZERO).is_none(),
+            "zero-length direction is rejected"
+        );
     }
 }

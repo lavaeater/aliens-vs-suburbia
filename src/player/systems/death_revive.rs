@@ -13,7 +13,7 @@
 
 use avian3d::prelude::{LinearVelocity, Position};
 use bevy::prelude::*;
-use lava_ui_builder::{progress_bar, WorldFollower};
+use lava_ui_builder::{WorldFollower, progress_bar};
 
 use crate::alien::components::general::Alien;
 use crate::animation::animation_plugin::{AnimationEvent, AnimationEventType, AnimationKey};
@@ -86,15 +86,31 @@ pub fn detect_player_death(
     mut anim_ew: MessageWriter<AnimationEvent>,
 ) {
     for (entity, health, mut vel) in query.iter_mut() {
-        if !health.is_dead() { continue; }
+        if !health.is_dead() {
+            continue;
+        }
 
         vel.0 = Vec3::ZERO;
 
-        let bar = commands.spawn((
-            WorldFollower { target: entity, offset: Vec2::new(-30.0, -60.0) },
-            progress_bar(0.0, 60.0, 8.0, Color::srgb(0.2, 0.6, 1.0), Color::srgba(0.0, 0.0, 0.0, 0.6)),
-            Node { position_type: PositionType::Absolute, ..default() },
-        )).id();
+        let bar = commands
+            .spawn((
+                WorldFollower {
+                    target: entity,
+                    offset: Vec2::new(-30.0, -60.0),
+                },
+                progress_bar(
+                    0.0,
+                    60.0,
+                    8.0,
+                    Color::srgb(0.2, 0.6, 1.0),
+                    Color::srgba(0.0, 0.0, 0.0, 0.6),
+                ),
+                Node {
+                    position_type: PositionType::Absolute,
+                    ..default()
+                },
+            ))
+            .id();
 
         commands.entity(entity).insert(PlayerDead {
             revive_progress: 0.0,
@@ -102,7 +118,11 @@ pub fn detect_player_death(
             bleed_out: settings.bleed_out_secs,
         });
 
-        anim_ew.write(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Death));
+        anim_ew.write(AnimationEvent(
+            AnimationEventType::GotoAnimState,
+            entity,
+            AnimationKey::Death,
+        ));
     }
 }
 
@@ -119,13 +139,15 @@ pub fn player_revive_system(
 ) {
     for (dead_entity, dead_pos, mut dead, mut health) in dead_players.iter_mut() {
         let helped = living_players.iter().any(|(p, control)| {
-            control.triggers.contains(&ControlCommand::Interact) && p.0.distance(dead_pos.0) <= REVIVE_RANGE
+            control.triggers.contains(&ControlCommand::Interact)
+                && p.0.distance(dead_pos.0) <= REVIVE_RANGE
         });
 
         if helped {
             dead.revive_progress += time.delta_secs() / REVIVE_DURATION;
         } else {
-            dead.revive_progress = (dead.revive_progress - time.delta_secs() / REVIVE_DURATION).max(0.0);
+            dead.revive_progress =
+                (dead.revive_progress - time.delta_secs() / REVIVE_DURATION).max(0.0);
         }
 
         // Sync progress bar.
@@ -142,7 +164,11 @@ pub fn player_revive_system(
             }
             health.health = health.max_health / 2;
             commands.entity(dead_entity).remove::<PlayerDead>();
-            anim_ew.write(AnimationEvent(AnimationEventType::LeaveAnimState, dead_entity, AnimationKey::Death));
+            anim_ew.write(AnimationEvent(
+                AnimationEventType::LeaveAnimState,
+                dead_entity,
+                AnimationKey::Death,
+            ));
         }
     }
 }
@@ -156,7 +182,16 @@ pub fn tick_bleed_out(
     settings: Res<GameSettings>,
     mut queue: ResMut<RespawnQueue>,
     mut downed: Query<
-        (Entity, &PlayerSlot, &Position, &mut PlayerDead, Option<&Lives>, Option<&Weapons>, Option<&AmmoPouch>, Option<&LastHit>),
+        (
+            Entity,
+            &PlayerSlot,
+            &Position,
+            &mut PlayerDead,
+            Option<&Lives>,
+            Option<&Weapons>,
+            Option<&AmmoPouch>,
+            Option<&LastHit>,
+        ),
         With<Player>,
     >,
     mut died_mw: MessageWriter<EntityDied>,
@@ -170,11 +205,16 @@ pub fn tick_bleed_out(
 
         if settings.drop_on_death {
             for (i, kind) in dropped_kit(loadout, pouch).into_iter().enumerate() {
-                spawn_item_mw.write(SpawnItem { kind, position: pos.0 + scatter(i) });
+                spawn_item_mw.write(SpawnItem {
+                    kind,
+                    position: pos.0 + scatter(i),
+                });
             }
         }
 
-        let lives_left = lives.map_or(settings.lives_per_player, |l| l.0).saturating_sub(1);
+        let lives_left = lives
+            .map_or(settings.lives_per_player, |l| l.0)
+            .saturating_sub(1);
         if lives_left > 0 {
             queue.pending.push(Respawning {
                 slot: slot.0,
@@ -187,8 +227,16 @@ pub fn tick_bleed_out(
             queue.out.push(slot.0);
         }
 
-        let last = last_hit.copied().unwrap_or(LastHit { normal: Vec3::Y, kind: DamageKind::Blunt });
-        died_mw.write(EntityDied { entity, position: pos.0, normal: last.normal, kind: last.kind });
+        let last = last_hit.copied().unwrap_or(LastHit {
+            normal: Vec3::Y,
+            kind: DamageKind::Blunt,
+        });
+        died_mw.write(EntityDied {
+            entity,
+            position: pos.0,
+            normal: last.normal,
+            kind: last.kind,
+        });
         if let Some(bar) = dead.revive_bar {
             commands.entity(bar).despawn();
         }
@@ -201,12 +249,21 @@ pub fn tick_bleed_out(
 pub fn dropped_kit(loadout: Option<&Weapons>, pouch: Option<&AmmoPouch>) -> Vec<ItemKind> {
     let mut kit = Vec::new();
     if let Some(loadout) = loadout {
-        kit.extend(loadout.slots.iter().map(|s| ItemKind::WeaponPickup { def: s.def_path.clone() }));
+        kit.extend(loadout.slots.iter().map(|s| ItemKind::WeaponPickup {
+            def: s.def_path.clone(),
+        }));
     }
     if let Some(pouch) = pouch {
         let mut pools: Vec<_> = pouch.0.iter().filter(|(_, n)| **n > 0).collect();
         pools.sort_by_key(|(k, _)| format!("{k:?}"));
-        kit.extend(pools.into_iter().map(|(kind, rounds)| ItemKind::AmmoPickup { kind: *kind, rounds: *rounds }));
+        kit.extend(
+            pools
+                .into_iter()
+                .map(|(kind, rounds)| ItemKind::AmmoPickup {
+                    kind: *kind,
+                    rounds: *rounds,
+                }),
+        );
     }
     kit
 }
@@ -240,12 +297,16 @@ pub fn choose_respawn_anchor(
     for entry in &mut queue.pending {
         let step = match roster.devices.get(entry.slot) {
             Some(InputDevice::Keyboard) => {
-                i32::from(keys.just_pressed(KeyCode::ArrowRight) || keys.just_pressed(KeyCode::KeyD))
-                    - i32::from(keys.just_pressed(KeyCode::ArrowLeft) || keys.just_pressed(KeyCode::KeyA))
+                i32::from(
+                    keys.just_pressed(KeyCode::ArrowRight) || keys.just_pressed(KeyCode::KeyD),
+                ) - i32::from(
+                    keys.just_pressed(KeyCode::ArrowLeft) || keys.just_pressed(KeyCode::KeyA),
+                )
             }
             Some(InputDevice::Gamepad(index)) => match (pads.get(*index), bindings.as_ref()) {
                 (Some(pad), Some(b)) => {
-                    i32::from(pad.just_pressed(b.next_build_item)) - i32::from(pad.just_pressed(b.prev_build_item))
+                    i32::from(pad.just_pressed(b.next_build_item))
+                        - i32::from(pad.just_pressed(b.prev_build_item))
                 }
                 _ => 0,
             },
@@ -262,10 +323,17 @@ pub fn cycle_anchor(current: Option<usize>, living: &[usize], step: i32) -> Opti
     let n = living.len() as i32 + 1; // +1 for "where I fell"
     let idx = match current {
         None => 0,
-        Some(slot) => living.iter().position(|s| *s == slot).map_or(0, |p| p as i32 + 1),
+        Some(slot) => living
+            .iter()
+            .position(|s| *s == slot)
+            .map_or(0, |p| p as i32 + 1),
     };
     let next = (idx + step).rem_euclid(n);
-    if next == 0 { None } else { living.get(next as usize - 1).copied() }
+    if next == 0 {
+        None
+    } else {
+        living.get(next as usize - 1).copied()
+    }
 }
 
 /// Fire `SpawnPlayer` for respawns whose timer has run out.
@@ -292,7 +360,9 @@ pub fn tick_respawns(
         let anchor_pos = entry
             .anchor
             .and_then(|slot| living.iter().find(|(s, _)| s.0 == slot).map(|(_, p)| p.0));
-        let position = if let Some(p) = anchor_pos { p + Vec3::new(0.8, 0.0, 0.8) } else {
+        let position = if let Some(p) = anchor_pos {
+            p + Vec3::new(0.8, 0.0, 0.8)
+        } else {
             let walkable: Vec<Vec3> = match (map_graph.as_ref(), tile_defs.as_ref()) {
                 (Some(graph), Some(defs)) => graph
                     .path_finding_grid
@@ -314,11 +384,18 @@ pub fn tick_respawns(
 /// Nearest walkable tile to `death` with no alien within [`RESPAWN_ALIEN_CLEARANCE`];
 /// the death spot itself when nothing qualifies.
 pub fn respawn_position(death: Vec3, walkable: &[Vec3], aliens: &[Vec3]) -> Vec3 {
-    let clear = |p: &Vec3| aliens.iter().all(|a| a.distance(*p) >= RESPAWN_ALIEN_CLEARANCE);
+    let clear = |p: &Vec3| {
+        aliens
+            .iter()
+            .all(|a| a.distance(*p) >= RESPAWN_ALIEN_CLEARANCE)
+    };
     walkable
         .iter()
         .filter(|p| clear(p))
-        .min_by(|a, b| a.distance_squared(death).total_cmp(&b.distance_squared(death)))
+        .min_by(|a, b| {
+            a.distance_squared(death)
+                .total_cmp(&b.distance_squared(death))
+        })
         .copied()
         .unwrap_or(death)
 }
@@ -329,7 +406,9 @@ pub fn check_team_wipe(
     players: Query<(), With<Player>>,
     mut tracker: Option<ResMut<LevelTracker>>,
 ) {
-    let Some(tracker) = tracker.as_mut() else { return };
+    let Some(tracker) = tracker.as_mut() else {
+        return;
+    };
     if !queue.started || !players.is_empty() || !queue.pending.is_empty() {
         return;
     }
@@ -352,19 +431,38 @@ mod tests {
         let living = [0, 2];
         assert_eq!(cycle_anchor(None, &living, 1), Some(0));
         assert_eq!(cycle_anchor(Some(0), &living, 1), Some(2));
-        assert_eq!(cycle_anchor(Some(2), &living, 1), None, "wraps back to the death spot");
+        assert_eq!(
+            cycle_anchor(Some(2), &living, 1),
+            None,
+            "wraps back to the death spot"
+        );
         assert_eq!(cycle_anchor(None, &living, -1), Some(2), "and backwards");
-        assert_eq!(cycle_anchor(Some(9), &living, 1), Some(0), "a dead anchor restarts from the top");
+        assert_eq!(
+            cycle_anchor(Some(9), &living, 1),
+            Some(0),
+            "a dead anchor restarts from the top"
+        );
     }
 
     #[test]
     fn respawn_prefers_the_nearest_tile_clear_of_aliens() {
         let death = Vec3::ZERO;
-        let walkable = [Vec3::new(1.0, 0.0, 0.0), Vec3::new(6.0, 0.0, 0.0), Vec3::new(-8.0, 0.0, 0.0)];
+        let walkable = [
+            Vec3::new(1.0, 0.0, 0.0),
+            Vec3::new(6.0, 0.0, 0.0),
+            Vec3::new(-8.0, 0.0, 0.0),
+        ];
         let aliens = [Vec3::new(2.0, 0.0, 0.0)];
         // (1,0,0) is 1 unit from the alien: rejected. (6,0,0) is 4 away: fine and nearer than -8.
-        assert_eq!(respawn_position(death, &walkable, &aliens), Vec3::new(6.0, 0.0, 0.0));
-        assert_eq!(respawn_position(death, &[], &aliens), death, "nothing walkable: fall back to the spot");
+        assert_eq!(
+            respawn_position(death, &walkable, &aliens),
+            Vec3::new(6.0, 0.0, 0.0)
+        );
+        assert_eq!(
+            respawn_position(death, &[], &aliens),
+            death,
+            "nothing walkable: fall back to the spot"
+        );
     }
 
     #[test]
@@ -374,6 +472,12 @@ mod tests {
         let kit = dropped_kit(Some(&loadout), Some(&pouch));
         assert_eq!(kit.len(), 3);
         assert!(matches!(&kit[0], ItemKind::WeaponPickup { def } if def == "a.ron"));
-        assert!(matches!(&kit[2], ItemKind::AmmoPickup { kind: AmmoKind::Pistol, rounds: 10 }));
+        assert!(matches!(
+            &kit[2],
+            ItemKind::AmmoPickup {
+                kind: AmmoKind::Pistol,
+                rounds: 10
+            }
+        ));
     }
 }

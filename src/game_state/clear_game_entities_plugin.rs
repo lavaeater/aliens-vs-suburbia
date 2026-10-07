@@ -1,14 +1,13 @@
+use crate::game_state::GameState;
+use avian3d::prelude::{Collider, RigidBody};
 use bevy::app::{App, Plugin};
 use bevy::prelude::{Commands, Entity, OnExit, Query, Window, Without};
-use avian3d::prelude::{Collider, RigidBody};
-use crate::game_state::GameState;
 
 pub struct ClearGameEntitiesPlugin;
 
 impl Plugin for ClearGameEntitiesPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_systems(OnExit(GameState::InGame), clear_game_entities)
+        app.add_systems(OnExit(GameState::InGame), clear_game_entities)
             .add_systems(OnExit(GameState::ModelShowcase), clear_game_entities);
     }
 }

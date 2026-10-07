@@ -1,9 +1,9 @@
-use bevy::prelude::*;
-use bevy::input::mouse::MouseButton;
-use bevy::window::PrimaryWindow;
 use crate::house_editor::state::HouseEditorState;
 use crate::map::procgen::WallCellKind;
 use crate::ui::spawn_ui::StateMarker;
+use bevy::input::mouse::MouseButton;
+use bevy::prelude::*;
+use bevy::window::PrimaryWindow;
 
 /// Pixels per whole-number world unit. No grid is drawn — this is only used to place
 /// nodes and result cells on screen; the underlying coordinates are just integers.
@@ -18,7 +18,10 @@ pub struct HouseCanvasMarker;
 pub fn spawn_house_editor_camera(mut commands: Commands) {
     commands.spawn((
         Camera2d,
-        Camera { order: 0, ..default() },
+        Camera {
+            order: 0,
+            ..default()
+        },
         HouseEditorCamera,
         StateMarker,
         Transform::default(),
@@ -38,7 +41,10 @@ fn cursor_to_world(window: &Window) -> Option<(i32, i32)> {
 }
 
 fn world_to_screen(window: &Window, x: i32, y: i32) -> (f32, f32) {
-    (window.width() * 0.5 + x as f32 * UNIT_PX, window.height() * 0.5 + y as f32 * UNIT_PX)
+    (
+        window.width() * 0.5 + x as f32 * UNIT_PX,
+        window.height() * 0.5 + y as f32 * UNIT_PX,
+    )
 }
 
 pub fn handle_canvas_click(
@@ -57,7 +63,9 @@ pub fn handle_canvas_click(
         return;
     }
     if mouse.just_pressed(MouseButton::Left) {
-        let Some((x, y)) = cursor_to_world(window) else { return };
+        let Some((x, y)) = cursor_to_world(window) else {
+            return;
+        };
         state.add_point(x, y);
     }
 }
@@ -79,17 +87,33 @@ pub fn redraw_canvas(
     windows: Query<&Window, With<PrimaryWindow>>,
     existing: Query<Entity, With<HouseCanvasMarker>>,
 ) {
-    for e in existing.iter() { commands.entity(e).despawn(); }
+    for e in existing.iter() {
+        commands.entity(e).despawn();
+    }
 
     let Ok(window) = windows.single() else { return };
 
     // Resolved result first, so in-progress polygon markers draw on top.
     if let Some(result) = &state.resolved {
         for &(x, y) in &result.floor_cells {
-            spawn_cell(&mut commands, window, x, y, Color::srgb(0.20, 0.22, 0.20), UNIT_PX - 2.0);
+            spawn_cell(
+                &mut commands,
+                window,
+                x,
+                y,
+                Color::srgb(0.20, 0.22, 0.20),
+                UNIT_PX - 2.0,
+            );
         }
         for cell in &result.wall_cells {
-            spawn_cell(&mut commands, window, cell.x, cell.y, wall_kind_color(cell.kind), UNIT_PX - 2.0);
+            spawn_cell(
+                &mut commands,
+                window,
+                cell.x,
+                cell.y,
+                wall_kind_color(cell.kind),
+                UNIT_PX - 2.0,
+            );
         }
     }
 
@@ -100,15 +124,29 @@ pub fn redraw_canvas(
         let (x0, y0) = world_to_screen(window, p0.0, p0.1);
         let (x1, y1) = world_to_screen(window, p1.0, p1.1);
         let (left, top, width, height) = if (x1 - x0).abs() >= (y1 - y0).abs() {
-            (x0.min(x1), y0 - EDGE_THICKNESS * 0.5, (x1 - x0).abs(), EDGE_THICKNESS)
+            (
+                x0.min(x1),
+                y0 - EDGE_THICKNESS * 0.5,
+                (x1 - x0).abs(),
+                EDGE_THICKNESS,
+            )
         } else {
-            (x0 - EDGE_THICKNESS * 0.5, y0.min(y1), EDGE_THICKNESS, (y1 - y0).abs())
+            (
+                x0 - EDGE_THICKNESS * 0.5,
+                y0.min(y1),
+                EDGE_THICKNESS,
+                (y1 - y0).abs(),
+            )
         };
         commands.spawn((
-            HouseCanvasMarker, StateMarker,
+            HouseCanvasMarker,
+            StateMarker,
             Node {
                 position_type: PositionType::Absolute,
-                left: Val::Px(left), top: Val::Px(top), width: Val::Px(width), height: Val::Px(height),
+                left: Val::Px(left),
+                top: Val::Px(top),
+                width: Val::Px(width),
+                height: Val::Px(height),
                 ..default()
             },
             BackgroundColor(EDGE_COLOR),
@@ -117,15 +155,20 @@ pub fn redraw_canvas(
 
     const NODE_SIZE: f32 = 14.0;
     for (i, &(x, y)) in state.points.iter().enumerate() {
-        let color = if i == 0 { Color::srgba(1.0, 0.9, 0.2, 1.0) } else { Color::srgba(1.0, 1.0, 1.0, 1.0) };
+        let color = if i == 0 {
+            Color::srgba(1.0, 0.9, 0.2, 1.0)
+        } else {
+            Color::srgba(1.0, 1.0, 1.0, 1.0)
+        };
         let (cx, cy) = world_to_screen(window, x, y);
         commands.spawn((
-            HouseCanvasMarker, StateMarker,
+            HouseCanvasMarker,
+            StateMarker,
             Node {
                 position_type: PositionType::Absolute,
                 left: Val::Px(cx - NODE_SIZE * 0.5),
-                top:  Val::Px(cy - NODE_SIZE * 0.5),
-                width:  Val::Px(NODE_SIZE),
+                top: Val::Px(cy - NODE_SIZE * 0.5),
+                width: Val::Px(NODE_SIZE),
                 height: Val::Px(NODE_SIZE),
                 border: UiRect::all(Val::Px(1.5)),
                 ..default()
@@ -138,10 +181,14 @@ pub fn redraw_canvas(
     // Origin marker — the only fixed reference point on an otherwise grid-less canvas.
     let (ox, oy) = world_to_screen(window, 0, 0);
     commands.spawn((
-        HouseCanvasMarker, StateMarker,
+        HouseCanvasMarker,
+        StateMarker,
         Node {
             position_type: PositionType::Absolute,
-            left: Val::Px(ox - 3.0), top: Val::Px(oy - 3.0), width: Val::Px(6.0), height: Val::Px(6.0),
+            left: Val::Px(ox - 3.0),
+            top: Val::Px(oy - 3.0),
+            width: Val::Px(6.0),
+            height: Val::Px(6.0),
             ..default()
         },
         BackgroundColor(Color::srgba(1.0, 0.3, 0.3, 0.9)),
@@ -151,12 +198,13 @@ pub fn redraw_canvas(
 fn spawn_cell(commands: &mut Commands, window: &Window, x: i32, y: i32, color: Color, size: f32) {
     let (cx, cy) = world_to_screen(window, x, y);
     commands.spawn((
-        HouseCanvasMarker, StateMarker,
+        HouseCanvasMarker,
+        StateMarker,
         Node {
             position_type: PositionType::Absolute,
             left: Val::Px(cx - size * 0.5),
-            top:  Val::Px(cy - size * 0.5),
-            width:  Val::Px(size),
+            top: Val::Px(cy - size * 0.5),
+            width: Val::Px(size),
             height: Val::Px(size),
             ..default()
         },

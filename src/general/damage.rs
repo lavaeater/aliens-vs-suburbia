@@ -46,7 +46,11 @@ pub struct DamageRules {
 
 impl Default for DamageRules {
     fn default() -> Self {
-        Self { friendly_fire: false, aliens_hurt_structures: true, players_hurt_structures: false }
+        Self {
+            friendly_fire: false,
+            aliens_hurt_structures: true,
+            players_hurt_structures: false,
+        }
     }
 }
 
@@ -98,7 +102,14 @@ pub struct ApplyDamage {
 impl ApplyDamage {
     /// A hit at `position` with no meaningful direction (spray straight up).
     pub const fn at(target: Entity, amount: i32, kind: DamageKind, position: Vec3) -> Self {
-        Self { target, amount, kind, position, normal: Vec3::Y, source: None }
+        Self {
+            target,
+            amount,
+            kind,
+            position,
+            normal: Vec3::Y,
+            source: None,
+        }
     }
 
     pub const fn from(mut self, source: Entity) -> Self {
@@ -144,7 +155,10 @@ pub fn apply_damage(
         if !rules.allows(source_faction, target_faction.copied()) {
             continue;
         }
-        let amount = scaled(req.amount, resistances.map_or(1.0, |r| r.multiplier(req.kind)));
+        let amount = scaled(
+            req.amount,
+            resistances.map_or(1.0, |r| r.multiplier(req.kind)),
+        );
         if amount <= 0 {
             continue;
         }
@@ -166,7 +180,9 @@ pub fn apply_damage(
             game_mw.write(GameTrackingEvent::ShotHit(source));
         }
         if lethal && was_alive && is_alien {
-            game_mw.write(GameTrackingEvent::AlienKilled(req.source.unwrap_or(req.target)));
+            game_mw.write(GameTrackingEvent::AlienKilled(
+                req.source.unwrap_or(req.target),
+            ));
             if let Some(counter) = alien_counter.as_mut() {
                 counter.count = counter.count.saturating_sub(1);
             }
@@ -222,8 +238,17 @@ mod tests {
     #[test]
     fn a_plain_hit_reduces_health_and_is_announced() {
         let mut app = test_app();
-        let t = app.world_mut().spawn(Health { health: 50, max_health: 50 }).id();
-        hit(&mut app, ApplyDamage::at(t, 20, DamageKind::Ballistic, Vec3::ZERO));
+        let t = app
+            .world_mut()
+            .spawn(Health {
+                health: 50,
+                max_health: 50,
+            })
+            .id();
+        hit(
+            &mut app,
+            ApplyDamage::at(t, 20, DamageKind::Ballistic, Vec3::ZERO),
+        );
         assert_eq!(app.world().get::<Health>(t).unwrap().health, 30);
         let caught = app.world().resource::<Caught>();
         assert_eq!(caught.dealt.len(), 1);
@@ -234,8 +259,20 @@ mod tests {
     #[test]
     fn indestructible_targets_ignore_everything() {
         let mut app = test_app();
-        let t = app.world_mut().spawn((Health { health: 50, max_health: 50 }, Indestructible)).id();
-        hit(&mut app, ApplyDamage::at(t, 999, DamageKind::Explosive, Vec3::ZERO));
+        let t = app
+            .world_mut()
+            .spawn((
+                Health {
+                    health: 50,
+                    max_health: 50,
+                },
+                Indestructible,
+            ))
+            .id();
+        hit(
+            &mut app,
+            ApplyDamage::at(t, 999, DamageKind::Explosive, Vec3::ZERO),
+        );
         assert_eq!(app.world().get::<Health>(t).unwrap().health, 50);
         assert!(app.world().resource::<Caught>().dealt.is_empty());
     }
@@ -244,18 +281,45 @@ mod tests {
     fn friendly_fire_is_off_by_default() {
         let mut app = test_app();
         let shooter = app.world_mut().spawn(Faction::Player).id();
-        let t = app.world_mut().spawn((Health { health: 50, max_health: 50 }, Faction::Player)).id();
-        hit(&mut app, ApplyDamage::at(t, 20, DamageKind::Ballistic, Vec3::ZERO).from(shooter));
+        let t = app
+            .world_mut()
+            .spawn((
+                Health {
+                    health: 50,
+                    max_health: 50,
+                },
+                Faction::Player,
+            ))
+            .id();
+        hit(
+            &mut app,
+            ApplyDamage::at(t, 20, DamageKind::Ballistic, Vec3::ZERO).from(shooter),
+        );
         assert_eq!(app.world().get::<Health>(t).unwrap().health, 50);
     }
 
     #[test]
     fn friendly_fire_can_be_switched_on() {
         let mut app = test_app();
-        app.insert_resource(DamageRules { friendly_fire: true, ..Default::default() });
+        app.insert_resource(DamageRules {
+            friendly_fire: true,
+            ..Default::default()
+        });
         let shooter = app.world_mut().spawn(Faction::Player).id();
-        let t = app.world_mut().spawn((Health { health: 50, max_health: 50 }, Faction::Player)).id();
-        hit(&mut app, ApplyDamage::at(t, 20, DamageKind::Ballistic, Vec3::ZERO).from(shooter));
+        let t = app
+            .world_mut()
+            .spawn((
+                Health {
+                    health: 50,
+                    max_health: 50,
+                },
+                Faction::Player,
+            ))
+            .id();
+        hit(
+            &mut app,
+            ApplyDamage::at(t, 20, DamageKind::Ballistic, Vec3::ZERO).from(shooter),
+        );
         assert_eq!(app.world().get::<Health>(t).unwrap().health, 30);
     }
 
@@ -264,18 +328,45 @@ mod tests {
         let mut app = test_app();
         let alien = app.world_mut().spawn(Faction::Alien).id();
         let player = app.world_mut().spawn(Faction::Player).id();
-        let wall = app.world_mut().spawn((Health { health: 50, max_health: 50 }, Faction::Structure)).id();
-        hit(&mut app, ApplyDamage::at(wall, 10, DamageKind::Blunt, Vec3::ZERO).from(player));
+        let wall = app
+            .world_mut()
+            .spawn((
+                Health {
+                    health: 50,
+                    max_health: 50,
+                },
+                Faction::Structure,
+            ))
+            .id();
+        hit(
+            &mut app,
+            ApplyDamage::at(wall, 10, DamageKind::Blunt, Vec3::ZERO).from(player),
+        );
         assert_eq!(app.world().get::<Health>(wall).unwrap().health, 50);
-        hit(&mut app, ApplyDamage::at(wall, 10, DamageKind::Blunt, Vec3::ZERO).from(alien));
+        hit(
+            &mut app,
+            ApplyDamage::at(wall, 10, DamageKind::Blunt, Vec3::ZERO).from(alien),
+        );
         assert_eq!(app.world().get::<Health>(wall).unwrap().health, 40);
     }
 
     #[test]
     fn ownerless_damage_hits_anyone() {
         let mut app = test_app();
-        let t = app.world_mut().spawn((Health { health: 50, max_health: 50 }, Faction::Player)).id();
-        hit(&mut app, ApplyDamage::at(t, 5, DamageKind::Fire, Vec3::ZERO));
+        let t = app
+            .world_mut()
+            .spawn((
+                Health {
+                    health: 50,
+                    max_health: 50,
+                },
+                Faction::Player,
+            ))
+            .id();
+        hit(
+            &mut app,
+            ApplyDamage::at(t, 5, DamageKind::Fire, Vec3::ZERO),
+        );
         assert_eq!(app.world().get::<Health>(t).unwrap().health, 45);
     }
 
@@ -285,21 +376,60 @@ mod tests {
         let mut res = DamageResistances::default();
         res.0.insert(DamageKind::Ballistic, 0.0);
         res.0.insert(DamageKind::Explosive, 2.0);
-        let wall = app.world_mut().spawn((Health { health: 100, max_health: 100 }, res)).id();
-        hit(&mut app, ApplyDamage::at(wall, 30, DamageKind::Ballistic, Vec3::ZERO));
-        assert_eq!(app.world().get::<Health>(wall).unwrap().health, 100, "immune to bullets");
-        hit(&mut app, ApplyDamage::at(wall, 30, DamageKind::Explosive, Vec3::ZERO));
-        assert_eq!(app.world().get::<Health>(wall).unwrap().health, 40, "double from explosives");
+        let wall = app
+            .world_mut()
+            .spawn((
+                Health {
+                    health: 100,
+                    max_health: 100,
+                },
+                res,
+            ))
+            .id();
+        hit(
+            &mut app,
+            ApplyDamage::at(wall, 30, DamageKind::Ballistic, Vec3::ZERO),
+        );
+        assert_eq!(
+            app.world().get::<Health>(wall).unwrap().health,
+            100,
+            "immune to bullets"
+        );
+        hit(
+            &mut app,
+            ApplyDamage::at(wall, 30, DamageKind::Explosive, Vec3::ZERO),
+        );
+        assert_eq!(
+            app.world().get::<Health>(wall).unwrap().health,
+            40,
+            "double from explosives"
+        );
     }
 
     #[test]
     fn a_lethal_hit_on_an_alien_counts_once_and_credits_the_source() {
         let mut app = test_app();
         let shooter = app.world_mut().spawn(Faction::Player).id();
-        let alien = app.world_mut().spawn((Health { health: 10, max_health: 10 }, Alien, Faction::Alien)).id();
-        hit(&mut app, ApplyDamage::at(alien, 10, DamageKind::Ballistic, Vec3::ZERO).from(shooter));
+        let alien = app
+            .world_mut()
+            .spawn((
+                Health {
+                    health: 10,
+                    max_health: 10,
+                },
+                Alien,
+                Faction::Alien,
+            ))
+            .id();
+        hit(
+            &mut app,
+            ApplyDamage::at(alien, 10, DamageKind::Ballistic, Vec3::ZERO).from(shooter),
+        );
         // A second hit on the corpse (e.g. same frame as the despawn) is not a second kill.
-        hit(&mut app, ApplyDamage::at(alien, 10, DamageKind::Ballistic, Vec3::ZERO).from(shooter));
+        hit(
+            &mut app,
+            ApplyDamage::at(alien, 10, DamageKind::Ballistic, Vec3::ZERO).from(shooter),
+        );
 
         let caught = app.world().resource::<Caught>();
         let kills: Vec<_> = caught
@@ -316,9 +446,21 @@ mod tests {
     #[test]
     fn zero_or_negative_damage_is_ignored() {
         let mut app = test_app();
-        let t = app.world_mut().spawn(Health { health: 50, max_health: 50 }).id();
-        hit(&mut app, ApplyDamage::at(t, 0, DamageKind::Ballistic, Vec3::ZERO));
-        hit(&mut app, ApplyDamage::at(t, -5, DamageKind::Ballistic, Vec3::ZERO));
+        let t = app
+            .world_mut()
+            .spawn(Health {
+                health: 50,
+                max_health: 50,
+            })
+            .id();
+        hit(
+            &mut app,
+            ApplyDamage::at(t, 0, DamageKind::Ballistic, Vec3::ZERO),
+        );
+        hit(
+            &mut app,
+            ApplyDamage::at(t, -5, DamageKind::Ballistic, Vec3::ZERO),
+        );
         assert_eq!(app.world().get::<Health>(t).unwrap().health, 50);
         assert!(app.world().resource::<Caught>().dealt.is_empty());
     }

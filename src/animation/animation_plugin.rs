@@ -84,9 +84,9 @@ pub enum AnimationKey {
     Death,
     HitReact,
     // ── Game-intent keys (resolved to composite clips by CharacterState) ───
-    Throwing,   // → IdleShoot or WalkShoot depending on movement
-    Building,   // direct clip ("interact" / "wave") or falls back to Idle
-    Reload,     // one-shot while a magazine is swapped; freezes if the rig has no clip
+    Throwing, // → IdleShoot or WalkShoot depending on movement
+    Building, // direct clip ("interact" / "wave") or falls back to Idle
+    Reload,   // one-shot while a magazine is swapped; freezes if the rig has no clip
 }
 
 impl AnimationKey {
@@ -105,25 +105,25 @@ impl AnimationKey {
     /// as a substring.  See `clip_matches()`.
     pub const fn default_search(self) -> &'static str {
         match self {
-            Self::Idle      => "idle",
+            Self::Idle => "idle",
             Self::IdleShoot => "idle_shoot",
-            Self::Walk      => "walk",
+            Self::Walk => "walk",
             Self::WalkShoot => "walk_shoot",
-            Self::Run       => "run",
-            Self::RunShoot  => "run_shoot",
-            Self::RunGun    => "run_gun",
-            Self::Duck      => "duck",
-            Self::Jump      => "jump",
-            Self::JumpIdle  => "jump_idle",
-            Self::JumpLand  => "jump_land",
+            Self::Run => "run",
+            Self::RunShoot => "run_shoot",
+            Self::RunGun => "run_gun",
+            Self::Duck => "duck",
+            Self::Jump => "jump",
+            Self::JumpIdle => "jump_idle",
+            Self::JumpLand => "jump_land",
             Self::Punch | Self::Throwing => "punch",
-            Self::Wave      => "wave",
-            Self::Yes       => "yes",
-            Self::No        => "no",
-            Self::Death     => "death",
-            Self::HitReact  => "hitreact",
-            Self::Building  => "interact",
-            Self::Reload    => "reload",
+            Self::Wave => "wave",
+            Self::Yes => "yes",
+            Self::No => "no",
+            Self::Death => "death",
+            Self::HitReact => "hitreact",
+            Self::Building => "interact",
+            Self::Reload => "reload",
         }
     }
 }
@@ -229,7 +229,13 @@ pub fn leave_animation_state_handler(
         {
             let old = current_key.key;
             current_key.key = resolved;
-            anim_thingie(&anim_store, &current_key.group, resolved, &mut player, Some(old));
+            anim_thingie(
+                &anim_store,
+                &current_key.group,
+                resolved,
+                &mut player,
+                Some(old),
+            );
         }
     }
 }
@@ -273,7 +279,13 @@ pub fn goto_animation_state_handler(
         {
             let old = current_key.key;
             current_key.key = resolved;
-            anim_thingie(&anim_store, &current_key.group, resolved, &mut player, Some(old));
+            anim_thingie(
+                &anim_store,
+                &current_key.group,
+                resolved,
+                &mut player,
+                Some(old),
+            );
         }
     }
 }

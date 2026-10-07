@@ -175,71 +175,149 @@ impl RuleBuilder {
 
     // booleans
     pub fn is_true(&mut self, key: impl Into<String>) -> &mut Self {
-        self.push(Criterion::BoolIs { key: key.into(), expected: true })
+        self.push(Criterion::BoolIs {
+            key: key.into(),
+            expected: true,
+        })
     }
     pub fn is_false(&mut self, key: impl Into<String>) -> &mut Self {
-        self.push(Criterion::BoolIs { key: key.into(), expected: false })
+        self.push(Criterion::BoolIs {
+            key: key.into(),
+            expected: false,
+        })
     }
     pub fn any_true(&mut self, pattern: impl Into<String>) -> &mut Self {
-        self.push(Criterion::AnyBool { pattern: pattern.into(), expected: true })
+        self.push(Criterion::AnyBool {
+            pattern: pattern.into(),
+            expected: true,
+        })
     }
     pub fn any_false(&mut self, pattern: impl Into<String>) -> &mut Self {
-        self.push(Criterion::AnyBool { pattern: pattern.into(), expected: false })
+        self.push(Criterion::AnyBool {
+            pattern: pattern.into(),
+            expected: false,
+        })
     }
     pub fn all_true(&mut self, pattern: impl Into<String>) -> &mut Self {
-        self.push(Criterion::AllBool { pattern: pattern.into(), expected: true })
+        self.push(Criterion::AllBool {
+            pattern: pattern.into(),
+            expected: true,
+        })
     }
     pub fn all_false(&mut self, pattern: impl Into<String>) -> &mut Self {
-        self.push(Criterion::AllBool { pattern: pattern.into(), expected: false })
+        self.push(Criterion::AllBool {
+            pattern: pattern.into(),
+            expected: false,
+        })
     }
 
     // ints
     pub fn int_more_than(&mut self, key: impl Into<String>, value: i64) -> &mut Self {
-        self.push(Criterion::IntCmp { key: key.into(), op: NumOp::Gt, value })
+        self.push(Criterion::IntCmp {
+            key: key.into(),
+            op: NumOp::Gt,
+            value,
+        })
     }
     pub fn int_less_than(&mut self, key: impl Into<String>, value: i64) -> &mut Self {
-        self.push(Criterion::IntCmp { key: key.into(), op: NumOp::Lt, value })
+        self.push(Criterion::IntCmp {
+            key: key.into(),
+            op: NumOp::Lt,
+            value,
+        })
     }
     pub fn int_equals(&mut self, key: impl Into<String>, value: i64) -> &mut Self {
-        self.push(Criterion::IntCmp { key: key.into(), op: NumOp::Eq, value })
+        self.push(Criterion::IntCmp {
+            key: key.into(),
+            op: NumOp::Eq,
+            value,
+        })
     }
-    pub fn int_more_than_fact(&mut self, lhs: impl Into<String>, rhs: impl Into<String>) -> &mut Self {
-        self.push(Criterion::IntVsInt { lhs: lhs.into(), op: NumOp::Gt, rhs: rhs.into() })
+    pub fn int_more_than_fact(
+        &mut self,
+        lhs: impl Into<String>,
+        rhs: impl Into<String>,
+    ) -> &mut Self {
+        self.push(Criterion::IntVsInt {
+            lhs: lhs.into(),
+            op: NumOp::Gt,
+            rhs: rhs.into(),
+        })
     }
-    pub fn int_less_than_fact(&mut self, lhs: impl Into<String>, rhs: impl Into<String>) -> &mut Self {
-        self.push(Criterion::IntVsInt { lhs: lhs.into(), op: NumOp::Lt, rhs: rhs.into() })
+    pub fn int_less_than_fact(
+        &mut self,
+        lhs: impl Into<String>,
+        rhs: impl Into<String>,
+    ) -> &mut Self {
+        self.push(Criterion::IntVsInt {
+            lhs: lhs.into(),
+            op: NumOp::Lt,
+            rhs: rhs.into(),
+        })
     }
 
     // floats
     pub fn float_more_than(&mut self, key: impl Into<String>, value: f32) -> &mut Self {
-        self.push(Criterion::FloatCmp { key: key.into(), op: NumOp::Gt, value })
+        self.push(Criterion::FloatCmp {
+            key: key.into(),
+            op: NumOp::Gt,
+            value,
+        })
     }
     pub fn float_less_than(&mut self, key: impl Into<String>, value: f32) -> &mut Self {
-        self.push(Criterion::FloatCmp { key: key.into(), op: NumOp::Lt, value })
+        self.push(Criterion::FloatCmp {
+            key: key.into(),
+            op: NumOp::Lt,
+            value,
+        })
     }
 
     // text
     pub fn text_equals(&mut self, key: impl Into<String>, value: impl Into<String>) -> &mut Self {
-        self.push(Criterion::TextEq { key: key.into(), value: value.into() })
+        self.push(Criterion::TextEq {
+            key: key.into(),
+            value: value.into(),
+        })
     }
     pub fn text_contains(&mut self, key: impl Into<String>, value: impl Into<String>) -> &mut Self {
-        self.push(Criterion::TextContains { key: key.into(), value: value.into() })
+        self.push(Criterion::TextContains {
+            key: key.into(),
+            value: value.into(),
+        })
     }
 
     // collections
     pub fn list_contains(&mut self, key: impl Into<String>, value: impl Into<String>) -> &mut Self {
-        self.push(Criterion::ListContains { key: key.into(), value: value.into() })
+        self.push(Criterion::ListContains {
+            key: key.into(),
+            value: value.into(),
+        })
     }
     pub fn list_size_more_than(&mut self, key: impl Into<String>, value: usize) -> &mut Self {
-        self.push(Criterion::ListSize { key: key.into(), op: NumOp::Gt, value })
+        self.push(Criterion::ListSize {
+            key: key.into(),
+            op: NumOp::Gt,
+            value,
+        })
     }
     pub fn list_size_equals(&mut self, key: impl Into<String>, value: usize) -> &mut Self {
-        self.push(Criterion::ListSize { key: key.into(), op: NumOp::Eq, value })
+        self.push(Criterion::ListSize {
+            key: key.into(),
+            op: NumOp::Eq,
+            value,
+        })
     }
     pub fn set_contains(&mut self, key: impl Into<String>, value: impl Into<String>) -> &mut Self {
-        self.push(Criterion::SetContains { key: key.into(), value: value.into() })
+        self.push(Criterion::SetContains {
+            key: key.into(),
+            value: value.into(),
+        })
     }
     pub fn set_size_equals(&mut self, key: impl Into<String>, value: usize) -> &mut Self {
-        self.push(Criterion::SetSize { key: key.into(), op: NumOp::Eq, value })
+        self.push(Criterion::SetSize {
+            key: key.into(),
+            op: NumOp::Eq,
+            value,
+        })
     }
 }

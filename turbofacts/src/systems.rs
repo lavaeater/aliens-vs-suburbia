@@ -54,7 +54,7 @@ pub fn arm_story_check(mut reader: MessageReader<FactChanged>, mut store: ResMut
 /// Evaluates stories
 ///
 /// Stories are sorted by specificity when active and armed,
-/// applying the consequences of any whose rules pass. 
+/// applying the consequences of any whose rules pass.
 /// Consequence fact writes re-dirty [`Facts`], so the
 /// change cascades to the next frame.
 /// Mirrors `TurboStoryManager.checkIfNeeded`.

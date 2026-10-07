@@ -1,8 +1,8 @@
+use crate::poly_pizza::state::{PolyPizzaState, glb_asset_path, glb_cache_path};
+use crate::ui::spawn_ui::StateMarker;
 use bevy::prelude::*;
 use bevy::world_serialization::WorldAssetRoot;
 use bevy_wind_waker_shader::WindWakerShaderBuilder;
-use crate::poly_pizza::state::{PolyPizzaState, glb_asset_path, glb_cache_path};
-use crate::ui::spawn_ui::StateMarker;
 
 #[derive(Component)]
 pub struct ViewerModel;
@@ -15,7 +15,10 @@ pub fn spawn_polypizza_cameras(mut commands: Commands) {
     commands.spawn((
         Camera2d,
         IsDefaultUiCamera,
-        Camera { order: 1, ..Default::default() },
+        Camera {
+            order: 1,
+            ..Default::default()
+        },
         StateMarker,
     ));
     spawn_viewer_camera_inner(&mut commands);
@@ -24,12 +27,14 @@ pub fn spawn_polypizza_cameras(mut commands: Commands) {
 fn spawn_viewer_camera_inner(commands: &mut Commands) {
     // Don't provide a separate Camera component — Camera3d sets up its own with the render graph.
     // We modify it via entry after spawn to set order and clear color.
-    let cam = commands.spawn((
-        Camera3d::default(),
-        Transform::from_xyz(0.0, 1.0, 4.0).looking_at(Vec3::new(0.0, 0.5, 0.0), Vec3::Y),
-        ViewerCamera,
-        StateMarker,
-    )).id();
+    let cam = commands
+        .spawn((
+            Camera3d::default(),
+            Transform::from_xyz(0.0, 1.0, 4.0).looking_at(Vec3::new(0.0, 0.5, 0.0), Vec3::Y),
+            ViewerCamera,
+            StateMarker,
+        ))
+        .id();
     commands.entity(cam).entry::<Camera>().and_modify(|mut c| {
         c.order = 0;
         c.clear_color = ClearColorConfig::Custom(Color::srgb(0.06, 0.06, 0.10));
@@ -59,8 +64,12 @@ pub fn handle_viewer_load(
     mut state: ResMut<PolyPizzaState>,
     asset_server: Res<AssetServer>,
 ) {
-    if !state.viewer_needs_load { return; }
-    let Some(model) = state.selected_model.clone() else { return; };
+    if !state.viewer_needs_load {
+        return;
+    }
+    let Some(model) = state.selected_model.clone() else {
+        return;
+    };
     state.viewer_needs_load = false;
 
     // Despawn old viewer entity
@@ -106,11 +115,16 @@ pub fn orbit_viewer(
 ) {
     let dragging = mouse_button.pressed(MouseButton::Left);
     for motion in mouse_motion.read() {
-        if !dragging { continue; }
+        if !dragging {
+            continue;
+        }
         for mut transform in model_query.iter_mut() {
             transform.rotate_y(motion.delta.x * 0.012);
             let right = transform.right().as_vec3();
-            transform.rotate_axis(Dir3::new_unchecked(right.normalize()), motion.delta.y * 0.008);
+            transform.rotate_axis(
+                Dir3::new_unchecked(right.normalize()),
+                motion.delta.y * 0.008,
+            );
         }
     }
 }
@@ -121,10 +135,14 @@ pub fn handle_toon_toggle(
     asset_server: Res<AssetServer>,
     keyboard: Res<ButtonInput<KeyCode>>,
 ) {
-    if !keyboard.just_pressed(KeyCode::KeyT) { return; }
+    if !keyboard.just_pressed(KeyCode::KeyT) {
+        return;
+    }
     state.toon_shader = !state.toon_shader;
 
-    let Some(model) = state.selected_model.clone() else { return; };
+    let Some(model) = state.selected_model.clone() else {
+        return;
+    };
     if let Some(old) = state.viewer_entity.take() {
         commands.entity(old).despawn();
     }

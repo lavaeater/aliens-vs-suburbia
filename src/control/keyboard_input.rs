@@ -1,16 +1,22 @@
-use bevy::input::ButtonState;
-use bevy::input::keyboard::KeyboardInput;
-use bevy::math::{Vec2, Vec3};
-use bevy::prelude::{Entity, MessageReader, MessageWriter, KeyCode, Query, Res, ResMut, With, Without};
 use crate::animation::animation_plugin::{AnimationEvent, AnimationEventType, AnimationKey};
-use crate::control::components::{CharacterControl, ControlCommand, ControlDirection, InputKeyboard};
+use crate::control::components::{
+    CharacterControl, ControlCommand, ControlDirection, InputKeyboard,
+};
 use crate::control::gamepad_input::stick_to_world;
-use crate::settings::resources::GameSettings;
 use crate::player::components::PlayerDead;
-use crate::player::events::building_events::{ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode};
+use crate::player::events::building_events::{
+    ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode,
+};
 use crate::player::systems::abilities::AbilityInput;
 use crate::player::systems::loadout::{SwitchWeapon, WeaponSelect};
 use crate::player::systems::shoot::ReloadRequest;
+use crate::settings::resources::GameSettings;
+use bevy::input::ButtonState;
+use bevy::input::keyboard::KeyboardInput;
+use bevy::math::{Vec2, Vec3};
+use bevy::prelude::{
+    Entity, KeyCode, MessageReader, MessageWriter, Query, Res, ResMut, With, Without,
+};
 
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn keyboard_input(
@@ -32,33 +38,60 @@ pub fn keyboard_input(
                 ButtonState::Pressed => match ev.key_code {
                     KeyCode::KeyB => {
                         if controller.triggers.contains(&ControlCommand::Build) {
-                            animation_ew.write(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Building));
+                            animation_ew.write(AnimationEvent(
+                                AnimationEventType::LeaveAnimState,
+                                entity,
+                                AnimationKey::Building,
+                            ));
                             exit_build.write(ExitBuildMode(entity));
                         } else {
                             controller.triggers.insert(ControlCommand::Build);
-                            animation_ew.write(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Building));
+                            animation_ew.write(AnimationEvent(
+                                AnimationEventType::GotoAnimState,
+                                entity,
+                                AnimationKey::Building,
+                            ));
                             start_build_ew.write(EnterBuildMode(entity));
                         }
                     }
-                    KeyCode::Escape
-                        if controller.triggers.contains(&ControlCommand::Build) => {
-                            animation_ew.write(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Building));
-                            exit_build.write(ExitBuildMode(entity));
-                        }
+                    KeyCode::Escape if controller.triggers.contains(&ControlCommand::Build) => {
+                        animation_ew.write(AnimationEvent(
+                            AnimationEventType::LeaveAnimState,
+                            entity,
+                            AnimationKey::Building,
+                        ));
+                        exit_build.write(ExitBuildMode(entity));
+                    }
                     KeyCode::KeyA => {
-                        animation_ew.write(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walk));
+                        animation_ew.write(AnimationEvent(
+                            AnimationEventType::GotoAnimState,
+                            entity,
+                            AnimationKey::Walk,
+                        ));
                         controller.directions.insert(ControlDirection::Left);
                     }
                     KeyCode::KeyD => {
-                        animation_ew.write(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walk));
+                        animation_ew.write(AnimationEvent(
+                            AnimationEventType::GotoAnimState,
+                            entity,
+                            AnimationKey::Walk,
+                        ));
                         controller.directions.insert(ControlDirection::Right);
                     }
                     KeyCode::KeyW => {
-                        animation_ew.write(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walk));
+                        animation_ew.write(AnimationEvent(
+                            AnimationEventType::GotoAnimState,
+                            entity,
+                            AnimationKey::Walk,
+                        ));
                         controller.directions.insert(ControlDirection::Forward);
                     }
                     KeyCode::KeyS => {
-                        animation_ew.write(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walk));
+                        animation_ew.write(AnimationEvent(
+                            AnimationEventType::GotoAnimState,
+                            entity,
+                            AnimationKey::Walk,
+                        ));
                         controller.directions.insert(ControlDirection::Backward);
                     }
                     KeyCode::Space => {
@@ -83,7 +116,10 @@ pub fn keyboard_input(
                         controller.triggers.insert(ControlCommand::ThrowSpecial);
                     }
                     KeyCode::Tab => {
-                        switch_mw.write(SwitchWeapon { player: entity, select: WeaponSelect::Next });
+                        switch_mw.write(SwitchWeapon {
+                            player: entity,
+                            select: WeaponSelect::Next,
+                        });
                     }
                     KeyCode::Digit1 | KeyCode::Digit2 | KeyCode::Digit3 | KeyCode::Digit4 => {
                         let slot = match ev.key_code {
@@ -92,7 +128,10 @@ pub fn keyboard_input(
                             KeyCode::Digit3 => 2,
                             _ => 3,
                         };
-                        switch_mw.write(SwitchWeapon { player: entity, select: WeaponSelect::Slot(slot) });
+                        switch_mw.write(SwitchWeapon {
+                            player: entity,
+                            select: WeaponSelect::Slot(slot),
+                        });
                     }
                     _ => {}
                 },
@@ -122,10 +161,14 @@ pub fn keyboard_input(
                         change_build_indicator.write(ChangeBuildIndicator(entity, 1));
                     }
                     _ => {}
-                }
+                },
             }
             if controller.directions.is_empty() && controller.rotations.is_empty() {
-                animation_ew.write(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Walk));
+                animation_ew.write(AnimationEvent(
+                    AnimationEventType::LeaveAnimState,
+                    entity,
+                    AnimationKey::Walk,
+                ));
             }
 
             // WASD is camera-relative, like the gamepad's left stick: W walks up the
@@ -145,7 +188,8 @@ pub fn keyboard_input(
             if controller.directions.contains(&ControlDirection::Right) {
                 stick.x += 1.0;
             }
-            controller.walk_direction = stick_to_world(stick.normalize_or_zero(), settings.yaw_degrees);
+            controller.walk_direction =
+                stick_to_world(stick.normalize_or_zero(), settings.yaw_degrees);
             controller.torque = Vec3::ZERO;
         }
     }

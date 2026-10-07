@@ -9,7 +9,8 @@
 //! `WeaponProps.projectile` set.
 
 use avian3d::prelude::{
-    Collider, CollisionEventsEnabled, CollisionLayers, CollisionStart, GravityScale, LinearVelocity, Position, RigidBody,
+    Collider, CollisionEventsEnabled, CollisionLayers, CollisionStart, GravityScale,
+    LinearVelocity, Position, RigidBody,
 };
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -41,7 +42,11 @@ pub struct FireProps {
 
 impl Default for FireProps {
     fn default() -> Self {
-        Self { radius: 2.2, duration: 6.0, dps: 35.0 }
+        Self {
+            radius: 2.2,
+            duration: 6.0,
+            dps: 35.0,
+        }
     }
 }
 
@@ -68,12 +73,21 @@ pub struct ProjectileProps {
     pub fuse_secs: Option<f32>,
 }
 
-const fn default_speed() -> f32 { 18.0 }
-const fn default_true() -> bool { true }
+const fn default_speed() -> f32 {
+    18.0
+}
+const fn default_true() -> bool {
+    true
+}
 
 impl Default for ProjectileProps {
     fn default() -> Self {
-        Self { speed: default_speed(), gravity: true, impact: Impact::Explode(ExplosionProps::default()), fuse_secs: None }
+        Self {
+            speed: default_speed(),
+            gravity: true,
+            impact: Impact::Explode(ExplosionProps::default()),
+            fuse_secs: None,
+        }
     }
 }
 
@@ -106,7 +120,12 @@ impl ThrowableKind {
             Self::Grenade => ProjectileProps {
                 speed: 0.0,
                 gravity: true,
-                impact: Impact::Explode(ExplosionProps { radius: 2.5, damage: 90, impulse: 9.0, fire: false }),
+                impact: Impact::Explode(ExplosionProps {
+                    radius: 2.5,
+                    damage: 90,
+                    impulse: 9.0,
+                    fire: false,
+                }),
                 fuse_secs: Some(GRENADE_FUSE_SECS),
             },
             Self::Molotov => ProjectileProps {
@@ -161,7 +180,9 @@ pub fn launch(
             Projectile {
                 source,
                 impact: props.impact.clone(),
-                fuse: props.fuse_secs.map(|s| Timer::from_seconds(s, TimerMode::Once)),
+                fuse: props
+                    .fuse_secs
+                    .map(|s| Timer::from_seconds(s, TimerMode::Once)),
                 lifetime: Timer::from_seconds(8.0, TimerMode::Once),
             },
             Mesh3d(meshes.add(Sphere::new(0.09))),
@@ -202,14 +223,26 @@ fn detonate(
     match &projectile.impact {
         Impact::Damage(amount) => {
             if let Some(target) = hit {
-                damage_mw.write(ApplyDamage::at(target, *amount, DamageKind::Ballistic, position).from(projectile.source));
+                damage_mw.write(
+                    ApplyDamage::at(target, *amount, DamageKind::Ballistic, position)
+                        .from(projectile.source),
+                );
             }
         }
         Impact::Explode(props) => {
-            explode_mw.write(Explode { position, props: props.clone(), source: Some(projectile.source) });
+            explode_mw.write(Explode {
+                position,
+                props: props.clone(),
+                source: Some(projectile.source),
+            });
         }
         Impact::Fire(props) => {
-            fire_mw.write(SpawnFire { position, radius: props.radius, duration: props.duration, dps: props.dps });
+            fire_mw.write(SpawnFire {
+                position,
+                radius: props.radius,
+                duration: props.duration,
+                dps: props.dps,
+            });
         }
     }
     commands.entity(entity).despawn();
@@ -234,7 +267,16 @@ pub fn tick_projectiles(
             None => false,
         };
         if fused {
-            detonate(&mut commands, entity, &projectile, pos.0, None, &mut damage_mw, &mut explode_mw, &mut fire_mw);
+            detonate(
+                &mut commands,
+                entity,
+                &projectile,
+                pos.0,
+                None,
+                &mut damage_mw,
+                &mut explode_mw,
+                &mut fire_mw,
+            );
         } else if projectile.lifetime.is_finished() {
             commands.entity(entity).despawn();
         }
@@ -265,14 +307,25 @@ pub fn projectile_impacts(
         if done.contains(&entity) {
             continue;
         }
-        let Ok((projectile, pos)) = projectiles.get(entity) else { continue };
+        let Ok((projectile, pos)) = projectiles.get(entity) else {
+            continue;
+        };
         // Grenades bounce; only fuseless projectiles go off on contact. Never on the
         // thrower's own body either.
         if projectile.fuse.is_some() || other == projectile.source {
             continue;
         }
         let hit = targets.contains(other).then_some(other);
-        detonate(&mut commands, entity, projectile, pos.0, hit, &mut damage_mw, &mut explode_mw, &mut fire_mw);
+        detonate(
+            &mut commands,
+            entity,
+            projectile,
+            pos.0,
+            hit,
+            &mut damage_mw,
+            &mut explode_mw,
+            &mut fire_mw,
+        );
         done.push(entity);
     }
 }
@@ -283,7 +336,16 @@ pub fn throw_special(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut players: Query<(Entity, &Position, &AutoAim, &mut CharacterControl, &mut AmmoPouch), (With<Player>, Without<PlayerDead>)>,
+    mut players: Query<
+        (
+            Entity,
+            &Position,
+            &AutoAim,
+            &mut CharacterControl,
+            &mut AmmoPouch,
+        ),
+        (With<Player>, Without<PlayerDead>),
+    >,
     mut anim_ew: MessageWriter<AnimationEvent>,
     mut game_mw: MessageWriter<GameTrackingEvent>,
 ) {
@@ -291,12 +353,26 @@ pub fn throw_special(
         if !control.triggers.remove(&ControlCommand::ThrowSpecial) {
             continue;
         }
-        let Some(kind) = ThrowableKind::pick(&pouch) else { continue };
+        let Some(kind) = ThrowableKind::pick(&pouch) else {
+            continue;
+        };
         pouch.take(kind.ammo(), 1);
         let origin = pos.0 + aim.0.normalize_or(Vec3::X) * 0.5 + Vec3::Y * 0.6;
-        launch(&mut commands, &mut meshes, &mut materials, player, origin, lob_velocity(aim.0, THROW_RANGE), &kind.props());
+        launch(
+            &mut commands,
+            &mut meshes,
+            &mut materials,
+            player,
+            origin,
+            lob_velocity(aim.0, THROW_RANGE),
+            &kind.props(),
+        );
         game_mw.write(GameTrackingEvent::ShotFired(player));
-        anim_ew.write(AnimationEvent(AnimationEventType::GotoAnimState, player, AnimationKey::Throwing));
+        anim_ew.write(AnimationEvent(
+            AnimationEventType::GotoAnimState,
+            player,
+            AnimationKey::Throwing,
+        ));
     }
 }
 
@@ -307,7 +383,10 @@ mod tests {
     #[test]
     fn lob_goes_forward_and_up_at_forty_five_degrees() {
         let v = lob_velocity(Vec3::new(1.0, 0.3, 0.0), 7.0);
-        assert!((v.x - v.y).abs() < 1e-4, "equal horizontal and vertical parts: {v:?}");
+        assert!(
+            (v.x - v.y).abs() < 1e-4,
+            "equal horizontal and vertical parts: {v:?}"
+        );
         assert_eq!(v.z, 0.0);
         // Range r at 45 deg needs v^2 = r*g.
         assert!((v.length_squared() - 7.0 * GRAVITY).abs() < 1e-3);
@@ -318,7 +397,10 @@ mod tests {
         let both = AmmoPouch::from_loadout(&[(AmmoKind::Grenade, 1), (AmmoKind::Molotov, 1)]);
         assert_eq!(ThrowableKind::pick(&both), Some(ThrowableKind::Grenade));
         let molotov_only = AmmoPouch::from_loadout(&[(AmmoKind::Molotov, 2)]);
-        assert_eq!(ThrowableKind::pick(&molotov_only), Some(ThrowableKind::Molotov));
+        assert_eq!(
+            ThrowableKind::pick(&molotov_only),
+            Some(ThrowableKind::Molotov)
+        );
         assert_eq!(ThrowableKind::pick(&AmmoPouch::default()), None);
     }
 
@@ -326,6 +408,9 @@ mod tests {
     fn grenades_have_a_fuse_and_molotovs_do_not() {
         assert!(ThrowableKind::Grenade.props().fuse_secs.is_some());
         assert!(ThrowableKind::Molotov.props().fuse_secs.is_none());
-        assert!(matches!(ThrowableKind::Molotov.props().impact, Impact::Fire(_)));
+        assert!(matches!(
+            ThrowableKind::Molotov.props().impact,
+            Impact::Fire(_)
+        ));
     }
 }

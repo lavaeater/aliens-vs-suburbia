@@ -1,6 +1,6 @@
-use crossterm::event::KeyCode;
 use crate::general::components::map_components::{MapFile, WaveDef};
 use crate::map::MapFeatures;
+use crossterm::event::KeyCode;
 use ron::ser::PrettyConfig;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -39,7 +39,7 @@ pub struct App {
     pub file_path: Option<String>,
     pub cursor: (usize, usize), // (col, row)
     pub mode: Mode,
-    pub paint_tile: u64,  // preview label only
+    pub paint_tile: u64, // preview label only
     pub paint_key: KeyCode,
     pub dirty: bool,
     pub viewport: (usize, usize), // (col_offset, row_offset)
@@ -50,12 +50,12 @@ pub struct App {
     pub new_wave_scratch: (String, String, String),
 }
 
-pub const TILE_VOID: u64   = 0;
-pub const TILE_FLOOR: u64  = MapFeatures::Floor as u64;
+pub const TILE_VOID: u64 = 0;
+pub const TILE_FLOOR: u64 = MapFeatures::Floor as u64;
 #[allow(dead_code)]
-pub const TILE_SPAWN: u64  = MapFeatures::Floor as u64 | MapFeatures::EnemySpawn as u64;
+pub const TILE_SPAWN: u64 = MapFeatures::Floor as u64 | MapFeatures::EnemySpawn as u64;
 #[allow(dead_code)]
-pub const TILE_GOAL: u64   = MapFeatures::Floor as u64 | MapFeatures::EnemyExit as u64;
+pub const TILE_GOAL: u64 = MapFeatures::Floor as u64 | MapFeatures::EnemyExit as u64;
 #[allow(dead_code)]
 pub const TILE_PLAYER: u64 = MapFeatures::Floor as u64 | MapFeatures::PlayerSpawn as u64;
 
@@ -121,7 +121,13 @@ impl App {
         }
     }
 
-    pub fn move_cursor(&mut self, dcol: i32, drow: i32, viewport_cols: usize, viewport_rows: usize) {
+    pub fn move_cursor(
+        &mut self,
+        dcol: i32,
+        drow: i32,
+        viewport_cols: usize,
+        viewport_rows: usize,
+    ) {
         let new_col = (self.cursor.0 as i32 + dcol)
             .clamp(0, self.map_width().saturating_sub(1) as i32) as usize;
         let new_row = (self.cursor.1 as i32 + drow)
@@ -144,8 +150,7 @@ impl App {
     pub fn save(&mut self) -> Result<(), String> {
         let path = self.file_path.clone().ok_or("No file path set")?;
         let pretty = PrettyConfig::new().depth_limit(4);
-        let out = ron::ser::to_string_pretty(&self.map, pretty)
-            .map_err(|e| e.to_string())?;
+        let out = ron::ser::to_string_pretty(&self.map, pretty).map_err(|e| e.to_string())?;
         std::fs::write(&path, out).map_err(|e| e.to_string())?;
         self.dirty = false;
         self.status_msg = Some(format!("Saved {path}"));
@@ -172,7 +177,9 @@ impl App {
     }
 
     pub fn delete_wave(&mut self) {
-        if self.map.waves.is_empty() { return; }
+        if self.map.waves.is_empty() {
+            return;
+        }
         self.map.waves.remove(self.wave_selected);
         if self.wave_selected > 0 && self.wave_selected >= self.map.waves.len() {
             self.wave_selected -= 1;
@@ -198,8 +205,16 @@ impl App {
         if let Some(wave) = self.map.waves.get_mut(idx) {
             match field {
                 0 => wave.enemy_def = value.to_string(),
-                1 => { if let Ok(v) = value.parse() { wave.count = v; } }
-                2 => { if let Ok(v) = value.parse() { wave.spawn_rate_per_minute = v; } }
+                1 => {
+                    if let Ok(v) = value.parse() {
+                        wave.count = v;
+                    }
+                }
+                2 => {
+                    if let Ok(v) = value.parse() {
+                        wave.spawn_rate_per_minute = v;
+                    }
+                }
                 _ => {}
             }
             self.dirty = true;

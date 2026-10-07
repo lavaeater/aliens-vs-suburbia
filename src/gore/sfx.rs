@@ -90,7 +90,10 @@ pub fn setup_sfx_bank(asset_server: Res<AssetServer>, mut commands: Commands) {
             if !is_wav {
                 continue;
             }
-            if let Some(kind) = SfxKind::ALL.into_iter().find(|k| lower.starts_with(k.prefix())) {
+            if let Some(kind) = SfxKind::ALL
+                .into_iter()
+                .find(|k| lower.starts_with(k.prefix()))
+            {
                 let handle = asset_server.load(format!("sfx/{name}"));
                 bank.samples.entry(kind).or_default().push(handle);
                 loaded += 1;
@@ -119,18 +122,33 @@ pub fn emit_combat_sfx(
         if hit.kind == DamageKind::Fire || hit.lethal {
             continue; // fire handled by SpawnFire; kills handled by EntityDied
         }
-        sfx.write(PlaySfx { kind: SfxKind::Hit, gain_db: -7.0 });
+        sfx.write(PlaySfx {
+            kind: SfxKind::Hit,
+            gain_db: -7.0,
+        });
     }
     for _ in deaths.read() {
-        sfx.write(PlaySfx { kind: SfxKind::Death, gain_db: -3.0 });
-        sfx.write(PlaySfx { kind: SfxKind::Gib, gain_db: -9.0 });
+        sfx.write(PlaySfx {
+            kind: SfxKind::Death,
+            gain_db: -3.0,
+        });
+        sfx.write(PlaySfx {
+            kind: SfxKind::Gib,
+            gain_db: -9.0,
+        });
     }
     for _ in fires.read() {
-        sfx.write(PlaySfx { kind: SfxKind::Fire, gain_db: -5.0 });
+        sfx.write(PlaySfx {
+            kind: SfxKind::Fire,
+            gain_db: -5.0,
+        });
     }
     for ev in tracking.read() {
         if matches!(ev, GameTrackingEvent::ShotFired(_)) {
-            sfx.write(PlaySfx { kind: SfxKind::Shoot, gain_db: -8.0 });
+            sfx.write(PlaySfx {
+                kind: SfxKind::Shoot,
+                gain_db: -8.0,
+            });
         }
     }
 }
@@ -149,14 +167,18 @@ pub fn play_sfx(
         if live >= MAX_VOICES {
             break;
         }
-        let Some(handles) = bank.samples.get(&msg.kind) else { continue };
+        let Some(handles) = bank.samples.get(&msg.kind) else {
+            continue;
+        };
         if handles.is_empty() {
             continue;
         }
 
         *seed = seed.wrapping_add(0x9E37_79B9).wrapping_mul(2_654_435_761);
         let pick = (*seed >> 16) as usize % handles.len();
-        let Some(handle) = handles.get(pick) else { continue };
+        let Some(handle) = handles.get(pick) else {
+            continue;
+        };
         // +/-8% pitch and +/-2 dB so repeats don't sound identical.
         let pitch = 1.0 + (f64::from((*seed >> 8) & 0xff) / 255.0 - 0.5) * 0.16;
         let gain = msg.gain_db + (((*seed >> 20) & 0xff) as f32 / 255.0 - 0.5) * 4.0;

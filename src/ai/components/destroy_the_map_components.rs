@@ -1,12 +1,12 @@
-use bevy::prelude::*;
 use crate::general::components::map_components::CoolDown;
+use bevy::prelude::*;
 
 #[derive(Default, Reflect)]
 #[reflect(Default)]
 #[type_path = "avs"]
 pub enum MustDestroyTheMapState {
-  #[default]  
-  NotStarted,
+    #[default]
+    NotStarted,
     SearchingForThingToDestroy,
     MovingTowardsThingToDestroy,
     DestroyingThing,

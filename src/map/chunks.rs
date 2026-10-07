@@ -16,7 +16,6 @@
 // genuinely risky spots are fixed individually.
 #![allow(clippy::arithmetic_side_effects, clippy::indexing_slicing)]
 
-
 use crate::map::MapFeatures;
 use enumflags2::BitFlags;
 use serde::{Deserialize, Serialize};
@@ -110,15 +109,26 @@ impl MapChunk {
     // programmer error that should fail loudly and immediately, not propagate.
     #[allow(clippy::panic)]
     pub fn from_ascii(name: &str, rows: &[&str], edges: [EdgeType; 4]) -> Self {
-        Self::try_from_ascii(name, rows.iter().map(std::string::ToString::to_string).collect(), edges)
-            .unwrap_or_else(|e| panic!("{e}"))
+        Self::try_from_ascii(
+            name,
+            rows.iter().map(std::string::ToString::to_string).collect(),
+            edges,
+        )
+        .unwrap_or_else(|e| panic!("{e}"))
     }
 
     /// Fallible ASCII build (used by the `.ron` loader, where a bad file shouldn't crash
     /// the game). Returns a human-readable error on the wrong shape or an unknown char.
-    pub fn try_from_ascii(name: &str, rows: Vec<String>, edges: [EdgeType; 4]) -> Result<Self, String> {
+    pub fn try_from_ascii(
+        name: &str,
+        rows: Vec<String>,
+        edges: [EdgeType; 4],
+    ) -> Result<Self, String> {
         if rows.len() != CHUNK_SIZE {
-            return Err(format!("chunk '{name}': needs {CHUNK_SIZE} rows, got {}", rows.len()));
+            return Err(format!(
+                "chunk '{name}': needs {CHUNK_SIZE} rows, got {}",
+                rows.len()
+            ));
         }
         let mut tiles = Vec::with_capacity(CHUNK_SIZE);
         for row in &rows {
@@ -136,7 +146,11 @@ impl MapChunk {
             }
             tiles.push(tile_row);
         }
-        Ok(Self { name: name.to_string(), tiles, edges })
+        Ok(Self {
+            name: name.to_string(),
+            tiles,
+            edges,
+        })
     }
 
     /// The connector on a given side.
@@ -169,7 +183,11 @@ impl MapChunk {
             e[Side::East as usize],  // South <- East
             e[Side::South as usize], // West  <- South
         ];
-        Self { name: self.name.clone(), tiles, edges }
+        Self {
+            name: self.name.clone(),
+            tiles,
+            edges,
+        }
     }
 }
 
@@ -245,15 +263,14 @@ mod tests {
         MapChunk::from_ascii(
             "test",
             &[
-                "#......",
-                ".......",
-                ".......",
-                ".......",
-                ".......",
-                ".......",
-                ".......",
+                "#......", ".......", ".......", ".......", ".......", ".......", ".......",
             ],
-            [EdgeType::Road, EdgeType::Open, EdgeType::Wall, EdgeType::Open],
+            [
+                EdgeType::Road,
+                EdgeType::Open,
+                EdgeType::Wall,
+                EdgeType::Open,
+            ],
         )
     }
 

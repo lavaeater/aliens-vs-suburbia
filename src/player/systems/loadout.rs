@@ -34,11 +34,17 @@ pub struct Weapons {
 }
 
 impl Weapons {
-    pub fn new(character_def_path: impl Into<String>, def_paths: impl IntoIterator<Item = String>) -> Self {
+    pub fn new(
+        character_def_path: impl Into<String>,
+        def_paths: impl IntoIterator<Item = String>,
+    ) -> Self {
         Self {
             slots: def_paths
                 .into_iter()
-                .map(|def_path| WeaponSlot { def_path, rounds_in_mag: None })
+                .map(|def_path| WeaponSlot {
+                    def_path,
+                    rounds_in_mag: None,
+                })
                 .collect(),
             active: 0,
             character_def_path: character_def_path.into(),
@@ -58,7 +64,10 @@ impl Weapons {
         if let Some(i) = self.index_of(def_path) {
             return (i, false);
         }
-        self.slots.push(WeaponSlot { def_path: def_path.to_string(), rounds_in_mag: None });
+        self.slots.push(WeaponSlot {
+            def_path: def_path.to_string(),
+            rounds_in_mag: None,
+        });
         (self.slots.len() - 1, true)
     }
 
@@ -95,16 +104,23 @@ pub struct SwitchWeapon {
 pub fn switch_weapons(
     mut commands: Commands,
     mut requests: MessageReader<SwitchWeapon>,
-    mut players: Query<(&mut Weapons, Option<&EquippedWeapon>, Has<PendingEquip>), (With<Player>, Without<PlayerDead>)>,
+    mut players: Query<
+        (&mut Weapons, Option<&EquippedWeapon>, Has<PendingEquip>),
+        (With<Player>, Without<PlayerDead>),
+    >,
     weapons: Query<&Weapon>,
 ) {
     for req in requests.read() {
-        let Ok((mut loadout, equipped, mid_equip)) = players.get_mut(req.player) else { continue };
+        let Ok((mut loadout, equipped, mid_equip)) = players.get_mut(req.player) else {
+            continue;
+        };
         // A swap already in flight: let it land before starting another.
         if mid_equip {
             continue;
         }
-        let Some(next) = loadout.resolve(req.select) else { continue };
+        let Some(next) = loadout.resolve(req.select) else {
+            continue;
+        };
         if next == loadout.active && equipped.is_some() {
             continue;
         }
@@ -132,15 +148,25 @@ pub fn switch_weapons(
 
 /// Insert a `PendingEquip` for the loadout's active slot, if the defs resolve.
 pub fn queue_equip(commands: &mut Commands, player: Entity, loadout: &Weapons) {
-    let Some(slot) = loadout.active_slot() else { return };
+    let Some(slot) = loadout.active_slot() else {
+        return;
+    };
     let Some(character) = AssetDefinition::load_from_def_path(&loadout.character_def_path) else {
-        warn!("cannot equip {}: character def {} failed to load", slot.def_path, loadout.character_def_path);
+        warn!(
+            "cannot equip {}: character def {} failed to load",
+            slot.def_path, loadout.character_def_path
+        );
         return;
     };
     if let Some(mut equip) = PendingEquip::resolve(&character, &slot.def_path) {
         equip.rounds_in_mag = slot.rounds_in_mag;
         commands.entity(player).insert(equip);
-    } else { warn!("cannot equip {}: no grip pairing with {}", slot.def_path, loadout.character_def_path) }
+    } else {
+        warn!(
+            "cannot equip {}: no grip pairing with {}",
+            slot.def_path, loadout.character_def_path
+        )
+    }
 }
 
 #[cfg(test)]
@@ -148,7 +174,14 @@ mod tests {
     use super::*;
 
     fn loadout() -> Weapons {
-        Weapons::new("c.ron", ["a.ron".to_string(), "b.ron".to_string(), "c.ron".to_string()])
+        Weapons::new(
+            "c.ron",
+            [
+                "a.ron".to_string(),
+                "b.ron".to_string(),
+                "c.ron".to_string(),
+            ],
+        )
     }
 
     #[test]

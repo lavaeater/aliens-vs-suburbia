@@ -1,11 +1,11 @@
-use bevy::prelude::{Query, Res};
-use avian3d::prelude::{Position, Rotation, SpatialQuery, SpatialQueryFilter};
-use bevy::math::{EulerRot, Quat, Vec3};
-use bevy::time::Time;
 use crate::ai::components::avoid_wall_components::AvoidWallsData;
 use crate::control::components::{CharacterControl, ControlRotation};
 use crate::general::components::CollisionLayer;
 use crate::general::components::map_components::CoolDown;
+use avian3d::prelude::{Position, Rotation, SpatialQuery, SpatialQueryFilter};
+use bevy::math::{EulerRot, Quat, Vec3};
+use bevy::prelude::{Query, Res};
+use bevy::time::Time;
 
 pub fn avoid_walls_data_system(
     mut avoid_wall_data_query: Query<(&mut AvoidWallsData, &Position, &Rotation)>,
@@ -31,9 +31,10 @@ pub fn avoid_walls_data_system(
                 avoid_wall_data.max_forward_distance,
                 true,
                 &filter,
-            ) {
-                avoid_wall_data.forward_distance = hit.distance;
-            }
+            )
+        {
+            avoid_wall_data.forward_distance = hit.distance;
+        }
 
         if let Ok(left_dir) = bevy::math::Dir3::new(left)
             && let Some(hit) = spatial_query.cast_ray(
@@ -42,9 +43,10 @@ pub fn avoid_walls_data_system(
                 avoid_wall_data.max_left_distance,
                 true,
                 &filter,
-            ) {
-                avoid_wall_data.left_distance = hit.distance;
-            }
+            )
+        {
+            avoid_wall_data.left_distance = hit.distance;
+        }
 
         if let Ok(right_dir) = bevy::math::Dir3::new(right)
             && let Some(hit) = spatial_query.cast_ray(
@@ -53,9 +55,10 @@ pub fn avoid_walls_data_system(
                 avoid_wall_data.max_right_distance,
                 true,
                 &filter,
-            ) {
-                avoid_wall_data.right_distance = hit.distance;
-            }
+            )
+        {
+            avoid_wall_data.right_distance = hit.distance;
+        }
     }
 }
 
@@ -76,8 +79,11 @@ pub fn avoid_walls_action_system(
         }
 
         controller.rotations.clear();
-        controller.rotations.insert(avoid_walls_data.rotation_direction);
-        let speed_factor = (avoid_walls_data.forward_distance / avoid_walls_data.max_forward_distance) * 2.0;
+        controller
+            .rotations
+            .insert(avoid_walls_data.rotation_direction);
+        let speed_factor =
+            (avoid_walls_data.forward_distance / avoid_walls_data.max_forward_distance) * 2.0;
         controller.speed = controller.max_speed * speed_factor;
         controller.turn_speed = controller.max_turn_speed;
     }

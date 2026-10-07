@@ -1,16 +1,17 @@
 use crate::alien::components::general::AlienCounter;
 use crate::alien::wave_manager::WaveManager;
-use crate::game_state::score_keeper::LevelTracker;
-use crate::animation::animation_plugin::{AnimationKey, ANIM_KEYS};
+use crate::animation::animation_plugin::{ANIM_KEYS, AnimationKey};
 use crate::game_state::GameState;
+use crate::game_state::score_keeper::LevelTracker;
 use crate::general::components::Health;
+use crate::model_settings::resources::{CharacterFolder, ModelSettings, PlayerAnimClips};
 use crate::player::components::IsBuilding;
 use crate::settings::resources::{GameSettings, ProjectionMode};
-use crate::model_settings::resources::{CharacterFolder, ModelSettings, PlayerAnimClips};
 use bevy::prelude::*;
 use bevy::ui_widgets::Activate;
 use lava_ui_builder::{
-    ButtonTheme, LavaTheme, ProgressBar, TextStyle, TextTheme, UIBuilder, WorldFollower, progress_bar,
+    ButtonTheme, LavaTheme, ProgressBar, TextStyle, TextTheme, UIBuilder, WorldFollower,
+    progress_bar,
 };
 
 // ── Theme ────────────────────────────────────────────────────────────────────
@@ -70,7 +71,9 @@ pub fn spawn_menu(commands: Commands, theme: Res<LavaTheme>) {
 
     ui.add_button_observe(
         "Start Game",
-        |btn| { btn.size_px(220.0, 52.0).font_size(20.0); },
+        |btn| {
+            btn.size_px(220.0, 52.0).font_size(20.0);
+        },
         |_: On<Activate>, mut next_state: ResMut<NextState<GameState>>| {
             next_state.set(GameState::PlayerSetup);
         },
@@ -83,7 +86,7 @@ pub fn spawn_menu(commands: Commands, theme: Res<LavaTheme>) {
     //         next_state.set(GameState::ModelShowcase);
     //     },
     // );
-    // 
+    //
     // ui.add_button_observe(
     //     "Browse Models",
     //     |btn| { btn.size_px(220.0, 52.0).font_size(20.0); },
@@ -97,7 +100,9 @@ pub fn spawn_menu(commands: Commands, theme: Res<LavaTheme>) {
     // `OnEnter(InGame)` take the sandbox path instead of loading level 1.
     ui.add_button_observe(
         "Playground",
-        |btn| { btn.size_px(220.0, 52.0).font_size(20.0); },
+        |btn| {
+            btn.size_px(220.0, 52.0).font_size(20.0);
+        },
         |_: On<Activate>, mut commands: Commands, mut next_state: ResMut<NextState<GameState>>| {
             commands.init_resource::<crate::playground::state::PlaygroundSession>();
             next_state.set(GameState::InGame);
@@ -106,7 +111,9 @@ pub fn spawn_menu(commands: Commands, theme: Res<LavaTheme>) {
 
     ui.add_button_observe(
         "Asset Browser",
-        |btn| { btn.size_px(220.0, 52.0).font_size(20.0); },
+        |btn| {
+            btn.size_px(220.0, 52.0).font_size(20.0);
+        },
         |_: On<Activate>, mut next_state: ResMut<NextState<GameState>>| {
             next_state.set(GameState::AssetBrowser);
         },
@@ -114,7 +121,9 @@ pub fn spawn_menu(commands: Commands, theme: Res<LavaTheme>) {
 
     ui.add_button_observe(
         "Map Editor",
-        |btn| { btn.size_px(220.0, 52.0).font_size(20.0); },
+        |btn| {
+            btn.size_px(220.0, 52.0).font_size(20.0);
+        },
         |_: On<Activate>, mut next_state: ResMut<NextState<GameState>>| {
             next_state.set(GameState::MapEditor);
         },
@@ -122,7 +131,9 @@ pub fn spawn_menu(commands: Commands, theme: Res<LavaTheme>) {
 
     ui.add_button_observe(
         "House Editor",
-        |btn| { btn.size_px(220.0, 52.0).font_size(20.0); },
+        |btn| {
+            btn.size_px(220.0, 52.0).font_size(20.0);
+        },
         |_: On<Activate>, mut next_state: ResMut<NextState<GameState>>| {
             next_state.set(GameState::HouseEditor);
         },
@@ -144,7 +155,9 @@ pub fn spawn_showcase_ui(commands: Commands, theme: Res<LavaTheme>) {
 
     ui.add_button_observe(
         "Back to Menu",
-        |btn| { btn.size_px(160.0, 44.0).font_size(18.0); },
+        |btn| {
+            btn.size_px(160.0, 44.0).font_size(18.0);
+        },
         |_: On<Activate>, mut next_state: ResMut<NextState<GameState>>| {
             next_state.set(GameState::Menu);
         },
@@ -202,15 +215,58 @@ pub fn spawn_ui(mut commands: Commands, theme: Res<LavaTheme>) {
     {
         let mut ui = UIBuilder::new(commands.reborrow(), Some(theme.clone()));
         ui.insert(StateMarker)
-          .absolute_position().top(px(8.0)).left(px(8.0))
-          .display_flex().align_items_center().column_gap_px(16.0);
+            .absolute_position()
+            .top(px(8.0))
+            .left(px(8.0))
+            .display_flex()
+            .align_items_center()
+            .column_gap_px(16.0);
 
-        ui.with_child(|c| { c.with_text("Coins: 0",  Some(TextStyle::size_color(14.0, Color::srgb(1.0, 0.85, 0.1)))).insert(HudCoins); });
-        ui.with_child(|c| { c.with_text("Wave 1 / 3 in 5s",   Some(TextStyle::size_color(13.0, Color::srgb(0.5, 0.8, 1.0)))).insert(HudWaveInfo); });
-        ui.with_child(|c| { c.with_text("Aliens: 0", Some(TextStyle::size_color(13.0, theme.text.label_color))).insert(HudAlienCount); });
-        ui.with_child(|c| { c.with_text("", Some(TextStyle::size_color(theme.text.label_size, Color::srgb(1.0, 0.8, 0.2)))).insert(HudBuildMode); });
-        ui.with_child(|c| { c.with_text("", Some(TextStyle::size_color(13.0, Color::srgb(0.8, 0.8, 0.2)))).insert(HudBuildCost); });
-        ui.with_child(|c| { c.with_text("", Some(TextStyle::size_color(12.0, Color::srgb(0.6, 0.6, 0.6)))).insert(HudProjection); });
+        ui.with_child(|c| {
+            c.with_text(
+                "Coins: 0",
+                Some(TextStyle::size_color(14.0, Color::srgb(1.0, 0.85, 0.1))),
+            )
+            .insert(HudCoins);
+        });
+        ui.with_child(|c| {
+            c.with_text(
+                "Wave 1 / 3 in 5s",
+                Some(TextStyle::size_color(13.0, Color::srgb(0.5, 0.8, 1.0))),
+            )
+            .insert(HudWaveInfo);
+        });
+        ui.with_child(|c| {
+            c.with_text(
+                "Aliens: 0",
+                Some(TextStyle::size_color(13.0, theme.text.label_color)),
+            )
+            .insert(HudAlienCount);
+        });
+        ui.with_child(|c| {
+            c.with_text(
+                "",
+                Some(TextStyle::size_color(
+                    theme.text.label_size,
+                    Color::srgb(1.0, 0.8, 0.2),
+                )),
+            )
+            .insert(HudBuildMode);
+        });
+        ui.with_child(|c| {
+            c.with_text(
+                "",
+                Some(TextStyle::size_color(13.0, Color::srgb(0.8, 0.8, 0.2))),
+            )
+            .insert(HudBuildCost);
+        });
+        ui.with_child(|c| {
+            c.with_text(
+                "",
+                Some(TextStyle::size_color(12.0, Color::srgb(0.6, 0.6, 0.6))),
+            )
+            .insert(HudProjection);
+        });
 
         ui.build();
     }
@@ -219,16 +275,30 @@ pub fn spawn_ui(mut commands: Commands, theme: Res<LavaTheme>) {
     {
         let mut ui = UIBuilder::new(commands.reborrow(), Some(theme.clone()));
         ui.insert(StateMarker)
-          .absolute_position().top(px(8.0)).left(percent(50.0))
-          .modify_node(|mut n| n.margin.left = Val::Px(-90.0))
-          .flex_column().align_items_center().row_gap_px(2.0);
+            .absolute_position()
+            .top(px(8.0))
+            .left(percent(50.0))
+            .modify_node(|mut n| n.margin.left = Val::Px(-90.0))
+            .flex_column()
+            .align_items_center()
+            .row_gap_px(2.0);
 
-        ui.with_child(|c| { c.with_text("Aliens escaped: 0 / 10", Some(TextStyle::size_color(13.0, Color::srgb(1.0, 0.35, 0.2)))).insert(HudAlienMeter); });
         ui.with_child(|c| {
-            c.insert_bundle(progress_bar(0.0, 180.0, 10.0,
+            c.with_text(
+                "Aliens escaped: 0 / 10",
+                Some(TextStyle::size_color(13.0, Color::srgb(1.0, 0.35, 0.2))),
+            )
+            .insert(HudAlienMeter);
+        });
+        ui.with_child(|c| {
+            c.insert_bundle(progress_bar(
+                0.0,
+                180.0,
+                10.0,
                 Color::srgb(1.0, 0.25, 0.1),
                 Color::srgba(0.0, 0.0, 0.0, 0.5),
-            )).insert(HudAlienMeter);
+            ))
+            .insert(HudAlienMeter);
         });
         ui.build();
     }
@@ -241,8 +311,12 @@ pub fn spawn_camera_panel(commands: Commands, theme: &LavaTheme) {
     let mut ui = UIBuilder::new(commands, Some(theme.clone()));
     ui.component::<SettingsPanel>()
         .display_none()
-        .absolute_position().top(px(8.0)).right(px(8.0))
-        .flex_column().row_gap_px(6.0).padding_all_px(12.0)
+        .absolute_position()
+        .top(px(8.0))
+        .right(px(8.0))
+        .flex_column()
+        .row_gap_px(6.0)
+        .padding_all_px(12.0)
         .min_width_px(350.0)
         .bg_color(Color::srgba(0.05, 0.12, 0.07, 0.92))
         .insert(StateMarker);
@@ -251,65 +325,131 @@ pub fn spawn_camera_panel(commands: Commands, theme: &LavaTheme) {
     ui.themed_header("Camera  [F1]");
 
     setting_row(&mut ui, "Projection", &t, |row| {
-        row.add_button_observe("Ortho", |b| { b.size_px(70.0, 32.0); },
-            |_: On<Activate>, mut s: ResMut<GameSettings>| { s.projection = ProjectionMode::Orthographic; s.save(); });
-        row.add_button_observe("Persp", |b| { b.size_px(70.0, 32.0); },
-            |_: On<Activate>, mut s: ResMut<GameSettings>| { s.projection = ProjectionMode::Perspective; s.save(); });
+        row.add_button_observe(
+            "Ortho",
+            |b| {
+                b.size_px(70.0, 32.0);
+            },
+            |_: On<Activate>, mut s: ResMut<GameSettings>| {
+                s.projection = ProjectionMode::Orthographic;
+                s.save();
+            },
+        );
+        row.add_button_observe(
+            "Persp",
+            |b| {
+                b.size_px(70.0, 32.0);
+            },
+            |_: On<Activate>, mut s: ResMut<GameSettings>| {
+                s.projection = ProjectionMode::Perspective;
+                s.save();
+            },
+        );
     });
-    cam_row(&mut ui, "Zoom",  &t, CameraSetting::Zoom,
+    cam_row(
+        &mut ui,
+        "Zoom",
+        &t,
+        CameraSetting::Zoom,
         |s| s.zoom = (s.zoom - 1.0).max(1.0),
         |s| s.zoom = (s.zoom - 0.1).max(1.0),
         |s| s.zoom = (s.zoom + 0.1).min(60.0),
-        |s| s.zoom = (s.zoom + 1.0).min(60.0));
-    cam_row(&mut ui, "Pitch", &t, CameraSetting::Pitch,
+        |s| s.zoom = (s.zoom + 1.0).min(60.0),
+    );
+    cam_row(
+        &mut ui,
+        "Pitch",
+        &t,
+        CameraSetting::Pitch,
         |s| s.pitch_degrees = (s.pitch_degrees - 5.0).max(-89.0),
         |s| s.pitch_degrees = (s.pitch_degrees - 1.0).max(-89.0),
         |s| s.pitch_degrees = (s.pitch_degrees + 1.0).min(-5.0),
-        |s| s.pitch_degrees = (s.pitch_degrees + 5.0).min(-5.0));
-    cam_row(&mut ui, "Yaw",   &t, CameraSetting::Yaw,
+        |s| s.pitch_degrees = (s.pitch_degrees + 5.0).min(-5.0),
+    );
+    cam_row(
+        &mut ui,
+        "Yaw",
+        &t,
+        CameraSetting::Yaw,
         |s| s.yaw_degrees = (s.yaw_degrees - 15.0).rem_euclid(360.0),
-        |s| s.yaw_degrees = (s.yaw_degrees -  1.0).rem_euclid(360.0),
-        |s| s.yaw_degrees = (s.yaw_degrees +  1.0).rem_euclid(360.0),
-        |s| s.yaw_degrees = (s.yaw_degrees + 15.0).rem_euclid(360.0));
-    cam_row(&mut ui, "Speed", &t, CameraSetting::Speed,
+        |s| s.yaw_degrees = (s.yaw_degrees - 1.0).rem_euclid(360.0),
+        |s| s.yaw_degrees = (s.yaw_degrees + 1.0).rem_euclid(360.0),
+        |s| s.yaw_degrees = (s.yaw_degrees + 15.0).rem_euclid(360.0),
+    );
+    cam_row(
+        &mut ui,
+        "Speed",
+        &t,
+        CameraSetting::Speed,
         |s| s.player_speed_multiplier = (s.player_speed_multiplier - 0.25).max(0.25),
         |s| s.player_speed_multiplier = (s.player_speed_multiplier - 0.05).max(0.05),
         |s| s.player_speed_multiplier = (s.player_speed_multiplier + 0.05).min(5.0),
-        |s| s.player_speed_multiplier = (s.player_speed_multiplier + 0.25).min(5.0));
+        |s| s.player_speed_multiplier = (s.player_speed_multiplier + 0.25).min(5.0),
+    );
 
     ui.label("-- Ortho --", 12.0, Color::srgb(0.4, 0.65, 0.5));
-    cam_row(&mut ui, "V.Height", &t, CameraSetting::OrthoVH,
+    cam_row(
+        &mut ui,
+        "V.Height",
+        &t,
+        CameraSetting::OrthoVH,
         |s| s.ortho_viewport_height = (s.ortho_viewport_height - 0.25).max(0.25),
         |s| s.ortho_viewport_height = (s.ortho_viewport_height - 0.05).max(0.05),
         |s| s.ortho_viewport_height += 0.05,
-        |s| s.ortho_viewport_height += 0.25);
-    cam_row(&mut ui, "Near", &t, CameraSetting::OrthoNear,
+        |s| s.ortho_viewport_height += 0.25,
+    );
+    cam_row(
+        &mut ui,
+        "Near",
+        &t,
+        CameraSetting::OrthoNear,
         |s| s.ortho_near -= 50.0,
-        |s| s.ortho_near -=  1.0,
-        |s| s.ortho_near = (s.ortho_near +  1.0).min(0.0),
-        |s| s.ortho_near = (s.ortho_near + 50.0).min(0.0));
-    cam_row(&mut ui, "Far", &t, CameraSetting::OrthoFar,
+        |s| s.ortho_near -= 1.0,
+        |s| s.ortho_near = (s.ortho_near + 1.0).min(0.0),
+        |s| s.ortho_near = (s.ortho_near + 50.0).min(0.0),
+    );
+    cam_row(
+        &mut ui,
+        "Far",
+        &t,
+        CameraSetting::OrthoFar,
         |s| s.ortho_far = (s.ortho_far - 100.0).max(1.0),
-        |s| s.ortho_far = (s.ortho_far -   1.0).max(1.0),
+        |s| s.ortho_far = (s.ortho_far - 1.0).max(1.0),
         |s| s.ortho_far += 1.0,
-        |s| s.ortho_far += 100.0);
+        |s| s.ortho_far += 100.0,
+    );
 
     ui.label("-- Persp --", 12.0, Color::srgb(0.4, 0.65, 0.5));
-    cam_row(&mut ui, "FOV", &t, CameraSetting::PerspFOV,
+    cam_row(
+        &mut ui,
+        "FOV",
+        &t,
+        CameraSetting::PerspFOV,
         |s| s.persp_fov = (s.persp_fov - 5.0).max(10.0),
         |s| s.persp_fov = (s.persp_fov - 1.0).max(10.0),
         |s| s.persp_fov = (s.persp_fov + 1.0).min(170.0),
-        |s| s.persp_fov = (s.persp_fov + 5.0).min(170.0));
-    cam_row(&mut ui, "Near", &t, CameraSetting::PerspNear,
+        |s| s.persp_fov = (s.persp_fov + 5.0).min(170.0),
+    );
+    cam_row(
+        &mut ui,
+        "Near",
+        &t,
+        CameraSetting::PerspNear,
         |s| s.persp_near = (s.persp_near - 0.05).max(0.01),
         |s| s.persp_near = (s.persp_near - 0.01).max(0.001),
         |s| s.persp_near = (s.persp_near + 0.01).min(s.persp_far - 0.1),
-        |s| s.persp_near = (s.persp_near + 0.05).min(s.persp_far - 0.1));
-    cam_row(&mut ui, "Far",  &t, CameraSetting::PerspFar,
+        |s| s.persp_near = (s.persp_near + 0.05).min(s.persp_far - 0.1),
+    );
+    cam_row(
+        &mut ui,
+        "Far",
+        &t,
+        CameraSetting::PerspFar,
         |s| s.persp_far = (s.persp_far - 100.0).max(s.persp_near + 1.0),
-        |s| s.persp_far = (s.persp_far -   1.0).max(s.persp_near + 1.0),
+        |s| s.persp_far = (s.persp_far - 1.0).max(s.persp_near + 1.0),
         |s| s.persp_far += 1.0,
-        |s| s.persp_far += 100.0);
+        |s| s.persp_far += 100.0,
+    );
 
     ui.build();
 }
@@ -318,8 +458,12 @@ pub fn spawn_model_panel(commands: Commands, theme: &LavaTheme) {
     let mut ui = UIBuilder::new(commands, Some(theme.clone()));
     ui.component::<ModelPanel>()
         .display_none()
-        .absolute_position().top(px(8.0)).right(px(366.0))
-        .flex_column().row_gap_px(6.0).padding_all_px(12.0)
+        .absolute_position()
+        .top(px(8.0))
+        .right(px(366.0))
+        .flex_column()
+        .row_gap_px(6.0)
+        .padding_all_px(12.0)
         .min_width_px(350.0)
         .bg_color(Color::srgba(0.05, 0.08, 0.15, 0.92))
         .insert(StateMarker);
@@ -329,42 +473,82 @@ pub fn spawn_model_panel(commands: Commands, theme: &LavaTheme) {
 
     // Character selector
     setting_row(&mut ui, "Character", &t, |row| {
-        row.add_button_observe("<", |b| { b.size_px(32.0, 32.0); },
-            |_: On<Activate>, mut s: ResMut<ModelSettings>, folder: Res<CharacterFolder>,
+        row.add_button_observe(
+            "<",
+            |b| {
+                b.size_px(32.0, 32.0);
+            },
+            |_: On<Activate>,
+             mut s: ResMut<ModelSettings>,
+             folder: Res<CharacterFolder>,
              panel: Query<&Node, With<ModelPanel>>| {
-                if panel.single().is_ok_and(|n| n.display == Display::None) { return; }
+                if panel.single().is_ok_and(|n| n.display == Display::None) {
+                    return;
+                }
                 let n = folder.files.len();
-                if n > 0 { s.character_index = (s.character_index + n - 1) % n; s.save(); }
-            });
+                if n > 0 {
+                    s.character_index = (s.character_index + n - 1) % n;
+                    s.save();
+                }
+            },
+        );
         row.with_child(|v| {
-            v.with_text("", Some(TextStyle::size(12.0))).insert(ModelSetting::CharacterName);
+            v.with_text("", Some(TextStyle::size(12.0)))
+                .insert(ModelSetting::CharacterName);
         });
-        row.add_button_observe(">", |b| { b.size_px(32.0, 32.0); },
-            |_: On<Activate>, mut s: ResMut<ModelSettings>, folder: Res<CharacterFolder>,
+        row.add_button_observe(
+            ">",
+            |b| {
+                b.size_px(32.0, 32.0);
+            },
+            |_: On<Activate>,
+             mut s: ResMut<ModelSettings>,
+             folder: Res<CharacterFolder>,
              panel: Query<&Node, With<ModelPanel>>| {
-                if panel.single().is_ok_and(|n| n.display == Display::None) { return; }
+                if panel.single().is_ok_and(|n| n.display == Display::None) {
+                    return;
+                }
                 let n = folder.files.len();
-                if n > 0 { s.character_index = (s.character_index + 1) % n; s.save(); }
-            });
+                if n > 0 {
+                    s.character_index = (s.character_index + 1) % n;
+                    s.save();
+                }
+            },
+        );
     });
 
     // Transform
     ui.label("-- Transform --", 12.0, Color::srgb(0.4, 0.65, 0.5));
-    mdl_row(&mut ui, "Scale",    &t, ModelSetting::Scale,
+    mdl_row(
+        &mut ui,
+        "Scale",
+        &t,
+        ModelSetting::Scale,
         |s| s.scale = (s.scale - 0.1).max(0.01),
         |s| s.scale = (s.scale - 0.01).max(0.01),
         |s| s.scale = (s.scale + 0.01).min(20.0),
-        |s| s.scale = (s.scale + 0.1).min(20.0));
-    mdl_row(&mut ui, "Offset Y", &t, ModelSetting::OffsetY,
+        |s| s.scale = (s.scale + 0.1).min(20.0),
+    );
+    mdl_row(
+        &mut ui,
+        "Offset Y",
+        &t,
+        ModelSetting::OffsetY,
         |s| s.translation_y -= 0.1,
         |s| s.translation_y -= 0.01,
         |s| s.translation_y += 0.01,
-        |s| s.translation_y += 0.1);
-    mdl_row(&mut ui, "Rot Y",    &t, ModelSetting::RotY,
+        |s| s.translation_y += 0.1,
+    );
+    mdl_row(
+        &mut ui,
+        "Rot Y",
+        &t,
+        ModelSetting::RotY,
         |s| s.rotation_y_degrees = (s.rotation_y_degrees - 15.0).rem_euclid(360.0),
-        |s| s.rotation_y_degrees = (s.rotation_y_degrees -  1.0).rem_euclid(360.0),
-        |s| s.rotation_y_degrees = (s.rotation_y_degrees +  1.0).rem_euclid(360.0),
-        |s| s.rotation_y_degrees = (s.rotation_y_degrees + 15.0).rem_euclid(360.0));
+        |s| s.rotation_y_degrees = (s.rotation_y_degrees - 1.0).rem_euclid(360.0),
+        |s| s.rotation_y_degrees = (s.rotation_y_degrees + 1.0).rem_euclid(360.0),
+        |s| s.rotation_y_degrees = (s.rotation_y_degrees + 15.0).rem_euclid(360.0),
+    );
 
     // Animation mapping
     ui.label("-- Animation Mapping --", 12.0, Color::srgb(0.4, 0.65, 0.5));
@@ -377,58 +561,77 @@ pub fn spawn_model_panel(commands: Commands, theme: &LavaTheme) {
 
 const fn key_label(key: AnimationKey) -> &'static str {
     match key {
-        AnimationKey::Idle      => "Idle",
+        AnimationKey::Idle => "Idle",
         AnimationKey::IdleShoot => "Idle Shoot",
-        AnimationKey::Walk      => "Walk",
+        AnimationKey::Walk => "Walk",
         AnimationKey::WalkShoot => "Walk Shoot",
-        AnimationKey::Run       => "Run",
-        AnimationKey::RunShoot  => "Run Shoot",
-        AnimationKey::RunGun    => "Run Gun",
-        AnimationKey::Duck      => "Duck",
-        AnimationKey::Jump      => "Jump",
-        AnimationKey::JumpIdle  => "Jump Idle",
-        AnimationKey::JumpLand  => "Jump Land",
-        AnimationKey::Punch     => "Punch",
-        AnimationKey::Wave      => "Wave",
-        AnimationKey::Yes       => "Yes",
-        AnimationKey::No        => "No",
-        AnimationKey::Death     => "Death",
-        AnimationKey::HitReact  => "Hit React",
-        AnimationKey::Throwing  => "Throwing",
-        AnimationKey::Building  => "Building",
-        AnimationKey::Reload    => "Reload",
+        AnimationKey::Run => "Run",
+        AnimationKey::RunShoot => "Run Shoot",
+        AnimationKey::RunGun => "Run Gun",
+        AnimationKey::Duck => "Duck",
+        AnimationKey::Jump => "Jump",
+        AnimationKey::JumpIdle => "Jump Idle",
+        AnimationKey::JumpLand => "Jump Land",
+        AnimationKey::Punch => "Punch",
+        AnimationKey::Wave => "Wave",
+        AnimationKey::Yes => "Yes",
+        AnimationKey::No => "No",
+        AnimationKey::Death => "Death",
+        AnimationKey::HitReact => "Hit React",
+        AnimationKey::Throwing => "Throwing",
+        AnimationKey::Building => "Building",
+        AnimationKey::Reload => "Reload",
     }
 }
 
 fn anim_mapping_row(ui: &mut UIBuilder, label: &str, t: &TextTheme, key: AnimationKey) {
     setting_row(ui, label, t, move |row| {
-        row.add_button_observe("<", |b| { b.size_px(28.0, 28.0); },
+        row.add_button_observe(
+            "<",
+            |b| {
+                b.size_px(28.0, 28.0);
+            },
             move |_: On<Activate>, mut s: ResMut<ModelSettings>, clips: Res<PlayerAnimClips>| {
                 let names = &clips.names;
-                if names.is_empty() { return; }
+                if names.is_empty() {
+                    return;
+                }
                 let cur = s.anim_mapping.get(key).to_string();
-                let idx = names.iter().position(|n| n == &cur)
+                let idx = names
+                    .iter()
+                    .position(|n| n == &cur)
                     .map_or(0, |i| (i + names.len() - 1) % names.len());
                 if let Some(name) = names.get(idx) {
                     s.anim_mapping.set(key, name.clone());
                 }
                 s.save();
-            });
+            },
+        );
         row.with_child(|v| {
-            v.with_text("-", Some(TextStyle::size(11.0))).insert(AnimMappingLabel(key));
+            v.with_text("-", Some(TextStyle::size(11.0)))
+                .insert(AnimMappingLabel(key));
         });
-        row.add_button_observe(">", |b| { b.size_px(28.0, 28.0); },
+        row.add_button_observe(
+            ">",
+            |b| {
+                b.size_px(28.0, 28.0);
+            },
             move |_: On<Activate>, mut s: ResMut<ModelSettings>, clips: Res<PlayerAnimClips>| {
                 let names = &clips.names;
-                if names.is_empty() { return; }
+                if names.is_empty() {
+                    return;
+                }
                 let cur = s.anim_mapping.get(key).to_string();
-                let idx = names.iter().position(|n| n == &cur)
+                let idx = names
+                    .iter()
+                    .position(|n| n == &cur)
                     .map_or(0, |i| (i + 1) % names.len());
                 if let Some(name) = names.get(idx) {
                     s.anim_mapping.set(key, name.clone());
                 }
                 s.save();
-            });
+            },
+        );
     });
 }
 
@@ -441,22 +644,54 @@ fn cam_row(
     t: &TextTheme,
     setting: CameraSetting,
     coarse_dec: impl Fn(&mut GameSettings) + Send + Sync + 'static,
-    fine_dec:   impl Fn(&mut GameSettings) + Send + Sync + 'static,
-    fine_inc:   impl Fn(&mut GameSettings) + Send + Sync + 'static,
+    fine_dec: impl Fn(&mut GameSettings) + Send + Sync + 'static,
+    fine_inc: impl Fn(&mut GameSettings) + Send + Sync + 'static,
     coarse_inc: impl Fn(&mut GameSettings) + Send + Sync + 'static,
 ) {
     setting_row(ui, label, t, move |row| {
-        row.add_button_observe("<<", |b| { b.size_px(28.0, 28.0); },
-            move |_: On<Activate>, mut s: ResMut<GameSettings>| { coarse_dec(&mut s); s.save(); });
-        row.add_button_observe("<",  |b| { b.size_px(24.0, 28.0); },
-            move |_: On<Activate>, mut s: ResMut<GameSettings>| { fine_dec(&mut s); s.save(); });
+        row.add_button_observe(
+            "<<",
+            |b| {
+                b.size_px(28.0, 28.0);
+            },
+            move |_: On<Activate>, mut s: ResMut<GameSettings>| {
+                coarse_dec(&mut s);
+                s.save();
+            },
+        );
+        row.add_button_observe(
+            "<",
+            |b| {
+                b.size_px(24.0, 28.0);
+            },
+            move |_: On<Activate>, mut s: ResMut<GameSettings>| {
+                fine_dec(&mut s);
+                s.save();
+            },
+        );
         row.with_child(|v| {
             v.default_text("").insert(setting).min_width_px(44.0);
         });
-        row.add_button_observe(">",  |b| { b.size_px(24.0, 28.0); },
-            move |_: On<Activate>, mut s: ResMut<GameSettings>| { fine_inc(&mut s); s.save(); });
-        row.add_button_observe(">>", |b| { b.size_px(28.0, 28.0); },
-            move |_: On<Activate>, mut s: ResMut<GameSettings>| { coarse_inc(&mut s); s.save(); });
+        row.add_button_observe(
+            ">",
+            |b| {
+                b.size_px(24.0, 28.0);
+            },
+            move |_: On<Activate>, mut s: ResMut<GameSettings>| {
+                fine_inc(&mut s);
+                s.save();
+            },
+        );
+        row.add_button_observe(
+            ">>",
+            |b| {
+                b.size_px(28.0, 28.0);
+            },
+            move |_: On<Activate>, mut s: ResMut<GameSettings>| {
+                coarse_inc(&mut s);
+                s.save();
+            },
+        );
     });
 }
 
@@ -468,22 +703,54 @@ fn mdl_row(
     t: &TextTheme,
     setting: ModelSetting,
     coarse_dec: impl Fn(&mut ModelSettings) + Send + Sync + 'static,
-    fine_dec:   impl Fn(&mut ModelSettings) + Send + Sync + 'static,
-    fine_inc:   impl Fn(&mut ModelSettings) + Send + Sync + 'static,
+    fine_dec: impl Fn(&mut ModelSettings) + Send + Sync + 'static,
+    fine_inc: impl Fn(&mut ModelSettings) + Send + Sync + 'static,
     coarse_inc: impl Fn(&mut ModelSettings) + Send + Sync + 'static,
 ) {
     setting_row(ui, label, t, move |row| {
-        row.add_button_observe("<<", |b| { b.size_px(28.0, 28.0); },
-            move |_: On<Activate>, mut s: ResMut<ModelSettings>| { coarse_dec(&mut s); s.save(); });
-        row.add_button_observe("<",  |b| { b.size_px(24.0, 28.0); },
-            move |_: On<Activate>, mut s: ResMut<ModelSettings>| { fine_dec(&mut s); s.save(); });
+        row.add_button_observe(
+            "<<",
+            |b| {
+                b.size_px(28.0, 28.0);
+            },
+            move |_: On<Activate>, mut s: ResMut<ModelSettings>| {
+                coarse_dec(&mut s);
+                s.save();
+            },
+        );
+        row.add_button_observe(
+            "<",
+            |b| {
+                b.size_px(24.0, 28.0);
+            },
+            move |_: On<Activate>, mut s: ResMut<ModelSettings>| {
+                fine_dec(&mut s);
+                s.save();
+            },
+        );
         row.with_child(|v| {
             v.default_text("").insert(setting).min_width_px(44.0);
         });
-        row.add_button_observe(">",  |b| { b.size_px(24.0, 28.0); },
-            move |_: On<Activate>, mut s: ResMut<ModelSettings>| { fine_inc(&mut s); s.save(); });
-        row.add_button_observe(">>", |b| { b.size_px(28.0, 28.0); },
-            move |_: On<Activate>, mut s: ResMut<ModelSettings>| { coarse_inc(&mut s); s.save(); });
+        row.add_button_observe(
+            ">",
+            |b| {
+                b.size_px(24.0, 28.0);
+            },
+            move |_: On<Activate>, mut s: ResMut<ModelSettings>| {
+                fine_inc(&mut s);
+                s.save();
+            },
+        );
+        row.add_button_observe(
+            ">>",
+            |b| {
+                b.size_px(28.0, 28.0);
+            },
+            move |_: On<Activate>, mut s: ResMut<ModelSettings>| {
+                coarse_inc(&mut s);
+                s.save();
+            },
+        );
     });
 }
 
@@ -497,7 +764,8 @@ fn setting_row<F: FnOnce(&mut UIBuilder)>(
     ui.add_row(|row| {
         row.gap_px(4.0).align_items_center().width_px(310.0);
         row.with_child(|c| {
-            c.with_text(label, Some(TextStyle::size_color(16.0, color))).width_px(70.0);
+            c.with_text(label, Some(TextStyle::size_color(16.0, color)))
+                .width_px(70.0);
         });
         f(row);
     });
@@ -514,21 +782,30 @@ pub struct ModelPanel;
 /// Identifies a camera-setting value label. One component type covers all rows.
 #[derive(Component, Clone, Copy)]
 pub enum CameraSetting {
-    Zoom, Pitch, Yaw, Speed,
-    OrthoVH, OrthoNear, OrthoFar,
-    PerspFOV, PerspNear, PerspFar,
+    Zoom,
+    Pitch,
+    Yaw,
+    Speed,
+    OrthoVH,
+    OrthoNear,
+    OrthoFar,
+    PerspFOV,
+    PerspNear,
+    PerspFar,
 }
 
 /// Identifies a model-setting value label.
 #[derive(Component, Clone, Copy)]
 pub enum ModelSetting {
-    CharacterName, Scale, OffsetY, RotY,
+    CharacterName,
+    Scale,
+    OffsetY,
+    RotY,
 }
 
 /// Identifies an animation-mapping value label; holds the key it represents.
 #[derive(Component, Clone, Copy)]
 pub struct AnimMappingLabel(pub AnimationKey);
-
 
 // ── Toggle systems ────────────────────────────────────────────────────────────
 
@@ -536,9 +813,14 @@ pub fn toggle_settings_panel(
     keys: Res<ButtonInput<KeyCode>>,
     mut panel: Query<&mut Node, With<SettingsPanel>>,
 ) {
-    if !keys.just_pressed(KeyCode::F1) { return; }
+    if !keys.just_pressed(KeyCode::F1) {
+        return;
+    }
     if let Ok(mut node) = panel.single_mut() {
-        node.display = match node.display { Display::None => Display::Flex, _ => Display::None };
+        node.display = match node.display {
+            Display::None => Display::Flex,
+            _ => Display::None,
+        };
     }
 }
 
@@ -546,9 +828,14 @@ pub fn toggle_model_panel(
     keys: Res<ButtonInput<KeyCode>>,
     mut panel: Query<&mut Node, With<ModelPanel>>,
 ) {
-    if !keys.just_pressed(KeyCode::F2) { return; }
+    if !keys.just_pressed(KeyCode::F2) {
+        return;
+    }
     if let Ok(mut node) = panel.single_mut() {
-        node.display = match node.display { Display::None => Display::Flex, _ => Display::None };
+        node.display = match node.display {
+            Display::None => Display::Flex,
+            _ => Display::None,
+        };
     }
 }
 
@@ -558,19 +845,21 @@ pub fn update_camera_panel(
     settings: Res<GameSettings>,
     mut labels: Query<(&CameraSetting, &mut Text)>,
 ) {
-    if !settings.is_changed() { return; }
+    if !settings.is_changed() {
+        return;
+    }
     for (setting, mut text) in labels.iter_mut() {
         **text = match setting {
-            CameraSetting::Zoom      => format!("{:.0}",  settings.zoom),
-            CameraSetting::Pitch     => format!("{:.0}deg", settings.pitch_degrees),
-            CameraSetting::Yaw       => format!("{:.0}deg", settings.yaw_degrees),
-            CameraSetting::Speed     => format!("{:.2}x", settings.player_speed_multiplier),
-            CameraSetting::OrthoVH   => format!("{:.2}",  settings.ortho_viewport_height),
-            CameraSetting::OrthoNear => format!("{:.0}",  settings.ortho_near),
-            CameraSetting::OrthoFar  => format!("{:.0}",  settings.ortho_far),
-            CameraSetting::PerspFOV  => format!("{:.0}deg", settings.persp_fov),
-            CameraSetting::PerspNear => format!("{:.2}",  settings.persp_near),
-            CameraSetting::PerspFar  => format!("{:.0}",  settings.persp_far),
+            CameraSetting::Zoom => format!("{:.0}", settings.zoom),
+            CameraSetting::Pitch => format!("{:.0}deg", settings.pitch_degrees),
+            CameraSetting::Yaw => format!("{:.0}deg", settings.yaw_degrees),
+            CameraSetting::Speed => format!("{:.2}x", settings.player_speed_multiplier),
+            CameraSetting::OrthoVH => format!("{:.2}", settings.ortho_viewport_height),
+            CameraSetting::OrthoNear => format!("{:.0}", settings.ortho_near),
+            CameraSetting::OrthoFar => format!("{:.0}", settings.ortho_far),
+            CameraSetting::PerspFOV => format!("{:.0}deg", settings.persp_fov),
+            CameraSetting::PerspNear => format!("{:.2}", settings.persp_near),
+            CameraSetting::PerspFar => format!("{:.0}", settings.persp_far),
         };
     }
 }
@@ -580,14 +869,18 @@ pub fn update_model_labels(
     folder: Res<CharacterFolder>,
     mut labels: Query<(&ModelSetting, &mut Text)>,
 ) {
-    if !settings.is_changed() { return; }
+    if !settings.is_changed() {
+        return;
+    }
     for (setting, mut text) in labels.iter_mut() {
         **text = match setting {
-            ModelSetting::CharacterName => folder.files
-                .get(settings.character_index).map_or_else(|| "-".to_string(), |f| CharacterFolder::display_name(f).to_string()),
-            ModelSetting::Scale   => format!("{:.2}",  settings.scale),
-            ModelSetting::OffsetY => format!("{:.2}",  settings.translation_y),
-            ModelSetting::RotY    => format!("{:.0}deg", settings.rotation_y_degrees),
+            ModelSetting::CharacterName => folder.files.get(settings.character_index).map_or_else(
+                || "-".to_string(),
+                |f| CharacterFolder::display_name(f).to_string(),
+            ),
+            ModelSetting::Scale => format!("{:.2}", settings.scale),
+            ModelSetting::OffsetY => format!("{:.2}", settings.translation_y),
+            ModelSetting::RotY => format!("{:.0}deg", settings.rotation_y_degrees),
         };
     }
 }
@@ -596,13 +889,18 @@ pub fn update_anim_mapping_labels(
     settings: Res<ModelSettings>,
     mut labels: Query<(&AnimMappingLabel, &mut Text)>,
 ) {
-    if !settings.is_changed() { return; }
+    if !settings.is_changed() {
+        return;
+    }
     for (label, mut text) in labels.iter_mut() {
         let name = settings.anim_mapping.get(label.0);
-        **text = if name.is_empty() { "-".to_string() } else { name.to_string() };
+        **text = if name.is_empty() {
+            "-".to_string()
+        } else {
+            name.to_string()
+        };
     }
 }
-
 
 #[allow(clippy::type_complexity)]
 pub fn update_hud(
@@ -635,9 +933,10 @@ pub fn update_hud(
     >,
 ) {
     if let Some(counter) = alien_counter
-        && let Ok(mut t) = alien_text.single_mut() {
-            **t = format!("Aliens: {}", counter.count);
-        }
+        && let Ok(mut t) = alien_text.single_mut()
+    {
+        **t = format!("Aliens: {}", counter.count);
+    }
 
     if let Ok(mut t) = build_text.single_mut() {
         **t = if building_query.iter().next().is_some() {
@@ -712,21 +1011,30 @@ pub fn health_bar_width(max_health: i32) -> f32 {
 }
 
 pub fn update_build_cost_hud(
-    building: Query<&crate::player::components::BuildingIndicator, With<crate::player::components::IsBuilding>>,
+    building: Query<
+        &crate::player::components::BuildingIndicator,
+        With<crate::player::components::IsBuilding>,
+    >,
     wallet: Option<Res<crate::general::systems::coin_system::TeamWallet>>,
     model_defs: Option<Res<crate::general::components::map_components::MapModelDefinitions>>,
     mut label: Query<(&mut Text, &mut TextColor), With<HudBuildCost>>,
 ) {
-    let Ok((mut text, mut color)) = label.single_mut() else { return };
+    let Ok((mut text, mut color)) = label.single_mut() else {
+        return;
+    };
     let Ok(indicator) = building.single() else {
         **text = String::new();
         return;
     };
 
-    let option = model_defs.as_ref().and_then(|defs| defs.build_indicators.get(indicator.1.max(0) as usize));
+    let option = model_defs
+        .as_ref()
+        .and_then(|defs| defs.build_indicators.get(indicator.1.max(0) as usize));
     let cost = option.map_or(0, |o| o.cost);
     let name = option.map_or("", |o| o.name.as_str());
-    let description = option.and_then(|o| o.tower.as_ref()).map_or("", |t| t.description.as_str());
+    let description = option
+        .and_then(|o| o.tower.as_ref())
+        .map_or("", |t| t.description.as_str());
 
     let coins = wallet.as_ref().map_or(0, |w| w.coins);
     let can_afford = coins >= cost;
@@ -747,7 +1055,9 @@ pub fn update_coin_hud(
     mut label: Query<&mut Text, With<HudCoins>>,
 ) {
     let Some(wallet) = wallet else { return };
-    if !wallet.is_changed() { return; }
+    if !wallet.is_changed() {
+        return;
+    }
     if let Ok(mut t) = label.single_mut() {
         **t = format!("Coins: {}", wallet.coins);
     }
@@ -758,7 +1068,9 @@ pub fn update_wave_hud(
     mut label: Query<&mut Text, With<HudWaveInfo>>,
 ) {
     let Some(wm) = wave_manager else { return };
-    if !wm.is_changed() { return; }
+    if !wm.is_changed() {
+        return;
+    }
     if let Ok(mut t) = label.single_mut() {
         **t = wm.label();
     }
@@ -770,7 +1082,9 @@ pub fn update_alien_meter(
     mut meter_bar: Query<&mut ProgressBar, With<HudAlienMeter>>,
 ) {
     let Some(tracker) = tracker else { return };
-    if !tracker.is_changed() { return; }
+    if !tracker.is_changed() {
+        return;
+    }
 
     let escaped = tracker.aliens_reached_goal;
     let cutoff = tracker.aliens_win_cut_off.max(1);

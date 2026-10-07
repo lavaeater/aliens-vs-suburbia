@@ -13,10 +13,10 @@ use bevy::prelude::*;
 use bevy::ui_widgets::Activate;
 use lava_ui_builder::{LavaTheme, TextStyle, TextTheme, UIBuilder};
 
-use crate::ui::spawn_ui::StateMarker;
 use crate::player::systems::gait::GaitParams;
 use crate::player::systems::leg_ik::{GaitReadout, GaitSettings, LegIkEnabled};
 use crate::settings::resources::GameSettings;
+use crate::ui::spawn_ui::StateMarker;
 
 #[derive(Component, Default)]
 pub struct GaitPanel;
@@ -173,40 +173,75 @@ pub fn spawn_gait_panel(commands: Commands, theme: &LavaTheme) {
     );
 
     setting_row(&mut ui, "Speed", &t, |row| {
-        row.add_button_observe("<<", |b| { b.size_px(28.0, 28.0); },
+        row.add_button_observe(
+            "<<",
+            |b| {
+                b.size_px(28.0, 28.0);
+            },
             |_: On<Activate>, mut s: ResMut<GameSettings>| {
                 s.player_speed_multiplier = (s.player_speed_multiplier - 0.25).max(0.05);
                 s.save();
-            });
-        row.add_button_observe("<", |b| { b.size_px(24.0, 28.0); },
+            },
+        );
+        row.add_button_observe(
+            "<",
+            |b| {
+                b.size_px(24.0, 28.0);
+            },
             |_: On<Activate>, mut s: ResMut<GameSettings>| {
                 s.player_speed_multiplier = (s.player_speed_multiplier - 0.05).max(0.05);
                 s.save();
-            });
+            },
+        );
         row.with_child(|v| {
-            v.default_text("").insert(GaitLabel::Speed).min_width_px(44.0);
+            v.default_text("")
+                .insert(GaitLabel::Speed)
+                .min_width_px(44.0);
         });
-        row.add_button_observe(">", |b| { b.size_px(24.0, 28.0); },
+        row.add_button_observe(
+            ">",
+            |b| {
+                b.size_px(24.0, 28.0);
+            },
             |_: On<Activate>, mut s: ResMut<GameSettings>| {
                 s.player_speed_multiplier = (s.player_speed_multiplier + 0.05).min(5.0);
                 s.save();
-            });
-        row.add_button_observe(">>", |b| { b.size_px(28.0, 28.0); },
+            },
+        );
+        row.add_button_observe(
+            ">>",
+            |b| {
+                b.size_px(28.0, 28.0);
+            },
             |_: On<Activate>, mut s: ResMut<GameSettings>| {
                 s.player_speed_multiplier = (s.player_speed_multiplier + 0.25).min(5.0);
                 s.save();
-            });
+            },
+        );
     });
 
     setting_row(&mut ui, "Legs", &t, |row| {
-        row.add_button_observe("Toggle", |b| { b.size_px(70.0, 28.0); },
-            |_: On<Activate>, mut enabled: ResMut<LegIkEnabled>| { enabled.0 = !enabled.0; });
+        row.add_button_observe(
+            "Toggle",
+            |b| {
+                b.size_px(70.0, 28.0);
+            },
+            |_: On<Activate>, mut enabled: ResMut<LegIkEnabled>| {
+                enabled.0 = !enabled.0;
+            },
+        );
         row.with_child(|v| {
-            v.default_text("").insert(GaitLabel::LegIk).min_width_px(44.0);
+            v.default_text("")
+                .insert(GaitLabel::LegIk)
+                .min_width_px(44.0);
         });
     });
 
-    ui.label("-- as walked (read-only) --", 12.0, Color::srgb(0.75, 0.5, 0.35));
+    ui.label(
+        "-- as walked (read-only) --",
+        12.0,
+        Color::srgb(0.75, 0.5, 0.35),
+    );
     readout_row(&mut ui, "Rig", &t, GaitLabel::Scale);
     readout_row(&mut ui, "Leg", &t, GaitLabel::LegLength);
     readout_row(&mut ui, "Extend", &t, GaitLabel::Furthest);
@@ -231,17 +266,49 @@ fn gait_row(
     coarse_inc: impl Fn(&mut GaitParams) + Send + Sync + 'static,
 ) {
     setting_row(ui, label, t, move |row| {
-        row.add_button_observe("<<", |b| { b.size_px(28.0, 28.0); },
-            move |_: On<Activate>, mut g: ResMut<GaitSettings>| { coarse_dec(&mut g.0); g.save(); });
-        row.add_button_observe("<", |b| { b.size_px(24.0, 28.0); },
-            move |_: On<Activate>, mut g: ResMut<GaitSettings>| { fine_dec(&mut g.0); g.save(); });
+        row.add_button_observe(
+            "<<",
+            |b| {
+                b.size_px(28.0, 28.0);
+            },
+            move |_: On<Activate>, mut g: ResMut<GaitSettings>| {
+                coarse_dec(&mut g.0);
+                g.save();
+            },
+        );
+        row.add_button_observe(
+            "<",
+            |b| {
+                b.size_px(24.0, 28.0);
+            },
+            move |_: On<Activate>, mut g: ResMut<GaitSettings>| {
+                fine_dec(&mut g.0);
+                g.save();
+            },
+        );
         row.with_child(|v| {
             v.default_text("").insert(which).min_width_px(44.0);
         });
-        row.add_button_observe(">", |b| { b.size_px(24.0, 28.0); },
-            move |_: On<Activate>, mut g: ResMut<GaitSettings>| { fine_inc(&mut g.0); g.save(); });
-        row.add_button_observe(">>", |b| { b.size_px(28.0, 28.0); },
-            move |_: On<Activate>, mut g: ResMut<GaitSettings>| { coarse_inc(&mut g.0); g.save(); });
+        row.add_button_observe(
+            ">",
+            |b| {
+                b.size_px(24.0, 28.0);
+            },
+            move |_: On<Activate>, mut g: ResMut<GaitSettings>| {
+                fine_inc(&mut g.0);
+                g.save();
+            },
+        );
+        row.add_button_observe(
+            ">>",
+            |b| {
+                b.size_px(28.0, 28.0);
+            },
+            move |_: On<Activate>, mut g: ResMut<GaitSettings>| {
+                coarse_inc(&mut g.0);
+                g.save();
+            },
+        );
     });
 }
 
@@ -259,7 +326,8 @@ fn setting_row<F: FnOnce(&mut UIBuilder)>(ui: &mut UIBuilder, label: &str, t: &T
     ui.add_row(|row| {
         row.gap_px(4.0).align_items_center().width_px(310.0);
         row.with_child(|c| {
-            c.with_text(label, Some(TextStyle::size_color(16.0, color))).width_px(70.0);
+            c.with_text(label, Some(TextStyle::size_color(16.0, color)))
+                .width_px(70.0);
         });
         f(row);
     });
@@ -293,7 +361,10 @@ pub fn update_gait_panel(
     panel: Query<&Node, With<GaitPanel>>,
     mut labels: Query<(&GaitLabel, &mut Text)>,
 ) {
-    if panel.single().is_ok_and(|node| node.display == Display::None) {
+    if panel
+        .single()
+        .is_ok_and(|node| node.display == Display::None)
+    {
         return;
     }
     for (label, mut text) in labels.iter_mut() {
@@ -305,11 +376,13 @@ pub fn update_gait_panel(
             GaitLabel::KneeStraight => format!("{:.0}deg", gait.knee.straightest_deg),
             GaitLabel::KneeBent => format!("{:.0}deg", gait.knee.most_bent_deg),
             GaitLabel::HipBob => format!("{:.3}L", gait.hip_bob),
-            GaitLabel::HipTarget => if gait.hip_height > 0.0 {
-                format!("{:.2}L", gait.hip_height)
-            } else {
-                "anim".to_string()
-            },
+            GaitLabel::HipTarget => {
+                if gait.hip_height > 0.0 {
+                    format!("{:.2}L", gait.hip_height)
+                } else {
+                    "anim".to_string()
+                }
+            }
             GaitLabel::Duty => format!("{:.2}", gait.duty_factor),
             GaitLabel::Speed => format!("{:.2}x", settings.player_speed_multiplier),
             GaitLabel::LegIk => if enabled.0 { "on" } else { "off" }.to_string(),

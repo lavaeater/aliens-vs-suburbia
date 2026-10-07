@@ -11,8 +11,8 @@
 
 use std::collections::HashMap;
 
-use bevy::prelude::*;
 use avian3d::prelude::Position;
+use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::assets::asset_definition::ItemKind;
@@ -21,16 +21,27 @@ use crate::items::SpawnItem;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum LootEntry {
-    Nothing { weight: f32 },
-    Item { weight: f32, kind: ItemKind, count: u32 },
+    Nothing {
+        weight: f32,
+    },
+    Item {
+        weight: f32,
+        kind: ItemKind,
+        count: u32,
+    },
     /// Roll another table (by file stem) in this slot.
-    Table { weight: f32, table: String },
+    Table {
+        weight: f32,
+        table: String,
+    },
 }
 
 impl LootEntry {
     const fn weight(&self) -> f32 {
         match self {
-            Self::Nothing { weight } | Self::Item { weight, .. } | Self::Table { weight, .. } => *weight,
+            Self::Nothing { weight } | Self::Item { weight, .. } | Self::Table { weight, .. } => {
+                *weight
+            }
         }
     }
 }
@@ -47,11 +58,17 @@ pub struct LootTable {
     pub entries: Vec<LootEntry>,
 }
 
-const fn default_rolls() -> u32 { 1 }
+const fn default_rolls() -> u32 {
+    1
+}
 
 impl Default for LootTable {
     fn default() -> Self {
-        Self { rolls: 1, always: Vec::new(), entries: Vec::new() }
+        Self {
+            rolls: 1,
+            always: Vec::new(),
+            entries: Vec::new(),
+        }
     }
 }
 
@@ -68,9 +85,16 @@ impl LootTables {
                 if path.extension().and_then(|e| e.to_str()) != Some("ron") {
                     continue;
                 }
-                let Some(stem) = path.file_stem().and_then(|s| s.to_str()) else { continue };
-                match std::fs::read_to_string(&path).map_err(|e| e.to_string()).and_then(|t| ron::from_str::<LootTable>(&t).map_err(|e| e.to_string())) {
-                    Ok(table) => { tables.insert(stem.to_string(), table); }
+                let Some(stem) = path.file_stem().and_then(|s| s.to_str()) else {
+                    continue;
+                };
+                match std::fs::read_to_string(&path)
+                    .map_err(|e| e.to_string())
+                    .and_then(|t| ron::from_str::<LootTable>(&t).map_err(|e| e.to_string()))
+                {
+                    Ok(table) => {
+                        tables.insert(stem.to_string(), table);
+                    }
                     Err(e) => warn!("loot table {} failed to load: {e}", path.display()),
                 }
             }
@@ -85,16 +109,29 @@ impl LootTables {
         out
     }
 
-    fn roll_into(&self, name: &str, rng: &mut impl FnMut() -> f32, out: &mut Vec<(ItemKind, u32)>, depth: u8) {
+    fn roll_into(
+        &self,
+        name: &str,
+        rng: &mut impl FnMut() -> f32,
+        out: &mut Vec<(ItemKind, u32)>,
+        depth: u8,
+    ) {
         // Tables that reference each other would otherwise recurse forever.
         if depth > 4 {
             return;
         }
-        let Some(table) = self.0.get(name) else { return };
+        let Some(table) = self.0.get(name) else {
+            return;
+        };
         for entry in &table.always {
             self.resolve(entry, rng, out, depth);
         }
-        let total: f32 = table.entries.iter().map(LootEntry::weight).filter(|w| *w > 0.0).sum();
+        let total: f32 = table
+            .entries
+            .iter()
+            .map(LootEntry::weight)
+            .filter(|w| *w > 0.0)
+            .sum();
         if total <= 0.0 {
             return;
         }
@@ -114,7 +151,13 @@ impl LootTables {
         }
     }
 
-    fn resolve(&self, entry: &LootEntry, rng: &mut impl FnMut() -> f32, out: &mut Vec<(ItemKind, u32)>, depth: u8) {
+    fn resolve(
+        &self,
+        entry: &LootEntry,
+        rng: &mut impl FnMut() -> f32,
+        out: &mut Vec<(ItemKind, u32)>,
+        depth: u8,
+    ) {
         match entry {
             LootEntry::Nothing { .. } => {}
             LootEntry::Item { kind, count, .. } => out.push((kind.clone(), (*count).max(1))),
@@ -149,7 +192,16 @@ impl Plugin for LootPlugin {
 pub fn spawn_loot_on_death(
     mut commands: Commands,
     tables: Res<LootTables>,
-    dying: Query<(Entity, &Health, &LootDrop, Option<&Position>, Option<&Transform>), Without<LootRolled>>,
+    dying: Query<
+        (
+            Entity,
+            &Health,
+            &LootDrop,
+            Option<&Position>,
+            Option<&Transform>,
+        ),
+        Without<LootRolled>,
+    >,
     mut spawn_mw: MessageWriter<SpawnItem>,
     mut seed: Local<u32>,
 ) {
@@ -158,7 +210,10 @@ pub fn spawn_loot_on_death(
             continue;
         }
         commands.entity(entity).try_insert(LootRolled);
-        let origin = pos.map(|p| p.0).or_else(|| transform.map(|t| t.translation)).unwrap_or(Vec3::ZERO);
+        let origin = pos
+            .map(|p| p.0)
+            .or_else(|| transform.map(|t| t.translation))
+            .unwrap_or(Vec3::ZERO);
         let mut rng = || {
             *seed = xorshift(seed.wrapping_add(0x9E37_79B9));
             (*seed >> 8) as f32 / (1u32 << 24) as f32
@@ -193,25 +248,55 @@ mod tests {
 
     fn tables() -> LootTables {
         let mut t = LootTables::default();
-        t.0.insert("alien".into(), LootTable {
-            rolls: 1,
-            always: vec![LootEntry::Item { weight: 1.0, kind: ItemKind::Coins { value: 5 }, count: 1 }],
-            entries: vec![
-                LootEntry::Nothing { weight: 70.0 },
-                LootEntry::Item { weight: 20.0, kind: ItemKind::HealthPickup { amount: 25.0 }, count: 1 },
-                LootEntry::Table { weight: 10.0, table: "ammo".into() },
-            ],
-        });
-        t.0.insert("ammo".into(), LootTable {
-            rolls: 1,
-            always: vec![],
-            entries: vec![LootEntry::Item { weight: 1.0, kind: ItemKind::AmmoPickup { kind: AmmoKind::Pistol, rounds: 12 }, count: 2 }],
-        });
-        t.0.insert("loop".into(), LootTable {
-            rolls: 1,
-            always: vec![LootEntry::Table { weight: 1.0, table: "loop".into() }],
-            entries: vec![],
-        });
+        t.0.insert(
+            "alien".into(),
+            LootTable {
+                rolls: 1,
+                always: vec![LootEntry::Item {
+                    weight: 1.0,
+                    kind: ItemKind::Coins { value: 5 },
+                    count: 1,
+                }],
+                entries: vec![
+                    LootEntry::Nothing { weight: 70.0 },
+                    LootEntry::Item {
+                        weight: 20.0,
+                        kind: ItemKind::HealthPickup { amount: 25.0 },
+                        count: 1,
+                    },
+                    LootEntry::Table {
+                        weight: 10.0,
+                        table: "ammo".into(),
+                    },
+                ],
+            },
+        );
+        t.0.insert(
+            "ammo".into(),
+            LootTable {
+                rolls: 1,
+                always: vec![],
+                entries: vec![LootEntry::Item {
+                    weight: 1.0,
+                    kind: ItemKind::AmmoPickup {
+                        kind: AmmoKind::Pistol,
+                        rounds: 12,
+                    },
+                    count: 2,
+                }],
+            },
+        );
+        t.0.insert(
+            "loop".into(),
+            LootTable {
+                rolls: 1,
+                always: vec![LootEntry::Table {
+                    weight: 1.0,
+                    table: "loop".into(),
+                }],
+                entries: vec![],
+            },
+        );
         t
     }
 
@@ -237,7 +322,16 @@ mod tests {
         let t = tables();
         let mut rng = || 0.95; // 95: the ammo sub-table band (90..100)
         let drops = t.roll("alien", &mut rng);
-        assert_eq!(drops[1], (ItemKind::AmmoPickup { kind: AmmoKind::Pistol, rounds: 12 }, 2));
+        assert_eq!(
+            drops[1],
+            (
+                ItemKind::AmmoPickup {
+                    kind: AmmoKind::Pistol,
+                    rounds: 12
+                },
+                2
+            )
+        );
     }
 
     #[test]
@@ -252,6 +346,9 @@ mod tests {
     fn the_shipped_tables_parse() {
         let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/loot");
         let tables = LootTables::load_dir(dir);
-        assert!(tables.0.contains_key("alien"), "assets/loot/alien.ron must exist and parse");
+        assert!(
+            tables.0.contains_key("alien"),
+            "assets/loot/alien.ron must exist and parse"
+        );
     }
 }

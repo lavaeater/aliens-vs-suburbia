@@ -17,9 +17,9 @@ use bevy::prelude::*;
 use crate::assets::gizmos::{bone_map, draw_hardpoints, draw_skeleton, joints_under};
 use crate::model_settings::plugin::PlayerAssetDef;
 use crate::player::components::Player;
+use crate::player::systems::equip::EquippedWeapon;
 use crate::player::systems::gait::Foot;
 use crate::player::systems::leg_ik::Legs;
-use crate::player::systems::equip::EquippedWeapon;
 use crate::playground::hardpoints::PlaygroundWeaponDef;
 
 #[derive(Resource, Default)]
@@ -92,7 +92,11 @@ pub fn draw_gait_gizmos(debug: Res<PlaygroundDebug>, mut gizmos: Gizmos, players
             Color::srgb(0.55, 0.5, 0.2),
         );
         // The hips themselves, and the centreline the feet are placed either side of.
-        gizmos.line(f.hip_ground, f.hip_ground + Vec3::Y * 0.25, Color::srgb(0.6, 0.6, 0.6));
+        gizmos.line(
+            f.hip_ground,
+            f.hip_ground + Vec3::Y * 0.25,
+            Color::srgb(0.6, 0.6, 0.6),
+        );
 
         for foot in Foot::BOTH {
             let i = foot.index();

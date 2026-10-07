@@ -1,4 +1,6 @@
-use crate::camera::components::{CameraFocus, CameraOffset, CameraShake, CameraTarget, GameCamera, PixelCanvas};
+use crate::camera::components::{
+    CameraFocus, CameraOffset, CameraShake, CameraTarget, GameCamera, PixelCanvas,
+};
 use crate::player::components::PlayerDead;
 use crate::settings::resources::{GameSettings, ProjectionMode};
 use avian3d::interpolation::TransformInterpolation;
@@ -109,9 +111,9 @@ pub fn spawn_pixelated_camera(
         GameCamera {},
     ));
 
-    let window_size = window_q
-        .single()
-        .map_or(Vec2::new(1280.0, 720.0), |w| Vec2::new(w.width(), w.height()));
+    let window_size = window_q.single().map_or(Vec2::new(1280.0, 720.0), |w| {
+        Vec2::new(w.width(), w.height())
+    });
 
     // 2D canvas camera — upscales the pixel texture to screen
     commands.spawn((
@@ -227,7 +229,14 @@ pub fn focus_of(targets: impl IntoIterator<Item = (Vec3, f32)>) -> Option<(Vec3,
 /// The ground's depth axis is foreshortened by `sin(pitch)` at the isometric angle, so
 /// that is the tight direction; landscape windows are wider than tall, so horizontal is
 /// never the limit.
-pub fn fit_factor(radius: f32, margin: f32, zoom: f32, viewport_height: f32, pitch_degrees: f32, max: f32) -> f32 {
+pub fn fit_factor(
+    radius: f32,
+    margin: f32,
+    zoom: f32,
+    viewport_height: f32,
+    pitch_degrees: f32,
+    max: f32,
+) -> f32 {
     let foreshorten = pitch_degrees.to_radians().sin().abs().max(0.1);
     let needed_scale = 2.0 * (radius + margin) / (viewport_height.max(0.01) * foreshorten);
     (needed_scale / zoom.max(0.01)).clamp(1.0, max.max(1.0))

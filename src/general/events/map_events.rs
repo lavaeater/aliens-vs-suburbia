@@ -1,6 +1,6 @@
-use bevy::prelude::Message;
-use bevy::math::Vec3;
 use crate::general::components::map_components::MapFile;
+use bevy::math::Vec3;
+use bevy::prelude::Message;
 
 #[derive(Message, Clone)]
 pub struct LoadMap {

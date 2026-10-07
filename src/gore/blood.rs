@@ -170,7 +170,10 @@ pub fn spawn_blood_on_damage(
         });
         let puff_size = 0.18 * mag;
         commands.spawn((
-            Mesh3d(meshes.add(Mesh::from(Plane3d::new(hit.normal.normalize_or(Vec3::Y), Vec2::splat(0.5))))),
+            Mesh3d(meshes.add(Mesh::from(Plane3d::new(
+                hit.normal.normalize_or(Vec3::Y),
+                Vec2::splat(0.5),
+            )))),
             MeshMaterial3d(puff_mat),
             Transform::from_translation(hit.position + hit.normal.normalize_or(Vec3::Y) * 0.05)
                 .with_scale(Vec3::splat(puff_size)),
@@ -189,9 +192,13 @@ pub fn spawn_blood_on_damage(
             .spawn((
                 Mesh3d(blood.decal_mesh.clone()),
                 MeshMaterial3d(blood.decal_material.clone()),
-                Transform::from_xyz(hit.position.x, tile_defs.floor_level + DECAL_LIFT, hit.position.z)
-                    .with_rotation(Quat::from_rotation_y(yaw))
-                    .with_scale(Vec3::splat(size)),
+                Transform::from_xyz(
+                    hit.position.x,
+                    tile_defs.floor_level + DECAL_LIFT,
+                    hit.position.z,
+                )
+                .with_rotation(Quat::from_rotation_y(yaw))
+                .with_scale(Vec3::splat(size)),
             ))
             .id();
         if let Some(evicted) = budget.push_decal(decal) {

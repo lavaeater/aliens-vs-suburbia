@@ -78,7 +78,8 @@ pub fn tag_paths(def: &AssetDefinition) -> Vec<String> {
 }
 
 pub fn bind(def: &mut AssetDefinition, key: AnimationKey, tag: &str) {
-    def.animation_bindings.insert(key.default_search().to_string(), tag.to_string());
+    def.animation_bindings
+        .insert(key.default_search().to_string(), tag.to_string());
 }
 
 pub fn unbind(def: &mut AssetDefinition, key: AnimationKey) {
@@ -125,7 +126,10 @@ mod tests {
     #[test]
     fn an_untagged_clip_offers_no_binding_target() {
         let def = def_with_tags(&[("Armature|Idle", "")]);
-        assert!(tag_paths(&def).is_empty(), "empty tags are not legal targets");
+        assert!(
+            tag_paths(&def).is_empty(),
+            "empty tags are not legal targets"
+        );
     }
 
     /// The key string has to be the one the runtime looks up, or a binding made here
@@ -134,7 +138,11 @@ mod tests {
     fn binding_uses_the_key_the_runtime_resolves_with() {
         let mut def = def_with_tags(&[("Armature|Wave", "Social/Wave")]);
         bind(&mut def, AnimationKey::Wave, "Social/Wave");
-        assert_eq!(def.resolved_clip(AnimationKey::Wave.default_search()).as_deref(), Some("Armature|Wave"));
+        assert_eq!(
+            def.resolved_clip(AnimationKey::Wave.default_search())
+                .as_deref(),
+            Some("Armature|Wave")
+        );
     }
 
     #[test]

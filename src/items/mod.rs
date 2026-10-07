@@ -6,8 +6,8 @@
 //! collect within their `PickupRange`; what a pickup *does* is one `match` in
 //! [`pickup_items`], and [`ItemPickedUp`] lets the HUD/SFX react.
 
-use bevy::prelude::*;
 use avian3d::prelude::Position;
+use bevy::prelude::*;
 
 use crate::assets::asset_definition::{AssetDefinition, ItemKind, ModelType};
 use crate::game_state::GameState;
@@ -84,11 +84,14 @@ pub fn spawn_items(
             _ => None,
         };
         if let Some(def) = weapon_def {
-            let scene = asset_server.load(bevy::gltf::GltfAssetLabel::Scene(0).from_asset(def.model_path.clone()));
-            commands.spawn((
-                base,
-                bevy::world_serialization::WorldAssetRoot(scene),
-            )).insert(Transform::from_translation(req.position + Vec3::Y * 0.25).with_scale(Vec3::splat(def.scale)));
+            let scene = asset_server
+                .load(bevy::gltf::GltfAssetLabel::Scene(0).from_asset(def.model_path.clone()));
+            commands
+                .spawn((base, bevy::world_serialization::WorldAssetRoot(scene)))
+                .insert(
+                    Transform::from_translation(req.position + Vec3::Y * 0.25)
+                        .with_scale(Vec3::splat(def.scale)),
+                );
             continue;
         }
 
@@ -108,12 +111,27 @@ pub fn spawn_items(
 
 fn primitive_for(kind: &ItemKind, meshes: &mut Assets<Mesh>) -> (Color, Handle<Mesh>) {
     match kind {
-        ItemKind::HealthPickup { .. } => (Color::srgb(0.95, 0.2, 0.25), meshes.add(Cuboid::new(0.3, 0.18, 0.3))),
-        ItemKind::AmmoPickup { .. } => (Color::srgb(0.75, 0.6, 0.2), meshes.add(Cuboid::new(0.25, 0.15, 0.18))),
-        ItemKind::WeaponPickup { .. } => (Color::srgb(0.5, 0.5, 0.55), meshes.add(Cuboid::new(0.5, 0.1, 0.12))),
+        ItemKind::HealthPickup { .. } => (
+            Color::srgb(0.95, 0.2, 0.25),
+            meshes.add(Cuboid::new(0.3, 0.18, 0.3)),
+        ),
+        ItemKind::AmmoPickup { .. } => (
+            Color::srgb(0.75, 0.6, 0.2),
+            meshes.add(Cuboid::new(0.25, 0.15, 0.18)),
+        ),
+        ItemKind::WeaponPickup { .. } => (
+            Color::srgb(0.5, 0.5, 0.55),
+            meshes.add(Cuboid::new(0.5, 0.1, 0.12)),
+        ),
         ItemKind::Coins { .. } => (Color::srgb(1.0, 0.85, 0.1), meshes.add(Sphere::new(0.15))),
-        ItemKind::Key { .. } => (Color::srgb(0.3, 0.8, 1.0), meshes.add(Cuboid::new(0.12, 0.25, 0.05))),
-        ItemKind::Decorative => (Color::srgb(0.6, 0.6, 0.6), meshes.add(Cuboid::new(0.2, 0.2, 0.2))),
+        ItemKind::Key { .. } => (
+            Color::srgb(0.3, 0.8, 1.0),
+            meshes.add(Cuboid::new(0.12, 0.25, 0.05)),
+        ),
+        ItemKind::Decorative => (
+            Color::srgb(0.6, 0.6, 0.6),
+            meshes.add(Cuboid::new(0.2, 0.2, 0.2)),
+        ),
     }
 }
 
@@ -179,7 +197,14 @@ pub fn pickup_items(
     mut commands: Commands,
     mut wallet: ResMut<TeamWallet>,
     mut players: Query<
-        (Entity, &Position, &PickupRange, &mut Health, &mut AmmoPouch, &mut Weapons),
+        (
+            Entity,
+            &Position,
+            &PickupRange,
+            &mut Health,
+            &mut AmmoPouch,
+            &mut Weapons,
+        ),
         (With<Player>, Without<PlayerDead>),
     >,
     items: Query<(Entity, &GlobalTransform, &Item), With<Pickup>>,
@@ -201,11 +226,17 @@ pub fn pickup_items(
                 continue;
             }
             if let PickupOutcome::NewWeapon(slot) = outcome {
-                switch_mw.write(SwitchWeapon { player, select: WeaponSelect::Slot(slot) });
+                switch_mw.write(SwitchWeapon {
+                    player,
+                    select: WeaponSelect::Slot(slot),
+                });
             }
             taken.push(item_entity);
             commands.entity(item_entity).despawn();
-            picked_mw.write(ItemPickedUp { player, kind: item.0.clone() });
+            picked_mw.write(ItemPickedUp {
+                player,
+                kind: item.0.clone(),
+            });
         }
     }
 }
@@ -216,8 +247,10 @@ pub fn bob_pickups(time: Res<Time>, mut pickups: Query<(&Pickup, &mut Transform)
     let dt = time.delta_secs();
     for (pickup, mut transform) in pickups.iter_mut() {
         transform.rotate_y(SPIN_RADS_PER_SEC * dt);
-        let target_offset = ((t * BOB_HZ * std::f32::consts::TAU) + pickup.phase).sin() * BOB_HEIGHT;
-        let prev_offset = (((t - dt) * BOB_HZ * std::f32::consts::TAU) + pickup.phase).sin() * BOB_HEIGHT;
+        let target_offset =
+            ((t * BOB_HZ * std::f32::consts::TAU) + pickup.phase).sin() * BOB_HEIGHT;
+        let prev_offset =
+            (((t - dt) * BOB_HZ * std::f32::consts::TAU) + pickup.phase).sin() * BOB_HEIGHT;
         transform.translation.y += target_offset - prev_offset;
     }
 }
@@ -228,35 +261,81 @@ mod tests {
     use crate::assets::asset_definition::AmmoKind;
 
     fn player() -> (Health, AmmoPouch, Weapons, TeamWallet) {
-        (Health { health: 40, max_health: 100 }, AmmoPouch::default(), Weapons::default(), TeamWallet::default())
+        (
+            Health {
+                health: 40,
+                max_health: 100,
+            },
+            AmmoPouch::default(),
+            Weapons::default(),
+            TeamWallet::default(),
+        )
     }
 
     #[test]
     fn health_heals_and_is_capped_and_ignored_when_full() {
         let (mut h, mut p, mut w, mut t) = player();
-        assert_eq!(apply_pickup(&ItemKind::HealthPickup { amount: 80.0 }, &mut h, &mut p, &mut w, &mut t), PickupOutcome::Consumed);
+        assert_eq!(
+            apply_pickup(
+                &ItemKind::HealthPickup { amount: 80.0 },
+                &mut h,
+                &mut p,
+                &mut w,
+                &mut t
+            ),
+            PickupOutcome::Consumed
+        );
         assert_eq!(h.health, 100);
-        assert_eq!(apply_pickup(&ItemKind::HealthPickup { amount: 10.0 }, &mut h, &mut p, &mut w, &mut t), PickupOutcome::Ignored);
+        assert_eq!(
+            apply_pickup(
+                &ItemKind::HealthPickup { amount: 10.0 },
+                &mut h,
+                &mut p,
+                &mut w,
+                &mut t
+            ),
+            PickupOutcome::Ignored
+        );
     }
 
     #[test]
     fn ammo_fills_the_pouch_until_full() {
         let (mut h, mut p, mut w, mut t) = player();
-        let kind = ItemKind::AmmoPickup { kind: AmmoKind::Grenade, rounds: 4 };
-        assert_eq!(apply_pickup(&kind, &mut h, &mut p, &mut w, &mut t), PickupOutcome::Consumed);
-        assert_eq!(apply_pickup(&kind, &mut h, &mut p, &mut w, &mut t), PickupOutcome::Consumed);
+        let kind = ItemKind::AmmoPickup {
+            kind: AmmoKind::Grenade,
+            rounds: 4,
+        };
+        assert_eq!(
+            apply_pickup(&kind, &mut h, &mut p, &mut w, &mut t),
+            PickupOutcome::Consumed
+        );
+        assert_eq!(
+            apply_pickup(&kind, &mut h, &mut p, &mut w, &mut t),
+            PickupOutcome::Consumed
+        );
         assert_eq!(p.rounds(AmmoKind::Grenade), 6, "capped");
-        assert_eq!(apply_pickup(&kind, &mut h, &mut p, &mut w, &mut t), PickupOutcome::Ignored);
+        assert_eq!(
+            apply_pickup(&kind, &mut h, &mut p, &mut w, &mut t),
+            PickupOutcome::Ignored
+        );
     }
 
     #[test]
     fn a_new_gun_joins_the_loadout_and_asks_to_be_drawn() {
         let (mut h, mut p, mut w, mut t) = player();
-        let kind = ItemKind::WeaponPickup { def: "assets/defs/Nope.ron".into() };
-        assert_eq!(apply_pickup(&kind, &mut h, &mut p, &mut w, &mut t), PickupOutcome::NewWeapon(0));
+        let kind = ItemKind::WeaponPickup {
+            def: "assets/defs/Nope.ron".into(),
+        };
+        assert_eq!(
+            apply_pickup(&kind, &mut h, &mut p, &mut w, &mut t),
+            PickupOutcome::NewWeapon(0)
+        );
         assert_eq!(w.slots.len(), 1);
         // Carried already and the def does not exist: nothing to convert into ammo.
-        assert_eq!(apply_pickup(&kind, &mut h, &mut p, &mut w, &mut t), PickupOutcome::Ignored);
+        assert_eq!(
+            apply_pickup(&kind, &mut h, &mut p, &mut w, &mut t),
+            PickupOutcome::Ignored
+        );
     }
 
     fn pickup_app(player_x: f32, item_x: f32) -> (App, Entity) {
@@ -303,7 +382,13 @@ mod tests {
     #[test]
     fn coins_go_to_the_team_wallet() {
         let (mut h, mut p, mut w, mut t) = player();
-        apply_pickup(&ItemKind::Coins { value: 7 }, &mut h, &mut p, &mut w, &mut t);
+        apply_pickup(
+            &ItemKind::Coins { value: 7 },
+            &mut h,
+            &mut p,
+            &mut w,
+            &mut t,
+        );
         assert_eq!(t.coins, 7);
     }
 }

@@ -1,14 +1,14 @@
-use bevy::prelude::*;
 use crate::general::components::map_components::CoolDown;
+use bevy::prelude::*;
 
 #[derive(Component, Default, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "avs"]
+#[type_path = "avs"]
 pub struct TowerSensor {}
 
 #[derive(Component, Default, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "avs"]
+#[type_path = "avs"]
 pub struct TowerShooter {
     pub cool_down: f32,
     pub rate_of_fire_per_minute: f32,
@@ -38,7 +38,7 @@ impl CoolDown for TowerShooter {
 /// Slows aliens in sensor range by scaling their velocity each frame.
 #[derive(Component, Default, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "avs"]
+#[type_path = "avs"]
 pub struct TowerSlow {
     /// Velocity multiplier while in range (e.g. 0.3 = 30% of normal speed).
     pub factor: f32,
@@ -47,7 +47,7 @@ pub struct TowerSlow {
 /// Deals continuous area damage to aliens in sensor range.
 #[derive(Component, Default, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "avs"]
+#[type_path = "avs"]
 pub struct TowerArea {
     pub damage_per_second: f32,
     pub cool_down: f32,
@@ -57,7 +57,11 @@ pub struct TowerArea {
 impl TowerArea {
     pub fn new(damage_per_second: f32, tick_hz: f32) -> Self {
         let interval = 1.0 / tick_hz;
-        Self { damage_per_second, cool_down: interval, tick_interval: interval }
+        Self {
+            damage_per_second,
+            cool_down: interval,
+            tick_interval: interval,
+        }
     }
 }
 
@@ -77,7 +81,7 @@ impl CoolDown for TowerArea {
 /// Removed when the alien leaves all slow zones.
 #[derive(Component, Default, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "avs"]
+#[type_path = "avs"]
 pub struct Slowed {
     pub factor: f32,
     /// Refreshed each frame the alien is in range; removal when it expires.
@@ -114,6 +118,9 @@ mod tests {
         let mut sp = AlienSpawnPoint::new(120.0);
         assert!(sp.cool_down(0.3), "starts charged: first tick spawns");
         assert!(!sp.cool_down(0.3), "0.3s since: not ready");
-        assert!(sp.cool_down(0.3), "0.6s since: spawn, re-armed for the next 0.5s");
+        assert!(
+            sp.cool_down(0.3),
+            "0.6s since: spawn, re-armed for the next 0.5s"
+        );
     }
 }

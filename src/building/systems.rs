@@ -1,21 +1,26 @@
-use bevy::asset::AssetServer;
-use bevy::log::info;
-use bevy::math::{Vec2, Vec3, Vec3Swizzles};
-use bevy::prelude::{AlphaMode, Assets, Children, Color, Commands, Component, Entity, MeshMaterial3d, MessageReader, MessageWriter, Name, Query, Res, ResMut, StandardMaterial, With, Without};
-use bevy::world_serialization::{WorldAssetRoot, WorldInstance, WorldInstanceSpawner};
-use avian3d::prelude::{CollisionLayers, LockedAxes, Position, RigidBody, Rotation};
-use crate::control::components::{ControlCommand, CharacterControl};
+use crate::control::components::{CharacterControl, ControlCommand};
+use crate::general::components::map_components::{CurrentTile, MapModelDefinitions};
 use crate::general::components::{CollisionLayer, Health};
 use crate::general::damage::Faction;
-use crate::general::components::map_components::{CurrentTile, MapModelDefinitions};
 use crate::general::resources::map_resources::MapGraph;
 use crate::general::systems::coin_system::TeamWallet;
 use crate::general::systems::map_systems::TileDefinitions;
 use crate::player::components::{BuildingIndicator, IsBuildIndicator, IsBuilding, IsObstacle};
-use crate::player::events::building_events::{ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode, RemoveTile};
+use crate::player::events::building_events::{
+    ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode, RemoveTile,
+};
 use crate::towers::events::BuildTower;
 use crate::towers::systems::spawn_tower_sensor;
 use crate::ui::spawn_ui::AddHealthBar;
+use avian3d::prelude::{CollisionLayers, LockedAxes, Position, RigidBody, Rotation};
+use bevy::asset::AssetServer;
+use bevy::log::info;
+use bevy::math::{Vec2, Vec3, Vec3Swizzles};
+use bevy::prelude::{
+    AlphaMode, Assets, Children, Color, Commands, Component, Entity, MeshMaterial3d, MessageReader,
+    MessageWriter, Name, Query, Res, ResMut, StandardMaterial, With, Without,
+};
+use bevy::world_serialization::{WorldAssetRoot, WorldInstance, WorldInstanceSpawner};
 
 /// Tracks materials cloned from the indicator model's scene children so they can be tinted.
 #[derive(Component, Default)]
@@ -34,10 +39,10 @@ pub fn enter_build_mode(
 ) {
     for start_event in enter_build_mode_evr.read() {
         if let Ok((current_tile, rotation)) = builder_query.get_mut(start_event.0) {
-            let desired_neighbour_pos =
-                rotation
-                    .get_neighbour(current_tile.tile)
-                    .to_world_coords(&tile_definitions) + Vec3::new(0.0, -tile_definitions.wall_height * 2.0, 0.0);
+            let desired_neighbour_pos = rotation
+                .get_neighbour(current_tile.tile)
+                .to_world_coords(&tile_definitions)
+                + Vec3::new(0.0, -tile_definitions.wall_height * 2.0, 0.0);
 
             let first = model_defs.build_indicators.first();
             let building_indicator = spawn_building_indicator(
@@ -48,7 +53,9 @@ pub fn enter_build_mode(
                 first.map_or(1.0, |o| o.scale),
                 &tile_definitions,
             );
-            commands.entity(start_event.0).insert(BuildingIndicator(building_indicator, 0));
+            commands
+                .entity(start_event.0)
+                .insert(BuildingIndicator(building_indicator, 0));
             commands.entity(start_event.0).insert(IsBuilding {});
         }
     }
@@ -62,19 +69,24 @@ pub fn spawn_building_indicator(
     scale: f32,
     tile_definitions: &TileDefinitions,
 ) -> Entity {
-    commands.spawn((
-        Name::from("BuildingIndicator"),
-        IsBuildIndicator {},
-        BuildIndicatorTint::default(),
-        bevy::prelude::Transform::from_scale(Vec3::splat(scale)),
-        WorldAssetRoot(asset_server.load(file.to_string())),
-        RigidBody::Kinematic,
-        tile_definitions.create_collider(16.0, 4.0, 16.0),
-        Position::from(*position),
-        CollisionLayers::new([CollisionLayer::BuildIndicator], [CollisionLayer::Floor; 0]),
-        LockedAxes::new().lock_rotation_x().lock_rotation_z().lock_rotation_y(),
-        CurrentTile::default(),
-    )).id()
+    commands
+        .spawn((
+            Name::from("BuildingIndicator"),
+            IsBuildIndicator {},
+            BuildIndicatorTint::default(),
+            bevy::prelude::Transform::from_scale(Vec3::splat(scale)),
+            WorldAssetRoot(asset_server.load(file.to_string())),
+            RigidBody::Kinematic,
+            tile_definitions.create_collider(16.0, 4.0, 16.0),
+            Position::from(*position),
+            CollisionLayers::new([CollisionLayer::BuildIndicator], [CollisionLayer::Floor; 0]),
+            LockedAxes::new()
+                .lock_rotation_x()
+                .lock_rotation_z()
+                .lock_rotation_y(),
+            CurrentTile::default(),
+        ))
+        .id()
 }
 
 fn collect_descendants(entity: Entity, children_q: &Query<&Children>, out: &mut Vec<Entity>) {
@@ -89,29 +101,37 @@ fn collect_descendants(entity: Entity, children_q: &Query<&Children>, out: &mut 
 /// On first frame after the scene is ready, clone each mesh's material with alpha blending
 /// and a green tint. Stores the handles so `update_build_indicator_tint` can change the color.
 pub fn init_build_indicator_tint(
-    mut indicators: Query<(Entity, &WorldInstance, &mut BuildIndicatorTint), With<IsBuildIndicator>>,
+    mut indicators: Query<
+        (Entity, &WorldInstance, &mut BuildIndicatorTint),
+        With<IsBuildIndicator>,
+    >,
     scene_spawner: Res<WorldInstanceSpawner>,
     children_q: Query<&Children>,
     mut mat_q: Query<&mut MeshMaterial3d<StandardMaterial>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     for (entity, scene_instance, mut tint) in &mut indicators {
-        if tint.initialized { continue; }
-        if !scene_spawner.instance_is_ready(**scene_instance) { continue; }
+        if tint.initialized {
+            continue;
+        }
+        if !scene_spawner.instance_is_ready(**scene_instance) {
+            continue;
+        }
 
         let mut descendants = Vec::new();
         collect_descendants(entity, &children_q, &mut descendants);
 
         for desc in descendants {
             if let Ok(mut mat_handle) = mat_q.get_mut(desc)
-                && let Some(new_mat) = materials.get(&mat_handle.0).cloned() {
-                    let mut tinted = new_mat;
-                    tinted.alpha_mode = AlphaMode::Blend;
-                    tinted.base_color = Color::srgba(0.2, 1.0, 0.2, 0.55);
-                    let handle = materials.add(tinted);
-                    tint.handles.push(handle.clone());
-                    mat_handle.0 = handle;
-                }
+                && let Some(new_mat) = materials.get(&mat_handle.0).cloned()
+            {
+                let mut tinted = new_mat;
+                tinted.alpha_mode = AlphaMode::Blend;
+                tinted.base_color = Color::srgba(0.2, 1.0, 0.2, 0.55);
+                let handle = materials.add(tinted);
+                tint.handles.push(handle.clone());
+                mat_handle.0 = handle;
+            }
         }
         tint.initialized = true;
     }
@@ -124,7 +144,9 @@ pub fn update_build_indicator_tint(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     for (tile, tint) in &indicators {
-        if !tint.initialized { continue; }
+        if !tint.initialized {
+            continue;
+        }
         let color = if map_graph.occupied_tiles.contains(&tile.tile) {
             Color::srgba(1.0, 0.2, 0.2, 0.55)
         } else {
@@ -140,11 +162,16 @@ pub fn update_build_indicator_tint(
 
 pub fn exit_build_mode(
     mut exit_build_mode_evr: MessageReader<ExitBuildMode>,
-    mut player_build_indicator_query: Query<(&BuildingIndicator, &mut CharacterControl), With<IsBuilding>>,
+    mut player_build_indicator_query: Query<
+        (&BuildingIndicator, &mut CharacterControl),
+        With<IsBuilding>,
+    >,
     mut commands: Commands,
 ) {
     for stop_event in exit_build_mode_evr.read() {
-        if let Ok((bulding_indicator, mut controller)) = player_build_indicator_query.get_mut(stop_event.0) {
+        if let Ok((bulding_indicator, mut controller)) =
+            player_build_indicator_query.get_mut(stop_event.0)
+        {
             controller.triggers.remove(&ControlCommand::Build);
             commands.entity(bulding_indicator.0).despawn();
         }
@@ -168,37 +195,46 @@ pub fn execute_build(
     for execute_event in execute_evr.read() {
         if let Ok(build_indicator) = player_build_indicator_query.get(execute_event.0)
             && let Ok((position, current_tile)) = building_indicator.get(build_indicator.0)
-                && !map_graph.occupied_tiles.contains(&current_tile.tile) {
+            && !map_graph.occupied_tiles.contains(&current_tile.tile)
+        {
+            let current_index = build_indicator.1.max(0) as usize;
+            let Some(option) = model_defs.build_indicators.get(current_index) else {
+                continue;
+            };
+            let cost = option.cost;
 
-                    let current_index = build_indicator.1.max(0) as usize;
-                    let Some(option) = model_defs.build_indicators.get(current_index) else { continue };
-                    let cost = option.cost;
-
-                    // Block build if insufficient funds.
-                    if let Some(ref mut w) = wallet {
-                        if w.coins < cost { continue; }
-                        w.coins -= cost;
-                    }
-
-                    build_tower_mw.write(BuildTower {
-                        position: position.0,
-                        option: current_index,
-                    });
-
-                    remove_tile_mw.write(RemoveTile(current_tile.tile));
+            // Block build if insufficient funds.
+            if let Some(ref mut w) = wallet {
+                if w.coins < cost {
+                    continue;
                 }
+                w.coins -= cost;
+            }
+
+            build_tower_mw.write(BuildTower {
+                position: position.0,
+                option: current_index,
+            });
+
+            remove_tile_mw.write(RemoveTile(current_tile.tile));
+        }
     }
 }
 
 pub fn building_mode(
     builder_query: Query<(&CurrentTile, &Rotation, &BuildingIndicator), With<IsBuilding>>,
-    mut building_indicator_query: Query<(&CurrentTile, &Rotation, &mut Position, &WorldInstance), With<IsBuildIndicator>>,
+    mut building_indicator_query: Query<
+        (&CurrentTile, &Rotation, &mut Position, &WorldInstance),
+        With<IsBuildIndicator>,
+    >,
     tile_definitions: Res<TileDefinitions>,
 ) {
     for (current_tile, rotation, building_indicator) in builder_query.iter() {
         let desired_neighbour = rotation.get_neighbour(current_tile.tile);
-        if let Ok((_, _, mut position, _)) = building_indicator_query.get_mut(building_indicator.0) {
-            let desired_neighbour_pos = desired_neighbour.to_world_coords(&tile_definitions) + Vec3::new(0.0, -tile_definitions.wall_height, 0.0);
+        if let Ok((_, _, mut position, _)) = building_indicator_query.get_mut(building_indicator.0)
+        {
+            let desired_neighbour_pos = desired_neighbour.to_world_coords(&tile_definitions)
+                + Vec3::new(0.0, -tile_definitions.wall_height, 0.0);
             position.0 = desired_neighbour_pos;
         }
     }
@@ -213,7 +249,8 @@ pub fn change_build_indicator(
     tile_defs: Res<TileDefinitions>,
 ) {
     for change_build_event in change_build_indicator_evr.read() {
-        if let Ok((mut building_indicator, position)) = builder_query.get_mut(change_build_event.0) {
+        if let Ok((mut building_indicator, position)) = builder_query.get_mut(change_build_event.0)
+        {
             let current_index = building_indicator.1;
 
             building_indicator.1 = current_index + change_build_event.1;
@@ -225,7 +262,12 @@ pub fn change_build_indicator(
             } else {
                 building_indicator.1
             };
-            let Some(option) = model_defs.build_indicators.get(building_indicator.1 as usize) else { continue };
+            let Some(option) = model_defs
+                .build_indicators
+                .get(building_indicator.1 as usize)
+            else {
+                continue;
+            };
             info!("Changing indicator to {}", option.name);
 
             let p = position.0;
@@ -262,14 +304,15 @@ impl ToWorldCoordinates for (usize, usize) {
 
 impl ToGridNeighbour for Rotation {
     fn get_neighbour(&self, current_tile: (usize, usize)) -> (usize, usize) {
-        let n = self.0
-            .mul_vec3(Vec3::new(0.0, 0.0, -1.0))
-            .xz()
-            .normalize();
+        let n = self.0.mul_vec3(Vec3::new(0.0, 0.0, -1.0)).xz().normalize();
 
         let mut angle = n.angle_to(Vec2::new(1.0, 0.0)).to_degrees() as i32;
 
-        angle = if angle.is_negative() { 360 + angle } else { angle };
+        angle = if angle.is_negative() {
+            360 + angle
+        } else {
+            angle
+        };
 
         // The explicit ranges spell out the compass; the catch-all only covers
         // angles the normalisation above already rules out.
@@ -287,7 +330,10 @@ impl ToGridNeighbour for Rotation {
             _ => 0,
         } + current_tile.1 as i32;
 
-        ((if x.is_negative() { 0 } else { x as usize }), if y.is_negative() { 0 } else { y as usize })
+        (
+            (if x.is_negative() { 0 } else { x as usize }),
+            if y.is_negative() { 0 } else { y as usize },
+        )
     }
 }
 
@@ -300,7 +346,9 @@ pub fn build_tower_system(
     tile_defs: Res<TileDefinitions>,
 ) {
     for build_tower in build_tower_mr.read() {
-        let Some(option) = model_defs.build_indicators.get(build_tower.option) else { continue };
+        let Some(option) = model_defs.build_indicators.get(build_tower.option) else {
+            continue;
+        };
         let builtin = option.model_key.and_then(|k| model_defs.definitions.get(k));
 
         let health = option.tower.as_ref().map_or(100, |t| t.health as i32);
@@ -318,7 +366,14 @@ pub fn build_tower_system(
             Position::from(build_tower.position),
             match builtin {
                 Some(d) => d.create_collision_layers(),
-                None => CollisionLayers::new([CollisionLayer::ImpassableAll], [CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
+                None => CollisionLayers::new(
+                    [CollisionLayer::ImpassableAll],
+                    [
+                        CollisionLayer::Ball,
+                        CollisionLayer::Alien,
+                        CollisionLayer::Player,
+                    ],
+                ),
             },
             CurrentTile::default(),
             Health::full(health),
@@ -326,7 +381,9 @@ pub fn build_tower_system(
 
         if let Some(props) = &option.tower {
             if !props.resistances.is_empty() {
-                ec.insert(crate::general::damage::DamageResistances(props.resistances.clone()));
+                ec.insert(crate::general::damage::DamageResistances(
+                    props.resistances.clone(),
+                ));
             }
             spawn_tower_sensor(&mut ec, props, build_tower.position);
         }
@@ -342,15 +399,17 @@ pub fn build_tower_system(
 #[cfg(test)]
 mod execute_build_tests {
     use super::execute_build;
-    use avian3d::prelude::Position;
-    use bevy::prelude::*;
-    use std::collections::{HashMap, HashSet};
-    use crate::general::components::map_components::{BuildOption, CurrentTile, MapModelDefinitions};
+    use crate::general::components::map_components::{
+        BuildOption, CurrentTile, MapModelDefinitions,
+    };
     use crate::general::resources::map_resources::MapGraph;
     use crate::general::systems::coin_system::TeamWallet;
     use crate::player::components::{BuildingIndicator, IsBuildIndicator};
     use crate::player::events::building_events::{ExecuteBuild, RemoveTile};
     use crate::towers::events::BuildTower;
+    use avian3d::prelude::Position;
+    use bevy::prelude::*;
+    use std::collections::{HashMap, HashSet};
 
     #[derive(Resource, Default)]
     struct Built(Vec<BuildTower>);
@@ -371,7 +430,13 @@ mod execute_build_tests {
         app.insert_resource(TeamWallet { coins });
         app.insert_resource(MapModelDefinitions {
             definitions: HashMap::new(),
-            build_indicators: vec![BuildOption::builtin("Ball Tower", "tower", "map/tower_balls.glb#Scene0", 50, None)],
+            build_indicators: vec![BuildOption::builtin(
+                "Ball Tower",
+                "tower",
+                "map/tower_balls.glb#Scene0",
+                50,
+                None,
+            )],
         });
         app.insert_resource(MapGraph {
             path_finding_grid: pathfinding::grid::Grid::new(8, 8),
@@ -383,7 +448,11 @@ mod execute_build_tests {
 
         let indicator = app
             .world_mut()
-            .spawn((IsBuildIndicator, Position::from(Vec3::ZERO), CurrentTile { tile: (2, 2) }))
+            .spawn((
+                IsBuildIndicator,
+                Position::from(Vec3::ZERO),
+                CurrentTile { tile: (2, 2) },
+            ))
             .id();
         let player = app.world_mut().spawn(BuildingIndicator(indicator, 0)).id();
         (app, player)
@@ -392,22 +461,41 @@ mod execute_build_tests {
     #[test]
     fn affordable_build_deducts_cost_and_requests_the_tower() {
         let (mut app, player) = setup(100);
-        app.world_mut().resource_mut::<Messages<ExecuteBuild>>().write(ExecuteBuild(player));
+        app.world_mut()
+            .resource_mut::<Messages<ExecuteBuild>>()
+            .write(ExecuteBuild(player));
 
         app.update();
 
-        assert_eq!(app.world().resource::<TeamWallet>().coins, 50, "100 - 50 tower cost");
-        assert_eq!(app.world().resource::<Built>().0.len(), 1, "a BuildTower was requested");
+        assert_eq!(
+            app.world().resource::<TeamWallet>().coins,
+            50,
+            "100 - 50 tower cost"
+        );
+        assert_eq!(
+            app.world().resource::<Built>().0.len(),
+            1,
+            "a BuildTower was requested"
+        );
     }
 
     #[test]
     fn a_broke_team_cannot_build() {
         let (mut app, player) = setup(30); // less than the 50 cost
-        app.world_mut().resource_mut::<Messages<ExecuteBuild>>().write(ExecuteBuild(player));
+        app.world_mut()
+            .resource_mut::<Messages<ExecuteBuild>>()
+            .write(ExecuteBuild(player));
 
         app.update();
 
-        assert_eq!(app.world().resource::<TeamWallet>().coins, 30, "no deduction when broke");
-        assert!(app.world().resource::<Built>().0.is_empty(), "no tower requested");
+        assert_eq!(
+            app.world().resource::<TeamWallet>().coins,
+            30,
+            "no deduction when broke"
+        );
+        assert!(
+            app.world().resource::<Built>().0.is_empty(),
+            "no tower requested"
+        );
     }
 }

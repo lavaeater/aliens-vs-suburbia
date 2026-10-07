@@ -59,7 +59,9 @@ mod tests {
 
     #[test]
     fn prefs_round_trip_through_ron() {
-        let prefs = PlaygroundPrefs { last_model_def: Some("assets/defs/amy.ron".into()) };
+        let prefs = PlaygroundPrefs {
+            last_model_def: Some("assets/defs/amy.ron".into()),
+        };
         let text = ron::ser::to_string_pretty(&prefs, ron::ser::PrettyConfig::default())
             .expect("serializes");
         let back: PlaygroundPrefs = ron::from_str(&text).expect("parses");
@@ -76,7 +78,9 @@ mod tests {
     /// spawns a player with no model at all.
     #[test]
     fn a_remembered_def_that_no_longer_exists_is_dropped() {
-        let prefs = PlaygroundPrefs { last_model_def: Some("assets/defs/gone.ron".into()) };
+        let prefs = PlaygroundPrefs {
+            last_model_def: Some("assets/defs/gone.ron".into()),
+        };
         assert_eq!(prefs.resolve_last_model(|_| false), None);
         assert_eq!(
             prefs.resolve_last_model(|_| true).as_deref(),

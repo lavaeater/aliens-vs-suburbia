@@ -23,7 +23,7 @@ impl NumOp {
         match self {
             Self::Lt => a < b,
             Self::Gt => a > b,
-            Self::Eq => (a-b).abs()< f32::EPSILON,
+            Self::Eq => (a - b).abs() < f32::EPSILON,
         }
     }
 
@@ -51,27 +51,82 @@ impl NumOp {
 /// the single variants read one key, treating a missing fact as its type default.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Criterion {
-    BoolIs { key: String, expected: bool },
-    AnyBool { pattern: String, expected: bool },
-    AllBool { pattern: String, expected: bool },
+    BoolIs {
+        key: String,
+        expected: bool,
+    },
+    AnyBool {
+        pattern: String,
+        expected: bool,
+    },
+    AllBool {
+        pattern: String,
+        expected: bool,
+    },
 
-    IntCmp { key: String, op: NumOp, value: i64 },
-    AnyIntCmp { pattern: String, op: NumOp, value: i64 },
-    AllIntCmp { pattern: String, op: NumOp, value: i64 },
-    IntVsInt { lhs: String, op: NumOp, rhs: String },
+    IntCmp {
+        key: String,
+        op: NumOp,
+        value: i64,
+    },
+    AnyIntCmp {
+        pattern: String,
+        op: NumOp,
+        value: i64,
+    },
+    AllIntCmp {
+        pattern: String,
+        op: NumOp,
+        value: i64,
+    },
+    IntVsInt {
+        lhs: String,
+        op: NumOp,
+        rhs: String,
+    },
 
-    FloatCmp { key: String, op: NumOp, value: f32 },
+    FloatCmp {
+        key: String,
+        op: NumOp,
+        value: f32,
+    },
 
-    TextEq { key: String, value: String },
-    TextContains { key: String, value: String },
-    AnyTextEq { pattern: String, value: String },
-    AllTextEq { pattern: String, value: String },
+    TextEq {
+        key: String,
+        value: String,
+    },
+    TextContains {
+        key: String,
+        value: String,
+    },
+    AnyTextEq {
+        pattern: String,
+        value: String,
+    },
+    AllTextEq {
+        pattern: String,
+        value: String,
+    },
 
-    ListContains { key: String, value: String },
-    ListSize { key: String, op: NumOp, value: usize },
+    ListContains {
+        key: String,
+        value: String,
+    },
+    ListSize {
+        key: String,
+        op: NumOp,
+        value: usize,
+    },
 
-    SetContains { key: String, value: String },
-    SetSize { key: String, op: NumOp, value: usize },
+    SetContains {
+        key: String,
+        value: String,
+    },
+    SetSize {
+        key: String,
+        op: NumOp,
+        value: usize,
+    },
 }
 
 impl Criterion {
@@ -83,7 +138,10 @@ impl Criterion {
                 .filter_map(|(_, v)| v.as_bool())
                 .any(|b| b == *expected),
             Self::AllBool { pattern, expected } => {
-                let mut bools = facts.query(pattern).filter_map(|(_, v)| v.as_bool()).peekable();
+                let mut bools = facts
+                    .query(pattern)
+                    .filter_map(|(_, v)| v.as_bool())
+                    .peekable();
                 // vacuously false when there are no matching bool facts, matching the
                 // intent that "all X are true" requires at least one X.
                 bools.peek().is_some() && bools.all(|b| b == *expected)
@@ -95,7 +153,10 @@ impl Criterion {
                 .filter_map(|(_, v)| v.as_int())
                 .any(|i| op.apply_i64(i, *value)),
             Self::AllIntCmp { pattern, op, value } => {
-                let mut ints = facts.query(pattern).filter_map(|(_, v)| v.as_int()).peekable();
+                let mut ints = facts
+                    .query(pattern)
+                    .filter_map(|(_, v)| v.as_int())
+                    .peekable();
                 ints.peek().is_some() && ints.all(|i| op.apply_i64(i, *value))
             }
             Self::IntVsInt { lhs, op, rhs } => op.apply_i64(facts.int(lhs), facts.int(rhs)),
@@ -109,16 +170,15 @@ impl Criterion {
                 .filter_map(|(_, v)| v.as_text())
                 .any(|t| t == value),
             Self::AllTextEq { pattern, value } => {
-                let mut texts = facts.query(pattern).filter_map(|(_, v)| v.as_text()).peekable();
+                let mut texts = facts
+                    .query(pattern)
+                    .filter_map(|(_, v)| v.as_text())
+                    .peekable();
                 texts.peek().is_some() && texts.all(|t| t == value)
             }
 
-            Self::ListContains { key, value } => {
-                facts.text_list(key).iter().any(|v| v == value)
-            }
-            Self::ListSize { key, op, value } => {
-                op.apply_usize(facts.text_list(key).len(), *value)
-            }
+            Self::ListContains { key, value } => facts.text_list(key).iter().any(|v| v == value),
+            Self::ListSize { key, op, value } => op.apply_usize(facts.text_list(key).len(), *value),
 
             Self::SetContains { key, value } => facts.text_set_contains(key, value),
             Self::SetSize { key, op, value } => op.apply_usize(facts.text_set_len(key), *value),

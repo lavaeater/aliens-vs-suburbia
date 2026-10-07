@@ -1,16 +1,16 @@
-use bevy::prelude::*;
 use crate::alien::components::general::Alien;
-use crate::general::components::{Health, TouchDamage};
 use crate::camera::components::CameraFocus;
+use crate::general::components::{Health, TouchDamage};
 use crate::general::explosion::{Explode, ExplosionProps};
 use crate::general::systems::coin_system::{Coin, TeamWallet};
 use crate::player::components::{Player, PlayerDead};
+use bevy::prelude::*;
 
 // ── Data ────────────────────────────────────────────────────────────────────
 
 #[derive(Component, Clone, Debug, Default, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "avs"]
+#[type_path = "avs"]
 pub enum SpecialAbility {
     #[default]
     Bombardment,
@@ -25,7 +25,7 @@ impl SpecialAbility {
     pub const fn throws_to_charge(&self) -> u32 {
         match self {
             Self::Bombardment | Self::Whirlwind => 10,
-            Self::Healing     =>  6,
+            Self::Healing => 6,
             Self::GoldDigger | Self::Molotov => 8,
         }
     }
@@ -33,10 +33,10 @@ impl SpecialAbility {
     pub const fn label(&self) -> &'static str {
         match self {
             Self::Bombardment => "Bombardment",
-            Self::Healing     => "Healing",
-            Self::Whirlwind   => "Whirlwind",
-            Self::GoldDigger  => "Gold Digger",
-            Self::Molotov     => "Molotov",
+            Self::Healing => "Healing",
+            Self::Whirlwind => "Whirlwind",
+            Self::GoldDigger => "Gold Digger",
+            Self::Molotov => "Molotov",
         }
     }
 }
@@ -44,7 +44,7 @@ impl SpecialAbility {
 /// Fills by throwing balls; ability fires when full (1.0).
 #[derive(Component, Default, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "avs"]
+#[type_path = "avs"]
 pub struct AbilityCooldown {
     /// 0.0 = empty, 1.0 = ready to fire.
     pub charge: f32,
@@ -56,14 +56,22 @@ pub struct AbilityCooldown {
 
 impl AbilityCooldown {
     pub const fn new(throws_needed: u32) -> Self {
-        Self { charge: 0.0, throws_banked: 0.0, throws_needed }
+        Self {
+            charge: 0.0,
+            throws_banked: 0.0,
+            throws_needed,
+        }
     }
 
-    pub fn ready(&self) -> bool { self.charge >= 1.0 }
+    pub fn ready(&self) -> bool {
+        self.charge >= 1.0
+    }
 
     /// Call once per thrown ball. Returns true when the meter just hit full.
     pub fn add_throw(&mut self) -> bool {
-        if self.charge >= 1.0 { return false; }
+        if self.charge >= 1.0 {
+            return false;
+        }
         self.throws_banked += 1.0;
         self.charge = (self.throws_banked / self.throws_needed as f32).min(1.0);
         self.charge >= 1.0
@@ -78,7 +86,7 @@ impl AbilityCooldown {
 /// Marker inserted while Whirlwind is active.
 #[derive(Component, Default, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "avs"]
+#[type_path = "avs"]
 pub struct WhirlwindActive {
     pub timer: Timer,
 }
@@ -94,7 +102,10 @@ pub const fn tick_cooldowns(_time: Res<Time>, _query: Query<&mut AbilityCooldown
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn activate_ability(
     mut commands: Commands,
-    mut players: Query<(Entity, &Transform, &SpecialAbility, &mut AbilityCooldown), (With<Player>, Without<PlayerDead>)>,
+    mut players: Query<
+        (Entity, &Transform, &SpecialAbility, &mut AbilityCooldown),
+        (With<Player>, Without<PlayerDead>),
+    >,
     aliens: Query<(Entity, &Transform), With<Alien>>,
     mut all_healable: Query<&mut Health, (Without<Alien>, Without<PlayerDead>)>,
     mut wallet: Option<ResMut<TeamWallet>>,
@@ -106,10 +117,14 @@ pub fn activate_ability(
     focus: Res<CameraFocus>,
     ability_input: Res<AbilityInput>,
 ) {
-    if !ability_input.pressed { return; }
+    if !ability_input.pressed {
+        return;
+    }
 
     for (entity, player_transform, ability, mut cooldown) in players.iter_mut() {
-        if !cooldown.ready() { continue; }
+        if !cooldown.ready() {
+            continue;
+        }
         cooldown.reset();
 
         match ability {
@@ -122,16 +137,29 @@ pub fn activate_ability(
                     .map(|(_, t)| t.translation)
                     .filter(|p| p.distance(focus.center) <= view)
                     .collect();
-                in_view.sort_by(|a, b| a.distance_squared(focus.center).total_cmp(&b.distance_squared(focus.center)));
+                in_view.sort_by(|a, b| {
+                    a.distance_squared(focus.center)
+                        .total_cmp(&b.distance_squared(focus.center))
+                });
                 for target in in_view.into_iter().take(8) {
                     explode_mw.write(Explode {
                         position: target,
-                        props: ExplosionProps { radius: 2.5, damage: 75, impulse: 8.0, fire: false },
+                        props: ExplosionProps {
+                            radius: 2.5,
+                            damage: 75,
+                            impulse: 8.0,
+                            fire: false,
+                        },
                         source: Some(entity),
                     });
                 }
                 // Spawn a visual flash effect.
-                spawn_flash(&mut commands, player_transform.translation, &mut meshes, &mut materials);
+                spawn_flash(
+                    &mut commands,
+                    player_transform.translation,
+                    &mut meshes,
+                    &mut materials,
+                );
             }
 
             SpecialAbility::Healing => {
@@ -145,7 +173,9 @@ pub fn activate_ability(
 
             SpecialAbility::Whirlwind => {
                 commands.entity(entity).insert((
-                    WhirlwindActive { timer: Timer::from_seconds(4.0, TimerMode::Once) },
+                    WhirlwindActive {
+                        timer: Timer::from_seconds(4.0, TimerMode::Once),
+                    },
                     TouchDamage { dps: 200.0 },
                 ));
             }
@@ -187,7 +217,11 @@ pub fn activate_ability(
 pub fn tick_whirlwind(
     mut commands: Commands,
     time: Res<Time>,
-    mut query: Query<(Entity, &mut WhirlwindActive, &mut crate::control::components::CharacterControl)>,
+    mut query: Query<(
+        Entity,
+        &mut WhirlwindActive,
+        &mut crate::control::components::CharacterControl,
+    )>,
 ) {
     for (entity, mut ww, mut controller) in query.iter_mut() {
         ww.timer.tick(time.delta());
@@ -214,7 +248,7 @@ pub struct AbilityInput {
 /// Fading shockwave visual for Bombardment.
 #[derive(Component, Default, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "avs"]
+#[type_path = "avs"]
 pub struct AbilityFlash {
     pub timer: Timer,
 }
@@ -233,7 +267,9 @@ fn spawn_flash(
         ..default()
     });
     commands.spawn((
-        AbilityFlash { timer: Timer::from_seconds(0.5, TimerMode::Once) },
+        AbilityFlash {
+            timer: Timer::from_seconds(0.5, TimerMode::Once),
+        },
         Mesh3d(meshes.add(Sphere::new(1.0))),
         MeshMaterial3d(mat),
         Transform::from_translation(pos),
@@ -242,7 +278,12 @@ fn spawn_flash(
 
 pub fn tick_ability_flash(
     mut commands: Commands,
-    mut query: Query<(Entity, &mut AbilityFlash, &mut Transform, &MeshMaterial3d<StandardMaterial>)>,
+    mut query: Query<(
+        Entity,
+        &mut AbilityFlash,
+        &mut Transform,
+        &MeshMaterial3d<StandardMaterial>,
+    )>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     time: Res<Time>,
 ) {
@@ -304,7 +345,11 @@ mod tests {
             SpecialAbility::GoldDigger,
             SpecialAbility::Molotov,
         ] {
-            assert!(a.throws_to_charge() > 0, "{} must cost something", a.label());
+            assert!(
+                a.throws_to_charge() > 0,
+                "{} must cost something",
+                a.label()
+            );
         }
     }
 }

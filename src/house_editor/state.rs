@@ -1,6 +1,6 @@
-use bevy::prelude::Resource;
 use crate::assets::asset_definition::{AssetDefinition, ModelType};
-use crate::map::procgen::{resolve_house, HouseResolveResult, HouseSpec, Polygon};
+use crate::map::procgen::{HouseResolveResult, HouseSpec, Polygon, resolve_house};
+use bevy::prelude::Resource;
 
 /// State for the standalone House Editor (`GameState::HouseEditor`) — a focused canvas
 /// for iterating on `crate::map::procgen`'s polygon-to-house resolver in isolation, with
@@ -38,10 +38,12 @@ impl HouseEditorState {
     /// tool), or via `close()`/Enter.
     pub fn add_point(&mut self, x: i32, y: i32) {
         if let Some(&first) = self.points.first()
-            && self.points.len() >= 3 && (x, y) == first {
-                self.close();
-                return;
-            }
+            && self.points.len() >= 3
+            && (x, y) == first
+        {
+            self.close();
+            return;
+        }
         if self.points.last() != Some(&(x, y)) {
             self.points.push((x, y));
         }
@@ -53,7 +55,9 @@ impl HouseEditorState {
     /// so `+`/`-` tuning re-resolves the same shape without redrawing it.
     pub fn close(&mut self) {
         if self.points.len() >= 3 {
-            let polygon = Polygon { points: self.points.clone() };
+            let polygon = Polygon {
+                points: self.points.clone(),
+            };
             self.resolved = Some(resolve_house(&polygon, &self.spec));
         }
         self.info_dirty = true;
@@ -76,7 +80,9 @@ impl HouseEditorState {
     /// door/window tuning keys so a change is visible immediately on an already-closed house.
     pub fn reresolve_if_closed(&mut self) {
         if self.resolved.is_some() && self.points.len() >= 3 {
-            let polygon = Polygon { points: self.points.clone() };
+            let polygon = Polygon {
+                points: self.points.clone(),
+            };
             self.resolved = Some(resolve_house(&polygon, &self.spec));
         }
         self.info_dirty = true;
@@ -99,16 +105,24 @@ impl HouseEditorState {
 fn scan_wall_def() -> Option<String> {
     let dir = std::path::Path::new("assets/defs");
     let entries = std::fs::read_dir(dir).ok()?;
-    let mut terrain_defs: Vec<String> = entries.flatten().filter_map(|e| {
-        let p = e.path();
-        if p.extension()?.to_str()? != "ron" { return None; }
-        let text = std::fs::read_to_string(&p).ok()?;
-        let def: AssetDefinition = ron::from_str(&text).ok()?;
-        if !matches!(def.model_type, ModelType::Terrain(_)) { return None; }
-        Some(p.to_string_lossy().replace('\\', "/"))
-    }).collect();
+    let mut terrain_defs: Vec<String> = entries
+        .flatten()
+        .filter_map(|e| {
+            let p = e.path();
+            if p.extension()?.to_str()? != "ron" {
+                return None;
+            }
+            let text = std::fs::read_to_string(&p).ok()?;
+            let def: AssetDefinition = ron::from_str(&text).ok()?;
+            if !matches!(def.model_type, ModelType::Terrain(_)) {
+                return None;
+            }
+            Some(p.to_string_lossy().replace('\\', "/"))
+        })
+        .collect();
     terrain_defs.sort();
-    terrain_defs.iter()
+    terrain_defs
+        .iter()
         .find(|p| p.to_lowercase().contains("wall"))
         .cloned()
         .or_else(|| terrain_defs.into_iter().next())

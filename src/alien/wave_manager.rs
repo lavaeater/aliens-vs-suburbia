@@ -134,7 +134,10 @@ pub fn wave_system(
     let dt = time.delta_secs();
 
     if manager.spawning {
-        let Some(alien_count) = manager.waves.get(manager.current_wave).map(|w| w.alien_count)
+        let Some(alien_count) = manager
+            .waves
+            .get(manager.current_wave)
+            .map(|w| w.alien_count)
         else {
             return;
         };
@@ -144,7 +147,11 @@ pub fn wave_system(
             manager.current_wave = manager.current_wave.saturating_add(1);
             manager.spawning = false;
             manager.spawned_this_wave = 0;
-            if let Some(delay) = manager.waves.get(manager.current_wave).map(|w| w.delay_before) {
+            if let Some(delay) = manager
+                .waves
+                .get(manager.current_wave)
+                .map(|w| w.delay_before)
+            {
                 manager.wave_timer = delay;
             }
         }

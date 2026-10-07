@@ -56,8 +56,8 @@ pub fn record_last_hit(mut damage: MessageReader<DamageDealt>, mut commands: Com
 #[cfg(test)]
 mod tests {
     use super::record_last_hit;
-    use bevy::prelude::*;
     use crate::gore::components::{DamageDealt, DamageKind, LastHit};
+    use bevy::prelude::*;
 
     #[derive(Resource)]
     struct Target(Entity);
@@ -84,7 +84,10 @@ mod tests {
 
         app.update();
 
-        let last = app.world().get::<LastHit>(target).expect("LastHit should be inserted");
+        let last = app
+            .world()
+            .get::<LastHit>(target)
+            .expect("LastHit should be inserted");
         assert_eq!(last.normal, Vec3::X);
         assert_eq!(last.kind, DamageKind::Fire);
     }

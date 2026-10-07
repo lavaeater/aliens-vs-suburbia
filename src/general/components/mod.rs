@@ -1,7 +1,7 @@
-pub (crate) mod map_components;
+pub(crate) mod map_components;
 
-use bevy::prelude::*;
 use avian3d::prelude::PhysicsLayer;
+use bevy::prelude::*;
 
 /// Entities with this component deal damage per second to any Player they collide with.
 #[derive(Component, Clone, Copy, Default, Reflect)]
@@ -14,12 +14,12 @@ pub struct TouchDamage {
 /// Marker: this entity cannot be targeted or damaged by alien DestroyTheMap behaviour.
 #[derive(Component, Clone, Copy, Default, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "avs"]
+#[type_path = "avs"]
 pub struct Indestructible;
 
 #[derive(Component, Default, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "avs"]
+#[type_path = "avs"]
 pub struct Ball {
     pub entity: Option<Entity>,
     pub bounces: u32,
@@ -40,7 +40,7 @@ impl Ball {
 
 #[derive(Component, Default, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "avs"]
+#[type_path = "avs"]
 pub struct HittableTarget {}
 
 #[derive(PhysicsLayer, Default, PartialEq, Eq, Clone, Copy)]
@@ -62,23 +62,20 @@ pub enum CollisionLayer {
 
 #[derive(Component, Clone, Debug, PartialEq, Eq, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "avs"]
+#[type_path = "avs"]
 pub struct Attack {
     pub damage_range: i32,
 }
 
 impl Default for Attack {
     fn default() -> Self {
-        Self {
-            damage_range: 5,
-        }
+        Self { damage_range: 5 }
     }
 }
 
-
 #[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "avs"]
+#[type_path = "avs"]
 pub struct Health {
     pub health: i32,
     pub max_health: i32,
@@ -95,7 +92,10 @@ impl Default for Health {
 
 impl Health {
     pub const fn full(max_health: i32) -> Self {
-        Self { health: max_health, max_health }
+        Self {
+            health: max_health,
+            max_health,
+        }
     }
 
     /// Subtract `amount` and report whether this blow was lethal (health now <= 0).
@@ -114,5 +114,3 @@ impl Health {
         self.health <= 0
     }
 }
-
-

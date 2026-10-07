@@ -32,11 +32,18 @@ pub struct ExplosionProps {
     pub fire: bool,
 }
 
-const fn default_impulse() -> f32 { 8.0 }
+const fn default_impulse() -> f32 {
+    8.0
+}
 
 impl Default for ExplosionProps {
     fn default() -> Self {
-        Self { radius: 2.5, damage: 80, impulse: default_impulse(), fire: false }
+        Self {
+            radius: 2.5,
+            damage: 80,
+            impulse: default_impulse(),
+            fire: false,
+        }
     }
 }
 
@@ -111,7 +118,9 @@ pub fn explosion_system(
 
         let blocked = |from: Vec3, to: Vec3| {
             let delta = to - from;
-            let Ok(dir) = Dir3::new(delta) else { return false };
+            let Ok(dir) = Dir3::new(delta) else {
+                return false;
+            };
             // Anything solid short of the target shields it.
             spatial
                 .cast_ray(from, dir, (delta.length() - 0.2).max(0.0), true, &walls)
@@ -120,8 +129,14 @@ pub fn explosion_system(
 
         for (entity, pos, velocity) in targets.iter_mut() {
             let target = pos.0 + Vec3::Y * 0.4;
-            let Some((damage, shove)) = blast_effect(center, target, props, blocked) else { continue };
-            let kind = if props.fire { DamageKind::Fire } else { DamageKind::Explosive };
+            let Some((damage, shove)) = blast_effect(center, target, props, blocked) else {
+                continue;
+            };
+            let kind = if props.fire {
+                DamageKind::Fire
+            } else {
+                DamageKind::Explosive
+            };
             let mut req = ApplyDamage::at(entity, damage, kind, target).along(target - center);
             if let Some(source) = explosion.source {
                 req = req.from(source);
@@ -133,12 +148,27 @@ pub fn explosion_system(
         }
 
         if props.fire {
-            fire_mw.write(SpawnFire { position: center, radius: props.radius * 0.8, duration: 5.0, dps: 40.0 });
+            fire_mw.write(SpawnFire {
+                position: center,
+                radius: props.radius * 0.8,
+                duration: 5.0,
+                dps: 40.0,
+            });
         }
-        sfx_mw.write(PlaySfx { kind: SfxKind::Fire, gain_db: 4.0 });
+        sfx_mw.write(PlaySfx {
+            kind: SfxKind::Fire,
+            gain_db: 4.0,
+        });
         shake.add(0.35 * (props.radius / 2.5).clamp(0.3, 2.0));
         *seed = seed.wrapping_add(0x9E37_79B9);
-        spawn_explosion_visual(&mut commands, &mut meshes, &mut materials, center, props.radius, *seed);
+        spawn_explosion_visual(
+            &mut commands,
+            &mut meshes,
+            &mut materials,
+            center,
+            props.radius,
+            *seed,
+        );
     }
 }
 
@@ -162,7 +192,9 @@ fn spawn_explosion_visual(
         Mesh3d(meshes.add(Sphere::new(0.3))),
         MeshMaterial3d(flash),
         Transform::from_translation(center),
-        Ephemeral::new(0.35).with_grow(radius / 0.3).base_scale(Vec3::ONE),
+        Ephemeral::new(0.35)
+            .with_grow(radius / 0.3)
+            .base_scale(Vec3::ONE),
     ));
 
     let debris_mesh = meshes.add(Cuboid::new(0.12, 0.12, 0.12));
@@ -187,7 +219,10 @@ fn spawn_explosion_visual(
             Transform::from_translation(center + dir * 0.2),
             avian3d::prelude::RigidBody::Dynamic,
             avian3d::prelude::Collider::cuboid(0.12, 0.12, 0.12),
-            avian3d::prelude::CollisionLayers::new([CollisionLayer::Ball], [CollisionLayer::Floor, CollisionLayer::ImpassableAll]),
+            avian3d::prelude::CollisionLayers::new(
+                [CollisionLayer::Ball],
+                [CollisionLayer::Floor, CollisionLayer::ImpassableAll],
+            ),
             LinearVelocity(dir * (4.0 + radius * 1.5)),
             Ephemeral::new(1.2),
         ));
@@ -206,7 +241,11 @@ pub fn explode_on_death(
             continue;
         }
         commands.entity(entity).try_insert(Exploded);
-        explode_mw.write(Explode { position: pos.0, props: props.0.clone(), source: None });
+        explode_mw.write(Explode {
+            position: pos.0,
+            props: props.0.clone(),
+            source: None,
+        });
     }
 }
 
@@ -215,26 +254,38 @@ mod tests {
     use super::*;
 
     fn props() -> ExplosionProps {
-        ExplosionProps { radius: 4.0, damage: 100, impulse: 10.0, fire: false }
+        ExplosionProps {
+            radius: 4.0,
+            damage: 100,
+            impulse: 10.0,
+            fire: false,
+        }
     }
 
     #[test]
     fn falloff_is_full_at_centre_and_zero_at_the_edge() {
         assert_eq!(falloff(0.0, 4.0), 1.0);
         assert_eq!(falloff(4.0, 4.0), 0.0);
-        assert!((falloff(2.0, 4.0) - 0.75).abs() < 1e-6, "quadratic: half way keeps 75%");
+        assert!(
+            (falloff(2.0, 4.0) - 0.75).abs() < 1e-6,
+            "quadratic: half way keeps 75%"
+        );
         assert_eq!(falloff(1.0, 0.0), 0.0);
     }
 
     #[test]
     fn outside_the_radius_nothing_happens() {
-        assert!(blast_effect(Vec3::ZERO, Vec3::new(5.0, 0.0, 0.0), &props(), |_, _| false).is_none());
+        assert!(
+            blast_effect(Vec3::ZERO, Vec3::new(5.0, 0.0, 0.0), &props(), |_, _| false).is_none()
+        );
     }
 
     #[test]
     fn damage_and_shove_scale_with_distance() {
-        let (near_dmg, near_shove) = blast_effect(Vec3::ZERO, Vec3::new(1.0, 0.0, 0.0), &props(), |_, _| false).unwrap();
-        let (far_dmg, far_shove) = blast_effect(Vec3::ZERO, Vec3::new(3.0, 0.0, 0.0), &props(), |_, _| false).unwrap();
+        let (near_dmg, near_shove) =
+            blast_effect(Vec3::ZERO, Vec3::new(1.0, 0.0, 0.0), &props(), |_, _| false).unwrap();
+        let (far_dmg, far_shove) =
+            blast_effect(Vec3::ZERO, Vec3::new(3.0, 0.0, 0.0), &props(), |_, _| false).unwrap();
         assert!(near_dmg > far_dmg, "{near_dmg} vs {far_dmg}");
         assert!(near_shove.length() > far_shove.length());
         assert!(near_shove.x > 0.0, "pushed away from the centre");
@@ -243,6 +294,8 @@ mod tests {
 
     #[test]
     fn walls_shield_targets() {
-        assert!(blast_effect(Vec3::ZERO, Vec3::new(1.0, 0.0, 0.0), &props(), |_, _| true).is_none());
+        assert!(
+            blast_effect(Vec3::ZERO, Vec3::new(1.0, 0.0, 0.0), &props(), |_, _| true).is_none()
+        );
     }
 }

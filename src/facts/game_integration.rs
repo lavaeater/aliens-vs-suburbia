@@ -4,15 +4,15 @@
 //! observable. The facts here are groundwork — they run alongside the existing
 //! `LevelTracker` flow without replacing it.
 
-use bevy::prelude::{
-    in_state, IntoScheduleConfigs, MessageReader, OnEnter, Query, Res, ResMut, Update, With,
-};
 use bevy::app::{App, Plugin};
+use bevy::prelude::{
+    IntoScheduleConfigs, MessageReader, OnEnter, Query, Res, ResMut, Update, With, in_state,
+};
 
 use crate::alien::components::general::Alien;
 use crate::alien::wave_manager::WaveManager;
-use crate::game_state::score_keeper::{LevelTracker, Score};
 use crate::game_state::GameState;
+use crate::game_state::score_keeper::{LevelTracker, Score};
 use crate::general::components::Health;
 use crate::general::systems::coin_system::TeamWallet;
 use crate::player::components::Player;
@@ -84,7 +84,11 @@ fn derive_world_facts(
     let all_waves_done = wave_manager.as_ref().is_none_or(|wm| !wm.waves_remaining());
     let all_killed = level_tracker.aliens_to_spawn > 0
         && level_tracker.aliens_killed >= level_tracker.aliens_to_spawn;
-    set_bool_if_changed(&mut facts, keys::ALL_ALIENS_DEAD, all_waves_done && all_killed);
+    set_bool_if_changed(
+        &mut facts,
+        keys::ALL_ALIENS_DEAD,
+        all_waves_done && all_killed,
+    );
 
     // Aliens escaping the goal -> the escape-loss condition.
     set_if_changed(

@@ -215,7 +215,9 @@ impl MapEditorState {
         };
 
         if let Some((tile_v, maybe_path)) = action {
-            let Some(row) = self.tiles.get_mut(uy) else { return };
+            let Some(row) = self.tiles.get_mut(uy) else {
+                return;
+            };
             let Some(cell) = row.get_mut(ux) else { return };
             *cell = tile_v;
             if let Some(path) = maybe_path {

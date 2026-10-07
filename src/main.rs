@@ -204,9 +204,12 @@ fn main() -> std::process::ExitCode {
         .add_plugins(GamePlugin);
 
     if straight_to_asset_browser {
-        app.add_systems(bevy::app::Startup, |mut next: bevy::prelude::ResMut<bevy::prelude::NextState<game_state::GameState>>| {
-            next.set(game_state::GameState::AssetBrowser);
-        });
+        app.add_systems(
+            bevy::app::Startup,
+            |mut next: bevy::prelude::ResMut<bevy::prelude::NextState<game_state::GameState>>| {
+                next.set(game_state::GameState::AssetBrowser);
+            },
+        );
     }
 
     if straight_to_playground {

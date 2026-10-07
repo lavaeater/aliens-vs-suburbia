@@ -1,26 +1,36 @@
 use crate::game_state::GameState;
 use crate::general::components::map_components::Floor;
 use crate::model_settings::plugin::PlayerAssetDef;
-use crate::player::components::{WeaponsHidden, WEAPON_NODES};
-use crate::player::systems::auto_aim::{auto_aim, debug_gizmos};
-use crate::player::systems::death_revive::{check_team_wipe, choose_respawn_anchor, detect_player_death, player_revive_system, reset_respawn_queue, tick_bleed_out, tick_respawns, RespawnQueue};
-use crate::player::systems::spawn_players::{fix_scene_transform, spawn_players};
-use crate::player::systems::abilities::{AbilityInput, activate_ability, tick_ability_flash, tick_cooldowns, tick_whirlwind};
-use crate::player::systems::equip::{equip_pending_weapons, keep_weapons_snapped};
-use crate::player::systems::shoot::{shoot_weapons, tick_reloads, ReloadRequest};
-use crate::player::systems::loadout::{switch_weapons, SwitchWeapon};
-use crate::player::systems::torso_twist::{
-    apply_torso_twist, resolve_twist_bones, toggle_torso_twist, TorsoTwistEnabled,
+use crate::player::components::{WEAPON_NODES, WeaponsHidden};
+use crate::player::systems::abilities::{
+    AbilityInput, activate_ability, tick_ability_flash, tick_cooldowns, tick_whirlwind,
 };
-use bevy::transform::TransformSystems;
-use crate::player::systems::arm_ik::{align_sights, solve_weapon_arms, toggle_hand_align, HandAlignEnabled};
+use crate::player::systems::arm_ik::{
+    HandAlignEnabled, align_sights, solve_weapon_arms, toggle_hand_align,
+};
+use crate::player::systems::auto_aim::{auto_aim, debug_gizmos};
+use crate::player::systems::death_revive::{
+    RespawnQueue, check_team_wipe, choose_respawn_anchor, detect_player_death,
+    player_revive_system, reset_respawn_queue, tick_bleed_out, tick_respawns,
+};
+use crate::player::systems::equip::{equip_pending_weapons, keep_weapons_snapped};
 use crate::player::systems::leg_ik::{
-    apply_leg_ik, resolve_legs, toggle_leg_ik, GaitReadout, GaitSettings, LegIkEnabled,
+    GaitReadout, GaitSettings, LegIkEnabled, apply_leg_ik, resolve_legs, toggle_leg_ik,
+};
+use crate::player::systems::loadout::{SwitchWeapon, switch_weapons};
+use crate::player::systems::shoot::{ReloadRequest, shoot_weapons, tick_reloads};
+use crate::player::systems::spawn_players::{fix_scene_transform, spawn_players};
+use crate::player::systems::torso_twist::{
+    TorsoTwistEnabled, apply_torso_twist, resolve_twist_bones, toggle_torso_twist,
 };
 use crate::player::systems::weapon_aim::aim_weapons;
 use bevy::prelude::*;
-use bevy::world_serialization::{WorldInstance, WorldAssetRoot};
-use bevy_mod_outline::{AsyncWorldInheritOutline, AutoGenerateOutlineNormalsPlugin, InheritOutline, OutlinePlugin, OutlineVolume};
+use bevy::transform::TransformSystems;
+use bevy::world_serialization::{WorldAssetRoot, WorldInstance};
+use bevy_mod_outline::{
+    AsyncWorldInheritOutline, AutoGenerateOutlineNormalsPlugin, InheritOutline, OutlinePlugin,
+    OutlineVolume,
+};
 
 #[derive(Default)]
 pub struct PlayerPlugin {
@@ -50,13 +60,22 @@ impl Plugin for PlayerPlugin {
                 // gun from one of them, and the arms are then solved onto the placed gun.
                 // The legs are last and independent: they read the character's world
                 // position, which none of the upper-body work touches.
-                (apply_torso_twist, aim_weapons, solve_weapon_arms, align_sights, apply_leg_ik)
+                (
+                    apply_torso_twist,
+                    aim_weapons,
+                    solve_weapon_arms,
+                    align_sights,
+                    apply_leg_ik,
+                )
                     .chain()
                     .after(bevy::app::AnimationSystems)
                     .before(TransformSystems::Propagate)
                     .run_if(in_state(GameState::InGame)),
             )
-            .add_plugins((OutlinePlugin::EXTRUDE_VERTEX, AutoGenerateOutlineNormalsPlugin::default()))
+            .add_plugins((
+                OutlinePlugin::EXTRUDE_VERTEX,
+                AutoGenerateOutlineNormalsPlugin::default(),
+            ))
             .add_systems(Update, (auto_outline_scenes, sync_outline_with_visibility))
             .add_systems(
                 Update,
@@ -77,7 +96,7 @@ impl Plugin for PlayerPlugin {
                     tick_respawns,
                     check_team_wipe.run_if(crate::playground::state::in_normal_game),
                 )
-                .run_if(in_state(GameState::InGame)),
+                    .run_if(in_state(GameState::InGame)),
             )
             .add_systems(
                 Update,
@@ -93,7 +112,7 @@ impl Plugin for PlayerPlugin {
                     resolve_legs,
                     toggle_leg_ik,
                 )
-                .run_if(in_state(GameState::InGame)),
+                    .run_if(in_state(GameState::InGame)),
             );
     }
 }
@@ -105,7 +124,14 @@ fn reset_ability_input(mut input: ResMut<AbilityInput>) {
 #[allow(clippy::type_complexity)]
 fn auto_outline_scenes(
     mut commands: Commands,
-    query: Query<Entity, (With<WorldAssetRoot>, Without<AsyncWorldInheritOutline>, Without<Floor>)>,
+    query: Query<
+        Entity,
+        (
+            With<WorldAssetRoot>,
+            Without<AsyncWorldInheritOutline>,
+            Without<Floor>,
+        ),
+    >,
 ) {
     for entity in query.iter() {
         // `try_insert`, not `insert`: a scene root can be despawned between this system
@@ -160,7 +186,13 @@ fn sync_outline_with_visibility(
 #[allow(clippy::type_complexity)]
 fn hide_player_weapon_nodes(
     mut commands: Commands,
-    player_query: Query<(Entity, &WorldInstance), (With<crate::player::components::Player>, Without<WeaponsHidden>)>,
+    player_query: Query<
+        (Entity, &WorldInstance),
+        (
+            With<crate::player::components::Player>,
+            Without<WeaponsHidden>,
+        ),
+    >,
     scene_spawner: Res<WorldInstanceSpawner>,
     named_query: Query<(Entity, &Name)>,
     player_asset_def: Option<Res<PlayerAssetDef>>,
@@ -171,14 +203,20 @@ fn hide_player_weapon_nodes(
         && let Some(def) = &def_res.0
         && !def.hidden_nodes.is_empty()
     {
-        def_nodes = def.hidden_nodes.iter().map(std::string::String::as_str).collect();
+        def_nodes = def
+            .hidden_nodes
+            .iter()
+            .map(std::string::String::as_str)
+            .collect();
         &def_nodes
     } else {
         WEAPON_NODES
     };
 
     for (player_entity, scene_instance) in player_query.iter() {
-        if !scene_spawner.instance_is_ready(**scene_instance) { continue; }
+        if !scene_spawner.instance_is_ready(**scene_instance) {
+            continue;
+        }
         // `try_insert`: the player can be despawned between this queueing and the
         // buffers applying -- a model swap or a death does exactly that -- and a plain
         // `insert` on a despawned entity takes the whole app down.

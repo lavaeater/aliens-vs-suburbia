@@ -185,13 +185,18 @@ pub fn tick_fire_fields(
                 ..default()
             });
             let fa = fire_assets.as_ref();
-            let mesh = fa.map_or_else(|| meshes.add(Mesh::from(Sphere::new(0.5))), |a| a.flame_mesh.clone());
+            let mesh = fa.map_or_else(
+                || meshes.add(Mesh::from(Sphere::new(0.5))),
+                |a| a.flame_mesh.clone(),
+            );
             commands.spawn((
                 Mesh3d(mesh),
                 MeshMaterial3d(mat),
                 Transform::from_translation(center + off + Vec3::Y * 0.2)
                     .with_scale(Vec3::splat(size)),
-                Ephemeral::new(0.35).with_grow(1.8).base_scale(Vec3::splat(size)),
+                Ephemeral::new(0.35)
+                    .with_grow(1.8)
+                    .base_scale(Vec3::splat(size)),
             ));
         }
 
@@ -217,16 +222,16 @@ pub fn tick_fire_fields(
 
 #[cfg(test)]
 mod tests {
-    use super::{tick_fire_fields, FireField};
-    use avian3d::prelude::Position;
-    use bevy::prelude::*;
-    use std::time::Duration;
+    use super::{FireField, tick_fire_fields};
     use crate::alien::components::general::Alien;
     use crate::game_state::score_keeper::GameTrackingEvent;
     use crate::general::components::Health;
-    use crate::general::damage::{apply_damage, ApplyDamage, DamageRules};
+    use crate::general::damage::{ApplyDamage, DamageRules, apply_damage};
     use crate::general::systems::map_systems::TileDefinitions;
     use crate::gore::components::{DamageDealt, DamageKind, GoreBudget};
+    use avian3d::prelude::Position;
+    use bevy::prelude::*;
+    use std::time::Duration;
 
     #[derive(Resource, Default)]
     struct Caught(Vec<DamageDealt>);
@@ -255,22 +260,49 @@ mod tests {
         app.add_systems(Update, (tick_fire_fields, apply_damage, catch).chain());
 
         // Fire at the origin: radius 2, 40 dps.
-        app.world_mut().spawn((FireField::new(5.0, 40.0, 2.0), Transform::from_translation(Vec3::ZERO)));
+        app.world_mut().spawn((
+            FireField::new(5.0, 40.0, 2.0),
+            Transform::from_translation(Vec3::ZERO),
+        ));
         let inside = app
             .world_mut()
-            .spawn((Alien, Health { health: 100, max_health: 100 }, Position(Vec3::new(1.0, 0.0, 0.0))))
+            .spawn((
+                Alien,
+                Health {
+                    health: 100,
+                    max_health: 100,
+                },
+                Position(Vec3::new(1.0, 0.0, 0.0)),
+            ))
             .id();
         let outside = app
             .world_mut()
-            .spawn((Alien, Health { health: 100, max_health: 100 }, Position(Vec3::new(9.0, 0.0, 0.0))))
+            .spawn((
+                Alien,
+                Health {
+                    health: 100,
+                    max_health: 100,
+                },
+                Position(Vec3::new(9.0, 0.0, 0.0)),
+            ))
             .id();
 
         // 0.3s -> one 0.25s damage tick -> 40 * 0.25 = 10 damage.
-        app.world_mut().resource_mut::<Time>().advance_by(Duration::from_millis(300));
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(Duration::from_millis(300));
         app.update();
 
-        assert_eq!(app.world().get::<Health>(inside).unwrap().health, 90, "creature in the fire burns");
-        assert_eq!(app.world().get::<Health>(outside).unwrap().health, 100, "creature outside is safe");
+        assert_eq!(
+            app.world().get::<Health>(inside).unwrap().health,
+            90,
+            "creature in the fire burns"
+        );
+        assert_eq!(
+            app.world().get::<Health>(outside).unwrap().health,
+            100,
+            "creature outside is safe"
+        );
 
         let caught = &app.world().resource::<Caught>().0;
         assert_eq!(caught.len(), 1);

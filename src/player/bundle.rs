@@ -1,15 +1,17 @@
-use bevy::math::Vec3;
-use bevy::prelude::{Bundle, Name};
-use avian3d::prelude::{AngularDamping, CollisionLayers, Friction, LayerMask, LinearDamping, LockedAxes, RigidBody};
 use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
-use crate::control::components::{CharacterControl, DynamicMovement, InputKeyboard};
 use crate::control::components::CharacterState;
+use crate::control::components::{CharacterControl, DynamicMovement, InputKeyboard};
 use crate::game_state::score_keeper::Score;
 use crate::general::components::Health;
-use crate::general::systems::coin_system::PickupRange;
-use crate::player::systems::abilities::{AbilityCooldown, SpecialAbility};
 use crate::general::components::map_components::CurrentTile;
+use crate::general::systems::coin_system::PickupRange;
 use crate::player::components::{AutoAim, Player};
+use crate::player::systems::abilities::{AbilityCooldown, SpecialAbility};
+use avian3d::prelude::{
+    AngularDamping, CollisionLayers, Friction, LayerMask, LinearDamping, LockedAxes, RigidBody,
+};
+use bevy::math::Vec3;
+use bevy::prelude::{Bundle, Name};
 
 #[derive(Bundle)]
 pub struct PlayerBundle {
@@ -37,11 +39,7 @@ pub struct PlayerBundle {
 
 #[allow(dead_code)]
 impl PlayerBundle {
-    pub fn new(
-        name: &str,
-        groups: impl Into<LayerMask>,
-        masks: impl Into<LayerMask>,
-    ) -> Self {
+    pub fn new(name: &str, groups: impl Into<LayerMask>, masks: impl Into<LayerMask>) -> Self {
         Self::with_throw_rate(name, groups, masks, 60.0)
     }
 
@@ -67,9 +65,7 @@ impl PlayerBundle {
                 health: 100,
                 max_health: 100,
             },
-            current_tile: CurrentTile {
-                tile: (0, 0)
-            },
+            current_tile: CurrentTile { tile: (0, 0) },
             current_animation_key: CurrentAnimationKey::new("players".into(), AnimationKey::Idle),
             character_state: CharacterState::default(),
             score: Score::new(),

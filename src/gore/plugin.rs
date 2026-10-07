@@ -6,14 +6,14 @@ use bevy::prelude::*;
 
 use crate::game_state::GameState;
 use crate::gore::barks::{
-    bark_on_events, reset_atrocity, setup_bark_caption, tick_bark_caption, AtrocityMeter, BarkState,
+    AtrocityMeter, BarkState, bark_on_events, reset_atrocity, setup_bark_caption, tick_bark_caption,
 };
 use crate::gore::blood::{setup_blood_assets, spawn_blood_on_damage};
 use crate::gore::components::{DamageDealt, EntityDied, GoreBudget};
-use crate::gore::despair::{apply_despair, despair_heartbeat, DespairSettings, Heartbeat};
-use crate::gore::fire::{setup_fire_assets, spawn_fire_fields, tick_fire_fields, SpawnFire};
+use crate::gore::despair::{DespairSettings, Heartbeat, apply_despair, despair_heartbeat};
+use crate::gore::fire::{SpawnFire, setup_fire_assets, spawn_fire_fields, tick_fire_fields};
 use crate::gore::gibs::{setup_gib_assets, spawn_gibs_on_death};
-use crate::gore::sfx::{emit_combat_sfx, play_sfx, setup_sfx_bank, PlaySfx};
+use crate::gore::sfx::{PlaySfx, emit_combat_sfx, play_sfx, setup_sfx_bank};
 use crate::gore::systems::{record_last_hit, tick_ephemeral};
 use crate::gore::terrain::{destroy_damaged_terrain, setup_debris_assets};
 

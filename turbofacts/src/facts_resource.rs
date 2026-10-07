@@ -10,8 +10,8 @@ pub fn fact_key(parts: &[&str]) -> String {
     parts.join(".")
 }
 
-/// The world's fact store. 
-/// 
+/// The world's fact store.
+///
 /// A flat `key -> FactValue` map plus a dirty list of keys mutated
 /// since the last drain. The drain is consumed by `emit_fact_changes` to produce
 /// `FactChanged` messages (see [`crate::facts::facts_plugin`]).

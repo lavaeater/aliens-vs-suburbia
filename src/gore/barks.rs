@@ -30,7 +30,11 @@ pub struct BarkState {
 
 impl Default for BarkState {
     fn default() -> Self {
-        Self { cooldown: 0.0, seed: 0x1234_5678, last: usize::MAX }
+        Self {
+            cooldown: 0.0,
+            seed: 0x1234_5678,
+            last: usize::MAX,
+        }
     }
 }
 
@@ -95,7 +99,10 @@ const LOW_HEALTH: Lines = Lines {
 
 /// Deterministic-ish pick that avoids repeating the immediately previous index.
 fn pick<'a>(state: &mut BarkState, lines: &'a [&'a str]) -> &'a str {
-    state.seed = state.seed.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+    state.seed = state
+        .seed
+        .wrapping_mul(1_664_525)
+        .wrapping_add(1_013_904_223);
     let mut i = (state.seed >> 16) as usize % lines.len();
     if lines.len() > 1 && i == state.last {
         i = (i + 1) % lines.len();
@@ -109,7 +116,11 @@ fn choose(state: &mut BarkState, lines: &Lines, kills: u32) -> &'static str {
     let haunted_frac = (kills as f32 / HAUNTED_AT as f32).clamp(0.0, 1.0);
     state.seed = state.seed.wrapping_mul(22_695_477).wrapping_add(1);
     let roll = ((state.seed >> 16) & 0xffff) as f32 / 65535.0;
-    let pool = if roll < haunted_frac { lines.haunted } else { lines.zeal };
+    let pool = if roll < haunted_frac {
+        lines.haunted
+    } else {
+        lines.zeal
+    };
     let pool = if pool.is_empty() { lines.zeal } else { pool };
     pick(state, pool)
 }
@@ -138,9 +149,15 @@ pub fn setup_bark_caption(mut commands: Commands, existing: Query<Entity, With<B
                     fade: Timer::from_seconds(1.0, TimerMode::Once),
                 },
                 Text::new(""),
-                TextFont { font_size: FontSize::Px(30.0), ..default() },
+                TextFont {
+                    font_size: FontSize::Px(30.0),
+                    ..default()
+                },
                 TextColor(Color::srgba(1.0, 0.9, 0.85, 0.0)),
-                TextLayout { justify: Justify::Center, ..default() },
+                TextLayout {
+                    justify: Justify::Center,
+                    ..default()
+                },
             ));
         });
 }
@@ -174,9 +191,9 @@ pub fn bark_on_events(
     }
 
     // Priority: player in danger > player hurt > kills.
-    let player_low = player_health
-        .iter()
-        .any(|h| h.max_health > 0 && (h.health as f32 / h.max_health as f32) < 0.25 && h.health > 0);
+    let player_low = player_health.iter().any(|h| {
+        h.max_health > 0 && (h.health as f32 / h.max_health as f32) < 0.25 && h.health > 0
+    });
 
     let line = if player_low && player_hit {
         Some(choose(&mut state, &LOW_HEALTH, atrocity.kills))
@@ -212,15 +229,15 @@ pub fn bark_on_events(
             *text_color = TextColor(color.with_alpha(1.0));
             cap.fade = Timer::from_seconds(2.6, TimerMode::Once);
         }
-        sfx.write(PlaySfx { kind: SfxKind::Bark, gain_db: -2.0 });
+        sfx.write(PlaySfx {
+            kind: SfxKind::Bark,
+            gain_db: -2.0,
+        });
     }
 }
 
 /// Fade the caption out over its lifetime.
-pub fn tick_bark_caption(
-    time: Res<Time>,
-    mut caption: Query<(&mut BarkCaption, &mut TextColor)>,
-) {
+pub fn tick_bark_caption(time: Res<Time>, mut caption: Query<(&mut BarkCaption, &mut TextColor)>) {
     for (mut cap, mut color) in caption.iter_mut() {
         cap.fade.tick(time.delta());
         let a = 1.0 - cap.fade.fraction();

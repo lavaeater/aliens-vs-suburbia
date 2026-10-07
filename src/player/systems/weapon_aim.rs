@@ -76,7 +76,10 @@ pub fn anchor_role<'a>(
     weapon: impl Fn(&str) -> bool,
     roles: &'a [&'a str],
 ) -> Option<&'a str> {
-    roles.iter().copied().find(|role| character(role) && weapon(role))
+    roles
+        .iter()
+        .copied()
+        .find(|role| character(role) && weapon(role))
 }
 
 /// The weapon-local axis that gets pointed along the aim: from the anchor to the muzzle.
@@ -87,7 +90,11 @@ pub fn weapon_axis(anchor: Vec3, muzzle: Vec3) -> Vec3 {
     let axis = muzzle - anchor;
     // A weapon whose muzzle sits on its anchor has no axis to speak of. Point it forward
     // rather than producing a NaN rotation that would blank the model.
-    if axis.length_squared() < 1e-8 { Vec3::NEG_Z } else { axis.normalize() }
+    if axis.length_squared() < 1e-8 {
+        Vec3::NEG_Z
+    } else {
+        axis.normalize()
+    }
 }
 
 /// Rotation that points `axis_local` along `aim`, rolled so `up_local` stays as upright as
@@ -99,8 +106,12 @@ pub fn weapon_axis(anchor: Vec3, muzzle: Vec3) -> Vec3 {
 /// Without the roll the gun would be correctly pointed but arbitrarily banked — the
 /// classic "aligned by one vector" mistake called out in the design doc.
 pub fn aimed_rotation(axis_local: Vec3, up_local: Vec3, aim: Vec3) -> Quat {
-    let Ok(axis) = Dir3::new(axis_local) else { return Quat::IDENTITY };
-    let Ok(aim) = Dir3::new(aim) else { return Quat::IDENTITY };
+    let Ok(axis) = Dir3::new(axis_local) else {
+        return Quat::IDENTITY;
+    };
+    let Ok(aim) = Dir3::new(aim) else {
+        return Quat::IDENTITY;
+    };
 
     let align = Quat::from_rotation_arc(*axis, *aim);
     let current_up = align * up_local;
@@ -170,8 +181,12 @@ pub const MAX_AIM_PITCH_DEGREES: f32 = 15.0;
 /// inventing one would swing the weapon to an arbitrary compass direction.
 pub fn level_aim(aim: Vec3, max_pitch: f32) -> Vec3 {
     let horizontal = Vec3::new(aim.x, 0.0, aim.z);
-    let Some(heading) = horizontal.try_normalize() else { return aim };
-    let Some(aim) = aim.try_normalize() else { return aim };
+    let Some(heading) = horizontal.try_normalize() else {
+        return aim;
+    };
+    let Some(aim) = aim.try_normalize() else {
+        return aim;
+    };
 
     let pitch = aim.y.clamp(-1.0, 1.0).asin();
     if pitch.abs() <= max_pitch {
@@ -193,9 +208,15 @@ pub fn aim_weapons(
     let dt = time.delta_secs();
 
     for (weapon, aimed) in aimed.iter() {
-        let Ok(aim) = aims.get(aimed.owner) else { continue };
-        let Ok(bone) = globals.get(aimed.anchor_bone) else { continue };
-        let Ok(owner) = globals.get(aimed.owner) else { continue };
+        let Ok(aim) = aims.get(aimed.owner) else {
+            continue;
+        };
+        let Ok(bone) = globals.get(aimed.anchor_bone) else {
+            continue;
+        };
+        let Ok(owner) = globals.get(aimed.owner) else {
+            continue;
+        };
 
         // The character's model root carries how big the character is drawn; the weapon
         // tracks that rather than whatever scale the rig baked into its bones.
@@ -212,11 +233,11 @@ pub fn aim_weapons(
         );
 
         // Expressed in the owner's frame, since that is what the weapon is parented to.
-        let local = Transform::from_matrix(
-            owner.to_matrix().inverse() * desired.to_matrix(),
-        );
+        let local = Transform::from_matrix(owner.to_matrix().inverse() * desired.to_matrix());
 
-        let Ok(mut transform) = transforms.get_mut(weapon) else { continue };
+        let Ok(mut transform) = transforms.get_mut(weapon) else {
+            continue;
+        };
         *transform = local;
 
         if let Ok(mut gun) = recoil_q.get_mut(weapon) {
@@ -270,7 +291,10 @@ mod tests {
         let aim = Vec3::NEG_Z;
         let bare = Quat::from_rotation_arc(axis, aim) * up_local;
         let rolled = aimed_rotation(axis, up_local, aim) * up_local;
-        assert!(rolled.y > bare.y, "rolled {rolled:?} was no better than {bare:?}");
+        assert!(
+            rolled.y > bare.y,
+            "rolled {rolled:?} was no better than {bare:?}"
+        );
     }
 
     /// Aiming straight up has no upright to prefer. It must still produce a usable
@@ -288,9 +312,15 @@ mod tests {
     fn a_steeply_pitched_aim_is_brought_back_toward_horizontal() {
         let steep = Vec3::new(0.0, 1.0, 1.0).normalize(); // 45 degrees up
         let levelled = level_aim(steep, 15f32.to_radians());
-        assert!((levelled.y.asin().to_degrees() - 15.0).abs() < 1e-3, "got {levelled:?}");
+        assert!(
+            (levelled.y.asin().to_degrees() - 15.0).abs() < 1e-3,
+            "got {levelled:?}"
+        );
         // Heading is what the player actually meant; only the tilt is overruled.
-        assert!(levelled.z > 0.0 && levelled.x.abs() < 1e-4, "heading changed: {levelled:?}");
+        assert!(
+            levelled.z > 0.0 && levelled.x.abs() < 1e-4,
+            "heading changed: {levelled:?}"
+        );
     }
 
     #[test]
@@ -303,7 +333,10 @@ mod tests {
     fn aiming_down_is_clamped_the_same_way() {
         let steep = Vec3::new(1.0, -3.0, 0.0);
         let levelled = level_aim(steep, 15f32.to_radians());
-        assert!((levelled.y.asin().to_degrees() + 15.0).abs() < 1e-3, "got {levelled:?}");
+        assert!(
+            (levelled.y.asin().to_degrees() + 15.0).abs() < 1e-3,
+            "got {levelled:?}"
+        );
     }
 
     /// Straight up has no heading to keep. Inventing one would swing the weapon to an
@@ -332,7 +365,10 @@ mod tests {
             anchor_world,
             Vec3::new(1.0, 0.0, 1.0),
         );
-        assert!(close(placed.transform_point(Vec3::new(0.0, 0.2, 0.0)), anchor_world));
+        assert!(close(
+            placed.transform_point(Vec3::new(0.0, 0.2, 0.0)),
+            anchor_world
+        ));
     }
 
     /// A rifle pinned at the shoulder must swing about the shoulder, so the axis is

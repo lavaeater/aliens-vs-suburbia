@@ -9,15 +9,15 @@
 use avian3d::prelude::{Position, SpatialQuery, SpatialQueryFilter};
 use bevy::prelude::*;
 
-use crate::assets::asset_definition::{AmmoKind, Hardpoint, WeaponProps};
-use crate::player::ammo::AmmoPouch;
 use crate::animation::animation_plugin::{AnimationEvent, AnimationEventType, AnimationKey};
+use crate::assets::asset_definition::{AmmoKind, Hardpoint, WeaponProps};
 use crate::control::components::{CharacterControl, ControlCommand};
 use crate::game_state::score_keeper::GameTrackingEvent;
 use crate::general::components::CollisionLayer;
 use crate::general::damage::ApplyDamage;
 use crate::general::projectiles::{self, ProjectileProps};
 use crate::gore::components::{DamageKind, Ephemeral};
+use crate::player::ammo::AmmoPouch;
 use crate::player::components::{AutoAim, Player, PlayerDead};
 use crate::player::systems::equip::EquippedWeapon;
 
@@ -58,7 +58,11 @@ impl Weapon {
         } else {
             0.5
         };
-        let magazine = if props.ammo == AmmoKind::Infinite { 0 } else { props.magazine.max(1) };
+        let magazine = if props.ammo == AmmoKind::Infinite {
+            0
+        } else {
+            props.magazine.max(1)
+        };
         Self {
             muzzle,
             damage: props.damage,
@@ -90,7 +94,11 @@ impl Weapon {
 
     /// Begin a reload if there is something to reload with. Returns whether one started.
     pub fn start_reload(&mut self, pouch_rounds: u32) -> bool {
-        if !self.uses_ammo() || self.reloading.is_some() || self.rounds_in_mag >= self.magazine || pouch_rounds == 0 {
+        if !self.uses_ammo()
+            || self.reloading.is_some()
+            || self.rounds_in_mag >= self.magazine
+            || pouch_rounds == 0
+        {
             return false;
         }
         self.reloading = Some(Timer::from_seconds(self.reload_secs, TimerMode::Once));
@@ -114,22 +122,37 @@ pub struct ReloadRequest(pub Entity);
 pub fn tick_reloads(
     time: Res<Time>,
     mut requests: MessageReader<ReloadRequest>,
-    mut players: Query<(Entity, &EquippedWeapon, &mut AmmoPouch), (With<Player>, Without<PlayerDead>)>,
+    mut players: Query<
+        (Entity, &EquippedWeapon, &mut AmmoPouch),
+        (With<Player>, Without<PlayerDead>),
+    >,
     mut weapons: Query<&mut Weapon>,
     mut anim_ew: MessageWriter<AnimationEvent>,
 ) {
     for ReloadRequest(player) in requests.read() {
-        let Ok((_, equipped, pouch)) = players.get_mut(*player) else { continue };
-        let Ok(mut weapon) = weapons.get_mut(equipped.0) else { continue };
+        let Ok((_, equipped, pouch)) = players.get_mut(*player) else {
+            continue;
+        };
+        let Ok(mut weapon) = weapons.get_mut(equipped.0) else {
+            continue;
+        };
         let available = pouch.rounds(weapon.ammo);
         if weapon.start_reload(available) {
-            anim_ew.write(AnimationEvent(AnimationEventType::GotoAnimState, *player, AnimationKey::Reload));
+            anim_ew.write(AnimationEvent(
+                AnimationEventType::GotoAnimState,
+                *player,
+                AnimationKey::Reload,
+            ));
         }
     }
 
     for (player, equipped, mut pouch) in players.iter_mut() {
-        let Ok(mut weapon) = weapons.get_mut(equipped.0) else { continue };
-        let Some(timer) = weapon.reloading.as_mut() else { continue };
+        let Ok(mut weapon) = weapons.get_mut(equipped.0) else {
+            continue;
+        };
+        let Some(timer) = weapon.reloading.as_mut() else {
+            continue;
+        };
         timer.tick(time.delta());
         if !timer.is_finished() {
             continue;
@@ -138,7 +161,11 @@ pub fn tick_reloads(
         let wanted = weapon.missing();
         let got = pouch.take(weapon.ammo, wanted);
         weapon.rounds_in_mag += got;
-        anim_ew.write(AnimationEvent(AnimationEventType::LeaveAnimState, player, AnimationKey::Reload));
+        anim_ew.write(AnimationEvent(
+            AnimationEventType::LeaveAnimState,
+            player,
+            AnimationKey::Reload,
+        ));
     }
 }
 
@@ -166,7 +193,16 @@ pub fn shoot_weapons(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    players: Query<(Entity, &AutoAim, &CharacterControl, &EquippedWeapon, &Position), (With<Player>, Without<PlayerDead>)>,
+    players: Query<
+        (
+            Entity,
+            &AutoAim,
+            &CharacterControl,
+            &EquippedWeapon,
+            &Position,
+        ),
+        (With<Player>, Without<PlayerDead>),
+    >,
     mut weapons: Query<(&mut Weapon, &GlobalTransform)>,
     mut game_mw: MessageWriter<GameTrackingEvent>,
     mut damage_mw: MessageWriter<ApplyDamage>,
@@ -176,13 +212,13 @@ pub fn shoot_weapons(
     let dt = time.delta_secs();
 
     // Only aliens and world geometry stop bullets — never the shooter.
-    let filter = SpatialQueryFilter::from_mask([
-        CollisionLayer::Alien,
-        CollisionLayer::ImpassableAll,
-    ]);
+    let filter =
+        SpatialQueryFilter::from_mask([CollisionLayer::Alien, CollisionLayer::ImpassableAll]);
 
     for (player, aim, control, equipped, player_pos) in players.iter() {
-        let Ok((mut weapon, weapon_gt)) = weapons.get_mut(equipped.0) else { continue };
+        let Ok((mut weapon, weapon_gt)) = weapons.get_mut(equipped.0) else {
+            continue;
+        };
 
         if weapon.cooldown > 0.0 {
             weapon.cooldown -= dt;
@@ -220,7 +256,15 @@ pub fn shoot_weapons(
 
         // Launcher-type guns fire a physics projectile instead of a ray.
         if let Some(props) = &weapon.projectile {
-            projectiles::launch(&mut commands, &mut meshes, &mut materials, player, origin, aim_dir * props.speed, props);
+            projectiles::launch(
+                &mut commands,
+                &mut meshes,
+                &mut materials,
+                player,
+                origin,
+                aim_dir * props.speed,
+                props,
+            );
             spawn_muzzle_flash(&mut commands, &mut meshes, &mut materials, origin);
             continue;
         }
@@ -235,7 +279,8 @@ pub fn shoot_weapons(
             let dir = (aim_dir + jitter).normalize_or(aim_dir);
             let Ok(dir3) = Dir3::new(dir) else { continue };
 
-            let end = if let Some(hit) = spatial.cast_ray(origin, dir3, weapon.range, true, &filter) {
+            let end = if let Some(hit) = spatial.cast_ray(origin, dir3, weapon.range, true, &filter)
+            {
                 let point = origin + dir * hit.distance;
                 // Whatever it is — alien, wall, tower — `apply_damage` decides if it hurts.
                 damage_mw.write(
@@ -313,22 +358,40 @@ mod tests {
 
     #[test]
     fn shot_interval_is_derived_from_fire_rate() {
-        let props = WeaponProps { fire_rate_per_minute: 300.0, ..Default::default() }; // 5 shots/sec
+        let props = WeaponProps {
+            fire_rate_per_minute: 300.0,
+            ..Default::default()
+        }; // 5 shots/sec
         let w = Weapon::from_props(&props, None);
-        assert!((w.shot_interval - 0.2).abs() < 1e-6, "300 rpm -> 0.2s between shots");
+        assert!(
+            (w.shot_interval - 0.2).abs() < 1e-6,
+            "300 rpm -> 0.2s between shots"
+        );
     }
 
     #[test]
     fn zero_fire_rate_falls_back_to_a_sane_interval() {
-        let props = WeaponProps { fire_rate_per_minute: 0.0, ..Default::default() };
+        let props = WeaponProps {
+            fire_rate_per_minute: 0.0,
+            ..Default::default()
+        };
         let w = Weapon::from_props(&props, None);
-        assert!(w.shot_interval > 0.0, "must not divide by zero into an infinite fire rate");
+        assert!(
+            w.shot_interval > 0.0,
+            "must not divide by zero into an infinite fire rate"
+        );
     }
 
     #[test]
     fn pellets_are_clamped_to_at_least_one() {
-        let props = WeaponProps { pellets: 0, ..Default::default() };
+        let props = WeaponProps {
+            pellets: 0,
+            ..Default::default()
+        };
         let w = Weapon::from_props(&props, None);
-        assert_eq!(w.pellets, 1, "a weapon with 0 pellets would never hit anything");
+        assert_eq!(
+            w.pellets, 1,
+            "a weapon with 0 pellets would never hit anything"
+        );
     }
 }

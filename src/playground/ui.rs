@@ -17,23 +17,23 @@ use bevy::ecs::relationship::RelatedSpawnerCommands;
 use bevy::ecs::system::EntityCommands;
 use lava_ui_builder::InteractionPalette;
 
+use crate::animation::animation_plugin::{AnimationEvent, AnimationEventType, AnimationKey};
 use crate::model_settings::plugin::PlayerAssetDef;
 use crate::player::components::Player;
-use crate::playground::debug::{toggle_physics_gizmos, PlaygroundDebug};
-use crate::animation::animation_plugin::{AnimationEvent, AnimationEventType, AnimationKey};
 use crate::playground::animation::{
-    bind, resolution_label, tag_paths, unbind, AnimationEditor, PLAYABLE_KEYS,
+    AnimationEditor, PLAYABLE_KEYS, bind, resolution_label, tag_paths, unbind,
 };
+use crate::playground::debug::{PlaygroundDebug, toggle_physics_gizmos};
 use crate::playground::hardpoints::{
-    ensure_role, nudge_rotation, nudge_translation, save_player_def, save_weapon_def,
-    HardpointEditor, HardpointSide, PlaygroundWeaponDef, COARSE_ROTATION, COARSE_TRANSLATION,
-    FINE_ROTATION, FINE_TRANSLATION,
+    COARSE_ROTATION, COARSE_TRANSLATION, FINE_ROTATION, FINE_TRANSLATION, HardpointEditor,
+    HardpointSide, PlaygroundWeaponDef, ensure_role, nudge_rotation, nudge_translation,
+    save_player_def, save_weapon_def,
 };
 use crate::playground::models::{
-    add_animation_source, classify, def_stem, set_weapon, ImportKind, PlaygroundModels,
+    ImportKind, PlaygroundModels, add_animation_source, classify, def_stem, set_weapon,
 };
 use crate::playground::state::PlaygroundSession;
-use crate::ui::collapse::{section_header, SectionBody};
+use crate::ui::collapse::{SectionBody, section_header};
 use crate::ui::spawn_ui::StateMarker;
 
 /// The right-hand pane. Its computed rectangle drives the game camera's viewport.
@@ -90,8 +90,16 @@ pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
         .flex_row();
 
     let t = theme.text.clone();
-    let hint = TextTheme { label_size: 11.0, label_color: Color::srgb(0.45, 0.6, 0.5), ..t.clone() };
-    let section = TextTheme { label_size: 12.0, label_color: Color::srgb(0.55, 0.8, 0.65), ..t.clone() };
+    let hint = TextTheme {
+        label_size: 11.0,
+        label_color: Color::srgb(0.45, 0.6, 0.5),
+        ..t.clone()
+    };
+    let section = TextTheme {
+        label_size: 12.0,
+        label_color: Color::srgb(0.55, 0.8, 0.65),
+        ..t.clone()
+    };
 
     ui.with_child(|left| {
         left.modify_node(|mut n| {
@@ -110,7 +118,9 @@ pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
         .padding_all_px(10.0)
         .bg_color(Color::srgba(0.04, 0.07, 0.10, 0.97));
 
-        left.with_child(|c| { c.insert_bundle(lava_ui_builder::header("Playground", &t)); });
+        left.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::header("Playground", &t));
+        });
         left.with_child(|c| {
             c.insert_bundle(lava_ui_builder::label(
                 "WASD / left stick to move, mouse / right stick to aim",
@@ -127,75 +137,95 @@ pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
         // ── Debug overlays ───────────────────────────────────────────────
         section_header(left, "DEBUG VIEW", &section);
         left.with_child(|c| {
-            c.display_flex().flex_column().gap_px(2.0)
-             .insert(DebugTogglesContainer).insert(SectionBody("DEBUG VIEW"))
-             .modify_node(|mut n| n.align_self = AlignSelf::Stretch);
+            c.display_flex()
+                .flex_column()
+                .gap_px(2.0)
+                .insert(DebugTogglesContainer)
+                .insert(SectionBody("DEBUG VIEW"))
+                .modify_node(|mut n| n.align_self = AlignSelf::Stretch);
         });
 
         // ── Imported models ──────────────────────────────────────────────
         section_header(left, "MODEL", &section);
         left.with_child(|c| {
-            c.display_flex().flex_column().gap_px(2.0)
-             .insert(ModelListContainer).insert(ScrollPosition::default())
-             .insert(SectionBody("MODEL"))
-             .modify_node(|mut n| {
-                 n.align_self = AlignSelf::Stretch;
-                 n.max_height = Val::Px(LIST_MAX_HEIGHT);
-                 n.overflow = Overflow::scroll_y();
-             });
+            c.display_flex()
+                .flex_column()
+                .gap_px(2.0)
+                .insert(ModelListContainer)
+                .insert(ScrollPosition::default())
+                .insert(SectionBody("MODEL"))
+                .modify_node(|mut n| {
+                    n.align_self = AlignSelf::Stretch;
+                    n.max_height = Val::Px(LIST_MAX_HEIGHT);
+                    n.overflow = Overflow::scroll_y();
+                });
         });
 
         // ── Weapon ───────────────────────────────────────────────────────
         section_header(left, "WEAPON", &section);
         left.with_child(|c| {
-            c.display_flex().flex_column().gap_px(2.0)
-             .insert(WeaponListContainer).insert(ScrollPosition::default())
-             .insert(SectionBody("WEAPON"))
-             .modify_node(|mut n| {
-                 n.align_self = AlignSelf::Stretch;
-                 n.max_height = Val::Px(LIST_MAX_HEIGHT);
-                 n.overflow = Overflow::scroll_y();
-             });
+            c.display_flex()
+                .flex_column()
+                .gap_px(2.0)
+                .insert(WeaponListContainer)
+                .insert(ScrollPosition::default())
+                .insert(SectionBody("WEAPON"))
+                .modify_node(|mut n| {
+                    n.align_self = AlignSelf::Stretch;
+                    n.max_height = Val::Px(LIST_MAX_HEIGHT);
+                    n.overflow = Overflow::scroll_y();
+                });
         });
 
         // ── Import browser ───────────────────────────────────────────────
         section_header(left, "IMPORT", &section);
         left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label("", &TextTheme {
-                label_size: 10.0, label_color: Color::srgb(0.5, 0.7, 0.9), ..t.clone()
-            }))
+            c.insert_bundle(lava_ui_builder::label(
+                "",
+                &TextTheme {
+                    label_size: 10.0,
+                    label_color: Color::srgb(0.5, 0.7, 0.9),
+                    ..t.clone()
+                },
+            ))
             .insert(ImportPathLabel)
             .insert(SectionBody("IMPORT"))
             .modify_node(|mut n| n.overflow = Overflow::clip());
         });
         left.with_child(|c| {
-            c.display_flex().flex_column().gap_px(2.0)
-             .insert(ImportBrowserContainer).insert(ScrollPosition::default())
-             .insert(SectionBody("IMPORT"))
-             .modify_node(|mut n| {
-                 n.align_self = AlignSelf::Stretch;
-                 n.max_height = Val::Px(LIST_MAX_HEIGHT);
-                 n.min_height = Val::Px(120.0);
-                 n.overflow = Overflow::scroll_y();
-             });
+            c.display_flex()
+                .flex_column()
+                .gap_px(2.0)
+                .insert(ImportBrowserContainer)
+                .insert(ScrollPosition::default())
+                .insert(SectionBody("IMPORT"))
+                .modify_node(|mut n| {
+                    n.align_self = AlignSelf::Stretch;
+                    n.max_height = Val::Px(LIST_MAX_HEIGHT);
+                    n.min_height = Val::Px(120.0);
+                    n.overflow = Overflow::scroll_y();
+                });
         });
         left.with_child(|c| {
             c.insert_bundle(lava_ui_builder::label("", &hint))
-             .insert(ImportStatusLabel)
-             .insert(SectionBody("IMPORT"));
+                .insert(ImportStatusLabel)
+                .insert(SectionBody("IMPORT"));
         });
 
         // ── Hardpoints ───────────────────────────────────────────────────
         section_header(left, "HARDPOINTS", &section);
         left.with_child(|c| {
-            c.display_flex().flex_column().gap_px(2.0)
-             .insert(HardpointContainer).insert(ScrollPosition::default())
-             .insert(SectionBody("HARDPOINTS"))
-             .modify_node(|mut n| {
-                 n.align_self = AlignSelf::Stretch;
-                 n.max_height = Val::Px(LIST_MAX_HEIGHT);
-                 n.overflow = Overflow::scroll_y();
-             });
+            c.display_flex()
+                .flex_column()
+                .gap_px(2.0)
+                .insert(HardpointContainer)
+                .insert(ScrollPosition::default())
+                .insert(SectionBody("HARDPOINTS"))
+                .modify_node(|mut n| {
+                    n.align_self = AlignSelf::Stretch;
+                    n.max_height = Val::Px(LIST_MAX_HEIGHT);
+                    n.overflow = Overflow::scroll_y();
+                });
         });
 
         // ── Animation ────────────────────────────────────────────────────
@@ -208,25 +238,33 @@ pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
             .insert(SectionBody("ANIMATION"));
         });
         left.with_child(|c| {
-            c.display_flex().flex_column().gap_px(2.0)
-             .insert(AnimationContainer).insert(ScrollPosition::default())
-             .insert(SectionBody("ANIMATION"))
-             .modify_node(|mut n| {
-                 n.align_self = AlignSelf::Stretch;
-                 n.max_height = Val::Px(LIST_MAX_HEIGHT);
-                 n.overflow = Overflow::scroll_y();
-             });
+            c.display_flex()
+                .flex_column()
+                .gap_px(2.0)
+                .insert(AnimationContainer)
+                .insert(ScrollPosition::default())
+                .insert(SectionBody("ANIMATION"))
+                .modify_node(|mut n| {
+                    n.align_self = AlignSelf::Stretch;
+                    n.max_height = Val::Px(LIST_MAX_HEIGHT);
+                    n.overflow = Overflow::scroll_y();
+                });
         });
 
         // Spare room for whatever comes next.
         left.with_child(|c| {
-            c.display_flex().flex_column().gap_px(6.0).insert(PlaygroundPanel)
-             .modify_node(|mut n| n.align_self = AlignSelf::Stretch);
+            c.display_flex()
+                .flex_column()
+                .gap_px(6.0)
+                .insert(PlaygroundPanel)
+                .modify_node(|mut n| n.align_self = AlignSelf::Stretch);
         });
 
         left.add_button_observe(
             "Back to Menu",
-            |b| { b.size_px(160.0, 40.0).font_size(16.0); },
+            |b| {
+                b.size_px(160.0, 40.0).font_size(16.0);
+            },
             |_: On<Activate>, mut next_state: ResMut<NextState<GameState>>| {
                 next_state.set(GameState::Menu);
             },
@@ -235,11 +273,12 @@ pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
 
     // Right pane: empty node, exists only to give the game camera a rectangle.
     ui.with_child(|right| {
-        right.modify_node(|mut n| {
-            n.flex_grow = 1.0;
-            n.height = Val::Percent(100.0);
-        })
-        .insert(PlaygroundViewportPane);
+        right
+            .modify_node(|mut n| {
+                n.flex_grow = 1.0;
+                n.height = Val::Percent(100.0);
+            })
+            .insert(PlaygroundViewportPane);
     });
 
     ui.build();
@@ -252,8 +291,12 @@ pub fn sync_playground_viewport(
     mut cameras: Query<&mut Camera, With<GameCamera>>,
     windows: Query<&Window>,
 ) {
-    let Ok((node, transform)) = panes.single() else { return };
-    let Ok(mut camera) = cameras.single_mut() else { return };
+    let Ok((node, transform)) = panes.single() else {
+        return;
+    };
+    let Ok(mut camera) = cameras.single_mut() else {
+        return;
+    };
     let Ok(window) = windows.single() else { return };
 
     let size = node.size();
@@ -410,25 +453,24 @@ fn nudge_row(
     rotation: bool,
 ) {
     parent
-        .spawn((
-            Node {
-                display: Display::Flex,
-                flex_direction: FlexDirection::Row,
-                align_items: AlignItems::Center,
-                column_gap: Val::Px(2.0),
-                ..Default::default()
-            },
-        ))
+        .spawn((Node {
+            display: Display::Flex,
+            flex_direction: FlexDirection::Row,
+            align_items: AlignItems::Center,
+            column_gap: Val::Px(2.0),
+            ..Default::default()
+        },))
         .with_children(|strip| {
             strip.spawn((
-                Node { width: Val::Px(86.0), ..Default::default() },
+                Node {
+                    width: Val::Px(86.0),
+                    ..Default::default()
+                },
                 Text::new(label),
                 TextFont::default().with_font_size(11.0),
                 TextColor(Color::srgb(0.8, 0.85, 0.9)),
             ));
-            for (text, delta) in [
-                ("<<", -coarse), ("<", -fine), (">", fine), (">>", coarse),
-            ] {
+            for (text, delta) in [("<<", -coarse), ("<", -fine), (">", fine), (">>", coarse)] {
                 let bg = Color::srgba(0.09, 0.16, 0.22, 0.95);
                 strip
                     .spawn((
@@ -457,7 +499,9 @@ fn nudge_row(
                               mut editor: ResMut<HardpointEditor>,
                               mut player_def: ResMut<PlayerAssetDef>,
                               mut weapon_def: ResMut<PlaygroundWeaponDef>| {
-                            let Some(role) = editor.active_role.clone() else { return };
+                            let Some(role) = editor.active_role.clone() else {
+                                return;
+                            };
                             let side = editor.side;
                             // Only reach for the side being edited: `as_mut()` on the other
                             // would mark it changed and re-push an unedited def at the live
@@ -495,12 +539,21 @@ fn side_chips(
         weapon_name.unwrap_or("(none)")
     );
     for (which, label) in [
-        (HardpointSide::Character, HardpointSide::Character.label().to_string()),
+        (
+            HardpointSide::Character,
+            HardpointSide::Character.label().to_string(),
+        ),
         (HardpointSide::Weapon, weapon_label),
     ] {
         let is_active = which == side;
         let marker = if is_active { "*" } else { " " };
-        row(parent, format!("{marker} {label}"), is_active, Color::srgb(0.9, 0.85, 0.7)).observe(
+        row(
+            parent,
+            format!("{marker} {label}"),
+            is_active,
+            Color::srgb(0.9, 0.85, 0.7),
+        )
+        .observe(
             move |_: On<Activate>, mut editor: ResMut<HardpointEditor>| {
                 editor.select_side(which);
             },
@@ -540,7 +593,9 @@ pub fn rebuild_hardpoint_panel(
     }
     editor.ui_dirty = false;
 
-    let Ok(container) = container_q.single() else { return };
+    let Ok(container) = container_q.single() else {
+        return;
+    };
     commands.entity(container).despawn_related::<Children>();
 
     let side = editor.side;
@@ -568,17 +623,20 @@ pub fn rebuild_hardpoint_panel(
 
     let active = editor.active_role.clone();
     let present: Vec<String> = def.hardpoints.keys().cloned().collect();
-    let hardpoint = active.as_ref().and_then(|role| def.hardpoints.get(role)).cloned();
+    let hardpoint = active
+        .as_ref()
+        .and_then(|role| def.hardpoints.get(role))
+        .cloned();
     let status = editor.status.clone();
     let dirty = editor.dirty(side);
     // Which file the Save button writes. Worth spelling out: the two sides write different
     // files, and the weapon's is reached by an explicit path rather than its model stem.
     let save_target = match side {
-        HardpointSide::Character => crate::assets::asset_definition::AssetDefinition::def_path(
-            &def.model_path,
-        )
-        .display()
-        .to_string(),
+        HardpointSide::Character => {
+            crate::assets::asset_definition::AssetDefinition::def_path(&def.model_path)
+                .display()
+                .to_string()
+        }
         HardpointSide::Weapon => weapon_def.def_path.clone().unwrap_or_default(),
     };
 
@@ -604,12 +662,25 @@ pub fn rebuild_hardpoint_panel(
         for role in side.roles().iter().copied() {
             let exists = present.iter().any(|r| r == role);
             let is_active = active.as_deref() == Some(role);
-            let marker = if is_active { "*" } else if exists { "-" } else { "+" };
+            let marker = if is_active {
+                "*"
+            } else if exists {
+                "-"
+            } else {
+                "+"
+            };
             let clicked = role.to_string();
-            row(parent, format!("{marker} {role}"), is_active, Color::srgb(0.85, 0.92, 0.85))
-                .observe(move |_: On<Activate>, mut editor: ResMut<HardpointEditor>| {
+            row(
+                parent,
+                format!("{marker} {role}"),
+                is_active,
+                Color::srgb(0.85, 0.92, 0.85),
+            )
+            .observe(
+                move |_: On<Activate>, mut editor: ResMut<HardpointEditor>| {
                     editor.select_role(&clicked);
-                });
+                },
+            );
         }
 
         let Some(hardpoint) = hardpoint else { return };
@@ -619,7 +690,9 @@ pub fn rebuild_hardpoint_panel(
             Text::new(format!(
                 "anchor: {}\nT {:.3} {:.3} {:.3}\nR {:.1} {:.1} {:.1}",
                 hardpoint.anchor.as_deref().unwrap_or("(model origin)"),
-                hardpoint.translation[0], hardpoint.translation[1], hardpoint.translation[2],
+                hardpoint.translation[0],
+                hardpoint.translation[1],
+                hardpoint.translation[2],
                 hardpoint.rotation_euler_deg[0],
                 hardpoint.rotation_euler_deg[1],
                 hardpoint.rotation_euler_deg[2],
@@ -629,18 +702,38 @@ pub fn rebuild_hardpoint_panel(
         ));
 
         for (axis, name) in ["move X", "move Y", "move Z"].into_iter().enumerate() {
-            nudge_row(parent, name.to_string(), axis, COARSE_TRANSLATION, FINE_TRANSLATION, false);
+            nudge_row(
+                parent,
+                name.to_string(),
+                axis,
+                COARSE_TRANSLATION,
+                FINE_TRANSLATION,
+                false,
+            );
         }
         for (axis, name) in ["turn X", "turn Y", "turn Z"].into_iter().enumerate() {
-            nudge_row(parent, name.to_string(), axis, COARSE_ROTATION, FINE_ROTATION, true);
+            nudge_row(
+                parent,
+                name.to_string(),
+                axis,
+                COARSE_ROTATION,
+                FINE_ROTATION,
+                true,
+            );
         }
 
         let removed = role.clone();
-        row(parent, "remove this hardpoint".to_string(), false, Color::srgb(0.95, 0.7, 0.6))
-            .observe(move |_: On<Activate>,
-                           mut editor: ResMut<HardpointEditor>,
-                           mut player_def: ResMut<PlayerAssetDef>,
-                           mut weapon_def: ResMut<PlaygroundWeaponDef>| {
+        row(
+            parent,
+            "remove this hardpoint".to_string(),
+            false,
+            Color::srgb(0.95, 0.7, 0.6),
+        )
+        .observe(
+            move |_: On<Activate>,
+                  mut editor: ResMut<HardpointEditor>,
+                  mut player_def: ResMut<PlayerAssetDef>,
+                  mut weapon_def: ResMut<PlaygroundWeaponDef>| {
                 let def = match editor.side {
                     HardpointSide::Character => player_def.0.as_mut(),
                     HardpointSide::Weapon => weapon_def.def.as_mut(),
@@ -650,7 +743,8 @@ pub fn rebuild_hardpoint_panel(
                 }
                 editor.active_role = None;
                 editor.touch();
-            });
+            },
+        );
 
         let save_label = match (side, dirty) {
             (HardpointSide::Character, true) => "SAVE character def (unsaved edits)",
@@ -658,16 +752,20 @@ pub fn rebuild_hardpoint_panel(
             (HardpointSide::Weapon, true) => "SAVE weapon def (unsaved edits)",
             (HardpointSide::Weapon, false) => "SAVE weapon def",
         };
-        row(parent, save_label.to_string(), dirty, Color::srgb(0.7, 0.95, 0.75))
-            .observe(move |_: On<Activate>,
-                      mut editor: ResMut<HardpointEditor>,
-                      player_def: Res<PlayerAssetDef>,
-                      weapon_def: Res<PlaygroundWeaponDef>| {
+        row(
+            parent,
+            save_label.to_string(),
+            dirty,
+            Color::srgb(0.7, 0.95, 0.75),
+        )
+        .observe(
+            move |_: On<Activate>,
+                  mut editor: ResMut<HardpointEditor>,
+                  player_def: Res<PlayerAssetDef>,
+                  weapon_def: Res<PlaygroundWeaponDef>| {
                 let side = editor.side;
                 let saved = match side {
-                    HardpointSide::Character => {
-                        player_def.0.as_ref().map(save_player_def)
-                    }
+                    HardpointSide::Character => player_def.0.as_ref().map(save_player_def),
                     HardpointSide::Weapon => weapon_def
                         .def
                         .as_ref()
@@ -679,7 +777,8 @@ pub fn rebuild_hardpoint_panel(
                     editor.set_dirty(side, false);
                     editor.ui_dirty = true;
                 }
-            });
+            },
+        );
 
         if !save_target.is_empty() {
             parent.spawn((
@@ -714,14 +813,16 @@ pub fn rebuild_hardpoint_panel(
                     false,
                     Color::srgb(0.95, 0.85, 0.6),
                 )
-                .observe(move |_: On<Activate>,
-                               mut editor: ResMut<HardpointEditor>,
-                               mut weapon_def: ResMut<PlaygroundWeaponDef>| {
-                    if let Some(def) = weapon_def.def.as_mut() {
-                        ensure_role(def, &for_role).anchor = None;
-                    }
-                    editor.touch();
-                });
+                .observe(
+                    move |_: On<Activate>,
+                          mut editor: ResMut<HardpointEditor>,
+                          mut weapon_def: ResMut<PlaygroundWeaponDef>| {
+                        if let Some(def) = weapon_def.def.as_mut() {
+                            ensure_role(def, &for_role).anchor = None;
+                        }
+                        editor.touch();
+                    },
+                );
             }
             return;
         }
@@ -772,7 +873,9 @@ pub fn rebuild_animation_panel(
     }
     editor.ui_dirty = false;
 
-    let Ok(container) = container_q.single() else { return };
+    let Ok(container) = container_q.single() else {
+        return;
+    };
     commands.entity(container).despawn_related::<Children>();
 
     let Some(def) = player_def.0.as_ref() else {
@@ -789,12 +892,17 @@ pub fn rebuild_animation_panel(
     let selected = editor.selected_key;
     let labels: Vec<(AnimationKey, String, String)> = PLAYABLE_KEYS
         .iter()
-        .map(|&key| (key, key.default_search().to_string(), resolution_label(def, key)))
+        .map(|&key| {
+            (
+                key,
+                key.default_search().to_string(),
+                resolution_label(def, key),
+            )
+        })
         .collect();
     let tags = tag_paths(def);
-    let bound_tag = selected.and_then(|key| {
-        def.animation_bindings.get(key.default_search()).cloned()
-    });
+    let bound_tag =
+        selected.and_then(|key| def.animation_bindings.get(key.default_search()).cloned());
     let status = editor.status.clone();
     let dirty = editor.dirty;
 
@@ -826,14 +934,26 @@ pub fn rebuild_animation_panel(
             );
         }
 
-        row(parent, "back to idle".to_string(), false, Color::srgb(0.7, 0.8, 0.9)).observe(
+        row(
+            parent,
+            "back to idle".to_string(),
+            false,
+            Color::srgb(0.7, 0.8, 0.9),
+        )
+        .observe(
             |_: On<Activate>,
              editor: Res<AnimationEditor>,
              mut anim_mw: MessageWriter<AnimationEvent>,
              players: Query<Entity, With<Player>>| {
-                let Some(key) = editor.selected_key else { return };
+                let Some(key) = editor.selected_key else {
+                    return;
+                };
                 for player in players.iter() {
-                    anim_mw.write(AnimationEvent(AnimationEventType::LeaveAnimState, player, key));
+                    anim_mw.write(AnimationEvent(
+                        AnimationEventType::LeaveAnimState,
+                        player,
+                        key,
+                    ));
                 }
             },
         );
@@ -869,7 +989,13 @@ pub fn rebuild_animation_panel(
             );
         }
 
-        row(parent, "clear binding".to_string(), false, Color::srgb(0.95, 0.8, 0.6)).observe(
+        row(
+            parent,
+            "clear binding".to_string(),
+            false,
+            Color::srgb(0.95, 0.8, 0.6),
+        )
+        .observe(
             move |_: On<Activate>,
                   mut editor: ResMut<AnimationEditor>,
                   mut player_def: ResMut<PlayerAssetDef>| {
@@ -880,8 +1006,18 @@ pub fn rebuild_animation_panel(
             },
         );
 
-        let save_label = if dirty { "SAVE def (unsaved edits)" } else { "SAVE def" };
-        row(parent, save_label.to_string(), dirty, Color::srgb(0.7, 0.95, 0.75)).observe(
+        let save_label = if dirty {
+            "SAVE def (unsaved edits)"
+        } else {
+            "SAVE def"
+        };
+        row(
+            parent,
+            save_label.to_string(),
+            dirty,
+            Color::srgb(0.7, 0.95, 0.75),
+        )
+        .observe(
             |_: On<Activate>,
              mut editor: ResMut<AnimationEditor>,
              player_def: Res<PlayerAssetDef>| {
@@ -923,7 +1059,9 @@ pub fn rebuild_model_list(
     }
     models.list_dirty = false;
 
-    let Ok(container) = container_q.single() else { return };
+    let Ok(container) = container_q.single() else {
+        return;
+    };
     commands.entity(container).despawn_related::<Children>();
 
     let defs = models.defs.clone();
@@ -942,7 +1080,11 @@ pub fn rebuild_model_list(
             let is_selected = selected.as_deref() == Some(def_path.as_str());
             let has_no_mesh = mesh_less.contains(&def_path);
             let mark = if is_selected { "*" } else { " " };
-            let label = if has_no_mesh { format!("{mark} {} (no mesh)", def_stem(&def_path)) } else { format!("{mark} {}", def_stem(&def_path)) };
+            let label = if has_no_mesh {
+                format!("{mark} {} (no mesh)", def_stem(&def_path))
+            } else {
+                format!("{mark} {}", def_stem(&def_path))
+            };
             let color = if has_no_mesh {
                 Color::srgb(0.75, 0.6, 0.5)
             } else {
@@ -1020,14 +1162,18 @@ pub fn rebuild_weapon_list(
     }
     last.clone_from(&equipped);
 
-    let Ok(container) = container_q.single() else { return };
+    let Ok(container) = container_q.single() else {
+        return;
+    };
     commands.entity(container).despawn_related::<Children>();
 
     let weapons = models.weapon_defs.clone();
-    let is_character = player_def
-        .0
-        .as_ref()
-        .is_some_and(|def| matches!(def.model_type, crate::assets::asset_definition::ModelType::Player(_)));
+    let is_character = player_def.0.as_ref().is_some_and(|def| {
+        matches!(
+            def.model_type,
+            crate::assets::asset_definition::ModelType::Player(_)
+        )
+    });
     models.list_dirty = false;
 
     commands.entity(container).with_children(|parent| {
@@ -1041,18 +1187,27 @@ pub fn rebuild_weapon_list(
         }
 
         let none_selected = equipped.is_none();
-        row(parent, format!("{} (none)", if none_selected { "*" } else { " " }),
-            none_selected, Color::srgb(0.8, 0.8, 0.85))
-            .observe(|_: On<Activate>,
-                      mut models: ResMut<PlaygroundModels>,
-                      mut player_def: ResMut<PlayerAssetDef>| {
+        row(
+            parent,
+            format!("{} (none)", if none_selected { "*" } else { " " }),
+            none_selected,
+            Color::srgb(0.8, 0.8, 0.85),
+        )
+        .observe(
+            |_: On<Activate>,
+             mut models: ResMut<PlaygroundModels>,
+             mut player_def: ResMut<PlayerAssetDef>| {
                 equip_weapon(None, &mut models, &mut player_def);
-            });
+            },
+        );
 
         for weapon_path in weapons {
             let is_equipped = equipped.as_deref() == Some(weapon_path.as_str());
-            let label =
-                format!("{} {}", if is_equipped { "*" } else { " " }, def_stem(&weapon_path));
+            let label = format!(
+                "{} {}",
+                if is_equipped { "*" } else { " " },
+                def_stem(&weapon_path)
+            );
             let chosen = weapon_path.clone();
             row(parent, label, is_equipped, Color::srgb(0.9, 0.88, 0.75)).observe(
                 move |_: On<Activate>,
@@ -1070,7 +1225,9 @@ fn equip_weapon(
     models: &mut PlaygroundModels,
     player_def: &mut PlayerAssetDef,
 ) {
-    let Some(def) = player_def.0.as_mut() else { return };
+    let Some(def) = player_def.0.as_mut() else {
+        return;
+    };
     if !set_weapon(def, weapon_def_path) {
         models.status = "the worn def is not a character".to_string();
         return;
@@ -1105,7 +1262,9 @@ pub fn rebuild_import_browser(
         (**text).clone_from(&models.status);
     }
 
-    let Ok(container) = container_q.single() else { return };
+    let Ok(container) = container_q.single() else {
+        return;
+    };
     commands.entity(container).despawn_related::<Children>();
 
     let at_root = models.browse_folder.is_empty();
@@ -1113,15 +1272,25 @@ pub fn rebuild_import_browser(
     let files = models.files.clone();
     commands.entity(container).with_children(|parent| {
         if !at_root {
-            row(parent, "[..]".to_string(), false, Color::srgb(0.75, 0.88, 1.0))
-                .observe(|_: On<Activate>, mut m: ResMut<PlaygroundModels>| m.leave_folder());
+            row(
+                parent,
+                "[..]".to_string(),
+                false,
+                Color::srgb(0.75, 0.88, 1.0),
+            )
+            .observe(|_: On<Activate>, mut m: ResMut<PlaygroundModels>| m.leave_folder());
         }
         for name in folders {
             let entered = name.clone();
-            row(parent, format!("[dir] {name}"), false, Color::srgb(0.75, 0.88, 1.0))
-                .observe(move |_: On<Activate>, mut m: ResMut<PlaygroundModels>| {
-                    m.enter_folder(&entered);
-                });
+            row(
+                parent,
+                format!("[dir] {name}"),
+                false,
+                Color::srgb(0.75, 0.88, 1.0),
+            )
+            .observe(move |_: On<Activate>, mut m: ResMut<PlaygroundModels>| {
+                m.enter_folder(&entered);
+            });
         }
         for file in files {
             let imported = file.clone();
@@ -1129,9 +1298,7 @@ pub fn rebuild_import_browser(
             // Say up front which files have no geometry, so the click that follows is an
             // informed one rather than a model that spawns invisible.
             let (label, color) = match classify(&file) {
-                ImportKind::Model => {
-                    (format!("+ {name}"), Color::srgb(0.9, 0.85, 0.7))
-                }
+                ImportKind::Model => (format!("+ {name}"), Color::srgb(0.9, 0.85, 0.7)),
                 ImportKind::AnimationLibrary => (
                     format!("~ {name}  (anims only -> add as source)"),
                     Color::srgb(0.7, 0.8, 0.95),
@@ -1145,7 +1312,12 @@ pub fn rebuild_import_browser(
                     match classify(&imported) {
                         ImportKind::Model => m.import(&imported),
                         ImportKind::AnimationLibrary => {
-                            attach_animation_source(&imported, &mut m, &mut player_def, &mut animation);
+                            attach_animation_source(
+                                &imported,
+                                &mut m,
+                                &mut player_def,
+                                &mut animation,
+                            );
                         }
                     }
                     m.browser_dirty = true;
@@ -1170,13 +1342,23 @@ mod tests {
     fn a_pane_hanging_off_the_window_is_clamped_to_it() {
         // Mid-resize the UI can report a rectangle wider than the window still is.
         let v = pane_viewport(400.0, 0.0, 1400.0, 900.0, 1600, 900).expect("valid rect");
-        assert_eq!(v.physical_size.to_array(), [1200, 900], "clamped to the window edge");
+        assert_eq!(
+            v.physical_size.to_array(),
+            [1200, 900],
+            "clamped to the window edge"
+        );
     }
 
     #[test]
     fn a_zero_sized_pane_is_refused_rather_than_sent_to_the_gpu() {
-        assert!(pane_viewport(0.0, 0.0, 0.0, 0.0, 1600, 900).is_none(), "first frame");
-        assert!(pane_viewport(1600.0, 0.0, 100.0, 900.0, 1600, 900).is_none(), "fully off-screen");
+        assert!(
+            pane_viewport(0.0, 0.0, 0.0, 0.0, 1600, 900).is_none(),
+            "first frame"
+        );
+        assert!(
+            pane_viewport(1600.0, 0.0, 100.0, 900.0, 1600, 900).is_none(),
+            "fully off-screen"
+        );
     }
 
     #[test]

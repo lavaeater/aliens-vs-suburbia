@@ -93,7 +93,13 @@ pub fn destroy_damaged_terrain(
 
         // The visual burst needs the shared debris art; skip it if not ready yet.
         if let Some(debris) = debris.as_ref() {
-            spawn_debris(&mut commands, &mut materials, &mut budget, debris, transform);
+            spawn_debris(
+                &mut commands,
+                &mut materials,
+                &mut budget,
+                debris,
+                transform,
+            );
         }
         commands.entity(entity).despawn();
     }
@@ -122,15 +128,23 @@ fn spawn_debris(
         Mesh3d(debris.dust_mesh.clone()),
         MeshMaterial3d(dust_mat),
         Transform::from_translation(origin + Vec3::Y * 0.3).with_scale(Vec3::splat(dust_size)),
-        Ephemeral::new(0.7).with_grow(2.8).base_scale(Vec3::splat(dust_size)),
+        Ephemeral::new(0.7)
+            .with_grow(2.8)
+            .base_scale(Vec3::splat(dust_size)),
     ));
 
     // Rubble: grey physics chunks thrown up and out.
     for _ in 0..CHUNK_COUNT {
-        let dir = Vec3::new(rng.signed(), rng.unit() * 0.8 + 0.4, rng.signed()).normalize_or(Vec3::Y);
+        let dir =
+            Vec3::new(rng.signed(), rng.unit() * 0.8 + 0.4, rng.signed()).normalize_or(Vec3::Y);
         let speed = 2.0 + rng.unit() * 3.5;
         let size = 0.08 + rng.unit() * 0.12;
-        let scale = Vec3::splat(size) * Vec3::new(0.7 + rng.unit() * 0.6, 0.7 + rng.unit() * 0.6, 0.7 + rng.unit() * 0.6);
+        let scale = Vec3::splat(size)
+            * Vec3::new(
+                0.7 + rng.unit() * 0.6,
+                0.7 + rng.unit() * 0.6,
+                0.7 + rng.unit() * 0.6,
+            );
         let spawn = origin + Vec3::Y * 0.4 + dir * 0.2;
 
         let chunk = commands
@@ -159,14 +173,14 @@ fn spawn_debris(
 #[cfg(test)]
 mod tests {
     use super::destroy_damaged_terrain;
-    use bevy::prelude::*;
-    use pathfinding::grid::Grid;
-    use std::collections::HashSet;
-    use crate::general::components::map_components::CurrentTile;
     use crate::general::components::Health;
+    use crate::general::components::map_components::CurrentTile;
     use crate::general::resources::map_resources::MapGraph;
     use crate::gore::components::GoreBudget;
     use crate::player::components::IsObstacle;
+    use bevy::prelude::*;
+    use pathfinding::grid::Grid;
+    use std::collections::HashSet;
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -190,7 +204,10 @@ mod tests {
             .world_mut()
             .spawn((
                 IsObstacle,
-                Health { health: 0, max_health: 100 },
+                Health {
+                    health: 0,
+                    max_health: 100,
+                },
                 CurrentTile { tile: (3, 4) },
                 Transform::default(),
             ))
@@ -199,9 +216,15 @@ mod tests {
         app.update();
 
         let map = app.world().resource::<MapGraph>();
-        assert!(map.path_finding_grid.has_vertex((3, 4)), "the tile should re-open");
+        assert!(
+            map.path_finding_grid.has_vertex((3, 4)),
+            "the tile should re-open"
+        );
         assert!(map.path_reopened, "the recheck flag should be set");
-        assert!(app.world().get::<Health>(wall).is_none(), "the wall should despawn");
+        assert!(
+            app.world().get::<Health>(wall).is_none(),
+            "the wall should despawn"
+        );
     }
 
     #[test]
@@ -211,7 +234,10 @@ mod tests {
             .world_mut()
             .spawn((
                 IsObstacle,
-                Health { health: 60, max_health: 100 },
+                Health {
+                    health: 60,
+                    max_health: 100,
+                },
                 CurrentTile { tile: (3, 4) },
                 Transform::default(),
             ))
@@ -219,7 +245,10 @@ mod tests {
 
         app.update();
 
-        assert!(app.world().get::<Health>(wall).is_some(), "a living wall stays");
+        assert!(
+            app.world().get::<Health>(wall).is_some(),
+            "a living wall stays"
+        );
         assert!(!app.world().resource::<MapGraph>().path_reopened);
     }
 }

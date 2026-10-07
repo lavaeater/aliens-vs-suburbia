@@ -1,9 +1,9 @@
-use bevy::math::Vec3;
-use bevy::prelude::{Commands, MessageReader, MessageWriter, Query, With};
-use avian3d::prelude::{CollisionStart, Position};
 use crate::general::components::{Ball, Health, HittableTarget};
 use crate::general::damage::ApplyDamage;
 use crate::gore::components::DamageKind;
+use avian3d::prelude::{CollisionStart, Position};
+use bevy::math::Vec3;
+use bevy::prelude::{Commands, MessageReader, MessageWriter, Query, With};
 
 /// Damage a thrown ball deals to what it hits.
 const BALL_DAMAGE: i32 = 10;
@@ -31,7 +31,9 @@ pub fn collision_handling_system(
         };
 
         let (ball_bounces, ball_thrower, ball_can_score) = {
-            let Ok(mut ball) = ball_query.get_mut(ball_entity) else { continue };
+            let Ok(mut ball) = ball_query.get_mut(ball_entity) else {
+                continue;
+            };
             ball.bounces += 1;
             if ball.bounces >= ball.max_bounces {
                 commands.entity(ball_entity).despawn();
@@ -39,12 +41,12 @@ pub fn collision_handling_system(
             (ball.bounces, ball.entity, ball.can_score)
         };
 
-        let Some(thrower) = ball_thrower else { continue };
+        let Some(thrower) = ball_thrower else {
+            continue;
+        };
 
         if hittable_target_query.contains(hittable_entity) {
-            if ball_can_score
-                && let Ok(mut ball) = ball_query.get_mut(ball_entity)
-            {
+            if ball_can_score && let Ok(mut ball) = ball_query.get_mut(ball_entity) {
                 ball.can_score = false;
             }
             if ball_bounces <= 2 {
@@ -52,9 +54,14 @@ pub fn collision_handling_system(
                 let target_pos = positions.get(hittable_entity).map_or(Vec3::ZERO, |p| p.0);
                 let ball_pos = positions.get(ball_entity).map_or(target_pos, |p| p.0);
                 damage_mw.write(
-                    ApplyDamage::at(hittable_entity, BALL_DAMAGE, DamageKind::Ballistic, target_pos + Vec3::Y * 0.4)
-                        .from(thrower)
-                        .along(target_pos - ball_pos),
+                    ApplyDamage::at(
+                        hittable_entity,
+                        BALL_DAMAGE,
+                        DamageKind::Ballistic,
+                        target_pos + Vec3::Y * 0.4,
+                    )
+                    .from(thrower)
+                    .along(target_pos - ball_pos),
                 );
             }
         }
@@ -64,13 +71,13 @@ pub fn collision_handling_system(
 #[cfg(test)]
 mod tests {
     use super::collision_handling_system;
-    use avian3d::prelude::CollisionStart;
-    use bevy::prelude::*;
     use crate::alien::components::general::{Alien, AlienCounter};
     use crate::game_state::score_keeper::GameTrackingEvent;
     use crate::general::components::{Ball, Health, HittableTarget};
-    use crate::general::damage::{apply_damage, ApplyDamage, DamageRules};
+    use crate::general::damage::{ApplyDamage, DamageRules, apply_damage};
     use crate::gore::components::DamageDealt;
+    use avian3d::prelude::CollisionStart;
+    use bevy::prelude::*;
 
     #[derive(Resource)]
     struct Collision(Entity, Entity);
@@ -101,22 +108,47 @@ mod tests {
         app.add_message::<DamageDealt>();
         app.add_message::<ApplyDamage>();
         app.init_resource::<DamageRules>();
-        app.insert_resource(AlienCounter { count: 1, max_count: 10 });
+        app.insert_resource(AlienCounter {
+            count: 1,
+            max_count: 10,
+        });
         app.init_resource::<Caught>();
-        app.add_systems(Update, (fire_collision, collision_handling_system, apply_damage, catch).chain());
+        app.add_systems(
+            Update,
+            (
+                fire_collision,
+                collision_handling_system,
+                apply_damage,
+                catch,
+            )
+                .chain(),
+        );
 
         let thrower = app.world_mut().spawn_empty().id();
         let ball = app.world_mut().spawn(Ball::new(thrower)).id();
         let alien = app
             .world_mut()
-            .spawn((Health { health: 10, max_health: 10 }, HittableTarget {}, Alien))
+            .spawn((
+                Health {
+                    health: 10,
+                    max_health: 10,
+                },
+                HittableTarget {},
+                Alien,
+            ))
             .id();
         app.insert_resource(Collision(ball, alien));
 
         app.update();
 
-        let health = app.world().get::<Health>(alien).expect("alien still exists");
-        assert!(health.health <= 0, "10 hp minus BALL_DAMAGE (10) leaves it dead");
+        let health = app
+            .world()
+            .get::<Health>(alien)
+            .expect("alien still exists");
+        assert!(
+            health.health <= 0,
+            "10 hp minus BALL_DAMAGE (10) leaves it dead"
+        );
 
         let caught = &app.world().resource::<Caught>().0;
         assert_eq!(caught.len(), 1, "one DamageDealt emitted");
@@ -138,15 +170,34 @@ mod tests {
         app.add_message::<DamageDealt>();
         app.add_message::<ApplyDamage>();
         app.init_resource::<DamageRules>();
-        app.insert_resource(AlienCounter { count: 1, max_count: 10 });
+        app.insert_resource(AlienCounter {
+            count: 1,
+            max_count: 10,
+        });
         app.init_resource::<Caught>();
-        app.add_systems(Update, (fire_collision, collision_handling_system, apply_damage, catch).chain());
+        app.add_systems(
+            Update,
+            (
+                fire_collision,
+                collision_handling_system,
+                apply_damage,
+                catch,
+            )
+                .chain(),
+        );
 
         let thrower = app.world_mut().spawn_empty().id();
         let ball = app.world_mut().spawn(Ball::new(thrower)).id();
         let alien = app
             .world_mut()
-            .spawn((Health { health: 100, max_health: 100 }, HittableTarget {}, Alien))
+            .spawn((
+                Health {
+                    health: 100,
+                    max_health: 100,
+                },
+                HittableTarget {},
+                Alien,
+            ))
             .id();
         app.insert_resource(Collision(ball, alien));
 
@@ -154,6 +205,10 @@ mod tests {
 
         assert_eq!(app.world().get::<Health>(alien).unwrap().health, 90);
         assert!(!app.world().resource::<Caught>().0[0].lethal);
-        assert_eq!(app.world().resource::<AlienCounter>().count, 1, "no kill, no decrement");
+        assert_eq!(
+            app.world().resource::<AlienCounter>().count,
+            1,
+            "no kill, no decrement"
+        );
     }
 }

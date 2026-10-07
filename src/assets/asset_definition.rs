@@ -1,10 +1,12 @@
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use crate::general::explosion::ExplosionProps;
 use crate::general::projectiles::ProjectileProps;
 use crate::gore::components::DamageKind;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
-const fn default_scale() -> f32 { 1.0 }
+const fn default_scale() -> f32 {
+    1.0
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EnemyProps {
@@ -34,13 +36,21 @@ pub enum EnemyAttack {
     #[default]
     Melee,
     /// Shoots the nearest player in range and line of sight while walking.
-    Ranged { damage: i32, range: f32, fire_rate_per_minute: f32 },
+    Ranged {
+        damage: i32,
+        range: f32,
+        fire_rate_per_minute: f32,
+    },
 }
 
 // Serde default for an `Option<String>` field, so the wrapper is the point.
 #[allow(clippy::unnecessary_wraps)]
-fn default_enemy_loot() -> Option<String> { Some("alien".to_string()) }
-const fn default_touch_dps() -> f32 { 10.0 }
+fn default_enemy_loot() -> Option<String> {
+    Some("alien".to_string())
+}
+const fn default_touch_dps() -> f32 {
+    10.0
+}
 
 impl Default for EnemyProps {
     fn default() -> Self {
@@ -174,13 +184,24 @@ impl AmmoKind {
 pub enum ItemKind {
     #[default]
     Decorative,
-    HealthPickup { amount: f32 },
-    AmmoPickup { kind: AmmoKind, rounds: u32 },
+    HealthPickup {
+        amount: f32,
+    },
+    AmmoPickup {
+        kind: AmmoKind,
+        rounds: u32,
+    },
     /// Path to a Weapon-typed def; picking it up adds the gun to the loadout.
-    WeaponPickup { def: String },
-    Coins { value: u32 },
+    WeaponPickup {
+        def: String,
+    },
+    Coins {
+        value: u32,
+    },
     /// Objective token for maps/stories; no runtime effect yet beyond a fact.
-    Key { id: String },
+    Key {
+        id: String,
+    },
 }
 
 impl ItemKind {
@@ -191,7 +212,8 @@ impl ItemKind {
             Self::HealthPickup { amount } => format!("+{amount} HP"),
             Self::AmmoPickup { kind, rounds } => format!("{rounds} {}", kind.label()),
             Self::WeaponPickup { def } => std::path::Path::new(def)
-                .file_stem().map_or_else(|| "weapon".into(), |s| s.to_string_lossy().into_owned()),
+                .file_stem()
+                .map_or_else(|| "weapon".into(), |s| s.to_string_lossy().into_owned()),
             Self::Coins { value } => format!("{value} coins"),
             Self::Key { id } => format!("key {id}"),
         }
@@ -218,7 +240,9 @@ pub enum PlayerAbility {
     Molotov,
 }
 
-const fn default_throw_rate() -> f32 { 60.0 }
+const fn default_throw_rate() -> f32 {
+    60.0
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PlayerProps {
@@ -258,11 +282,21 @@ pub enum WeaponHands {
     TwoHanded,
 }
 
-const fn default_weapon_damage() -> i32 { 20 }
-const fn default_fire_rate() -> f32 { 300.0 }
-const fn default_weapon_range() -> f32 { 40.0 }
-const fn default_spread_deg() -> f32 { 1.5 }
-const fn default_pellets() -> u32 { 1 }
+const fn default_weapon_damage() -> i32 {
+    20
+}
+const fn default_fire_rate() -> f32 {
+    300.0
+}
+const fn default_weapon_range() -> f32 {
+    40.0
+}
+const fn default_spread_deg() -> f32 {
+    1.5
+}
+const fn default_pellets() -> u32 {
+    1
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WeaponProps {
@@ -300,8 +334,12 @@ pub struct WeaponProps {
     pub projectile: Option<ProjectileProps>,
 }
 
-const fn default_magazine() -> u32 { 12 }
-const fn default_reload_secs() -> f32 { 1.5 }
+const fn default_magazine() -> u32 {
+    12
+}
+const fn default_reload_secs() -> f32 {
+    1.5
+}
 
 impl Default for WeaponProps {
     fn default() -> Self {
@@ -332,18 +370,20 @@ pub enum ModelType {
 }
 
 impl Default for ModelType {
-    fn default() -> Self { Self::Player(PlayerProps::default()) }
+    fn default() -> Self {
+        Self::Player(PlayerProps::default())
+    }
 }
 
 impl ModelType {
     pub const fn label(&self) -> &'static str {
         match self {
-            Self::Player(_)   => "Player",
-            Self::Tower(_)    => "Tower",
-            Self::Terrain(_)  => "Terrain",
-            Self::Item(_)     => "Item",
-            Self::Enemy(_)    => "Enemy",
-            Self::Weapon(_)   => "Weapon",
+            Self::Player(_) => "Player",
+            Self::Tower(_) => "Tower",
+            Self::Terrain(_) => "Terrain",
+            Self::Item(_) => "Item",
+            Self::Enemy(_) => "Enemy",
+            Self::Weapon(_) => "Weapon",
         }
     }
 
@@ -360,12 +400,12 @@ impl ModelType {
     /// Return a default instance for each label.
     pub fn from_label(label: &str) -> Self {
         match label {
-            "Tower"   => Self::Tower(TowerProps::default()),
+            "Tower" => Self::Tower(TowerProps::default()),
             "Terrain" => Self::Terrain(TerrainProps::default()),
-            "Item"    => Self::Item(ItemProps::default()),
-            "Enemy"   => Self::Enemy(EnemyProps::default()),
-            "Weapon"  => Self::Weapon(WeaponProps::default()),
-            _         => Self::Player(PlayerProps::default()),
+            "Item" => Self::Item(ItemProps::default()),
+            "Enemy" => Self::Enemy(EnemyProps::default()),
+            "Weapon" => Self::Weapon(WeaponProps::default()),
+            _ => Self::Player(PlayerProps::default()),
         }
     }
 }
@@ -389,7 +429,11 @@ pub struct Hardpoint {
 
 impl Default for Hardpoint {
     fn default() -> Self {
-        Self { anchor: None, translation: [0.0; 3], rotation_euler_deg: [0.0; 3] }
+        Self {
+            anchor: None,
+            translation: [0.0; 3],
+            rotation_euler_deg: [0.0; 3],
+        }
     }
 }
 
@@ -515,7 +559,10 @@ impl AssetDefinition {
             // Binding points at a tag no clip carries (yet) — nothing to play.
             return None;
         }
-        self.animation_mapping.get(key).filter(|s| !s.is_empty()).cloned()
+        self.animation_mapping
+            .get(key)
+            .filter(|s| !s.is_empty())
+            .cloned()
     }
 }
 
@@ -561,7 +608,10 @@ mod tests {
     fn every_def_in_assets_parses() {
         let root = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/defs");
         let mut checked = 0;
-        for entry in std::fs::read_dir(root).expect("assets/defs exists").flatten() {
+        for entry in std::fs::read_dir(root)
+            .expect("assets/defs exists")
+            .flatten()
+        {
             let path = entry.path();
             if path.extension().and_then(|e| e.to_str()) != Some("ron") {
                 continue;
@@ -580,17 +630,25 @@ mod tests {
     #[test]
     fn resolved_clip_follows_binding_to_tagged_clip() {
         let mut def = AssetDefinition::default();
-        def.clip_tags.insert("CharacterArmature|Run_Shoot".into(), "Combat/Ranged/RunShoot".into());
-        def.animation_bindings.insert("run_shoot".into(), "Combat/Ranged/RunShoot".into());
+        def.clip_tags.insert(
+            "CharacterArmature|Run_Shoot".into(),
+            "Combat/Ranged/RunShoot".into(),
+        );
+        def.animation_bindings
+            .insert("run_shoot".into(), "Combat/Ranged/RunShoot".into());
 
-        assert_eq!(def.resolved_clip("run_shoot").as_deref(), Some("CharacterArmature|Run_Shoot"));
+        assert_eq!(
+            def.resolved_clip("run_shoot").as_deref(),
+            Some("CharacterArmature|Run_Shoot")
+        );
     }
 
     #[test]
     fn resolved_clip_binding_to_missing_tag_yields_none() {
         let mut def = AssetDefinition::default();
         // Binding points at a tag no clip carries.
-        def.animation_bindings.insert("idle".into(), "Idle/Neutral".into());
+        def.animation_bindings
+            .insert("idle".into(), "Idle/Neutral".into());
 
         assert_eq!(def.resolved_clip("idle"), None);
     }
@@ -598,17 +656,24 @@ mod tests {
     #[test]
     fn resolved_clip_falls_back_to_legacy_mapping() {
         let mut def = AssetDefinition::default();
-        def.animation_mapping.insert("walk".into(), "CharacterArmature|Walk".into());
+        def.animation_mapping
+            .insert("walk".into(), "CharacterArmature|Walk".into());
 
-        assert_eq!(def.resolved_clip("walk").as_deref(), Some("CharacterArmature|Walk"));
+        assert_eq!(
+            def.resolved_clip("walk").as_deref(),
+            Some("CharacterArmature|Walk")
+        );
     }
 
     #[test]
     fn resolved_clip_binding_wins_over_legacy_mapping() {
         let mut def = AssetDefinition::default();
-        def.animation_mapping.insert("walk".into(), "Old|Walk".into());
-        def.clip_tags.insert("New|Stroll".into(), "Locomotion/Walk".into());
-        def.animation_bindings.insert("walk".into(), "Locomotion/Walk".into());
+        def.animation_mapping
+            .insert("walk".into(), "Old|Walk".into());
+        def.clip_tags
+            .insert("New|Stroll".into(), "Locomotion/Walk".into());
+        def.animation_bindings
+            .insert("walk".into(), "Locomotion/Walk".into());
 
         assert_eq!(def.resolved_clip("walk").as_deref(), Some("New|Stroll"));
     }

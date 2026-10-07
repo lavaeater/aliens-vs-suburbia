@@ -1,37 +1,55 @@
+use crate::asset_browser::state::{
+    ANIM_KEY_NAMES, AssetBrowserState, CHARACTER_NODE_PREFIX, HARDPOINT_ROLES, ModelType,
+};
+use crate::asset_browser::viewer::AssetBrowserViewerPanel;
+use crate::game_state::GameState;
+use crate::ui::collapse::{SectionBody, section_header};
+use crate::ui::spawn_ui::StateMarker;
 use bevy::input::ButtonState;
 use bevy::input::keyboard::{Key, KeyboardInput};
 use bevy::prelude::*;
 use bevy::ui::ScrollPosition;
 use bevy::ui_widgets::Activate;
 use lava_ui_builder::{InteractionPalette, LavaTheme, TextTheme, UIBuilder};
-use crate::asset_browser::state::{ANIM_KEY_NAMES, AssetBrowserState, CHARACTER_NODE_PREFIX, HARDPOINT_ROLES, ModelType};
-use crate::asset_browser::viewer::AssetBrowserViewerPanel;
-use crate::game_state::GameState;
-use crate::ui::collapse::{section_header, SectionBody};
-use crate::ui::spawn_ui::StateMarker;
 
 // ── Marker components ─────────────────────────────────────────────────────────
 
-#[derive(Component)] pub struct AssetListContainer;
-#[derive(Component)] pub struct AssetPathLabel;
-#[derive(Component)] pub struct AssetAnimLabel;
-#[derive(Component)] pub struct NodeListContainer;
-#[derive(Component)] pub struct ClipTagContainer;
+#[derive(Component)]
+pub struct AssetListContainer;
+#[derive(Component)]
+pub struct AssetPathLabel;
+#[derive(Component)]
+pub struct AssetAnimLabel;
+#[derive(Component)]
+pub struct NodeListContainer;
+#[derive(Component)]
+pub struct ClipTagContainer;
 /// Kept for a future re-enable of the game-key -> tag-path binding UI. Currently
 /// not spawned; bind resolution still works off the persisted `animation_bindings`.
 #[allow(dead_code)]
-#[derive(Component)] pub struct BindingContainer;
-#[derive(Component)] pub struct FolderContainer;
-#[derive(Component)] pub struct FolderPathLabel;
-#[derive(Component)] pub struct HeightDisplay;
-#[derive(Component)] pub struct TypeContainer;
-#[derive(Component)] pub struct TypePropsContainer;
-#[derive(Component)] pub struct SourcesContainer;
-#[derive(Component)] pub struct BoneListContainer;
-#[derive(Component)] pub struct AttachmentContainer;
-#[derive(Component)] pub struct HardpointContainer;
+#[derive(Component)]
+pub struct BindingContainer;
+#[derive(Component)]
+pub struct FolderContainer;
+#[derive(Component)]
+pub struct FolderPathLabel;
+#[derive(Component)]
+pub struct HeightDisplay;
+#[derive(Component)]
+pub struct TypeContainer;
+#[derive(Component)]
+pub struct TypePropsContainer;
+#[derive(Component)]
+pub struct SourcesContainer;
+#[derive(Component)]
+pub struct BoneListContainer;
+#[derive(Component)]
+pub struct AttachmentContainer;
+#[derive(Component)]
+pub struct HardpointContainer;
 
-#[derive(Component)] pub struct ListItem(pub usize);
+#[derive(Component)]
+pub struct ListItem(pub usize);
 
 /// The always-visible "bone: <name>" line.
 #[derive(Component)]
@@ -54,9 +72,16 @@ pub fn spawn_asset_browser_ui(
         .flex_row();
 
     let t = theme.text.clone();
-    let hint = TextTheme { label_size: 11.0, label_color: Color::srgb(0.4, 0.55, 0.4), ..t.clone() };
-    let section_theme =
-        TextTheme { label_size: 11.0, label_color: Color::srgb(0.5, 0.8, 0.6), ..t.clone() };
+    let hint = TextTheme {
+        label_size: 11.0,
+        label_color: Color::srgb(0.4, 0.55, 0.4),
+        ..t.clone()
+    };
+    let section_theme = TextTheme {
+        label_size: 11.0,
+        label_color: Color::srgb(0.5, 0.8, 0.6),
+        ..t.clone()
+    };
 
     ui.with_child(|left| {
         left.modify_node(|mut n| {
@@ -69,197 +94,346 @@ pub fn spawn_asset_browser_ui(
             n.overflow = Overflow::scroll_y();
         })
         .insert(ScrollPosition::default())
-        .display_flex().flex_column().gap_px(4.0).padding_all_px(8.0)
+        .display_flex()
+        .flex_column()
+        .gap_px(4.0)
+        .padding_all_px(8.0)
         .bg_color(Color::srgba(0.04, 0.07, 0.10, 0.97));
 
-        left.with_child(|c| { c.insert_bundle(lava_ui_builder::header("Asset Browser", &t)); });
-        left.with_child(|c| { c.insert_bundle(lava_ui_builder::label("[Up/Dn] navigate  [Enter] load  [I] import", &hint)); });
-        left.with_child(|c| { c.insert_bundle(lava_ui_builder::label("[Bksp] up folder  [[ ]] anim  [= / -] height", &hint)); });
-        left.with_child(|c| { c.insert_bundle(lava_ui_builder::label("[B] toggle skeleton overlay", &hint)); });
+        left.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::header("Asset Browser", &t));
+        });
+        left.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label(
+                "[Up/Dn] navigate  [Enter] load  [I] import",
+                &hint,
+            ));
+        });
+        left.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label(
+                "[Bksp] up folder  [[ ]] anim  [= / -] height",
+                &hint,
+            ));
+        });
+        left.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label("[B] toggle skeleton overlay", &hint));
+        });
 
         // Which bone the socket/anchor buttons will use. Deliberately outside every
         // foldable section: it is what you check before pressing Attach or anchoring a
         // hardpoint, and hunting for it inside a folded list is how you attach to the
         // wrong bone.
         left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label("bone: (none)", &TextTheme {
-                label_size: 11.0, label_color: Color::srgb(1.0, 0.85, 0.5), ..t.clone()
-            })).insert(SelectedBoneLabel);
+            c.insert_bundle(lava_ui_builder::label(
+                "bone: (none)",
+                &TextTheme {
+                    label_size: 11.0,
+                    label_color: Color::srgb(1.0, 0.85, 0.5),
+                    ..t.clone()
+                },
+            ))
+            .insert(SelectedBoneLabel);
         });
 
         // Current folder path
         left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label("", &TextTheme {
-                label_size: 10.0, label_color: Color::srgb(0.5, 0.7, 0.9), ..t.clone()
-            })).insert(FolderPathLabel)
+            c.insert_bundle(lava_ui_builder::label(
+                "",
+                &TextTheme {
+                    label_size: 10.0,
+                    label_color: Color::srgb(0.5, 0.7, 0.9),
+                    ..t.clone()
+                },
+            ))
+            .insert(FolderPathLabel)
             .modify_node(|mut n| n.overflow = Overflow::clip());
         });
 
         // Folder chips
         left.with_child(|c| {
-            c.display_flex().flex_wrap().gap_px(3.0)
-             .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
-             .insert(FolderContainer);
+            c.display_flex()
+                .flex_wrap()
+                .gap_px(3.0)
+                .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
+                .insert(FolderContainer);
         });
 
         // Anim label + path label
         left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label("", &TextTheme {
-                label_size: 10.0, label_color: Color::srgb(0.55, 0.75, 1.0), ..t.clone()
-            })).insert(AssetPathLabel)
+            c.insert_bundle(lava_ui_builder::label(
+                "",
+                &TextTheme {
+                    label_size: 10.0,
+                    label_color: Color::srgb(0.55, 0.75, 1.0),
+                    ..t.clone()
+                },
+            ))
+            .insert(AssetPathLabel)
             .modify_node(|mut n| n.overflow = Overflow::clip());
         });
         left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label("", &TextTheme {
-                label_size: 11.0, label_color: Color::srgb(0.8, 0.65, 1.0), ..t.clone()
-            })).insert(AssetAnimLabel);
+            c.insert_bundle(lava_ui_builder::label(
+                "",
+                &TextTheme {
+                    label_size: 11.0,
+                    label_color: Color::srgb(0.8, 0.65, 1.0),
+                    ..t.clone()
+                },
+            ))
+            .insert(AssetAnimLabel);
         });
 
         // Hidden-node chips
         left.with_child(|c| {
-            c.display_flex().flex_wrap().gap_px(3.0)
-             .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
-             .insert(NodeListContainer);
+            c.display_flex()
+                .flex_wrap()
+                .gap_px(3.0)
+                .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
+                .insert(NodeListContainer);
         });
 
         // Clip tags section — tag each of the model's clips with a free-form path.
         section_header(left, "CLIP TAGS", &section_theme);
         left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label("click a clip, type a path e.g. Combat/Ranged/Shoot", &hint))
-             .insert(SectionBody("CLIP TAGS"));
+            c.insert_bundle(lava_ui_builder::label(
+                "click a clip, type a path e.g. Combat/Ranged/Shoot",
+                &hint,
+            ))
+            .insert(SectionBody("CLIP TAGS"));
         });
         left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label("scroll wheel over the list to see more", &hint))
-             .insert(SectionBody("CLIP TAGS"));
+            c.insert_bundle(lava_ui_builder::label(
+                "scroll wheel over the list to see more",
+                &hint,
+            ))
+            .insert(SectionBody("CLIP TAGS"));
         });
         left.with_child(|c| {
-            c.display_flex().flex_column().gap_px(2.0)
-             .overflow_scroll_y()
-             .modify_node(|mut n| { n.align_self = AlignSelf::Stretch; n.max_height = Val::Px(180.0); })
-             .insert(ClipTagContainer).insert(ScrollPosition::default())
-             .insert(SectionBody("CLIP TAGS"));
+            c.display_flex()
+                .flex_column()
+                .gap_px(2.0)
+                .overflow_scroll_y()
+                .modify_node(|mut n| {
+                    n.align_self = AlignSelf::Stretch;
+                    n.max_height = Val::Px(180.0);
+                })
+                .insert(ClipTagContainer)
+                .insert(ScrollPosition::default())
+                .insert(SectionBody("CLIP TAGS"));
         });
 
         // Height section
         section_header(left, "HEIGHT", &section_theme);
         left.with_child(|row| {
-            row.display_flex().flex_row().gap_px(4.0)
-               .insert(SectionBody("HEIGHT"))
-               .modify_node(|mut n| { n.align_items = AlignItems::Center; n.align_self = AlignSelf::Stretch; });
+            row.display_flex()
+                .flex_row()
+                .gap_px(4.0)
+                .insert(SectionBody("HEIGHT"))
+                .modify_node(|mut n| {
+                    n.align_items = AlignItems::Center;
+                    n.align_self = AlignSelf::Stretch;
+                });
 
-            row.add_button_observe("-", |b| { b.width(px(20.0)).height(px(20.0)).font_size(14.0); },
-                |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.height_down(); });
+            row.add_button_observe(
+                "-",
+                |b| {
+                    b.width(px(20.0)).height(px(20.0)).font_size(14.0);
+                },
+                |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                    s.height_down();
+                },
+            );
 
             row.with_child(|c| {
-                c.insert_bundle(lava_ui_builder::label("-- m  (x1.0000)", &TextTheme {
-                    label_size: 11.0, label_color: Color::srgb(0.9, 0.85, 0.65), ..t.clone()
-                })).insert(HeightDisplay)
-                .modify_node(|mut n| { n.flex_grow = 1.0; });
+                c.insert_bundle(lava_ui_builder::label(
+                    "-- m  (x1.0000)",
+                    &TextTheme {
+                        label_size: 11.0,
+                        label_color: Color::srgb(0.9, 0.85, 0.65),
+                        ..t.clone()
+                    },
+                ))
+                .insert(HeightDisplay)
+                .modify_node(|mut n| {
+                    n.flex_grow = 1.0;
+                });
             });
 
-            row.add_button_observe("+", |b| { b.width(px(20.0)).height(px(20.0)).font_size(14.0); },
-                |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.height_up(); });
+            row.add_button_observe(
+                "+",
+                |b| {
+                    b.width(px(20.0)).height(px(20.0)).font_size(14.0);
+                },
+                |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                    s.height_up();
+                },
+            );
         });
 
         // Model type section
         section_header(left, "MODEL TYPE", &section_theme);
         left.with_child(|c| {
-            c.display_flex().flex_wrap().gap_px(3.0)
-             .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
-             .insert(TypeContainer)
-             .insert(SectionBody("MODEL TYPE"));
+            c.display_flex()
+                .flex_wrap()
+                .gap_px(3.0)
+                .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
+                .insert(TypeContainer)
+                .insert(SectionBody("MODEL TYPE"));
         });
         left.with_child(|c| {
-            c.display_flex().flex_column().gap_px(2.0)
-             .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
-             .insert(TypePropsContainer)
-             .insert(SectionBody("MODEL TYPE"));
+            c.display_flex()
+                .flex_column()
+                .gap_px(2.0)
+                .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
+                .insert(TypePropsContainer)
+                .insert(SectionBody("MODEL TYPE"));
         });
 
         // Animation sources section
         section_header(left, "ANIM SOURCES", &section_theme);
         left.with_child(|c| {
-            c.display_flex().flex_wrap().gap_px(3.0)
-             .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
-             .insert(SourcesContainer)
-             .insert(SectionBody("ANIM SOURCES"));
+            c.display_flex()
+                .flex_wrap()
+                .gap_px(3.0)
+                .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
+                .insert(SourcesContainer)
+                .insert(SectionBody("ANIM SOURCES"));
         });
         left.with_child(|c| {
-            c.display_flex().flex_column().insert(SectionBody("ANIM SOURCES"))
-             .modify_node(|mut n| n.align_self = AlignSelf::Stretch);
-            c.add_button_observe("+ Add selected as source", |b| { b.width(percent(100.0)).height(px(22.0)).font_size(11.0); },
+            c.display_flex()
+                .flex_column()
+                .insert(SectionBody("ANIM SOURCES"))
+                .modify_node(|mut n| n.align_self = AlignSelf::Stretch);
+            c.add_button_observe(
+                "+ Add selected as source",
+                |b| {
+                    b.width(percent(100.0)).height(px(22.0)).font_size(11.0);
+                },
                 |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
                     if let Some(path) = s.selected_path().map(std::string::ToString::to_string) {
                         s.add_animation_source(path);
                     }
-                });
+                },
+            );
         });
 
         // Weapon attachment section
         section_header(left, "WEAPON ATTACH", &section_theme);
         left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label("[B] skeleton  [, .] cycle bone  then Attach", &hint))
-             .insert(SectionBody("WEAPON ATTACH"));
+            c.insert_bundle(lava_ui_builder::label(
+                "[B] skeleton  [, .] cycle bone  then Attach",
+                &hint,
+            ))
+            .insert(SectionBody("WEAPON ATTACH"));
         });
         // Bone list (click to pick the socket)
         left.with_child(|c| {
-            c.display_flex().flex_column().gap_px(1.0)
-             .overflow_scroll_y()
-             .modify_node(|mut n| { n.align_self = AlignSelf::Stretch; n.max_height = Val::Px(110.0); })
-             .insert(BoneListContainer).insert(ScrollPosition::default())
-             .insert(SectionBody("WEAPON ATTACH"));
+            c.display_flex()
+                .flex_column()
+                .gap_px(1.0)
+                .overflow_scroll_y()
+                .modify_node(|mut n| {
+                    n.align_self = AlignSelf::Stretch;
+                    n.max_height = Val::Px(110.0);
+                })
+                .insert(BoneListContainer)
+                .insert(ScrollPosition::default())
+                .insert(SectionBody("WEAPON ATTACH"));
         });
         left.with_child(|c| {
-            c.display_flex().flex_column().insert(SectionBody("WEAPON ATTACH"))
-             .modify_node(|mut n| n.align_self = AlignSelf::Stretch);
-            c.add_button_observe("Attach selected file to bone", |b| { b.width(percent(100.0)).height(px(22.0)).font_size(11.0); },
+            c.display_flex()
+                .flex_column()
+                .insert(SectionBody("WEAPON ATTACH"))
+                .modify_node(|mut n| n.align_self = AlignSelf::Stretch);
+            c.add_button_observe(
+                "Attach selected file to bone",
+                |b| {
+                    b.width(percent(100.0)).height(px(22.0)).font_size(11.0);
+                },
                 |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
                     if let Some(path) = s.selected_path().map(std::string::ToString::to_string) {
                         s.attach_selected_model(path);
                     }
-                });
+                },
+            );
         });
         // Attachment editor (socket info + offset nudge controls)
         left.with_child(|c| {
-            c.display_flex().flex_column().gap_px(2.0)
-             .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
-             .insert(AttachmentContainer)
-             .insert(SectionBody("WEAPON ATTACH"));
+            c.display_flex()
+                .flex_column()
+                .gap_px(2.0)
+                .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
+                .insert(AttachmentContainer)
+                .insert(SectionBody("WEAPON ATTACH"));
         });
 
         // Hardpoints section (dynamic weapon snapping)
         section_header(left, "HARDPOINTS", &section_theme);
         left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label("[H] show frames. char: anchor grip to a bone", &hint))
-             .insert(SectionBody("HARDPOINTS"));
+            c.insert_bundle(lava_ui_builder::label(
+                "[H] show frames. char: anchor grip to a bone",
+                &hint,
+            ))
+            .insert(SectionBody("HARDPOINTS"));
         });
         left.with_child(|c| {
-            c.display_flex().flex_column().gap_px(2.0)
-             .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
-             .insert(HardpointContainer)
-             .insert(SectionBody("HARDPOINTS"));
+            c.display_flex()
+                .flex_column()
+                .gap_px(2.0)
+                .modify_node(|mut n| n.align_self = AlignSelf::Stretch)
+                .insert(HardpointContainer)
+                .insert(SectionBody("HARDPOINTS"));
         });
 
         // File list
         left.with_child(|c| {
-            c.with_flex_grow(1.0).width_percent(100.0)
-             .overflow_scroll_y().display_flex().flex_column().gap_px(1.0)
-             .insert(AssetListContainer).insert(ScrollPosition::default());
+            c.with_flex_grow(1.0)
+                .width_percent(100.0)
+                .overflow_scroll_y()
+                .display_flex()
+                .flex_column()
+                .gap_px(1.0)
+                .insert(AssetListContainer)
+                .insert(ScrollPosition::default());
         });
 
         // Import + back buttons
-        left.add_button_observe("Clear mapping + nodes", |b| { b.width(percent(100.0)).height(px(26.0)).font_size(12.0); },
-            |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.clear_all(); });
+        left.add_button_observe(
+            "Clear mapping + nodes",
+            |b| {
+                b.width(percent(100.0)).height(px(26.0)).font_size(12.0);
+            },
+            |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                s.clear_all();
+            },
+        );
 
-        left.add_button_observe("Import definition", |b| { b.width(percent(100.0)).height(px(30.0)).font_size(13.0); },
-            |_: On<Activate>, s: ResMut<AssetBrowserState>| { s.export_definition(); });
+        left.add_button_observe(
+            "Import definition",
+            |b| {
+                b.width(percent(100.0)).height(px(30.0)).font_size(13.0);
+            },
+            |_: On<Activate>, s: ResMut<AssetBrowserState>| {
+                s.export_definition();
+            },
+        );
 
-        left.add_button_observe("<- Back to Menu", |b| { b.width(percent(100.0)).height(px(36.0)).font_size(14.0); },
-            |_: On<Activate>, mut next: ResMut<NextState<GameState>>| { next.set(GameState::Menu); });
+        left.add_button_observe(
+            "<- Back to Menu",
+            |b| {
+                b.width(percent(100.0)).height(px(36.0)).font_size(14.0);
+            },
+            |_: On<Activate>, mut next: ResMut<NextState<GameState>>| {
+                next.set(GameState::Menu);
+            },
+        );
     });
 
     ui.with_child(|viewer| {
-        viewer.with_flex_grow(1.0).height_percent(100.0).insert(AssetBrowserViewerPanel);
+        viewer
+            .with_flex_grow(1.0)
+            .height_percent(100.0)
+            .insert(AssetBrowserViewerPanel);
     });
 
     ui.build();
@@ -276,9 +450,15 @@ pub fn update_selected_bone_label(
     if !state.is_changed() {
         return;
     }
-    let Ok(mut text) = labels.single_mut() else { return };
+    let Ok(mut text) = labels.single_mut() else {
+        return;
+    };
     let wanted = match state.selected_bone_name() {
-        Some(bone) => format!("bone: {bone}  ({}/{})", state.selected_bone + 1, state.bone_names.len()),
+        Some(bone) => format!(
+            "bone: {bone}  ({}/{})",
+            state.selected_bone + 1,
+            state.bone_names.len()
+        ),
         None => "bone: (load a model with a skeleton)".to_string(),
     };
     if **text != wanted {
@@ -294,15 +474,17 @@ pub fn handle_key_input(
     mut next_state: ResMut<NextState<GameState>>,
 ) {
     for event in keyboard_reader.read() {
-        if event.state != ButtonState::Pressed { continue; }
+        if event.state != ButtonState::Pressed {
+            continue;
+        }
 
         // While a tag text-box is open, keystrokes edit the buffer instead of navigating.
         if state.tag_edit_clip.is_some() {
             match &event.logical_key {
-                Key::Escape    => state.tag_edit_cancel(),
-                Key::Enter     => state.tag_edit_commit(),
+                Key::Escape => state.tag_edit_cancel(),
+                Key::Enter => state.tag_edit_commit(),
                 Key::Backspace => state.tag_edit_backspace(),
-                Key::Space     => state.tag_edit_push(" "),
+                Key::Space => state.tag_edit_push(" "),
                 Key::Character(c) => state.tag_edit_push(c.as_str()),
                 _ => {}
             }
@@ -310,13 +492,13 @@ pub fn handle_key_input(
         }
 
         match &event.logical_key {
-            Key::ArrowUp        => state.move_up(),
-            Key::ArrowDown      => state.move_down(),
-            Key::PageUp         => state.page_up(),
-            Key::PageDown       => state.page_down(),
-            Key::Enter          => state.load_requested = true,
-            Key::Escape         => next_state.set(GameState::Menu),
-            Key::Backspace      => state.leave_folder(),
+            Key::ArrowUp => state.move_up(),
+            Key::ArrowDown => state.move_down(),
+            Key::PageUp => state.page_up(),
+            Key::PageDown => state.page_down(),
+            Key::Enter => state.load_requested = true,
+            Key::Escape => next_state.set(GameState::Menu),
+            Key::Backspace => state.leave_folder(),
             Key::Character(c) if c == "]" => state.anim_next(),
             Key::Character(c) if c == "[" => state.anim_prev(),
             Key::Character(c) if c == "=" || c == "+" => state.height_up(),
@@ -339,38 +521,53 @@ pub fn rebuild_folder_list(
     container_q: Query<Entity, With<FolderContainer>>,
     mut path_label_q: Query<&mut Text, With<FolderPathLabel>>,
 ) {
-    if !state.folder_list_dirty { return; }
+    if !state.folder_list_dirty {
+        return;
+    }
     state.folder_list_dirty = false;
 
     if let Ok(mut t) = path_label_q.single_mut() {
         **t = format!("[dir] {}", state.current_folder);
     }
 
-    let Ok(container) = container_q.single() else { return };
+    let Ok(container) = container_q.single() else {
+        return;
+    };
     commands.entity(container).despawn_related::<Children>();
 
     let folders: Vec<String> = state.folders.clone();
-    if folders.is_empty() { return; }
+    if folders.is_empty() {
+        return;
+    }
 
     commands.entity(container).with_children(|parent| {
         for name in folders {
             let name_clone = name.clone();
             let bg = Color::srgba(0.10, 0.22, 0.35, 0.90);
-            parent.spawn((
-                Node { padding: UiRect::axes(Val::Px(8.0), Val::Px(4.0)), border_radius: BorderRadius::all(Val::Px(4.0)), ..Default::default() },
-                BackgroundColor(bg),
-                InteractionPalette { none: bg, hovered: Color::srgba(0.18, 0.35, 0.55, 0.95), pressed: Color::srgba(0.10, 0.22, 0.40, 1.0) },
-                bevy::picking::hover::Hovered::default(),
-                bevy::ui_widgets::Button,
-            ))
-            .with_child((
-                Text::new(format!("[dir] {name}")),
-                TextFont::default().with_font_size(11.0),
-                TextColor(Color::srgb(0.75, 0.88, 1.0)),
-            ))
-            .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
-                s.enter_folder(&name_clone);
-            });
+            parent
+                .spawn((
+                    Node {
+                        padding: UiRect::axes(Val::Px(8.0), Val::Px(4.0)),
+                        border_radius: BorderRadius::all(Val::Px(4.0)),
+                        ..Default::default()
+                    },
+                    BackgroundColor(bg),
+                    InteractionPalette {
+                        none: bg,
+                        hovered: Color::srgba(0.18, 0.35, 0.55, 0.95),
+                        pressed: Color::srgba(0.10, 0.22, 0.40, 1.0),
+                    },
+                    bevy::picking::hover::Hovered::default(),
+                    bevy::ui_widgets::Button,
+                ))
+                .with_child((
+                    Text::new(format!("[dir] {name}")),
+                    TextFont::default().with_font_size(11.0),
+                    TextColor(Color::srgb(0.75, 0.88, 1.0)),
+                ))
+                .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                    s.enter_folder(&name_clone);
+                });
         }
     });
 }
@@ -381,19 +578,25 @@ pub fn rebuild_list(
     container_q: Query<Entity, With<AssetListContainer>>,
     mut path_label: Query<&mut Text, With<AssetPathLabel>>,
 ) {
-    if !state.list_dirty { return; }
+    if !state.list_dirty {
+        return;
+    }
     state.list_dirty = false;
 
     if let Ok(mut t) = path_label.single_mut() {
         **t = state.selected_path().unwrap_or("").to_string();
     }
 
-    let Ok(container) = container_q.single() else { return };
+    let Ok(container) = container_q.single() else {
+        return;
+    };
     commands.entity(container).despawn_related::<Children>();
 
     let selected = state.selected;
-    let files_window: Vec<(usize, String)> = state.visible_files()
-        .map(|(i, s)| (i, s.to_string())).collect();
+    let files_window: Vec<(usize, String)> = state
+        .visible_files()
+        .map(|(i, s)| (i, s.to_string()))
+        .collect();
     let total = state.files.len();
     let scroll_offset = state.scroll_offset;
 
@@ -403,29 +606,54 @@ pub fn rebuild_list(
             Text::new(format!("{}-{} / {total}", scroll_offset + 1, window_end)),
             TextFont::default().with_font_size(10.0),
             TextColor(Color::srgba(0.5, 0.55, 0.6, 0.6)),
-            Node { padding: UiRect::axes(Val::Px(4.0), Val::Px(2.0)), ..Default::default() },
+            Node {
+                padding: UiRect::axes(Val::Px(4.0), Val::Px(2.0)),
+                ..Default::default()
+            },
         ));
 
         for (idx, path) in files_window {
             let is_selected = idx == selected;
-            let bg = if is_selected { Color::srgba(0.15, 0.35, 0.55, 0.95) } else { Color::srgba(0.06, 0.08, 0.12, 0.80) };
-            let name_color = if is_selected { Color::srgb(1.0, 1.0, 1.0) } else { Color::srgb(0.72, 0.80, 0.88) };
+            let bg = if is_selected {
+                Color::srgba(0.15, 0.35, 0.55, 0.95)
+            } else {
+                Color::srgba(0.06, 0.08, 0.12, 0.80)
+            };
+            let name_color = if is_selected {
+                Color::srgb(1.0, 1.0, 1.0)
+            } else {
+                Color::srgb(0.72, 0.80, 0.88)
+            };
             let filename = path.split('/').next_back().unwrap_or(&path).to_string();
 
-            parent.spawn((
-                Node { width: Val::Percent(100.0), padding: UiRect::axes(Val::Px(8.0), Val::Px(3.0)), border_radius: BorderRadius::all(Val::Px(3.0)), ..Default::default() },
-                BackgroundColor(bg),
-                InteractionPalette { none: bg, hovered: Color::srgba(0.15, 0.28, 0.45, 0.95), pressed: Color::srgba(0.10, 0.20, 0.36, 1.0) },
-                bevy::picking::hover::Hovered::default(),
-                bevy::ui_widgets::Button,
-                ListItem(idx),
-            ))
-            .with_child((Text::new(filename), TextFont::default().with_font_size(13.0), TextColor(name_color)))
-            .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
-                s.selected = idx;
-                s.load_requested = true;
-                s.list_dirty = true;
-            });
+            parent
+                .spawn((
+                    Node {
+                        width: Val::Percent(100.0),
+                        padding: UiRect::axes(Val::Px(8.0), Val::Px(3.0)),
+                        border_radius: BorderRadius::all(Val::Px(3.0)),
+                        ..Default::default()
+                    },
+                    BackgroundColor(bg),
+                    InteractionPalette {
+                        none: bg,
+                        hovered: Color::srgba(0.15, 0.28, 0.45, 0.95),
+                        pressed: Color::srgba(0.10, 0.20, 0.36, 1.0),
+                    },
+                    bevy::picking::hover::Hovered::default(),
+                    bevy::ui_widgets::Button,
+                    ListItem(idx),
+                ))
+                .with_child((
+                    Text::new(filename),
+                    TextFont::default().with_font_size(13.0),
+                    TextColor(name_color),
+                ))
+                .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                    s.selected = idx;
+                    s.load_requested = true;
+                    s.list_dirty = true;
+                });
         }
     });
 }
@@ -436,20 +664,31 @@ pub fn scroll_to_selection(
     child_q: Query<(Option<&ListItem>, &ComputedNode)>,
     children_q: Query<&Children>,
 ) {
-    let Ok((container_entity, container_node, mut scroll)) = container_q.single_mut() else { return };
-    let Ok(children) = children_q.get(container_entity) else { return };
+    let Ok((container_entity, container_node, mut scroll)) = container_q.single_mut() else {
+        return;
+    };
+    let Ok(children) = children_q.get(container_entity) else {
+        return;
+    };
     let container_height = container_node.size().y;
-    if container_height == 0.0 { return; }
+    if container_height == 0.0 {
+        return;
+    }
     let mut y = 0.0f32;
     for child in children.iter() {
-        let Ok((opt_item, child_node)) = child_q.get(child) else { continue };
+        let Ok((opt_item, child_node)) = child_q.get(child) else {
+            continue;
+        };
         let h = child_node.size().y + 1.0;
         if let Some(item) = opt_item
             && item.0 == state.selected
         {
             let cur = scroll.0.y;
-            if y < cur { scroll.0.y = y; }
-            else if y + h > cur + container_height { scroll.0.y = y + h - container_height; }
+            if y < cur {
+                scroll.0.y = y;
+            } else if y + h > cur + container_height {
+                scroll.0.y = y + h - container_height;
+            }
             return;
         }
         y += h;
@@ -462,7 +701,14 @@ pub fn scroll_to_selection(
 pub fn scroll_clip_tag_list(
     mut wheel: MessageReader<bevy::input::mouse::MouseWheel>,
     windows: Query<&Window>,
-    mut container_q: Query<(&ComputedNode, &bevy::ui::UiGlobalTransform, &mut ScrollPosition), With<ClipTagContainer>>,
+    mut container_q: Query<
+        (
+            &ComputedNode,
+            &bevy::ui::UiGlobalTransform,
+            &mut ScrollPosition,
+        ),
+        With<ClipTagContainer>,
+    >,
 ) {
     use bevy::input::mouse::MouseScrollUnit;
     let mut dy = 0.0f32;
@@ -472,13 +718,19 @@ pub fn scroll_clip_tag_list(
             MouseScrollUnit::Pixel => ev.y,
         };
     }
-    if dy == 0.0 { return; }
+    if dy == 0.0 {
+        return;
+    }
 
     let Ok(window) = windows.single() else { return };
-    let Some(cursor) = window.cursor_position() else { return };
+    let Some(cursor) = window.cursor_position() else {
+        return;
+    };
     let cursor = cursor * window.scale_factor(); // logical -> physical
 
-    let Ok((node, transform, mut scroll)) = container_q.single_mut() else { return };
+    let Ok((node, transform, mut scroll)) = container_q.single_mut() else {
+        return;
+    };
     let size = node.size();
     let center = transform.affine().translation;
     let min = center - size * 0.5;
@@ -496,33 +748,64 @@ pub fn rebuild_node_list(
     mut commands: Commands,
     container_q: Query<Entity, With<NodeListContainer>>,
 ) {
-    if !state.nodes_ui_dirty { return; }
+    if !state.nodes_ui_dirty {
+        return;
+    }
     state.nodes_ui_dirty = false;
 
-    let Ok(container) = container_q.single() else { return };
+    let Ok(container) = container_q.single() else {
+        return;
+    };
     commands.entity(container).despawn_related::<Children>();
 
-    let nodes: Vec<(String, bool)> = state.mesh_nodes.iter()
+    let nodes: Vec<(String, bool)> = state
+        .mesh_nodes
+        .iter()
         .filter(|n| !n.starts_with(CHARACTER_NODE_PREFIX))
         .map(|n| (n.clone(), state.hidden_nodes.contains(n)))
         .collect();
 
-    if nodes.is_empty() { return; }
+    if nodes.is_empty() {
+        return;
+    }
 
     commands.entity(container).with_children(|parent| {
         for (name, hidden) in nodes {
-            let bg = if hidden { Color::srgba(0.12, 0.10, 0.18, 0.85) } else { Color::srgba(0.25, 0.18, 0.40, 0.90) };
-            let tc = if hidden { Color::srgba(0.45, 0.40, 0.55, 0.70) } else { Color::srgb(0.88, 0.75, 1.0) };
+            let bg = if hidden {
+                Color::srgba(0.12, 0.10, 0.18, 0.85)
+            } else {
+                Color::srgba(0.25, 0.18, 0.40, 0.90)
+            };
+            let tc = if hidden {
+                Color::srgba(0.45, 0.40, 0.55, 0.70)
+            } else {
+                Color::srgb(0.88, 0.75, 1.0)
+            };
             let name_clone = name.clone();
-            parent.spawn((
-                Node { padding: UiRect::axes(Val::Px(6.0), Val::Px(3.0)), border_radius: BorderRadius::all(Val::Px(4.0)), ..Default::default() },
-                BackgroundColor(bg),
-                InteractionPalette { none: bg, hovered: Color::srgba(0.35, 0.25, 0.55, 0.95), pressed: Color::srgba(0.20, 0.14, 0.35, 1.0) },
-                bevy::picking::hover::Hovered::default(),
-                bevy::ui_widgets::Button,
-            ))
-            .with_child((Text::new(name.clone()), TextFont::default().with_font_size(10.0), TextColor(tc)))
-            .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.toggle_node(&name_clone); });
+            parent
+                .spawn((
+                    Node {
+                        padding: UiRect::axes(Val::Px(6.0), Val::Px(3.0)),
+                        border_radius: BorderRadius::all(Val::Px(4.0)),
+                        ..Default::default()
+                    },
+                    BackgroundColor(bg),
+                    InteractionPalette {
+                        none: bg,
+                        hovered: Color::srgba(0.35, 0.25, 0.55, 0.95),
+                        pressed: Color::srgba(0.20, 0.14, 0.35, 1.0),
+                    },
+                    bevy::picking::hover::Hovered::default(),
+                    bevy::ui_widgets::Button,
+                ))
+                .with_child((
+                    Text::new(name.clone()),
+                    TextFont::default().with_font_size(10.0),
+                    TextColor(tc),
+                ))
+                .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                    s.toggle_node(&name_clone);
+                });
         }
     });
 }
@@ -535,14 +818,20 @@ pub fn rebuild_clip_tag_list(
     mut commands: Commands,
     container_q: Query<Entity, With<ClipTagContainer>>,
 ) {
-    if !state.tags_dirty { return; }
+    if !state.tags_dirty {
+        return;
+    }
     state.tags_dirty = false;
 
-    let Ok(container) = container_q.single() else { return };
+    let Ok(container) = container_q.single() else {
+        return;
+    };
     commands.entity(container).despawn_related::<Children>();
 
     // Distinct, non-empty clip names, sorted, matching the browser's clip list.
-    let mut clips: Vec<String> = state.anim_names.iter()
+    let mut clips: Vec<String> = state
+        .anim_names
+        .iter()
         .filter(|n| !n.is_empty())
         .cloned()
         .collect();
@@ -569,44 +858,57 @@ pub fn rebuild_clip_tag_list(
 
             // Clickable row: "clipname   tag".
             let clip_for_click = clip.clone();
-            let bg = if is_editing { Color::srgba(0.14, 0.20, 0.10, 0.95) } else { Color::srgba(0.07, 0.10, 0.14, 0.70) };
-            parent.spawn((
-                Node {
-                    width: Val::Percent(100.0),
-                    flex_direction: FlexDirection::Row,
-                    justify_content: JustifyContent::SpaceBetween,
-                    align_items: AlignItems::Center,
-                    padding: UiRect::axes(Val::Px(5.0), Val::Px(2.0)),
-                    border_radius: BorderRadius::all(Val::Px(3.0)),
-                    column_gap: Val::Px(6.0),
-                    ..Default::default()
-                },
-                BackgroundColor(bg),
-                InteractionPalette { none: bg, hovered: Color::srgba(0.15, 0.24, 0.14, 0.95), pressed: Color::srgba(0.10, 0.16, 0.10, 1.0) },
-                bevy::picking::hover::Hovered::default(),
-                bevy::ui_widgets::Button,
-            ))
-            .with_children(|row| {
-                row.spawn((
-                    Text::new(short),
-                    TextFont::default().with_font_size(10.0),
-                    TextColor(Color::srgb(0.8, 0.75, 0.9)),
-                    Node { flex_grow: 1.0, overflow: Overflow::clip(), ..Default::default() },
-                ));
-                let (tag_text, tag_color) = if tag.is_empty() {
-                    ("--".to_string(), Color::srgba(0.5, 0.55, 0.5, 0.6))
-                } else {
-                    (tag.clone(), Color::srgb(0.55, 0.85, 0.65))
-                };
-                row.spawn((
-                    Text::new(tag_text),
-                    TextFont::default().with_font_size(10.0),
-                    TextColor(tag_color),
-                ));
-            })
-            .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
-                s.begin_tag_edit(&clip_for_click);
-            });
+            let bg = if is_editing {
+                Color::srgba(0.14, 0.20, 0.10, 0.95)
+            } else {
+                Color::srgba(0.07, 0.10, 0.14, 0.70)
+            };
+            parent
+                .spawn((
+                    Node {
+                        width: Val::Percent(100.0),
+                        flex_direction: FlexDirection::Row,
+                        justify_content: JustifyContent::SpaceBetween,
+                        align_items: AlignItems::Center,
+                        padding: UiRect::axes(Val::Px(5.0), Val::Px(2.0)),
+                        border_radius: BorderRadius::all(Val::Px(3.0)),
+                        column_gap: Val::Px(6.0),
+                        ..Default::default()
+                    },
+                    BackgroundColor(bg),
+                    InteractionPalette {
+                        none: bg,
+                        hovered: Color::srgba(0.15, 0.24, 0.14, 0.95),
+                        pressed: Color::srgba(0.10, 0.16, 0.10, 1.0),
+                    },
+                    bevy::picking::hover::Hovered::default(),
+                    bevy::ui_widgets::Button,
+                ))
+                .with_children(|row| {
+                    row.spawn((
+                        Text::new(short),
+                        TextFont::default().with_font_size(10.0),
+                        TextColor(Color::srgb(0.8, 0.75, 0.9)),
+                        Node {
+                            flex_grow: 1.0,
+                            overflow: Overflow::clip(),
+                            ..Default::default()
+                        },
+                    ));
+                    let (tag_text, tag_color) = if tag.is_empty() {
+                        ("--".to_string(), Color::srgba(0.5, 0.55, 0.5, 0.6))
+                    } else {
+                        (tag.clone(), Color::srgb(0.55, 0.85, 0.65))
+                    };
+                    row.spawn((
+                        Text::new(tag_text),
+                        TextFont::default().with_font_size(10.0),
+                        TextColor(tag_color),
+                    ));
+                })
+                .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                    s.begin_tag_edit(&clip_for_click);
+                });
 
             // While this clip is being edited, show the text box + suggestions.
             if is_editing {
@@ -615,34 +917,63 @@ pub fn rebuild_clip_tag_list(
                     Text::new(display),
                     TextFont::default().with_font_size(11.0),
                     TextColor(Color::srgb(0.95, 0.95, 0.7)),
-                    Node { padding: UiRect::axes(Val::Px(8.0), Val::Px(2.0)), ..Default::default() },
+                    Node {
+                        padding: UiRect::axes(Val::Px(8.0), Val::Px(2.0)),
+                        ..Default::default()
+                    },
                     BackgroundColor(Color::srgba(0.05, 0.08, 0.05, 0.9)),
                 ));
                 parent.spawn((
                     Text::new("[Enter] save  [Esc] cancel"),
                     TextFont::default().with_font_size(9.0),
                     TextColor(Color::srgba(0.45, 0.6, 0.45, 0.7)),
-                    Node { padding: UiRect::axes(Val::Px(8.0), Val::Px(0.0)), ..Default::default() },
+                    Node {
+                        padding: UiRect::axes(Val::Px(8.0), Val::Px(0.0)),
+                        ..Default::default()
+                    },
                 ));
                 if !suggestions.is_empty() {
-                    parent.spawn((
-                        Node { flex_direction: FlexDirection::Row, flex_wrap: FlexWrap::Wrap, column_gap: Val::Px(3.0), row_gap: Val::Px(3.0), padding: UiRect::axes(Val::Px(8.0), Val::Px(2.0)), ..Default::default() },
-                    ))
-                    .with_children(|chips| {
-                        for sug in &suggestions {
-                            let sug_clone = sug.clone();
-                            let cbg = Color::srgba(0.10, 0.22, 0.18, 0.9);
-                            chips.spawn((
-                                Node { padding: UiRect::axes(Val::Px(5.0), Val::Px(2.0)), border_radius: BorderRadius::all(Val::Px(3.0)), ..Default::default() },
-                                BackgroundColor(cbg),
-                                InteractionPalette { none: cbg, hovered: Color::srgba(0.15, 0.35, 0.28, 0.95), pressed: Color::srgba(0.08, 0.18, 0.14, 1.0) },
-                                bevy::picking::hover::Hovered::default(),
-                                bevy::ui_widgets::Button,
-                            ))
-                            .with_child((Text::new(sug.clone()), TextFont::default().with_font_size(9.0), TextColor(Color::srgb(0.7, 0.9, 0.8))))
-                            .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.tag_edit_accept_suggestion(&sug_clone); });
-                        }
-                    });
+                    parent
+                        .spawn((Node {
+                            flex_direction: FlexDirection::Row,
+                            flex_wrap: FlexWrap::Wrap,
+                            column_gap: Val::Px(3.0),
+                            row_gap: Val::Px(3.0),
+                            padding: UiRect::axes(Val::Px(8.0), Val::Px(2.0)),
+                            ..Default::default()
+                        },))
+                        .with_children(|chips| {
+                            for sug in &suggestions {
+                                let sug_clone = sug.clone();
+                                let cbg = Color::srgba(0.10, 0.22, 0.18, 0.9);
+                                chips
+                                    .spawn((
+                                        Node {
+                                            padding: UiRect::axes(Val::Px(5.0), Val::Px(2.0)),
+                                            border_radius: BorderRadius::all(Val::Px(3.0)),
+                                            ..Default::default()
+                                        },
+                                        BackgroundColor(cbg),
+                                        InteractionPalette {
+                                            none: cbg,
+                                            hovered: Color::srgba(0.15, 0.35, 0.28, 0.95),
+                                            pressed: Color::srgba(0.08, 0.18, 0.14, 1.0),
+                                        },
+                                        bevy::picking::hover::Hovered::default(),
+                                        bevy::ui_widgets::Button,
+                                    ))
+                                    .with_child((
+                                        Text::new(sug.clone()),
+                                        TextFont::default().with_font_size(9.0),
+                                        TextColor(Color::srgb(0.7, 0.9, 0.8)),
+                                    ))
+                                    .observe(
+                                        move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                                            s.tag_edit_accept_suggestion(&sug_clone);
+                                        },
+                                    );
+                            }
+                        });
                 }
             }
         }
@@ -657,64 +988,109 @@ pub fn rebuild_binding_list(
     mut commands: Commands,
     container_q: Query<Entity, With<BindingContainer>>,
 ) {
-    if !state.tags_dirty { return; }
+    if !state.tags_dirty {
+        return;
+    }
 
-    let Ok(container) = container_q.single() else { return };
+    let Ok(container) = container_q.single() else {
+        return;
+    };
     commands.entity(container).despawn_related::<Children>();
 
-    let rows: Vec<(String, String)> = ANIM_KEY_NAMES.iter()
-        .map(|&k| (k.to_string(), state.animation_bindings.get(k).cloned().unwrap_or_default()))
+    let rows: Vec<(String, String)> = ANIM_KEY_NAMES
+        .iter()
+        .map(|&k| {
+            (
+                k.to_string(),
+                state.animation_bindings.get(k).cloned().unwrap_or_default(),
+            )
+        })
         .collect();
 
     commands.entity(container).with_children(|parent| {
         for (key, tag) in rows {
             let key_prev = key.clone();
             let key_next = key.clone();
-            let tag_display = if tag.is_empty() { "--".to_string() } else { tag.clone() };
-            let tag_color = if tag.is_empty() { Color::srgb(0.5, 0.55, 0.5) } else { Color::srgb(0.9, 0.85, 0.65) };
-            parent.spawn((
-                Node {
-                    width: Val::Percent(100.0),
-                    flex_direction: FlexDirection::Row,
-                    justify_content: JustifyContent::SpaceBetween,
-                    align_items: AlignItems::Center,
-                    padding: UiRect::axes(Val::Px(4.0), Val::Px(2.0)),
-                    column_gap: Val::Px(4.0),
-                    ..Default::default()
-                },
-                BackgroundColor(Color::srgba(0.07, 0.10, 0.14, 0.70)),
-            ))
-            .with_children(|row| {
-                row.spawn((
-                    Text::new(key.clone()),
-                    TextFont::default().with_font_size(10.0),
-                    TextColor(Color::srgb(0.6, 0.75, 0.6)),
-                ));
-                row.spawn((
-                    Node { width: Val::Px(14.0), ..Default::default() },
-                    BackgroundColor(Color::srgba(0.15, 0.15, 0.15, 0.6)),
-                    bevy::picking::hover::Hovered::default(),
-                    bevy::ui_widgets::Button,
+            let tag_display = if tag.is_empty() {
+                "--".to_string()
+            } else {
+                tag.clone()
+            };
+            let tag_color = if tag.is_empty() {
+                Color::srgb(0.5, 0.55, 0.5)
+            } else {
+                Color::srgb(0.9, 0.85, 0.65)
+            };
+            parent
+                .spawn((
+                    Node {
+                        width: Val::Percent(100.0),
+                        flex_direction: FlexDirection::Row,
+                        justify_content: JustifyContent::SpaceBetween,
+                        align_items: AlignItems::Center,
+                        padding: UiRect::axes(Val::Px(4.0), Val::Px(2.0)),
+                        column_gap: Val::Px(4.0),
+                        ..Default::default()
+                    },
+                    BackgroundColor(Color::srgba(0.07, 0.10, 0.14, 0.70)),
                 ))
-                .with_child((Text::new("<"), TextFont::default().with_font_size(9.0), TextColor(Color::srgb(0.8, 0.8, 0.8))))
-                .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.cycle_binding(&key_prev, -1); });
+                .with_children(|row| {
+                    row.spawn((
+                        Text::new(key.clone()),
+                        TextFont::default().with_font_size(10.0),
+                        TextColor(Color::srgb(0.6, 0.75, 0.6)),
+                    ));
+                    row.spawn((
+                        Node {
+                            width: Val::Px(14.0),
+                            ..Default::default()
+                        },
+                        BackgroundColor(Color::srgba(0.15, 0.15, 0.15, 0.6)),
+                        bevy::picking::hover::Hovered::default(),
+                        bevy::ui_widgets::Button,
+                    ))
+                    .with_child((
+                        Text::new("<"),
+                        TextFont::default().with_font_size(9.0),
+                        TextColor(Color::srgb(0.8, 0.8, 0.8)),
+                    ))
+                    .observe(
+                        move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                            s.cycle_binding(&key_prev, -1);
+                        },
+                    );
 
-                row.spawn((
-                    Text::new(tag_display),
-                    TextFont::default().with_font_size(10.0),
-                    TextColor(tag_color),
-                    Node { flex_grow: 1.0, overflow: Overflow::clip(), ..Default::default() },
-                ));
+                    row.spawn((
+                        Text::new(tag_display),
+                        TextFont::default().with_font_size(10.0),
+                        TextColor(tag_color),
+                        Node {
+                            flex_grow: 1.0,
+                            overflow: Overflow::clip(),
+                            ..Default::default()
+                        },
+                    ));
 
-                row.spawn((
-                    Node { width: Val::Px(14.0), ..Default::default() },
-                    BackgroundColor(Color::srgba(0.15, 0.15, 0.15, 0.6)),
-                    bevy::picking::hover::Hovered::default(),
-                    bevy::ui_widgets::Button,
-                ))
-                .with_child((Text::new(">"), TextFont::default().with_font_size(9.0), TextColor(Color::srgb(0.8, 0.8, 0.8))))
-                .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.cycle_binding(&key_next, 1); });
-            });
+                    row.spawn((
+                        Node {
+                            width: Val::Px(14.0),
+                            ..Default::default()
+                        },
+                        BackgroundColor(Color::srgba(0.15, 0.15, 0.15, 0.6)),
+                        bevy::picking::hover::Hovered::default(),
+                        bevy::ui_widgets::Button,
+                    ))
+                    .with_child((
+                        Text::new(">"),
+                        TextFont::default().with_font_size(9.0),
+                        TextColor(Color::srgb(0.8, 0.8, 0.8)),
+                    ))
+                    .observe(
+                        move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                            s.cycle_binding(&key_next, 1);
+                        },
+                    );
+                });
         }
     });
 }
@@ -726,7 +1102,9 @@ pub fn rebuild_type_picker(
     props_q: Query<Entity, With<TypePropsContainer>>,
     theme: Res<lava_ui_builder::LavaTheme>,
 ) {
-    if !state.type_dirty { return; }
+    if !state.type_dirty {
+        return;
+    }
     state.type_dirty = false;
 
     let current_label = state.model_type.label();
@@ -736,27 +1114,57 @@ pub fn rebuild_type_picker(
         commands.entity(container).with_children(|parent| {
             for &label in ModelType::all_labels() {
                 let is_active = label == current_label;
-                let bg = if is_active { Color::srgba(0.20, 0.45, 0.25, 0.95) } else { Color::srgba(0.10, 0.16, 0.12, 0.85) };
-                let tc = if is_active { Color::srgb(0.8, 1.0, 0.8) } else { Color::srgb(0.55, 0.70, 0.55) };
-                parent.spawn((
-                    Node { padding: UiRect::axes(Val::Px(7.0), Val::Px(3.0)), border_radius: BorderRadius::all(Val::Px(4.0)), ..Default::default() },
-                    BackgroundColor(bg),
-                    InteractionPalette { none: bg, hovered: Color::srgba(0.25, 0.55, 0.30, 0.95), pressed: Color::srgba(0.15, 0.38, 0.20, 1.0) },
-                    bevy::picking::hover::Hovered::default(),
-                    bevy::ui_widgets::Button,
-                ))
-                .with_child((Text::new(label), TextFont::default().with_font_size(10.0), TextColor(tc)))
-                .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.set_model_type(label); });
+                let bg = if is_active {
+                    Color::srgba(0.20, 0.45, 0.25, 0.95)
+                } else {
+                    Color::srgba(0.10, 0.16, 0.12, 0.85)
+                };
+                let tc = if is_active {
+                    Color::srgb(0.8, 1.0, 0.8)
+                } else {
+                    Color::srgb(0.55, 0.70, 0.55)
+                };
+                parent
+                    .spawn((
+                        Node {
+                            padding: UiRect::axes(Val::Px(7.0), Val::Px(3.0)),
+                            border_radius: BorderRadius::all(Val::Px(4.0)),
+                            ..Default::default()
+                        },
+                        BackgroundColor(bg),
+                        InteractionPalette {
+                            none: bg,
+                            hovered: Color::srgba(0.25, 0.55, 0.30, 0.95),
+                            pressed: Color::srgba(0.15, 0.38, 0.20, 1.0),
+                        },
+                        bevy::picking::hover::Hovered::default(),
+                        bevy::ui_widgets::Button,
+                    ))
+                    .with_child((
+                        Text::new(label),
+                        TextFont::default().with_font_size(10.0),
+                        TextColor(tc),
+                    ))
+                    .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                        s.set_model_type(label);
+                    });
             }
         });
     }
 
     if let Ok(props_container) = props_q.single() {
-        commands.entity(props_container).despawn_related::<Children>();
+        commands
+            .entity(props_container)
+            .despawn_related::<Children>();
         let t = theme.text.clone();
-        let prop_theme = lava_ui_builder::TextTheme { label_size: 10.0, label_color: Color::srgb(0.75, 0.82, 0.75), ..t };
-        commands.entity(props_container).with_children(|parent| {
-            match &state.model_type {
+        let prop_theme = lava_ui_builder::TextTheme {
+            label_size: 10.0,
+            label_color: Color::srgb(0.75, 0.82, 0.75),
+            ..t
+        };
+        commands
+            .entity(props_container)
+            .with_children(|parent| match &state.model_type {
                 ModelType::Enemy(p) => {
                     parent.spawn(prop_row("HP", p.health, &prop_theme));
                     parent.spawn(prop_row("Speed", p.speed, &prop_theme));
@@ -772,12 +1180,19 @@ pub fn rebuild_type_picker(
                 ModelType::Terrain(p) => {
                     let blocks_e = if p.blocks_enemies { "yes" } else { "no" };
                     let blocks_p = if p.blocks_players { "yes" } else { "no" };
-                    let hp_str = p.health.map_or_else(|| "inf".to_string(), |h| format!("{h}"));
+                    let hp_str = p
+                        .health
+                        .map_or_else(|| "inf".to_string(), |h| format!("{h}"));
                     parent.spawn((
-                        Text::new(format!("blocks enemies: {blocks_e}  players: {blocks_p}  HP: {hp_str}")),
+                        Text::new(format!(
+                            "blocks enemies: {blocks_e}  players: {blocks_p}  HP: {hp_str}"
+                        )),
                         TextFont::default().with_font_size(10.0),
                         TextColor(Color::srgb(0.75, 0.82, 0.75)),
-                        Node { padding: UiRect::axes(Val::Px(4.0), Val::Px(1.0)), ..Default::default() },
+                        Node {
+                            padding: UiRect::axes(Val::Px(4.0), Val::Px(1.0)),
+                            ..Default::default()
+                        },
                     ));
                 }
                 ModelType::Item(p) => {
@@ -786,7 +1201,10 @@ pub fn rebuild_type_picker(
                         Text::new(format!("kind: {kind}")),
                         TextFont::default().with_font_size(10.0),
                         TextColor(Color::srgb(0.75, 0.82, 0.75)),
-                        Node { padding: UiRect::axes(Val::Px(4.0), Val::Px(1.0)), ..Default::default() },
+                        Node {
+                            padding: UiRect::axes(Val::Px(4.0), Val::Px(1.0)),
+                            ..Default::default()
+                        },
                     ));
                 }
                 ModelType::Weapon(p) => {
@@ -798,12 +1216,14 @@ pub fn rebuild_type_picker(
                         Text::new(format!("hands: {hands}")),
                         TextFont::default().with_font_size(10.0),
                         TextColor(Color::srgb(0.75, 0.82, 0.75)),
-                        Node { padding: UiRect::axes(Val::Px(4.0), Val::Px(1.0)), ..Default::default() },
+                        Node {
+                            padding: UiRect::axes(Val::Px(4.0), Val::Px(1.0)),
+                            ..Default::default()
+                        },
                     ));
                 }
                 ModelType::Player(_) => {}
-            }
-        });
+            });
     }
 }
 
@@ -812,11 +1232,15 @@ pub fn rebuild_sources_list(
     mut commands: Commands,
     container_q: Query<Entity, With<SourcesContainer>>,
 ) {
-    if !state.sources_dirty { return; }
+    if !state.sources_dirty {
+        return;
+    }
     // Don't clear sources_dirty here — load_extra_animation_sources also reads it.
     // It will be cleared there. We just rebuild the UI whenever it's set.
 
-    let Ok(container) = container_q.single() else { return };
+    let Ok(container) = container_q.single() else {
+        return;
+    };
     commands.entity(container).despawn_related::<Children>();
 
     let sources: Vec<String> = state.animation_sources.clone();
@@ -835,38 +1259,57 @@ pub fn rebuild_sources_list(
     commands.entity(container).with_children(|parent| {
         for (idx, path) in sources.iter().enumerate() {
             let stem = std::path::Path::new(path)
-                .file_stem().and_then(|s| s.to_str())
-                .unwrap_or(path).to_string();
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or(path)
+                .to_string();
             let bg = Color::srgba(0.10, 0.22, 0.35, 0.90);
-            parent.spawn((
-                Node {
-                    flex_direction: FlexDirection::Row,
-                    align_items: AlignItems::Center,
-                    padding: UiRect::axes(Val::Px(6.0), Val::Px(3.0)),
-                    border_radius: BorderRadius::all(Val::Px(4.0)),
-                    column_gap: Val::Px(4.0),
-                    ..Default::default()
-                },
-                BackgroundColor(bg),
-            ))
-            .with_children(|chip| {
-                chip.spawn((
-                    Text::new(stem),
-                    TextFont::default().with_font_size(10.0),
-                    TextColor(Color::srgb(0.75, 0.88, 1.0)),
-                ));
-                chip.spawn((
-                    Node { width: Val::Px(14.0), height: Val::Px(14.0), justify_content: JustifyContent::Center, align_items: AlignItems::Center, ..Default::default() },
-                    BackgroundColor(Color::srgba(0.4, 0.1, 0.1, 0.7)),
-                    bevy::picking::hover::Hovered::default(),
-                    bevy::ui_widgets::Button,
-                    InteractionPalette { none: Color::srgba(0.4, 0.1, 0.1, 0.7), hovered: Color::srgba(0.6, 0.15, 0.15, 0.9), pressed: Color::srgba(0.3, 0.08, 0.08, 1.0) },
+            parent
+                .spawn((
+                    Node {
+                        flex_direction: FlexDirection::Row,
+                        align_items: AlignItems::Center,
+                        padding: UiRect::axes(Val::Px(6.0), Val::Px(3.0)),
+                        border_radius: BorderRadius::all(Val::Px(4.0)),
+                        column_gap: Val::Px(4.0),
+                        ..Default::default()
+                    },
+                    BackgroundColor(bg),
                 ))
-                .with_child((Text::new("x"), TextFont::default().with_font_size(9.0), TextColor(Color::srgb(1.0, 0.7, 0.7))))
-                .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
-                    s.remove_animation_source(idx);
+                .with_children(|chip| {
+                    chip.spawn((
+                        Text::new(stem),
+                        TextFont::default().with_font_size(10.0),
+                        TextColor(Color::srgb(0.75, 0.88, 1.0)),
+                    ));
+                    chip.spawn((
+                        Node {
+                            width: Val::Px(14.0),
+                            height: Val::Px(14.0),
+                            justify_content: JustifyContent::Center,
+                            align_items: AlignItems::Center,
+                            ..Default::default()
+                        },
+                        BackgroundColor(Color::srgba(0.4, 0.1, 0.1, 0.7)),
+                        bevy::picking::hover::Hovered::default(),
+                        bevy::ui_widgets::Button,
+                        InteractionPalette {
+                            none: Color::srgba(0.4, 0.1, 0.1, 0.7),
+                            hovered: Color::srgba(0.6, 0.15, 0.15, 0.9),
+                            pressed: Color::srgba(0.3, 0.08, 0.08, 1.0),
+                        },
+                    ))
+                    .with_child((
+                        Text::new("x"),
+                        TextFont::default().with_font_size(9.0),
+                        TextColor(Color::srgb(1.0, 0.7, 0.7)),
+                    ))
+                    .observe(
+                        move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                            s.remove_animation_source(idx);
+                        },
+                    );
                 });
-            });
         }
     });
 }
@@ -874,16 +1317,24 @@ pub fn rebuild_sources_list(
 // ── Weapon attachment UI ──────────────────────────────────────────────────────
 
 #[derive(Clone, Copy)]
-enum NudgeKind { TransX, TransY, TransZ, RotX, RotY, RotZ, Scale }
+enum NudgeKind {
+    TransX,
+    TransY,
+    TransZ,
+    RotX,
+    RotY,
+    RotZ,
+    Scale,
+}
 
 fn apply_nudge(s: &mut AssetBrowserState, kind: NudgeKind, delta: f32) {
     match kind {
         NudgeKind::TransX => s.nudge_translation(0, delta),
         NudgeKind::TransY => s.nudge_translation(1, delta),
         NudgeKind::TransZ => s.nudge_translation(2, delta),
-        NudgeKind::RotX  => s.nudge_rotation(0, delta),
-        NudgeKind::RotY  => s.nudge_rotation(1, delta),
-        NudgeKind::RotZ  => s.nudge_rotation(2, delta),
+        NudgeKind::RotX => s.nudge_rotation(0, delta),
+        NudgeKind::RotY => s.nudge_rotation(1, delta),
+        NudgeKind::RotZ => s.nudge_rotation(2, delta),
         // Scale is multiplicative: the sign of `delta` picks grow (x1.1) vs shrink.
         NudgeKind::Scale => s.nudge_scale(if delta > 0.0 { 1.1 } else { 1.0 / 1.1 }),
     }
@@ -894,10 +1345,14 @@ pub fn rebuild_bone_list(
     mut commands: Commands,
     container_q: Query<Entity, With<BoneListContainer>>,
 ) {
-    if !state.bones_ui_dirty { return; }
+    if !state.bones_ui_dirty {
+        return;
+    }
     state.bones_ui_dirty = false;
 
-    let Ok(container) = container_q.single() else { return };
+    let Ok(container) = container_q.single() else {
+        return;
+    };
     commands.entity(container).despawn_related::<Children>();
 
     let bones: Vec<String> = state.bone_names.clone();
@@ -914,17 +1369,41 @@ pub fn rebuild_bone_list(
         }
         for (idx, name) in bones.iter().enumerate() {
             let is_sel = idx == selected;
-            let bg = if is_sel { Color::srgba(0.35, 0.12, 0.30, 0.95) } else { Color::srgba(0.07, 0.10, 0.14, 0.70) };
-            let tc = if is_sel { Color::srgb(1.0, 0.7, 0.95) } else { Color::srgb(0.7, 0.78, 0.85) };
-            parent.spawn((
-                Node { width: Val::Percent(100.0), padding: UiRect::axes(Val::Px(5.0), Val::Px(2.0)), border_radius: BorderRadius::all(Val::Px(3.0)), ..Default::default() },
-                BackgroundColor(bg),
-                InteractionPalette { none: bg, hovered: Color::srgba(0.25, 0.15, 0.30, 0.9), pressed: Color::srgba(0.18, 0.10, 0.22, 1.0) },
-                bevy::picking::hover::Hovered::default(),
-                bevy::ui_widgets::Button,
-            ))
-            .with_child((Text::new(name.clone()), TextFont::default().with_font_size(10.0), TextColor(tc)))
-            .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.set_selected_bone(idx); });
+            let bg = if is_sel {
+                Color::srgba(0.35, 0.12, 0.30, 0.95)
+            } else {
+                Color::srgba(0.07, 0.10, 0.14, 0.70)
+            };
+            let tc = if is_sel {
+                Color::srgb(1.0, 0.7, 0.95)
+            } else {
+                Color::srgb(0.7, 0.78, 0.85)
+            };
+            parent
+                .spawn((
+                    Node {
+                        width: Val::Percent(100.0),
+                        padding: UiRect::axes(Val::Px(5.0), Val::Px(2.0)),
+                        border_radius: BorderRadius::all(Val::Px(3.0)),
+                        ..Default::default()
+                    },
+                    BackgroundColor(bg),
+                    InteractionPalette {
+                        none: bg,
+                        hovered: Color::srgba(0.25, 0.15, 0.30, 0.9),
+                        pressed: Color::srgba(0.18, 0.10, 0.22, 1.0),
+                    },
+                    bevy::picking::hover::Hovered::default(),
+                    bevy::ui_widgets::Button,
+                ))
+                .with_child((
+                    Text::new(name.clone()),
+                    TextFont::default().with_font_size(10.0),
+                    TextColor(tc),
+                ))
+                .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                    s.set_selected_bone(idx);
+                });
         }
     });
 }
@@ -934,10 +1413,14 @@ pub fn rebuild_attachment_panel(
     mut commands: Commands,
     container_q: Query<Entity, With<AttachmentContainer>>,
 ) {
-    if !state.attachment_ui_dirty { return; }
+    if !state.attachment_ui_dirty {
+        return;
+    }
     state.attachment_ui_dirty = false;
 
-    let Ok(container) = container_q.single() else { return };
+    let Ok(container) = container_q.single() else {
+        return;
+    };
     commands.entity(container).despawn_related::<Children>();
 
     let attachments = state.attachments.clone();
@@ -955,106 +1438,267 @@ pub fn rebuild_attachment_panel(
         }
 
         // Chips to switch the active attachment.
-        parent.spawn((Node { flex_direction: FlexDirection::Row, flex_wrap: FlexWrap::Wrap, column_gap: Val::Px(3.0), row_gap: Val::Px(3.0), ..Default::default() },))
+        parent
+            .spawn((Node {
+                flex_direction: FlexDirection::Row,
+                flex_wrap: FlexWrap::Wrap,
+                column_gap: Val::Px(3.0),
+                row_gap: Val::Px(3.0),
+                ..Default::default()
+            },))
             .with_children(|chips| {
                 for (idx, a) in attachments.iter().enumerate() {
                     let is_active = Some(idx) == active_idx;
-                    let stem = std::path::Path::new(&a.model_path).file_stem().and_then(|s| s.to_str()).unwrap_or("?").to_string();
-                    let bg = if is_active { Color::srgba(0.20, 0.40, 0.25, 0.95) } else { Color::srgba(0.10, 0.16, 0.12, 0.85) };
-                    chips.spawn((
-                        Node { padding: UiRect::axes(Val::Px(6.0), Val::Px(2.0)), border_radius: BorderRadius::all(Val::Px(3.0)), ..Default::default() },
-                        BackgroundColor(bg),
-                        InteractionPalette { none: bg, hovered: Color::srgba(0.25, 0.5, 0.30, 0.95), pressed: Color::srgba(0.15, 0.3, 0.20, 1.0) },
-                        bevy::picking::hover::Hovered::default(),
-                        bevy::ui_widgets::Button,
-                    ))
-                    .with_child((Text::new(stem), TextFont::default().with_font_size(9.0), TextColor(Color::srgb(0.8, 1.0, 0.85))))
-                    .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.select_attachment(idx); });
+                    let stem = std::path::Path::new(&a.model_path)
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or("?")
+                        .to_string();
+                    let bg = if is_active {
+                        Color::srgba(0.20, 0.40, 0.25, 0.95)
+                    } else {
+                        Color::srgba(0.10, 0.16, 0.12, 0.85)
+                    };
+                    chips
+                        .spawn((
+                            Node {
+                                padding: UiRect::axes(Val::Px(6.0), Val::Px(2.0)),
+                                border_radius: BorderRadius::all(Val::Px(3.0)),
+                                ..Default::default()
+                            },
+                            BackgroundColor(bg),
+                            InteractionPalette {
+                                none: bg,
+                                hovered: Color::srgba(0.25, 0.5, 0.30, 0.95),
+                                pressed: Color::srgba(0.15, 0.3, 0.20, 1.0),
+                            },
+                            bevy::picking::hover::Hovered::default(),
+                            bevy::ui_widgets::Button,
+                        ))
+                        .with_child((
+                            Text::new(stem),
+                            TextFont::default().with_font_size(9.0),
+                            TextColor(Color::srgb(0.8, 1.0, 0.85)),
+                        ))
+                        .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                            s.select_attachment(idx);
+                        });
                 }
             });
 
         let Some(a) = active else { return };
 
         // Header: model @ bone
-        let stem = std::path::Path::new(&a.model_path).file_stem().and_then(|s| s.to_str()).unwrap_or("?").to_string();
+        let stem = std::path::Path::new(&a.model_path)
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("?")
+            .to_string();
         parent.spawn((
             Text::new(format!("{stem} @ {}", a.bone)),
             TextFont::default().with_font_size(10.0),
             TextColor(Color::srgb(0.85, 0.8, 1.0)),
-            Node { padding: UiRect::axes(Val::Px(2.0), Val::Px(1.0)), ..Default::default() },
+            Node {
+                padding: UiRect::axes(Val::Px(2.0), Val::Px(1.0)),
+                ..Default::default()
+            },
         ));
 
         // Offset nudge rows.
         let rows: [(&str, String, NudgeKind, f32); 7] = [
-            ("Pos X", format!("{:+.3}", a.translation[0]), NudgeKind::TransX, 0.01),
-            ("Pos Y", format!("{:+.3}", a.translation[1]), NudgeKind::TransY, 0.01),
-            ("Pos Z", format!("{:+.3}", a.translation[2]), NudgeKind::TransZ, 0.01),
-            ("Rot X", format!("{:.0}", a.rotation_euler_deg[0]), NudgeKind::RotX, 5.0),
-            ("Rot Y", format!("{:.0}", a.rotation_euler_deg[1]), NudgeKind::RotY, 5.0),
-            ("Rot Z", format!("{:.0}", a.rotation_euler_deg[2]), NudgeKind::RotZ, 5.0),
+            (
+                "Pos X",
+                format!("{:+.3}", a.translation[0]),
+                NudgeKind::TransX,
+                0.01,
+            ),
+            (
+                "Pos Y",
+                format!("{:+.3}", a.translation[1]),
+                NudgeKind::TransY,
+                0.01,
+            ),
+            (
+                "Pos Z",
+                format!("{:+.3}", a.translation[2]),
+                NudgeKind::TransZ,
+                0.01,
+            ),
+            (
+                "Rot X",
+                format!("{:.0}", a.rotation_euler_deg[0]),
+                NudgeKind::RotX,
+                5.0,
+            ),
+            (
+                "Rot Y",
+                format!("{:.0}", a.rotation_euler_deg[1]),
+                NudgeKind::RotY,
+                5.0,
+            ),
+            (
+                "Rot Z",
+                format!("{:.0}", a.rotation_euler_deg[2]),
+                NudgeKind::RotZ,
+                5.0,
+            ),
             ("Scale", format!("{:.2}", a.scale), NudgeKind::Scale, 0.05),
         ];
         for (label, value, kind, step) in rows {
-            parent.spawn((
-                Node { width: Val::Percent(100.0), flex_direction: FlexDirection::Row, align_items: AlignItems::Center, column_gap: Val::Px(4.0), padding: UiRect::axes(Val::Px(2.0), Val::Px(1.0)), ..Default::default() },
-                BackgroundColor(Color::srgba(0.07, 0.10, 0.14, 0.6)),
-            ))
-            .with_children(|row| {
-                row.spawn((Text::new(label), TextFont::default().with_font_size(10.0), TextColor(Color::srgb(0.6, 0.75, 0.6)),
-                    Node { width: Val::Px(38.0), ..Default::default() }));
-                row.spawn((
-                    Node { width: Val::Px(16.0), justify_content: JustifyContent::Center, ..Default::default() },
-                    BackgroundColor(Color::srgba(0.15, 0.15, 0.15, 0.6)),
-                    bevy::picking::hover::Hovered::default(),
-                    bevy::ui_widgets::Button,
+            parent
+                .spawn((
+                    Node {
+                        width: Val::Percent(100.0),
+                        flex_direction: FlexDirection::Row,
+                        align_items: AlignItems::Center,
+                        column_gap: Val::Px(4.0),
+                        padding: UiRect::axes(Val::Px(2.0), Val::Px(1.0)),
+                        ..Default::default()
+                    },
+                    BackgroundColor(Color::srgba(0.07, 0.10, 0.14, 0.6)),
                 ))
-                .with_child((Text::new("-"), TextFont::default().with_font_size(11.0), TextColor(Color::srgb(0.8, 0.8, 0.8))))
-                .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { apply_nudge(&mut s, kind, -step); });
+                .with_children(|row| {
+                    row.spawn((
+                        Text::new(label),
+                        TextFont::default().with_font_size(10.0),
+                        TextColor(Color::srgb(0.6, 0.75, 0.6)),
+                        Node {
+                            width: Val::Px(38.0),
+                            ..Default::default()
+                        },
+                    ));
+                    row.spawn((
+                        Node {
+                            width: Val::Px(16.0),
+                            justify_content: JustifyContent::Center,
+                            ..Default::default()
+                        },
+                        BackgroundColor(Color::srgba(0.15, 0.15, 0.15, 0.6)),
+                        bevy::picking::hover::Hovered::default(),
+                        bevy::ui_widgets::Button,
+                    ))
+                    .with_child((
+                        Text::new("-"),
+                        TextFont::default().with_font_size(11.0),
+                        TextColor(Color::srgb(0.8, 0.8, 0.8)),
+                    ))
+                    .observe(
+                        move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                            apply_nudge(&mut s, kind, -step);
+                        },
+                    );
 
-                row.spawn((Text::new(value), TextFont::default().with_font_size(10.0), TextColor(Color::srgb(0.9, 0.85, 0.65)),
-                    Node { flex_grow: 1.0, justify_content: JustifyContent::Center, ..Default::default() }));
+                    row.spawn((
+                        Text::new(value),
+                        TextFont::default().with_font_size(10.0),
+                        TextColor(Color::srgb(0.9, 0.85, 0.65)),
+                        Node {
+                            flex_grow: 1.0,
+                            justify_content: JustifyContent::Center,
+                            ..Default::default()
+                        },
+                    ));
 
-                row.spawn((
-                    Node { width: Val::Px(16.0), justify_content: JustifyContent::Center, ..Default::default() },
-                    BackgroundColor(Color::srgba(0.15, 0.15, 0.15, 0.6)),
-                    bevy::picking::hover::Hovered::default(),
-                    bevy::ui_widgets::Button,
-                ))
-                .with_child((Text::new("+"), TextFont::default().with_font_size(11.0), TextColor(Color::srgb(0.8, 0.8, 0.8))))
-                .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { apply_nudge(&mut s, kind, step); });
-            });
+                    row.spawn((
+                        Node {
+                            width: Val::Px(16.0),
+                            justify_content: JustifyContent::Center,
+                            ..Default::default()
+                        },
+                        BackgroundColor(Color::srgba(0.15, 0.15, 0.15, 0.6)),
+                        bevy::picking::hover::Hovered::default(),
+                        bevy::ui_widgets::Button,
+                    ))
+                    .with_child((
+                        Text::new("+"),
+                        TextFont::default().with_font_size(11.0),
+                        TextColor(Color::srgb(0.8, 0.8, 0.8)),
+                    ))
+                    .observe(
+                        move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                            apply_nudge(&mut s, kind, step);
+                        },
+                    );
+                });
         }
 
         // Re-socket + remove buttons.
-        parent.spawn((Node { flex_direction: FlexDirection::Row, column_gap: Val::Px(4.0), ..Default::default() },))
+        parent
+            .spawn((Node {
+                flex_direction: FlexDirection::Row,
+                column_gap: Val::Px(4.0),
+                ..Default::default()
+            },))
             .with_children(|row| {
                 let rebg = Color::srgba(0.12, 0.22, 0.35, 0.9);
                 row.spawn((
-                    Node { flex_grow: 1.0, padding: UiRect::axes(Val::Px(4.0), Val::Px(3.0)), justify_content: JustifyContent::Center, border_radius: BorderRadius::all(Val::Px(3.0)), ..Default::default() },
+                    Node {
+                        flex_grow: 1.0,
+                        padding: UiRect::axes(Val::Px(4.0), Val::Px(3.0)),
+                        justify_content: JustifyContent::Center,
+                        border_radius: BorderRadius::all(Val::Px(3.0)),
+                        ..Default::default()
+                    },
                     BackgroundColor(rebg),
-                    InteractionPalette { none: rebg, hovered: Color::srgba(0.18, 0.32, 0.5, 0.95), pressed: Color::srgba(0.10, 0.18, 0.30, 1.0) },
+                    InteractionPalette {
+                        none: rebg,
+                        hovered: Color::srgba(0.18, 0.32, 0.5, 0.95),
+                        pressed: Color::srgba(0.10, 0.18, 0.30, 1.0),
+                    },
                     bevy::picking::hover::Hovered::default(),
                     bevy::ui_widgets::Button,
                 ))
-                .with_child((Text::new("Set to bone"), TextFont::default().with_font_size(10.0), TextColor(Color::srgb(0.8, 0.9, 1.0))))
-                .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.set_active_attachment_bone(); });
+                .with_child((
+                    Text::new("Set to bone"),
+                    TextFont::default().with_font_size(10.0),
+                    TextColor(Color::srgb(0.8, 0.9, 1.0)),
+                ))
+                .observe(
+                    move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                        s.set_active_attachment_bone();
+                    },
+                );
 
                 let rmbg = Color::srgba(0.35, 0.1, 0.1, 0.85);
                 row.spawn((
-                    Node { padding: UiRect::axes(Val::Px(8.0), Val::Px(3.0)), justify_content: JustifyContent::Center, border_radius: BorderRadius::all(Val::Px(3.0)), ..Default::default() },
+                    Node {
+                        padding: UiRect::axes(Val::Px(8.0), Val::Px(3.0)),
+                        justify_content: JustifyContent::Center,
+                        border_radius: BorderRadius::all(Val::Px(3.0)),
+                        ..Default::default()
+                    },
                     BackgroundColor(rmbg),
-                    InteractionPalette { none: rmbg, hovered: Color::srgba(0.55, 0.15, 0.15, 0.95), pressed: Color::srgba(0.28, 0.08, 0.08, 1.0) },
+                    InteractionPalette {
+                        none: rmbg,
+                        hovered: Color::srgba(0.55, 0.15, 0.15, 0.95),
+                        pressed: Color::srgba(0.28, 0.08, 0.08, 1.0),
+                    },
                     bevy::picking::hover::Hovered::default(),
                     bevy::ui_widgets::Button,
                 ))
-                .with_child((Text::new("Remove"), TextFont::default().with_font_size(10.0), TextColor(Color::srgb(1.0, 0.8, 0.8))))
-                .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.remove_active_attachment(); });
+                .with_child((
+                    Text::new("Remove"),
+                    TextFont::default().with_font_size(10.0),
+                    TextColor(Color::srgb(1.0, 0.8, 0.8)),
+                ))
+                .observe(
+                    move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                        s.remove_active_attachment();
+                    },
+                );
             });
     });
 }
 
 #[derive(Clone, Copy)]
-enum HpNudge { TX, TY, TZ, RX, RY, RZ }
+enum HpNudge {
+    TX,
+    TY,
+    TZ,
+    RX,
+    RY,
+    RZ,
+}
 
 fn apply_hp_nudge(s: &mut AssetBrowserState, kind: HpNudge, delta: f32) {
     match kind {
@@ -1072,10 +1716,14 @@ pub fn rebuild_hardpoint_panel(
     mut commands: Commands,
     container_q: Query<Entity, With<HardpointContainer>>,
 ) {
-    if !state.hardpoints_ui_dirty { return; }
+    if !state.hardpoints_ui_dirty {
+        return;
+    }
     state.hardpoints_ui_dirty = false;
 
-    let Ok(container) = container_q.single() else { return };
+    let Ok(container) = container_q.single() else {
+        return;
+    };
     commands.entity(container).despawn_related::<Children>();
 
     let is_char = state.is_character_model();
@@ -1087,24 +1735,54 @@ pub fn rebuild_hardpoint_panel(
 
     commands.entity(container).with_children(|parent| {
         // Role chips (click to select/create).
-        parent.spawn((Node { flex_direction: FlexDirection::Row, flex_wrap: FlexWrap::Wrap, column_gap: Val::Px(3.0), row_gap: Val::Px(3.0), ..Default::default() },))
+        parent
+            .spawn((Node {
+                flex_direction: FlexDirection::Row,
+                flex_wrap: FlexWrap::Wrap,
+                column_gap: Val::Px(3.0),
+                row_gap: Val::Px(3.0),
+                ..Default::default()
+            },))
             .with_children(|chips| {
                 for &role in HARDPOINT_ROLES {
                     let has = existing.contains(role);
                     let is_active = active.as_deref() == Some(role);
-                    let bg = if is_active { Color::srgba(0.20, 0.45, 0.25, 0.95) }
-                             else if has { Color::srgba(0.12, 0.26, 0.16, 0.9) }
-                             else { Color::srgba(0.10, 0.13, 0.11, 0.8) };
-                    let tc = if has { Color::srgb(0.8, 1.0, 0.85) } else { Color::srgb(0.55, 0.65, 0.55) };
-                    chips.spawn((
-                        Node { padding: UiRect::axes(Val::Px(7.0), Val::Px(2.0)), border_radius: BorderRadius::all(Val::Px(3.0)), ..Default::default() },
-                        BackgroundColor(bg),
-                        InteractionPalette { none: bg, hovered: Color::srgba(0.25, 0.5, 0.3, 0.95), pressed: Color::srgba(0.15, 0.32, 0.2, 1.0) },
-                        bevy::picking::hover::Hovered::default(),
-                        bevy::ui_widgets::Button,
-                    ))
-                    .with_child((Text::new(role), TextFont::default().with_font_size(10.0), TextColor(tc)))
-                    .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.select_hardpoint_role(role); });
+                    let bg = if is_active {
+                        Color::srgba(0.20, 0.45, 0.25, 0.95)
+                    } else if has {
+                        Color::srgba(0.12, 0.26, 0.16, 0.9)
+                    } else {
+                        Color::srgba(0.10, 0.13, 0.11, 0.8)
+                    };
+                    let tc = if has {
+                        Color::srgb(0.8, 1.0, 0.85)
+                    } else {
+                        Color::srgb(0.55, 0.65, 0.55)
+                    };
+                    chips
+                        .spawn((
+                            Node {
+                                padding: UiRect::axes(Val::Px(7.0), Val::Px(2.0)),
+                                border_radius: BorderRadius::all(Val::Px(3.0)),
+                                ..Default::default()
+                            },
+                            BackgroundColor(bg),
+                            InteractionPalette {
+                                none: bg,
+                                hovered: Color::srgba(0.25, 0.5, 0.3, 0.95),
+                                pressed: Color::srgba(0.15, 0.32, 0.2, 1.0),
+                            },
+                            bevy::picking::hover::Hovered::default(),
+                            bevy::ui_widgets::Button,
+                        ))
+                        .with_child((
+                            Text::new(role),
+                            TextFont::default().with_font_size(10.0),
+                            TextColor(tc),
+                        ))
+                        .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                            s.select_hardpoint_role(role);
+                        });
                 }
             });
 
@@ -1115,87 +1793,208 @@ pub fn rebuild_hardpoint_panel(
                 Text::new(format!("{role} @ {anchor_txt}")),
                 TextFont::default().with_font_size(10.0),
                 TextColor(Color::srgb(0.85, 0.8, 1.0)),
-                Node { padding: UiRect::axes(Val::Px(2.0), Val::Px(1.0)), ..Default::default() },
+                Node {
+                    padding: UiRect::axes(Val::Px(2.0), Val::Px(1.0)),
+                    ..Default::default()
+                },
             ));
 
             if is_char {
-                parent.spawn((
-                    Node { padding: UiRect::axes(Val::Px(6.0), Val::Px(3.0)), justify_content: JustifyContent::Center, border_radius: BorderRadius::all(Val::Px(3.0)), ..Default::default() },
-                    BackgroundColor(Color::srgba(0.12, 0.22, 0.35, 0.9)),
-                    InteractionPalette { none: Color::srgba(0.12, 0.22, 0.35, 0.9), hovered: Color::srgba(0.18, 0.32, 0.5, 0.95), pressed: Color::srgba(0.1, 0.18, 0.3, 1.0) },
-                    bevy::picking::hover::Hovered::default(),
-                    bevy::ui_widgets::Button,
-                ))
-                .with_child((Text::new("Anchor to selected bone"), TextFont::default().with_font_size(10.0), TextColor(Color::srgb(0.8, 0.9, 1.0))))
-                .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.set_active_hardpoint_bone(); });
+                parent
+                    .spawn((
+                        Node {
+                            padding: UiRect::axes(Val::Px(6.0), Val::Px(3.0)),
+                            justify_content: JustifyContent::Center,
+                            border_radius: BorderRadius::all(Val::Px(3.0)),
+                            ..Default::default()
+                        },
+                        BackgroundColor(Color::srgba(0.12, 0.22, 0.35, 0.9)),
+                        InteractionPalette {
+                            none: Color::srgba(0.12, 0.22, 0.35, 0.9),
+                            hovered: Color::srgba(0.18, 0.32, 0.5, 0.95),
+                            pressed: Color::srgba(0.1, 0.18, 0.3, 1.0),
+                        },
+                        bevy::picking::hover::Hovered::default(),
+                        bevy::ui_widgets::Button,
+                    ))
+                    .with_child((
+                        Text::new("Anchor to selected bone"),
+                        TextFont::default().with_font_size(10.0),
+                        TextColor(Color::srgb(0.8, 0.9, 1.0)),
+                    ))
+                    .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                        s.set_active_hardpoint_bone();
+                    });
             }
 
             // (label, value, kind, fine step, coarse step). Translation is in bone-local
             // space; on a rig that bakes a tiny bone scale (amy ~0.0136) even 0.5 local
             // is a small world move, so the coarse step is generous.
             let rows: [(&str, String, HpNudge, f32, f32); 6] = [
-                ("Pos X", format!("{:+.3}", hp.translation[0]), HpNudge::TX, 0.05, 0.5),
-                ("Pos Y", format!("{:+.3}", hp.translation[1]), HpNudge::TY, 0.05, 0.5),
-                ("Pos Z", format!("{:+.3}", hp.translation[2]), HpNudge::TZ, 0.05, 0.5),
-                ("Rot X", format!("{:.0}", hp.rotation_euler_deg[0]), HpNudge::RX, 5.0, 45.0),
-                ("Rot Y", format!("{:.0}", hp.rotation_euler_deg[1]), HpNudge::RY, 5.0, 45.0),
-                ("Rot Z", format!("{:.0}", hp.rotation_euler_deg[2]), HpNudge::RZ, 5.0, 45.0),
+                (
+                    "Pos X",
+                    format!("{:+.3}", hp.translation[0]),
+                    HpNudge::TX,
+                    0.05,
+                    0.5,
+                ),
+                (
+                    "Pos Y",
+                    format!("{:+.3}", hp.translation[1]),
+                    HpNudge::TY,
+                    0.05,
+                    0.5,
+                ),
+                (
+                    "Pos Z",
+                    format!("{:+.3}", hp.translation[2]),
+                    HpNudge::TZ,
+                    0.05,
+                    0.5,
+                ),
+                (
+                    "Rot X",
+                    format!("{:.0}", hp.rotation_euler_deg[0]),
+                    HpNudge::RX,
+                    5.0,
+                    45.0,
+                ),
+                (
+                    "Rot Y",
+                    format!("{:.0}", hp.rotation_euler_deg[1]),
+                    HpNudge::RY,
+                    5.0,
+                    45.0,
+                ),
+                (
+                    "Rot Z",
+                    format!("{:.0}", hp.rotation_euler_deg[2]),
+                    HpNudge::RZ,
+                    5.0,
+                    45.0,
+                ),
             ];
             for (label, value, kind, fine, coarse) in rows {
-                parent.spawn((
-                    Node { width: Val::Percent(100.0), flex_direction: FlexDirection::Row, align_items: AlignItems::Center, column_gap: Val::Px(3.0), padding: UiRect::axes(Val::Px(2.0), Val::Px(1.0)), ..Default::default() },
-                    BackgroundColor(Color::srgba(0.07, 0.10, 0.14, 0.6)),
-                ))
-                .with_children(|row| {
-                    row.spawn((Text::new(label), TextFont::default().with_font_size(10.0), TextColor(Color::srgb(0.6, 0.75, 0.6)),
-                        Node { width: Val::Px(38.0), ..Default::default() }));
-
-                    // Coarse then fine on the left (--, -), fine then coarse on the right (+, ++).
-                    let nudge_btn = |row: &mut ChildSpawnerCommands, glyph: &str, delta: f32, coarse: bool| {
-                        let (w, bg) = if coarse {
-                            (22.0, Color::srgba(0.20, 0.15, 0.10, 0.7))
-                        } else {
-                            (16.0, Color::srgba(0.15, 0.15, 0.15, 0.6))
-                        };
+                parent
+                    .spawn((
+                        Node {
+                            width: Val::Percent(100.0),
+                            flex_direction: FlexDirection::Row,
+                            align_items: AlignItems::Center,
+                            column_gap: Val::Px(3.0),
+                            padding: UiRect::axes(Val::Px(2.0), Val::Px(1.0)),
+                            ..Default::default()
+                        },
+                        BackgroundColor(Color::srgba(0.07, 0.10, 0.14, 0.6)),
+                    ))
+                    .with_children(|row| {
                         row.spawn((
-                            Node { width: Val::Px(w), justify_content: JustifyContent::Center, ..Default::default() },
-                            BackgroundColor(bg),
-                            bevy::picking::hover::Hovered::default(),
-                            bevy::ui_widgets::Button,
-                        ))
-                        .with_child((Text::new(glyph), TextFont::default().with_font_size(11.0), TextColor(Color::srgb(0.8, 0.8, 0.8))))
-                        .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { apply_hp_nudge(&mut s, kind, delta); });
-                    };
+                            Text::new(label),
+                            TextFont::default().with_font_size(10.0),
+                            TextColor(Color::srgb(0.6, 0.75, 0.6)),
+                            Node {
+                                width: Val::Px(38.0),
+                                ..Default::default()
+                            },
+                        ));
 
-                    nudge_btn(row, "--", -coarse, true);
-                    nudge_btn(row, "-", -fine, false);
+                        // Coarse then fine on the left (--, -), fine then coarse on the right (+, ++).
+                        let nudge_btn = |row: &mut ChildSpawnerCommands,
+                                         glyph: &str,
+                                         delta: f32,
+                                         coarse: bool| {
+                            let (w, bg) = if coarse {
+                                (22.0, Color::srgba(0.20, 0.15, 0.10, 0.7))
+                            } else {
+                                (16.0, Color::srgba(0.15, 0.15, 0.15, 0.6))
+                            };
+                            row.spawn((
+                                Node {
+                                    width: Val::Px(w),
+                                    justify_content: JustifyContent::Center,
+                                    ..Default::default()
+                                },
+                                BackgroundColor(bg),
+                                bevy::picking::hover::Hovered::default(),
+                                bevy::ui_widgets::Button,
+                            ))
+                            .with_child((
+                                Text::new(glyph),
+                                TextFont::default().with_font_size(11.0),
+                                TextColor(Color::srgb(0.8, 0.8, 0.8)),
+                            ))
+                            .observe(
+                                move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                                    apply_hp_nudge(&mut s, kind, delta);
+                                },
+                            );
+                        };
 
-                    row.spawn((Text::new(value), TextFont::default().with_font_size(10.0), TextColor(Color::srgb(0.9, 0.85, 0.65)),
-                        Node { flex_grow: 1.0, justify_content: JustifyContent::Center, ..Default::default() }));
+                        nudge_btn(row, "--", -coarse, true);
+                        nudge_btn(row, "-", -fine, false);
 
-                    nudge_btn(row, "+", fine, false);
-                    nudge_btn(row, "++", coarse, true);
-                });
+                        row.spawn((
+                            Text::new(value),
+                            TextFont::default().with_font_size(10.0),
+                            TextColor(Color::srgb(0.9, 0.85, 0.65)),
+                            Node {
+                                flex_grow: 1.0,
+                                justify_content: JustifyContent::Center,
+                                ..Default::default()
+                            },
+                        ));
+
+                        nudge_btn(row, "+", fine, false);
+                        nudge_btn(row, "++", coarse, true);
+                    });
             }
 
             let rmbg = Color::srgba(0.35, 0.1, 0.1, 0.85);
-            parent.spawn((
-                Node { padding: UiRect::axes(Val::Px(6.0), Val::Px(3.0)), justify_content: JustifyContent::Center, border_radius: BorderRadius::all(Val::Px(3.0)), ..Default::default() },
-                BackgroundColor(rmbg),
-                InteractionPalette { none: rmbg, hovered: Color::srgba(0.55, 0.15, 0.15, 0.95), pressed: Color::srgba(0.28, 0.08, 0.08, 1.0) },
-                bevy::picking::hover::Hovered::default(),
-                bevy::ui_widgets::Button,
-            ))
-            .with_child((Text::new(format!("Delete {role}")), TextFont::default().with_font_size(10.0), TextColor(Color::srgb(1.0, 0.8, 0.8))))
-            .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.delete_active_hardpoint(); });
+            parent
+                .spawn((
+                    Node {
+                        padding: UiRect::axes(Val::Px(6.0), Val::Px(3.0)),
+                        justify_content: JustifyContent::Center,
+                        border_radius: BorderRadius::all(Val::Px(3.0)),
+                        ..Default::default()
+                    },
+                    BackgroundColor(rmbg),
+                    InteractionPalette {
+                        none: rmbg,
+                        hovered: Color::srgba(0.55, 0.15, 0.15, 0.95),
+                        pressed: Color::srgba(0.28, 0.08, 0.08, 1.0),
+                    },
+                    bevy::picking::hover::Hovered::default(),
+                    bevy::ui_widgets::Button,
+                ))
+                .with_child((
+                    Text::new(format!("Delete {role}")),
+                    TextFont::default().with_font_size(10.0),
+                    TextColor(Color::srgb(1.0, 0.8, 0.8)),
+                ))
+                .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                    s.delete_active_hardpoint();
+                });
         }
 
         // Reference-weapon preview (characters only): snap a saved weapon onto `grip`.
         if is_char {
-            let rw = ref_weapon.as_deref().map_or_else(|| "none".to_string(), |p| std::path::Path::new(p).file_stem().and_then(|s| s.to_str()).unwrap_or(p).to_string());
+            let rw = ref_weapon.as_deref().map_or_else(
+                || "none".to_string(),
+                |p| {
+                    std::path::Path::new(p)
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or(p)
+                        .to_string()
+                },
+            );
             // Flag the common gotcha: chosen weapon has no `grip` hardpoint saved.
             let (suffix, col) = if ref_weapon.is_some() && !ref_has_grip {
-                ("  (no grip in def!)".to_string(), Color::srgb(1.0, 0.6, 0.4))
+                (
+                    "  (no grip in def!)".to_string(),
+                    Color::srgb(1.0, 0.6, 0.4),
+                )
             } else {
                 (String::new(), Color::srgb(0.7, 0.8, 0.9))
             };
@@ -1203,32 +2002,76 @@ pub fn rebuild_hardpoint_panel(
                 Text::new(format!("ref weapon: {rw}{suffix}")),
                 TextFont::default().with_font_size(10.0),
                 TextColor(col),
-                Node { padding: UiRect::axes(Val::Px(2.0), Val::Px(1.0)), ..Default::default() },
+                Node {
+                    padding: UiRect::axes(Val::Px(2.0), Val::Px(1.0)),
+                    ..Default::default()
+                },
             ));
-            parent.spawn((Node { flex_direction: FlexDirection::Row, column_gap: Val::Px(4.0), ..Default::default() },))
+            parent
+                .spawn((Node {
+                    flex_direction: FlexDirection::Row,
+                    column_gap: Val::Px(4.0),
+                    ..Default::default()
+                },))
                 .with_children(|row| {
                     let usebg = Color::srgba(0.12, 0.22, 0.35, 0.9);
                     row.spawn((
-                        Node { flex_grow: 1.0, padding: UiRect::axes(Val::Px(4.0), Val::Px(3.0)), justify_content: JustifyContent::Center, border_radius: BorderRadius::all(Val::Px(3.0)), ..Default::default() },
+                        Node {
+                            flex_grow: 1.0,
+                            padding: UiRect::axes(Val::Px(4.0), Val::Px(3.0)),
+                            justify_content: JustifyContent::Center,
+                            border_radius: BorderRadius::all(Val::Px(3.0)),
+                            ..Default::default()
+                        },
                         BackgroundColor(usebg),
-                        InteractionPalette { none: usebg, hovered: Color::srgba(0.18, 0.32, 0.5, 0.95), pressed: Color::srgba(0.1, 0.18, 0.3, 1.0) },
+                        InteractionPalette {
+                            none: usebg,
+                            hovered: Color::srgba(0.18, 0.32, 0.5, 0.95),
+                            pressed: Color::srgba(0.1, 0.18, 0.3, 1.0),
+                        },
                         bevy::picking::hover::Hovered::default(),
                         bevy::ui_widgets::Button,
                     ))
-                    .with_child((Text::new("Preview selected weapon"), TextFont::default().with_font_size(10.0), TextColor(Color::srgb(0.8, 0.9, 1.0))))
-                    .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
-                        if let Some(p) = s.selected_path().map(std::string::ToString::to_string) { s.set_ref_weapon(p); }
-                    });
+                    .with_child((
+                        Text::new("Preview selected weapon"),
+                        TextFont::default().with_font_size(10.0),
+                        TextColor(Color::srgb(0.8, 0.9, 1.0)),
+                    ))
+                    .observe(
+                        move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                            if let Some(p) = s.selected_path().map(std::string::ToString::to_string)
+                            {
+                                s.set_ref_weapon(p);
+                            }
+                        },
+                    );
                     let clrbg = Color::srgba(0.2, 0.14, 0.1, 0.85);
                     row.spawn((
-                        Node { padding: UiRect::axes(Val::Px(8.0), Val::Px(3.0)), justify_content: JustifyContent::Center, border_radius: BorderRadius::all(Val::Px(3.0)), ..Default::default() },
+                        Node {
+                            padding: UiRect::axes(Val::Px(8.0), Val::Px(3.0)),
+                            justify_content: JustifyContent::Center,
+                            border_radius: BorderRadius::all(Val::Px(3.0)),
+                            ..Default::default()
+                        },
                         BackgroundColor(clrbg),
-                        InteractionPalette { none: clrbg, hovered: Color::srgba(0.3, 0.2, 0.14, 0.95), pressed: Color::srgba(0.16, 0.1, 0.08, 1.0) },
+                        InteractionPalette {
+                            none: clrbg,
+                            hovered: Color::srgba(0.3, 0.2, 0.14, 0.95),
+                            pressed: Color::srgba(0.16, 0.1, 0.08, 1.0),
+                        },
                         bevy::picking::hover::Hovered::default(),
                         bevy::ui_widgets::Button,
                     ))
-                    .with_child((Text::new("clear"), TextFont::default().with_font_size(10.0), TextColor(Color::srgb(0.9, 0.8, 0.7))))
-                    .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| { s.clear_ref_weapon(); });
+                    .with_child((
+                        Text::new("clear"),
+                        TextFont::default().with_font_size(10.0),
+                        TextColor(Color::srgb(0.9, 0.8, 0.7)),
+                    ))
+                    .observe(
+                        move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
+                            s.clear_ref_weapon();
+                        },
+                    );
                 });
         }
     });
@@ -1239,6 +2082,9 @@ fn prop_row(label: &str, value: f32, theme: &lava_ui_builder::TextTheme) -> impl
         Text::new(format!("{label}: {value}")),
         TextFont::default().with_font_size(10.0),
         TextColor(theme.label_color),
-        Node { padding: UiRect::axes(Val::Px(4.0), Val::Px(1.0)), ..Default::default() },
+        Node {
+            padding: UiRect::axes(Val::Px(4.0), Val::Px(1.0)),
+            ..Default::default()
+        },
     )
 }

@@ -1,19 +1,21 @@
-use bevy::app::{App, Plugin, Update};
-use bevy::feathers::{dark_theme::create_dark_theme, theme::UiTheme, FeathersPlugins};
-use bevy::prelude::{in_state, Camera2d, Commands, IntoScheduleConfigs, IsDefaultUiCamera, OnEnter, OnExit};
-use lava_ui_builder::LavaUiPlugin;
 use crate::game_state::GameState;
 use crate::ui::gait_panel::{toggle_gait_panel, update_gait_panel};
-use crate::ui::player_hud::{spawn_player_bar, track_pickup_toasts, update_player_bar, PickupToasts};
-use crate::ui::spawn_ui::{
-    add_health_bar, cleanup_state, game_theme, goto_state_system, GotoState,
-    spawn_menu, spawn_showcase_ui, spawn_ui, sync_health_bars,
-    update_alien_meter, update_wave_hud, update_coin_hud, update_build_cost_hud,
-    toggle_settings_panel, toggle_model_panel,
-    update_camera_panel, update_model_labels, update_anim_mapping_labels,
-    update_hud,
-    AddHealthBar, StateMarker,
+use crate::ui::player_hud::{
+    PickupToasts, spawn_player_bar, track_pickup_toasts, update_player_bar,
 };
+use crate::ui::spawn_ui::{
+    AddHealthBar, GotoState, StateMarker, add_health_bar, cleanup_state, game_theme,
+    goto_state_system, spawn_menu, spawn_showcase_ui, spawn_ui, sync_health_bars,
+    toggle_model_panel, toggle_settings_panel, update_alien_meter, update_anim_mapping_labels,
+    update_build_cost_hud, update_camera_panel, update_coin_hud, update_hud, update_model_labels,
+    update_wave_hud,
+};
+use bevy::app::{App, Plugin, Update};
+use bevy::feathers::{FeathersPlugins, dark_theme::create_dark_theme, theme::UiTheme};
+use bevy::prelude::{
+    Camera2d, Commands, IntoScheduleConfigs, IsDefaultUiCamera, OnEnter, OnExit, in_state,
+};
+use lava_ui_builder::LavaUiPlugin;
 
 pub struct UiPlugin;
 
@@ -26,9 +28,15 @@ impl Plugin for UiPlugin {
             .add_message::<GotoState>()
             .add_message::<AddHealthBar>()
             .add_systems(OnEnter(GameState::InGame), spawn_ui_camera)
-            .add_systems(OnEnter(GameState::InGame), (spawn_ui, spawn_player_bar).run_if(crate::playground::state::in_normal_game))
+            .add_systems(
+                OnEnter(GameState::InGame),
+                (spawn_ui, spawn_player_bar).run_if(crate::playground::state::in_normal_game),
+            )
             .add_systems(OnEnter(GameState::Menu), (spawn_ui_camera, spawn_menu))
-            .add_systems(OnEnter(GameState::ModelShowcase), (spawn_ui_camera, spawn_showcase_ui))
+            .add_systems(
+                OnEnter(GameState::ModelShowcase),
+                (spawn_ui_camera, spawn_showcase_ui),
+            )
             .add_systems(OnExit(GameState::Menu), cleanup_state)
             .add_systems(OnExit(GameState::InGame), cleanup_state)
             .add_systems(OnExit(GameState::ModelShowcase), cleanup_state)
@@ -52,7 +60,8 @@ impl Plugin for UiPlugin {
                     update_camera_panel,
                     update_model_labels,
                     update_anim_mapping_labels,
-                ).run_if(in_state(GameState::InGame)),
+                )
+                    .run_if(in_state(GameState::InGame)),
             );
     }
 }
@@ -61,7 +70,10 @@ pub fn spawn_ui_camera(mut commands: Commands) {
     commands.spawn((
         Camera2d,
         IsDefaultUiCamera,
-        bevy::prelude::Camera { order: 1, ..Default::default() },
+        bevy::prelude::Camera {
+            order: 1,
+            ..Default::default()
+        },
         StateMarker,
     ));
 }

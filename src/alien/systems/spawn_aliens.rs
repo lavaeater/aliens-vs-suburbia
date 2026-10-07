@@ -1,29 +1,29 @@
-
 use crate::alien::components::general::{Alien, AlienCounter};
-use crate::general::damage::Faction;
-use crate::loot::LootDrop;
 use crate::assets::assets_plugin::GameAssets;
 use crate::game_state::score_keeper::GameTrackingEvent;
 use crate::general::components::map_components::{AlienSpawnPoint, CoolDown};
+use crate::general::damage::Faction;
 use crate::general::events::map_events::SpawnAlien;
+use crate::loot::LootDrop;
 use crate::ui::spawn_ui::AddHealthBar;
 
-use bevy::math::{Quat, Vec3};
-use bevy::prelude::{
-    AssetServer, Commands, Entity, MessageReader, MessageWriter, Name, Query, Res, ResMut, Time, Transform,
-};
-use avian3d::prelude::Collider;
 use crate::alien::enemy_defs::{EnemyDef, EnemyDefCache, LoadedEnemyDef, RangedAttack};
+use crate::alien::wave_manager::WaveManager;
 use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
 use crate::control::components::CharacterControl;
 use crate::general::components::{Health, TouchDamage};
 use crate::general::damage::DamageResistances;
 use crate::general::explosion::ExplodesOnDeath;
 use crate::player::systems::spawn_players::FixSceneTransform;
+use avian3d::prelude::Collider;
+use avian3d::prelude::Position;
+use bevy::math::{Quat, Vec3};
+use bevy::prelude::{
+    AssetServer, Commands, Entity, MessageReader, MessageWriter, Name, Query, Res, ResMut, Time,
+    Transform,
+};
 use bevy::world_serialization::WorldAssetRoot;
 use std::f32::consts::PI;
-use avian3d::prelude::Position;
-use crate::alien::wave_manager::WaveManager;
 
 pub fn alien_spawner_system(
     time_res: Res<Time>,
@@ -58,13 +58,23 @@ pub fn alien_spawner_system(
 /// Build an alien from an Enemy def. The `Alien` required-components bundle supplies the
 /// AI, physics and collision layers; the def overrides model, scale, health, speed,
 /// touch damage, loot, resistances, attack and death behaviour.
-fn spawn_from_def(commands: &mut Commands, path: &str, loaded: &LoadedEnemyDef, position: Vec3) -> Entity {
+fn spawn_from_def(
+    commands: &mut Commands,
+    path: &str,
+    loaded: &LoadedEnemyDef,
+    position: Vec3,
+) -> Entity {
     let props = &loaded.props;
     let mut ec = commands.spawn((
         Alien,
         Faction::Alien,
         EnemyDef(path.to_string()),
-        Name::new(format!("Enemy {}", std::path::Path::new(path).file_stem().map_or_default(|s| s.to_string_lossy()))),
+        Name::new(format!(
+            "Enemy {}",
+            std::path::Path::new(path)
+                .file_stem()
+                .map_or_default(|s| s.to_string_lossy())
+        )),
         Transform::from_translation(position),
         WorldAssetRoot(loaded.scene.clone()),
         // Same convention as players: unit root, the model scaled by its def.
@@ -72,7 +82,9 @@ fn spawn_from_def(commands: &mut Commands, path: &str, loaded: &LoadedEnemyDef, 
         Collider::cuboid(0.5, 0.5, 0.45),
         CharacterControl::new(props.speed, 3.0, 1.0),
         Health::full(props.health as i32),
-        TouchDamage { dps: props.touch_dps },
+        TouchDamage {
+            dps: props.touch_dps,
+        },
         CurrentAnimationKey::new(path.to_string(), AnimationKey::Walk),
     ));
     if let Some(table) = &props.loot_table {
@@ -113,7 +125,10 @@ pub fn spawn_aliens(
             && let Some(loaded) = def_cache.get_or_load(path, &asset_server)
         {
             let id = spawn_from_def(&mut commands, path, loaded, spawn_alien.position);
-            add_health_bar_mw.write(AddHealthBar { entity: id, name: "ALIEN" });
+            add_health_bar_mw.write(AddHealthBar {
+                entity: id,
+                name: "ALIEN",
+            });
             game_tracking_mw.write(GameTrackingEvent::AlienSpawned);
             if let Some(ref mut wm) = wave_manager {
                 wm.spawned_this_wave = wm.spawned_this_wave.saturating_add(1);
@@ -160,19 +175,20 @@ pub fn spawn_aliens(
                TouchDamage { dps: 10.0 }
         */
 
-        let id = commands.spawn((
-            Alien,
-            Faction::Alien,
-            LootDrop("alien".to_string()),
-            alien_transform,
-            WorldAssetRoot(game_assets.alien_scene.clone()),
-            // WindWakerShaderBuilder::default().build(),
-            // PixelShaderBuilder::default()
-            //     .pixel_density(1.0)   // lower = blockier
-            //     .color_levels(2.0)    // lower = fewer colors
-            //     .build(),
-
-        )).id();
+        let id = commands
+            .spawn((
+                Alien,
+                Faction::Alien,
+                LootDrop("alien".to_string()),
+                alien_transform,
+                WorldAssetRoot(game_assets.alien_scene.clone()),
+                // WindWakerShaderBuilder::default().build(),
+                // PixelShaderBuilder::default()
+                //     .pixel_density(1.0)   // lower = blockier
+                //     .color_levels(2.0)    // lower = fewer colors
+                //     .build(),
+            ))
+            .id();
 
         add_health_bar_mw.write(AddHealthBar {
             entity: id,
@@ -186,4 +202,3 @@ pub fn spawn_aliens(
         }
     }
 }
-

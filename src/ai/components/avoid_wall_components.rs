@@ -1,7 +1,7 @@
-use bevy::log::info;
-use bevy::prelude::*;
 use crate::control::components::{ControlRotation, Opposite};
 use crate::general::components::map_components::CoolDown;
+use bevy::log::info;
+use bevy::prelude::*;
 
 #[derive(Clone, Component, Debug, Reflect, Default)]
 #[reflect(Component, Default)]
@@ -24,7 +24,10 @@ impl CoolDown for AvoidWallsData {
         self.rotation_timer -= delta;
         if self.rotation_timer <= 0.0 {
             self.rotation_direction = self.rotation_direction.opposite();
-            info!("Timer expired, new direction is: {:?}", self.rotation_direction);
+            info!(
+                "Timer expired, new direction is: {:?}",
+                self.rotation_direction
+            );
             self.rotation_timer = self.rotation_timer_max;
             true
         } else {
@@ -34,7 +37,12 @@ impl CoolDown for AvoidWallsData {
 }
 
 impl AvoidWallsData {
-    pub const fn new(max_forward_distance: f32, max_left_distance: f32, max_right_distance: f32, rotation_timer: f32) -> Self {
+    pub const fn new(
+        max_forward_distance: f32,
+        max_left_distance: f32,
+        max_right_distance: f32,
+        rotation_timer: f32,
+    ) -> Self {
         Self {
             forward_distance: max_forward_distance,
             left_distance: max_left_distance,
