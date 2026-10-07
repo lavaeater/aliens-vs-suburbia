@@ -447,5 +447,7 @@
     ],
     decorations: [],
     placements: [],
-    waves: [],
+    waves: [
+        (enemy_def: "assets/defs/Alien.ron", count: 1, spawn_rate_per_minute: 1.0)
+        ],
 )
