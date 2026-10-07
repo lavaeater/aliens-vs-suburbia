@@ -17,7 +17,7 @@ use bevy::world_serialization::WorldAsset;
 
 use crate::alien::components::general::Alien;
 use crate::animation::animation_plugin::{
-    AnimationStore, CurrentAnimationKey, get_child_with_component_recursive,
+  AnimationStore, CurrentAnimationKey, get_child_with_component_recursive,
 };
 use crate::assets::asset_definition::{AssetDefinition, EnemyAttack, EnemyProps, ModelType};
 use crate::general::components::{CollisionLayer, Health};
@@ -135,7 +135,7 @@ pub fn build_enemy_anim_graphs(
         for source in &loaded.def.animation_sources {
             let handle: Handle<Gltf> = asset_server.load(source.clone());
             if let Some(g) = gltf_assets.get(&handle) {
-                extra.push((source, g))
+                extra.push((source, g));
             } else {
                 waiting = true;
                 break;
@@ -246,9 +246,9 @@ pub fn ranged_attacks(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    #[test]
+  #[test]
     fn melee_enemies_have_no_ranged_component() {
         assert!(RangedAttack::from_attack(&EnemyAttack::Melee).is_none());
     }

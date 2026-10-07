@@ -165,15 +165,15 @@ pub fn queue_equip(commands: &mut Commands, player: Entity, loadout: &Weapons) {
         warn!(
             "cannot equip {}: no grip pairing with {}",
             slot.def_path, loadout.character_def_path
-        )
+        );
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    fn loadout() -> Weapons {
+  fn loadout() -> Weapons {
         Weapons::new(
             "c.ron",
             [
