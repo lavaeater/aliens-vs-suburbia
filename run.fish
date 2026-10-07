@@ -5,12 +5,17 @@
 #   ./run.fish run_dev [-- cargo/game args...]   fastest iteration build
 #   ./run.fish run_rel [-- cargo/game args...]   optimised release build
 #
-# run_dev mirrors the `superoptimized` job in bacon.toml: nightly toolchain,
-# cranelift as the dev codegen backend, and sccache in front of rustc. Cranelift
+# run_dev mirrors the `run` job in bacon.toml: nightly toolchain, cranelift as
+# the dev codegen backend, sccache in front of rustc, the parallel rustc frontend
+# (`-Z threads=8`) and `hint-mostly-unused` for dependencies only. Cranelift
 # compiles much faster than LLVM but produces slower code, so it is dev-only.
+# The env and flags match bacon exactly, so the two share sccache entries and
+# don't invalidate each other's build artefacts in target/.
 #
-# run_rel keeps sccache but drops nightly/cranelift and builds with --release,
-# so the binary is actually fast at runtime.
+# run_rel mirrors the `run-release` job in bacon.toml: the same nightly env and
+# flags, plus --release. The cranelift env var only touches the dev profile, so
+# the release profile in Cargo.toml (LLVM, thin LTO) still applies and the binary
+# is actually fast at runtime; it still gets sccache and the parallel frontend.
 #
 # Extra arguments are appended to the cargo invocation. Anything after a `--`
 # separator is passed through to the game itself, e.g.
@@ -29,8 +34,8 @@ set -q JOBS; or set -l JOBS (nproc)
 function __usage
     echo "usage: ./run.fish {run_dev|run_rel} [extra cargo args...]"
     echo
-    echo "  run_dev  nightly + cranelift + sccache, dev profile (fastest build)"
-    echo "  run_rel  sccache, --release (fastest runtime)"
+    echo "  run_dev  nightly + cranelift + sccache + parallel frontend, dev profile (fastest build)"
+    echo "  run_rel  nightly + sccache + parallel frontend, --release (fastest runtime)"
 end
 
 function __require
@@ -41,15 +46,31 @@ function __require
     end
 end
 
+function __require_nightly
+    if not rustup toolchain list | string match -qr '^nightly-'
+        echo "run.fish: no nightly toolchain installed." >&2
+        echo "run.fish: install it with: rustup toolchain install nightly" >&2
+        return 1
+    end
+end
+
+# Shared by both modes, identical to bacon.toml's [env] and job flags so bacon
+# and this script reuse each other's artefacts instead of rebuilding.
+function __cargo_nightly
+    env CARGO_TERM_COLOR=always \
+        RUSTC_WRAPPER=sccache \
+        CARGO_PROFILE_DEV_CODEGEN_BACKEND=cranelift \
+        RUSTFLAGS="-Z threads=8" \
+        cargo +nightly $argv[1] \
+        -Z codegen-backend -Z profile-hint-mostly-unused --timings \
+        --config 'profile.dev.package."*".hint-mostly-unused=true' \
+        $argv[2..-1]
+end
+
 switch $mode
     case run_dev
         __require sccache "install it with: cargo install sccache"; or exit 1
-
-        if not rustup toolchain list | string match -qr '^nightly-'
-            echo "run.fish: no nightly toolchain installed." >&2
-            echo "run.fish: install it with: rustup toolchain install nightly" >&2
-            exit 1
-        end
+        __require_nightly; or exit 1
 
         if not rustup component list --toolchain nightly \
                 | string match -qr 'rustc-codegen-cranelift.*\(installed\)'
@@ -59,17 +80,15 @@ switch $mode
             exit 1
         end
 
-        echo "==> dev build: nightly + cranelift + sccache (-j $JOBS)"
-        env RUSTC_WRAPPER=sccache \
-            CARGO_PROFILE_DEV_CODEGEN_BACKEND=cranelift \
-            cargo +nightly run --timings -Z codegen-backend -j $JOBS $extra
+        echo "==> dev build: nightly + cranelift + sccache + -Z threads=8 (-j $JOBS)"
+        __cargo_nightly run -j $JOBS $extra
 
     case run_rel
         __require sccache "install it with: cargo install sccache"; or exit 1
+        __require_nightly; or exit 1
 
-        echo "==> release build: sccache (-j $JOBS)"
-        env RUSTC_WRAPPER=sccache \
-            cargo run --timings --release -j $JOBS $extra
+        echo "==> release build: nightly + sccache + -Z threads=8 (-j $JOBS)"
+        __cargo_nightly run --release -j $JOBS $extra
 
     case '' -h --help help
         __usage
