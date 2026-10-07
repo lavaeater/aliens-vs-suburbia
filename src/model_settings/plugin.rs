@@ -194,8 +194,7 @@ fn build_player_anim_graph(
     let def = player_asset_def.as_ref().and_then(|r| r.0.as_ref());
 
     let def_sig = def
-        .map(|d| format!("{:?}|{:?}|{:?}|{:?}", d.animation_bindings, d.clip_tags, d.animation_mapping, d.animation_sources))
-        .unwrap_or_default();
+        .map_or_default(|d| format!("{:?}|{:?}|{:?}|{:?}", d.animation_bindings, d.clip_tags, d.animation_mapping, d.animation_sources));
 
     let sig = format!("{}|{:?}|{}", game_assets.player_gltf.id(), model_settings.anim_mapping, def_sig);
     if *last_sig == sig { return; }

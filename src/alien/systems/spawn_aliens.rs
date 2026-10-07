@@ -64,7 +64,7 @@ fn spawn_from_def(commands: &mut Commands, path: &str, loaded: &LoadedEnemyDef, 
         Alien,
         Faction::Alien,
         EnemyDef(path.to_string()),
-        Name::new(format!("Enemy {}", std::path::Path::new(path).file_stem().map(|s| s.to_string_lossy()).unwrap_or_default())),
+        Name::new(format!("Enemy {}", std::path::Path::new(path).file_stem().map_or_default(|s| s.to_string_lossy()))),
         Transform::from_translation(position),
         WorldAssetRoot(loaded.scene.clone()),
         // Same convention as players: unit root, the model scaled by its def.

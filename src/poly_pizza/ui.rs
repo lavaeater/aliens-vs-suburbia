@@ -822,8 +822,7 @@ pub fn update_attribution_label(
 ) {
     if !state.is_changed() { return; }
     let attribution = state.selected_model.as_ref()
-        .map(|m| m.attribution.clone())
-        .unwrap_or_default();
+        .map_or_default(|m| m.attribution.clone());
     for mut text in labels.iter_mut() {
         (**text).clone_from(&attribution);
     }

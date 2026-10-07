@@ -40,8 +40,7 @@ impl ModelLibrary {
     /// Returns existing tags for a model, space-joined, or an empty string.
     pub fn tags_string(&self, id: &str) -> String {
         self.entries.get(id)
-            .map(|e| e.tags.join(" "))
-            .unwrap_or_default()
+            .map_or_default(|e| e.tags.join(" "))
     }
 
     /// Saves or updates a model entry. Tags come from a space-separated string.

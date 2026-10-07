@@ -74,7 +74,7 @@ fn parse_info(json: &str) -> Option<GltfInfo> {
     let animations = value
         .get("animations")
         .and_then(|a| a.as_array())
-        .map(|clips| {
+        .map_or_default(|clips| {
             clips
                 .iter()
                 .enumerate()
@@ -83,8 +83,7 @@ fn parse_info(json: &str) -> Option<GltfInfo> {
                         .and_then(|n| n.as_str()).map_or_else(|| format!("Animation{index}"), str::to_string)
                 })
                 .collect()
-        })
-        .unwrap_or_default();
+        });
     Some(GltfInfo { mesh_count, animations })
 }
 

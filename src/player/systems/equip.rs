@@ -262,7 +262,7 @@ fn ancestor_entities(entity: Entity, parents: &Query<&ChildOf>) -> Vec<Entity> {
 fn ancestor_names(entity: Entity, parents: &Query<&ChildOf>, names: &Query<&Name>) -> Vec<String> {
     ancestor_entities(entity, parents)
         .into_iter()
-        .map(|e| names.get(e).map(std::string::ToString::to_string).unwrap_or_default())
+        .map(|e| names.get(e).map_or_default(std::string::ToString::to_string))
         .collect()
 }
 

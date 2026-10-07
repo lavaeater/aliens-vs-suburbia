@@ -228,7 +228,7 @@ pub fn update_player_bar(
         };
         node.display = Display::Flex;
 
-        let lives_text = lives.map(|l| format!("  x{}", l.0)).unwrap_or_default();
+        let lives_text = lives.map_or_default(|l| format!("  x{}", l.0));
         let name_line = match dead {
             Some(d) => format!("{name} - DOWN {}s", d.bleed_out.max(0.0).ceil() as u32),
             None => format!("{name}{lives_text}"),
@@ -237,7 +237,7 @@ pub fn update_player_bar(
         let held = equipped.and_then(|e| weapon_q.get(e.0).ok());
         let weapon = held.map_or_else(|| "Unarmed".to_string(), |(n, _)| n.as_str().to_string());
         let ammo = ammo_label(held.map(|(_, w)| w), pouch);
-        let toast = toasts.0.iter().find(|(s, ..)| *s == hud_slot.0).map(|(_, t, _)| t.clone()).unwrap_or_default();
+        let toast = toasts.0.iter().find(|(s, ..)| *s == hud_slot.0).map_or_default(|(_, t, _)| t.clone());
         let ability_text = match (ability, meter) {
             (Some(a), Some(m)) => ability_label(a, m),
             _ => String::new(),

@@ -252,8 +252,7 @@ impl MapEditorState {
         let enemy_def = self
             .enemy_defs
             .get(self.selected_enemy)
-            .map(|(path, _)| path.clone())
-            .unwrap_or_default();
+            .map_or_default(|(path, _)| path.clone());
         self.waves.push(WaveDef {
             enemy_def,
             ..WaveDef::default()

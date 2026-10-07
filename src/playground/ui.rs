@@ -588,15 +588,14 @@ pub fn rebuild_hardpoint_panel(
         .iter()
         .next()
         .filter(|_| side == HardpointSide::Character)
-        .map(|player| {
+        .map_or_default(|player| {
             let joints = crate::assets::gizmos::joints_under(player, &children_q, &skinned_q);
             let mut names: Vec<String> = crate::assets::gizmos::bone_map(&joints, &names)
                 .into_keys()
                 .collect();
             names.sort();
             names
-        })
-        .unwrap_or_default();
+        });
 
     commands.entity(container).with_children(|parent| {
         side_chips(parent, side, weapon_name.as_deref());

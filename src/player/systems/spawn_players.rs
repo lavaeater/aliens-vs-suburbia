@@ -168,7 +168,7 @@ pub fn spawn_players(
         // Torso twist: resolved to bone entities once the skeleton spawns. Defs that
         // don't list `aim_bones` fall back to the default mixamo spine chain.
         commands.entity(player).insert(PendingTorsoTwist::new(
-            roster_def.as_ref().map(|def| def.aim_bones.clone()).unwrap_or_default(),
+            roster_def.as_ref().map_or_default(|def| def.aim_bones.clone()),
         ));
         // Procedural legs: the chains are found from the skeleton's own bone names once it
         // spawns, so there is nothing per-def to carry here.

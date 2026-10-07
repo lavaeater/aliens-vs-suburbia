@@ -148,7 +148,7 @@ impl BuildOption {
                 let Ok(text) = std::fs::read_to_string(&path) else { continue };
                 let Ok(def) = ron::from_str::<AssetDefinition>(&text) else { continue };
                 let ModelType::Tower(props) = &def.model_type else { continue };
-                let name = path.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+                let name = path.file_stem().map_or_default(|s| s.to_string_lossy().into_owned());
                 out.push(Self {
                     name,
                     file: format!("{}#Scene0", def.model_path),
