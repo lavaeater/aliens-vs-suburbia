@@ -1,17 +1,70 @@
+use crate::general::explosion::ExplosionProps;
+use crate::general::projectiles::ProjectileProps;
+use crate::gore::components::DamageKind;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-fn default_scale() -> f32 { 1.0 }
+const fn default_scale() -> f32 {
+    1.0
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EnemyProps {
     pub health: f32,
     pub speed: f32,
     pub coin_drop: u32,
+    /// Per-`DamageKind` multipliers (missing = 1.0, 0.0 = immune).
+    #[serde(default)]
+    pub resistances: HashMap<DamageKind, f32>,
+    /// Loot table (file stem under `assets/loot`) rolled on death. Default `"alien"`.
+    #[serde(default = "default_enemy_loot")]
+    pub loot_table: Option<String>,
+    /// Damage per second while overlapping a player.
+    #[serde(default = "default_touch_dps")]
+    pub touch_dps: f32,
+    #[serde(default)]
+    pub attack: EnemyAttack,
+    /// Detonate on death (exploders).
+    #[serde(default)]
+    pub explodes_on_death: Option<ExplosionProps>,
+}
+
+/// How an enemy hurts players beyond bumping into them.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub enum EnemyAttack {
+    /// Touch damage only.
+    #[default]
+    Melee,
+    /// Shoots the nearest player in range and line of sight while walking.
+    Ranged {
+        damage: i32,
+        range: f32,
+        fire_rate_per_minute: f32,
+    },
+}
+
+// Serde default for an `Option<String>` field, so the wrapper is the point.
+#[allow(clippy::unnecessary_wraps)]
+fn default_enemy_loot() -> Option<String> {
+    Some("alien".to_string())
+}
+const fn default_touch_dps() -> f32 {
+    10.0
 }
 
 impl Default for EnemyProps {
-    fn default() -> Self { Self { health: 100.0, speed: 2.0, coin_drop: 5 } }
+    fn default() -> Self {
+        Self {
+            health: 100.0,
+            speed: 2.0,
+            coin_drop: 5,
+            resistances: HashMap::new(),
+            loot_table: default_enemy_loot(),
+            touch_dps: default_touch_dps(),
+            attack: EnemyAttack::default(),
+            explodes_on_death: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -21,10 +74,41 @@ pub struct TowerProps {
     pub range: f32,
     pub damage: f32,
     pub fire_rate_per_minute: f32,
+    /// Per-`DamageKind` multipliers (missing = 1.0, 0.0 = immune).
+    #[serde(default)]
+    pub resistances: HashMap<DamageKind, f32>,
+    #[serde(default)]
+    pub kind: TowerKind,
+    /// One line for the build menu.
+    #[serde(default)]
+    pub description: String,
+}
+
+/// What a tower does to aliens inside its `range`.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub enum TowerKind {
+    /// Lobs balls at the nearest alien, `fire_rate_per_minute` times a minute.
+    #[default]
+    Shooter,
+    /// Multiplies alien velocity by `factor` while inside.
+    Slow { factor: f32 },
+    /// Burns everything inside for `damage` per second, applied `tick_hz` times a second.
+    Area { tick_hz: f32 },
 }
 
 impl Default for TowerProps {
-    fn default() -> Self { Self { health: 200.0, cost: 50, range: 4.0, damage: 20.0, fire_rate_per_minute: 30.0 } }
+    fn default() -> Self {
+        Self {
+            health: 200.0,
+            cost: 50,
+            range: 4.0,
+            damage: 20.0,
+            fire_rate_per_minute: 30.0,
+            resistances: HashMap::new(),
+            kind: TowerKind::default(),
+            description: String::new(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -33,17 +117,112 @@ pub struct TerrainProps {
     pub blocks_players: bool,
     /// None = indestructible.
     pub health: Option<f32>,
+    /// Per-`DamageKind` multipliers (missing = 1.0, 0.0 = immune). Only meaningful with
+    /// `health: Some(_)`.
+    #[serde(default)]
+    pub resistances: HashMap<DamageKind, f32>,
+    /// Loot table (file stem under `assets/loot`) rolled when this breaks, e.g. `"crate"`.
+    #[serde(default)]
+    pub loot_table: Option<String>,
+    /// Detonate when destroyed (barrels). Needs `health: Some(_)`.
+    #[serde(default)]
+    pub explodes_on_death: Option<ExplosionProps>,
 }
 
 impl Default for TerrainProps {
-    fn default() -> Self { Self { blocks_enemies: true, blocks_players: false, health: None } }
+    fn default() -> Self {
+        Self {
+            blocks_enemies: true,
+            blocks_players: false,
+            health: None,
+            resistances: HashMap::new(),
+            loot_table: None,
+            explodes_on_death: None,
+        }
+    }
+}
+
+/// What a gun consumes. Each kind is a separate pool in the player's `AmmoPouch`;
+/// `Infinite` weapons never reload (the playground's default).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum AmmoKind {
+    #[default]
+    Infinite,
+    Pistol,
+    Rifle,
+    Shells,
+    Grenade,
+    Molotov,
+}
+
+impl AmmoKind {
+    /// Most rounds of this kind a player can carry outside the magazine.
+    pub const fn cap(self) -> u32 {
+        match self {
+            Self::Infinite => u32::MAX,
+            Self::Pistol => 120,
+            Self::Rifle => 240,
+            Self::Shells => 48,
+            Self::Grenade => 6,
+            Self::Molotov => 4,
+        }
+    }
+
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Infinite => "inf",
+            Self::Pistol => "9mm",
+            Self::Rifle => "5.56",
+            Self::Shells => "shells",
+            Self::Grenade => "grenades",
+            Self::Molotov => "molotovs",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub enum ItemKind {
     #[default]
     Decorative,
-    HealthPickup { amount: f32 },
+    HealthPickup {
+        amount: f32,
+    },
+    AmmoPickup {
+        kind: AmmoKind,
+        rounds: u32,
+    },
+    /// Path to a Weapon-typed def; picking it up adds the gun to the loadout.
+    WeaponPickup {
+        def: String,
+    },
+    Coins {
+        value: u32,
+    },
+    /// Objective token for maps/stories; no runtime effect yet beyond a fact.
+    Key {
+        id: String,
+    },
+}
+
+impl ItemKind {
+    /// Short human label for editors and the HUD.
+    pub fn label(&self) -> String {
+        match self {
+            Self::Decorative => "decorative".into(),
+            Self::HealthPickup { amount } => format!("+{amount} HP"),
+            Self::AmmoPickup { kind, rounds } => format!("{rounds} {}", kind.label()),
+            Self::WeaponPickup { def } => std::path::Path::new(def)
+                .file_stem()
+                .map_or_else(|| "weapon".into(), |s| s.to_string_lossy().into_owned()),
+            Self::Coins { value } => format!("{value} coins"),
+            Self::Key { id } => format!("key {id}"),
+        }
+    }
+
+    /// Whether players can pick this up (everything except set dressing).
+    pub const fn is_pickup(&self) -> bool {
+        !matches!(self, Self::Decorative)
+    }
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -51,7 +230,7 @@ pub struct ItemProps {
     pub kind: ItemKind,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PlayerAbility {
     #[default]
     Bombardment,
@@ -61,7 +240,9 @@ pub enum PlayerAbility {
     Molotov,
 }
 
-fn default_throw_rate() -> f32 { 60.0 }
+const fn default_throw_rate() -> f32 {
+    60.0
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PlayerProps {
@@ -74,6 +255,12 @@ pub struct PlayerProps {
     /// Snapped to this model's `grip` hardpoint. `None` = unarmed.
     #[serde(default)]
     pub weapon: Option<String>,
+    /// Further weapon defs carried from the start (cycled with 1-4 / d-pad up-down).
+    #[serde(default)]
+    pub extra_weapons: Vec<String>,
+    /// Rounds in the pouch at spawn, per ammo kind (magazines start full on top of this).
+    #[serde(default)]
+    pub starting_ammo: Vec<(AmmoKind, u32)>,
 }
 
 impl Default for PlayerProps {
@@ -82,22 +269,34 @@ impl Default for PlayerProps {
             ability: PlayerAbility::default(),
             throw_rate_per_minute: default_throw_rate(),
             weapon: None,
+            extra_weapons: Vec::new(),
+            starting_ammo: Vec::new(),
         }
     }
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum WeaponHands {
     #[default]
     OneHanded,
     TwoHanded,
 }
 
-fn default_weapon_damage() -> i32 { 20 }
-fn default_fire_rate() -> f32 { 300.0 }
-fn default_weapon_range() -> f32 { 40.0 }
-fn default_spread_deg() -> f32 { 1.5 }
-fn default_pellets() -> u32 { 1 }
+const fn default_weapon_damage() -> i32 {
+    20
+}
+const fn default_fire_rate() -> f32 {
+    300.0
+}
+const fn default_weapon_range() -> f32 {
+    40.0
+}
+const fn default_spread_deg() -> f32 {
+    1.5
+}
+const fn default_pellets() -> u32 {
+    1
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WeaponProps {
@@ -121,6 +320,25 @@ pub struct WeaponProps {
     /// Holds-to-fire (automatic) vs one shot per trigger press.
     #[serde(default)]
     pub auto: bool,
+    /// Ammo pool this weapon draws from. `Infinite` = never reloads.
+    #[serde(default)]
+    pub ammo: AmmoKind,
+    /// Rounds per magazine. Ignored for `Infinite`.
+    #[serde(default = "default_magazine")]
+    pub magazine: u32,
+    /// Seconds a reload takes.
+    #[serde(default = "default_reload_secs")]
+    pub reload_secs: f32,
+    /// Fire a physics projectile (grenade launcher, rocket) instead of a hitscan ray.
+    #[serde(default)]
+    pub projectile: Option<ProjectileProps>,
+}
+
+const fn default_magazine() -> u32 {
+    12
+}
+const fn default_reload_secs() -> f32 {
+    1.5
 }
 
 impl Default for WeaponProps {
@@ -133,6 +351,10 @@ impl Default for WeaponProps {
             spread_deg: default_spread_deg(),
             pellets: default_pellets(),
             auto: false,
+            ammo: AmmoKind::default(),
+            magazine: default_magazine(),
+            reload_secs: default_reload_secs(),
+            projectile: None,
         }
     }
 }
@@ -148,22 +370,24 @@ pub enum ModelType {
 }
 
 impl Default for ModelType {
-    fn default() -> Self { ModelType::Player(PlayerProps::default()) }
+    fn default() -> Self {
+        Self::Player(PlayerProps::default())
+    }
 }
 
 impl ModelType {
-    pub fn label(&self) -> &'static str {
+    pub const fn label(&self) -> &'static str {
         match self {
-            ModelType::Player(_)   => "Player",
-            ModelType::Tower(_)    => "Tower",
-            ModelType::Terrain(_)  => "Terrain",
-            ModelType::Item(_)     => "Item",
-            ModelType::Enemy(_)    => "Enemy",
-            ModelType::Weapon(_)   => "Weapon",
+            Self::Player(_) => "Player",
+            Self::Tower(_) => "Tower",
+            Self::Terrain(_) => "Terrain",
+            Self::Item(_) => "Item",
+            Self::Enemy(_) => "Enemy",
+            Self::Weapon(_) => "Weapon",
         }
     }
 
-    pub fn all_labels() -> &'static [&'static str] {
+    pub const fn all_labels() -> &'static [&'static str] {
         &["Player", "Tower", "Terrain", "Item", "Enemy", "Weapon"]
     }
 
@@ -176,12 +400,12 @@ impl ModelType {
     /// Return a default instance for each label.
     pub fn from_label(label: &str) -> Self {
         match label {
-            "Tower"   => ModelType::Tower(TowerProps::default()),
-            "Terrain" => ModelType::Terrain(TerrainProps::default()),
-            "Item"    => ModelType::Item(ItemProps::default()),
-            "Enemy"   => ModelType::Enemy(EnemyProps::default()),
-            "Weapon"  => ModelType::Weapon(WeaponProps::default()),
-            _         => ModelType::Player(PlayerProps::default()),
+            "Tower" => Self::Tower(TowerProps::default()),
+            "Terrain" => Self::Terrain(TerrainProps::default()),
+            "Item" => Self::Item(ItemProps::default()),
+            "Enemy" => Self::Enemy(EnemyProps::default()),
+            "Weapon" => Self::Weapon(WeaponProps::default()),
+            _ => Self::Player(PlayerProps::default()),
         }
     }
 }
@@ -205,7 +429,11 @@ pub struct Hardpoint {
 
 impl Default for Hardpoint {
     fn default() -> Self {
-        Self { anchor: None, translation: [0.0; 3], rotation_euler_deg: [0.0; 3] }
+        Self {
+            anchor: None,
+            translation: [0.0; 3],
+            rotation_euler_deg: [0.0; 3],
+        }
     }
 }
 
@@ -331,7 +559,10 @@ impl AssetDefinition {
             // Binding points at a tag no clip carries (yet) — nothing to play.
             return None;
         }
-        self.animation_mapping.get(key).filter(|s| !s.is_empty()).cloned()
+        self.animation_mapping
+            .get(key)
+            .filter(|s| !s.is_empty())
+            .cloned()
     }
 }
 
@@ -371,22 +602,53 @@ impl AssetDefinition {
 
 #[cfg(test)]
 mod tests {
+    /// Every shipped def must parse: a typo in a hand-edited `.ron` otherwise only shows
+    /// up as a silently unarmed player or a missing enemy at runtime.
+    #[test]
+    fn every_def_in_assets_parses() {
+        let root = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/defs");
+        let mut checked = 0;
+        for entry in std::fs::read_dir(root)
+            .expect("assets/defs exists")
+            .flatten()
+        {
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("ron") {
+                continue;
+            }
+            let text = std::fs::read_to_string(&path).unwrap();
+            if let Err(e) = ron::from_str::<super::AssetDefinition>(&text) {
+                panic!("{} does not parse: {e}", path.display());
+            }
+            checked += 1;
+        }
+        assert!(checked > 0, "no defs found under {root}");
+    }
+
     use super::*;
 
     #[test]
     fn resolved_clip_follows_binding_to_tagged_clip() {
         let mut def = AssetDefinition::default();
-        def.clip_tags.insert("CharacterArmature|Run_Shoot".into(), "Combat/Ranged/RunShoot".into());
-        def.animation_bindings.insert("run_shoot".into(), "Combat/Ranged/RunShoot".into());
+        def.clip_tags.insert(
+            "CharacterArmature|Run_Shoot".into(),
+            "Combat/Ranged/RunShoot".into(),
+        );
+        def.animation_bindings
+            .insert("run_shoot".into(), "Combat/Ranged/RunShoot".into());
 
-        assert_eq!(def.resolved_clip("run_shoot").as_deref(), Some("CharacterArmature|Run_Shoot"));
+        assert_eq!(
+            def.resolved_clip("run_shoot").as_deref(),
+            Some("CharacterArmature|Run_Shoot")
+        );
     }
 
     #[test]
     fn resolved_clip_binding_to_missing_tag_yields_none() {
         let mut def = AssetDefinition::default();
         // Binding points at a tag no clip carries.
-        def.animation_bindings.insert("idle".into(), "Idle/Neutral".into());
+        def.animation_bindings
+            .insert("idle".into(), "Idle/Neutral".into());
 
         assert_eq!(def.resolved_clip("idle"), None);
     }
@@ -394,17 +656,24 @@ mod tests {
     #[test]
     fn resolved_clip_falls_back_to_legacy_mapping() {
         let mut def = AssetDefinition::default();
-        def.animation_mapping.insert("walk".into(), "CharacterArmature|Walk".into());
+        def.animation_mapping
+            .insert("walk".into(), "CharacterArmature|Walk".into());
 
-        assert_eq!(def.resolved_clip("walk").as_deref(), Some("CharacterArmature|Walk"));
+        assert_eq!(
+            def.resolved_clip("walk").as_deref(),
+            Some("CharacterArmature|Walk")
+        );
     }
 
     #[test]
     fn resolved_clip_binding_wins_over_legacy_mapping() {
         let mut def = AssetDefinition::default();
-        def.animation_mapping.insert("walk".into(), "Old|Walk".into());
-        def.clip_tags.insert("New|Stroll".into(), "Locomotion/Walk".into());
-        def.animation_bindings.insert("walk".into(), "Locomotion/Walk".into());
+        def.animation_mapping
+            .insert("walk".into(), "Old|Walk".into());
+        def.clip_tags
+            .insert("New|Stroll".into(), "Locomotion/Walk".into());
+        def.animation_bindings
+            .insert("walk".into(), "Locomotion/Walk".into());
 
         assert_eq!(def.resolved_clip("walk").as_deref(), Some("New|Stroll"));
     }

@@ -65,7 +65,11 @@ pub fn spawn_dummy_posts(mut commands: Commands, tile_defs: Res<TileDefinitions>
             + Vec3::Y * (tile_defs.floor_level + ALIEN_CAPSULE_HALF_HEIGHT * DUMMY_SCALE);
         commands.spawn((
             Name::from("Dummy Post"),
-            DummyPost { position, occupant: None, respawn_in: 0.0 },
+            DummyPost {
+                position,
+                occupant: None,
+                respawn_in: 0.0,
+            },
             StateMarker,
         ));
     }
@@ -119,7 +123,10 @@ pub fn respawn_dummies(
         // has to be counted on the way in or the counter underflows.
         alien_counter.count += 1;
 
-        add_health_bar_mw.write(AddHealthBar { entity: dummy, name: "DUMMY" });
+        add_health_bar_mw.write(AddHealthBar {
+            entity: dummy,
+            name: "DUMMY",
+        });
         post.occupant = Some(dummy);
     }
 }

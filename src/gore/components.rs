@@ -5,10 +5,12 @@
 //! subscribe to those instead of each re-deriving who got hurt where.
 
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 
-/// Broad category of damage, used to pick the gore/SFX response.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+/// Broad category of damage, used to pick the gore/SFX response and looked up in a
+/// target's `DamageResistances`. Serialised by name in def files.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 pub enum DamageKind {
     /// Bullets, thrown balls — a sharp local spray.
     #[default]
@@ -86,22 +88,30 @@ impl Ephemeral {
         }
     }
 
-    pub fn with_grow(mut self, grow_to: f32) -> Self {
+    pub const fn with_grow(mut self, grow_to: f32) -> Self {
         self.grow_to = grow_to;
         self
     }
 
-    pub fn base_scale(mut self, base_scale: Vec3) -> Self {
+    pub const fn base_scale(mut self, base_scale: Vec3) -> Self {
         self.base_scale = base_scale;
         self
     }
 
     #[allow(dead_code)]
-    pub fn no_fade(mut self) -> Self {
+    pub const fn no_fade(mut self) -> Self {
         self.fade = false;
         self
     }
 }
+
+/// How far a ground decal sits above the floor plane. Enough to clear the floor quad
+/// without reading as floating; the materials also carry a `depth_bias`.
+///
+/// The floor is **not** at `y = 0` -- `TileDefinitions::floor_level` is
+/// `-wall_height * 2.0` (about -0.59 at the shipped tile sizes), so a decal placed at a
+/// hardcoded `y` hovers in mid-air and reads as a dark patch offset from whatever bled.
+pub const DECAL_LIFT: f32 = 0.02;
 
 /// A cap on how many persistent gore entities can live at once, so a big wave can't
 /// spawn thousands of decals/gibs and tank the frame. Recycles oldest-first.
@@ -162,21 +172,36 @@ mod tests {
     #[test]
     fn decal_budget_recycles_oldest_first() {
         let e = entities(3);
-        let mut budget = GoreBudget { max_decals: 2, ..Default::default() };
+        let mut budget = GoreBudget {
+            max_decals: 2,
+            ..Default::default()
+        };
 
         assert_eq!(budget.push_decal(e[0]), None, "under cap: nothing evicted");
         assert_eq!(budget.push_decal(e[1]), None, "at cap: nothing evicted");
-        assert_eq!(budget.push_decal(e[2]), Some(e[0]), "over cap: evict the oldest");
+        assert_eq!(
+            budget.push_decal(e[2]),
+            Some(e[0]),
+            "over cap: evict the oldest"
+        );
     }
 
     #[test]
     fn gib_and_decal_budgets_are_independent() {
         let e = entities(3);
-        let mut budget = GoreBudget { max_gibs: 1, max_decals: 10, ..Default::default() };
+        let mut budget = GoreBudget {
+            max_gibs: 1,
+            max_decals: 10,
+            ..Default::default()
+        };
 
         // Pushing decals never evicts gibs, and vice versa.
         assert_eq!(budget.push_decal(e[0]), None);
         assert_eq!(budget.push_gib(e[1]), None);
-        assert_eq!(budget.push_gib(e[2]), Some(e[1]), "second gib evicts the first");
+        assert_eq!(
+            budget.push_gib(e[2]),
+            Some(e[1]),
+            "second gib evicts the first"
+        );
     }
 }

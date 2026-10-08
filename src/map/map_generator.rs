@@ -1,17 +1,23 @@
-use enumflags2::BitFlags;
+// Grid/procgen math: coordinates and offsets here are structurally bounded by
+// loop ranges and chunk/tile dimensions checked elsewhere, so the blanket
+// arithmetic/indexing lints mostly flag noise in this module. Scoped allow;
+// genuinely risky spots are fixed individually.
+#![allow(clippy::arithmetic_side_effects, clippy::indexing_slicing)]
+
 use crate::general::components::map_components::{DecorationItem, MapFile};
 use crate::map::MapFeatures;
+use enumflags2::BitFlags;
 
 // ── Seeded RNG (xorshift64) ──────────────────────────────────────────────────
 
 struct Rng(u64);
 
 impl Rng {
-    fn new(seed: u64) -> Self {
-        Rng(seed.wrapping_add(1).wrapping_mul(0x9e3779b97f4a7c15))
+    const fn new(seed: u64) -> Self {
+        Self(seed.wrapping_add(1).wrapping_mul(0x9e37_79b9_7f4a_7c15))
     }
 
-    fn next(&mut self) -> u64 {
+    const fn next(&mut self) -> u64 {
         let mut x = self.0;
         x ^= x << 13;
         x ^= x >> 7;
@@ -27,7 +33,7 @@ impl Rng {
     fn f32(&mut self) -> f32 {
         (self.next() >> 40) as f32 / (1u64 << 24) as f32
     }
-    
+
     #[allow(dead_code)]
     fn prob(&mut self, p: f32) -> bool {
         self.f32() < p
@@ -174,10 +180,10 @@ const CLUTTER: &[Prop] = &[
 #[allow(dead_code)]
 #[derive(Clone, Copy, PartialEq)]
 enum Zone {
-    PlayerArea,  // near player spawn — suburban props, parked cars
-    AlienArea,   // near alien spawns — sci-fi/invasion dressing
-    Perimeter,   // map edge and house-adjacent — trees, hedges
-    Open,        // mid-map — mixed combat debris and suburban clutter
+    PlayerArea, // near player spawn — suburban props, parked cars
+    AlienArea,  // near alien spawns — sci-fi/invasion dressing
+    Perimeter,  // map edge and house-adjacent — trees, hedges
+    Open,       // mid-map — mixed combat debris and suburban clutter
 }
 #[allow(dead_code)]
 fn classify(
@@ -196,12 +202,17 @@ fn classify(
     let h = grid.len();
     let w = grid[0].len();
     let on_edge = row == 0 || row == h - 1 || col == 0 || col == w - 1;
-    let near_void = [(-1i32, 0i32), (1, 0), (0, -1), (0, 1)].iter().any(|&(dr, dc)| {
-        let nr = row as i32 + dr;
-        let nc = col as i32 + dc;
-        nr >= 0 && (nr as usize) < h && nc >= 0 && (nc as usize) < w
-            && grid[nr as usize][nc as usize] == 0
-    });
+    let near_void = [(-1i32, 0i32), (1, 0), (0, -1), (0, 1)]
+        .iter()
+        .any(|&(dr, dc)| {
+            let nr = row as i32 + dr;
+            let nc = col as i32 + dc;
+            nr >= 0
+                && (nr as usize) < h
+                && nc >= 0
+                && (nc as usize) < w
+                && grid[nr as usize][nc as usize] == 0
+        });
 
     if dp <= 3 {
         Zone::PlayerArea
@@ -218,25 +229,29 @@ fn pick_prop(rng: &mut Rng, zone: Zone) -> (&'static str, f32) {
     let palette: &[Prop] = match zone {
         Zone::PlayerArea => match rng.range(0, 5) {
             0 | 1 => SUBURBAN,
-            2     => TREES,
-            3     => BUSHES,
-            _     => CLUTTER,
+            2 => TREES,
+            3 => BUSHES,
+            _ => CLUTTER,
         },
         Zone::AlienArea => match rng.range(0, 4) {
             0 | 1 => ALIEN_DRESSING,
-            2     => COMBAT,
-            _     => CLUTTER,
+            2 => COMBAT,
+            _ => CLUTTER,
         },
         Zone::Perimeter => {
-            if rng.prob(0.65) { TREES } else { BUSHES }
+            if rng.prob(0.65) {
+                TREES
+            } else {
+                BUSHES
+            }
         }
         Zone::Open => match rng.range(0, 6) {
-            0     => TREES,
-            1     => BUSHES,
-            2     => SUBURBAN,
-            3     => ALIEN_DRESSING,
-            4     => COMBAT,
-            _     => CLUTTER,
+            0 => TREES,
+            1 => BUSHES,
+            2 => SUBURBAN,
+            3 => ALIEN_DRESSING,
+            4 => COMBAT,
+            _ => CLUTTER,
         },
     };
     *rng.pick(palette)
@@ -288,17 +303,21 @@ fn try_place_house(
         let hh = rng.range(2, 5); // house height (rows)
         let hw = rng.range(2, 4); // house width (cols)
 
-        if h < hh + 4 || w < hw + 2 { continue; }
+        if h < hh + 4 || w < hw + 2 {
+            continue;
+        }
         let row = rng.range(2, h - hh - 2);
         let col = rng.range(1, w - hw - 1);
 
         // All cells must be plain floor (value 1)
         let clear = (row..row + hh).all(|r| (col..col + hw).all(|c| grid[r][c] == 1));
-        if !clear { continue; }
+        if !clear {
+            continue;
+        }
 
         // Tentatively place
-        for row_data in grid[row..row + hh].iter_mut() {
-            for cell in row_data[col..col + hw].iter_mut() {
+        for row_data in &mut grid[row..row + hh] {
+            for cell in &mut row_data[col..col + hw] {
                 *cell = 0;
             }
         }
@@ -312,8 +331,8 @@ fn try_place_house(
         }
 
         // Roll back
-        for row_data in grid[row..row + hh].iter_mut() {
-            for cell in row_data[col..col + hw].iter_mut() {
+        for row_data in &mut grid[row..row + hh] {
+            for cell in &mut row_data[col..col + hw] {
                 *cell = 1;
             }
         }
@@ -367,24 +386,33 @@ pub fn generate_suburb_map(seed: u64, width: usize, height: usize) -> MapFile {
     }
 
     // Convert scratch u8 values to BitFlags<MapFeatures> u64.
-    let border = f(MapFeatures::Floor | MapFeatures::ImpassableForPlayers | MapFeatures::ImpassableForEnemies);
-    let grid: Vec<Vec<u64>> = scratch.iter().enumerate().map(|(row, cols)| {
-        cols.iter().enumerate().map(|(col, &t)| {
-            let is_edge = row == 0 || row == h - 1 || col == 0 || col == w - 1;
-            match t {
-                0 => 0u64, // void
-                5 => f(MapFeatures::Floor | MapFeatures::EnemySpawn),
-                9 => f(MapFeatures::Floor | MapFeatures::EnemyExit),
-                17 => f(MapFeatures::Floor | MapFeatures::PlayerSpawn),
-                _ if is_edge => border,
-                _ => f(MapFeatures::Floor),
-            }
-        }).collect()
-    }).collect();
+    let border = f(MapFeatures::Floor
+        | MapFeatures::ImpassableForPlayers
+        | MapFeatures::ImpassableForEnemies);
+    let grid: Vec<Vec<u64>> = scratch
+        .iter()
+        .enumerate()
+        .map(|(row, cols)| {
+            cols.iter()
+                .enumerate()
+                .map(|(col, &t)| {
+                    let is_edge = row == 0 || row == h - 1 || col == 0 || col == w - 1;
+                    match t {
+                        0 => 0u64, // void
+                        5 => f(MapFeatures::Floor | MapFeatures::EnemySpawn),
+                        9 => f(MapFeatures::Floor | MapFeatures::EnemyExit),
+                        17 => f(MapFeatures::Floor | MapFeatures::PlayerSpawn),
+                        _ if is_edge => border,
+                        _ => f(MapFeatures::Floor),
+                    }
+                })
+                .collect()
+        })
+        .collect();
 
     // Dress the ruined suburb with ultraviolence props (reproducible from the seed).
     let decorations = crate::map::scatter::scatter_decorations(
-        seed ^ 0x5CA77E4,
+        seed ^ 0x05CA_77E4,
         &grid,
         crate::map::scatter::ScatterOptions::default(),
     );

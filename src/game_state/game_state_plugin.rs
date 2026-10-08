@@ -1,47 +1,52 @@
+use avian3d::prelude::PhysicsGizmos;
 use bevy::app::{App, Plugin, Update};
 use bevy::gizmos::config::GizmoConfigStore;
-use bevy::prelude::{in_state, ButtonInput, IntoScheduleConfigs, KeyCode, OnEnter, Res, ResMut, Time};
-use avian3d::prelude::PhysicsGizmos;
+use bevy::prelude::{
+    ButtonInput, IntoScheduleConfigs, KeyCode, OnEnter, Res, ResMut, Time, in_state,
+};
 
-use bevy::state::app::AppExtStates;
-use bevy::time::Fixed;
 use crate::ai::stateful_ai_plugin::StatefulAiPlugin;
 use crate::alien::stateful_alien_plugin::StatefulAlienPlugin;
 use crate::animation::animation_plugin::AnimationPlugin;
+use crate::asset_browser::plugin::AssetBrowserPlugin;
 use crate::assets::assets_plugin::AssetsPlugin;
 use crate::building::build_mode_plugin::StatefulBuildModePlugin;
 use crate::camera::camera_plugin::StatefulCameraPlugin;
 use crate::control::control_plugin::StatefulControlPlugin;
 use crate::control::gamepad_input::GamepadPlugin;
-use crate::game_state::clear_game_entities_plugin::ClearGameEntitiesPlugin;
+use crate::facts::{FactsGameIntegrationPlugin, FactsPlugin};
 use crate::game_state::GameState;
+use crate::game_state::clear_game_entities_plugin::ClearGameEntitiesPlugin;
 use crate::game_state::score_keeper::ScoreKeeperPlugin;
-use crate::facts::{FactsPlugin, FactsGameIntegrationPlugin};
+use crate::general::damage::{ApplyDamage, DamageRules, apply_damage};
+use crate::general::explosion::{Explode, explode_on_death, explosion_system};
+use crate::general::projectiles::{projectile_impacts, throw_special, tick_projectiles};
+use crate::general::systems::coin_system::TeamWallet;
 use crate::general::systems::collision_handling_system::collision_handling_system;
-use crate::general::systems::health_monitor_system::health_monitor_system;
-use crate::general::systems::touch_damage_system::touch_damage_system;
-use crate::general::systems::coin_system::{coin_pickup_system, spawn_coins_on_alien_death, TeamWallet};
 use crate::general::systems::death_effect_system::{spawn_death_effects, tick_death_effects};
+use crate::general::systems::health_monitor_system::health_monitor_system;
 use crate::general::systems::lights_systems::spawn_lights;
 use crate::general::systems::throwing_system::throwing;
+use crate::general::systems::touch_damage_system::touch_damage_system;
+use crate::gore::plugin::GorePlugin;
+use crate::house_editor::plugin::HouseEditorPlugin;
+use crate::items::ItemsPlugin;
+use crate::loot::{LootPlugin, spawn_loot_on_death};
 use crate::map::map_plugins::StatefulMapPlugin;
-use crate::player::player_plugin::PlayerPlugin;
-use crate::settings::plugin::SettingsPlugin;
+use crate::map_editor::plugin::MapEditorPlugin;
 use crate::model_settings::plugin::ModelSettingsPlugin;
+use crate::music::game_music_plugin::GameMusicPlugin;
+use crate::player::player_plugin::PlayerPlugin;
+use crate::player_setup::plugin::PlayerSetupPlugin;
+use crate::playground::plugin::PlaygroundPlugin;
+use crate::poly_pizza::plugin::PolyPizzaPlugin;
+use crate::settings::plugin::SettingsPlugin;
 use crate::towers::systems::{area_damage_system, shoot_alien_system, slow_alien_system};
 use crate::ui::ui_plugin::UiPlugin;
-use crate::poly_pizza::plugin::PolyPizzaPlugin;
-use crate::asset_browser::plugin::AssetBrowserPlugin;
-use crate::player_setup::plugin::PlayerSetupPlugin;
-use crate::map_editor::plugin::MapEditorPlugin;
-use crate::playground::plugin::PlaygroundPlugin;
-use crate::music::game_music_plugin::GameMusicPlugin;
-use crate::gore::plugin::GorePlugin;
+use bevy::state::app::AppExtStates;
+use bevy::time::Fixed;
 
-fn toggle_physics_debug(
-    keys: Res<ButtonInput<KeyCode>>,
-    mut store: ResMut<GizmoConfigStore>,
-) {
+fn toggle_physics_debug(keys: Res<ButtonInput<KeyCode>>, mut store: ResMut<GizmoConfigStore>) {
     if keys.just_pressed(KeyCode::F3) {
         let (config, _) = store.config_mut::<PhysicsGizmos>();
         config.enabled = !config.enabled;
@@ -52,9 +57,11 @@ pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        app
-            .insert_resource(Time::<Fixed>::from_seconds(0.05))
+        app.insert_resource(Time::<Fixed>::from_seconds(0.05))
             .init_resource::<TeamWallet>()
+            .init_resource::<DamageRules>()
+            .add_message::<ApplyDamage>()
+            .add_message::<Explode>()
             .init_state::<GameState>()
             .add_plugins((
                 AssetsPlugin,
@@ -70,6 +77,8 @@ impl Plugin for GamePlugin {
                 PlayerPlugin::default(),
                 ScoreKeeperPlugin,
                 GamepadPlugin,
+                ItemsPlugin,
+                LootPlugin,
             ))
             .add_plugins((
                 SettingsPlugin,
@@ -78,32 +87,45 @@ impl Plugin for GamePlugin {
                 AssetBrowserPlugin,
                 PlayerSetupPlugin,
                 MapEditorPlugin,
+                HouseEditorPlugin,
                 PlaygroundPlugin,
                 FactsPlugin,
                 FactsGameIntegrationPlugin,
                 GameMusicPlugin,
                 GorePlugin,
             ))
-            .add_systems(
-                OnEnter(GameState::InGame),
-                spawn_lights,
-            )
+            .add_systems(OnEnter(GameState::InGame), spawn_lights)
             .add_systems(Update, toggle_physics_debug)
             .add_systems(
                 Update,
                 (
                     throwing,
+                    throw_special,
+                    tick_projectiles,
+                    projectile_impacts,
+                    // Blasts write damage; barrels blow before the death path removes them.
+                    explosion_system.before(apply_damage),
+                    explode_on_death
+                        .before(health_monitor_system)
+                        .before(crate::gore::terrain::destroy_damaged_terrain),
                     collision_handling_system,
                     shoot_alien_system,
                     slow_alien_system,
                     area_damage_system,
                     touch_damage_system,
-                    spawn_coins_on_alien_death.before(health_monitor_system),
-                    coin_pickup_system,
+                    // Every damage writer above (and in the player/AI/gore plugins) funnels
+                    // into this one; it must land before the death path reads Health.
+                    apply_damage
+                        .before(spawn_loot_on_death)
+                        .before(spawn_death_effects),
+                    spawn_loot_on_death
+                        .before(health_monitor_system)
+                        .before(crate::gore::terrain::destroy_damaged_terrain),
                     spawn_death_effects.before(health_monitor_system),
                     health_monitor_system,
                     tick_death_effects,
-                ).run_if(in_state(GameState::InGame)),
+                )
+                    .run_if(in_state(GameState::InGame)),
             );
     }
 }

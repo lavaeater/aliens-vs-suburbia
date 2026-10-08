@@ -21,7 +21,7 @@ use bevy::prelude::*;
 use crate::player::components::{Player, PlayerDead};
 use crate::player::systems::arm_ik::{aim_bone, local_from_world, solve_elbow};
 use crate::player::systems::gait::{
-    hip_bob_offset, horizontal_reach, Foot, GaitContext, GaitParams, GaitState,
+    Foot, GaitContext, GaitParams, GaitState, hip_bob_offset, horizontal_reach,
 };
 
 /// The gait shape, as a tunable resource.
@@ -284,7 +284,12 @@ fn chain_from_foot(foot: Entity, parents: &Query<&ChildOf>) -> Option<LegChain> 
 ///
 /// Composing the locals also drops out the character's own world transform, which is what
 /// we want: the answer is an offset within the character, not a place in the world.
-fn offset_within(bone: Entity, root: Entity, parents: &Query<&ChildOf>, transforms: &Query<&Transform>) -> Option<Transform> {
+fn offset_within(
+    bone: Entity,
+    root: Entity,
+    parents: &Query<&ChildOf>,
+    transforms: &Query<&Transform>,
+) -> Option<Transform> {
     let mut chain = Vec::new();
     let mut current = bone;
     while current != root {
@@ -310,7 +315,11 @@ fn right_of(forward: Vec3) -> Vec3 {
 }
 
 /// The ancestor of `bone` that is a direct child of `character` — the scene's own root.
-fn child_of_character(bone: Entity, character: Entity, parents: &Query<&ChildOf>) -> Option<Entity> {
+fn child_of_character(
+    bone: Entity,
+    character: Entity,
+    parents: &Query<&ChildOf>,
+) -> Option<Entity> {
     let mut current = bone;
     loop {
         let parent = parents.get(current).ok()?.parent();
@@ -323,6 +332,9 @@ fn child_of_character(bone: Entity, character: Entity, parents: &Query<&ChildOf>
 
 /// Turn a spawned skeleton into two leg chains, once it exists.
 #[allow(clippy::type_complexity)]
+// Indexed only by `Foot::index()` (0/1 over a two-variant enum) into `[T; 2]`
+// arrays / tuples -- structurally in bounds, not a real panic risk.
+#[allow(clippy::indexing_slicing)]
 pub fn resolve_legs(
     mut commands: Commands,
     mut pending: Query<(Entity, &mut PendingLegs), (With<Player>, Without<Legs>)>,
@@ -355,9 +367,10 @@ pub fn resolve_legs(
 
         // All-or-nothing, like the twist chain: one leg solved and one animated would look
         // far worse than neither.
-        let (Some(left), Some(right)) =
-            (chain_from_foot(left, &parents), chain_from_foot(right, &parents))
-        else {
+        let (Some(left), Some(right)) = (
+            chain_from_foot(left, &parents),
+            chain_from_foot(right, &parents),
+        ) else {
             pending.tries += 1;
             continue;
         };
@@ -393,7 +406,9 @@ pub fn resolve_legs(
             continue;
         }
 
-        let Ok(body) = transforms.get(character) else { continue };
+        let Ok(body) = transforms.get(character) else {
+            continue;
+        };
 
         commands
             .entity(character)
@@ -416,6 +431,9 @@ pub fn resolve_legs(
 
 /// Step the gait and bend both legs onto its feet.
 #[allow(clippy::type_complexity, clippy::too_many_arguments)]
+// Indexed only by `Foot::index()` (0/1 over a two-variant enum) into `[T; 2]`
+// arrays / tuples -- structurally in bounds, not a real panic risk.
+#[allow(clippy::indexing_slicing)]
 pub fn apply_leg_ik(
     mut commands: Commands,
     time: Res<Time>,
@@ -445,7 +463,9 @@ pub fn apply_leg_ik(
                 .insert(PendingLegs::default());
             continue;
         }
-        let Ok(body) = globals.get(character) else { continue };
+        let Ok(body) = globals.get(character) else {
+            continue;
+        };
         let position = body.translation();
 
         // `position` is last frame's world transform -- everything in this slot runs
@@ -457,16 +477,20 @@ pub fn apply_leg_ik(
 
         // Direction of travel, not facing: the character strafes, and the feet should step
         // where the body is going rather than where the gun is pointing.
-        let forward = flat
-            .try_normalize()
-            .unwrap_or_else(|| (body.rotation() * Vec3::NEG_Z).with_y(0.0).normalize_or(Vec3::NEG_Z));
+        let forward = flat.try_normalize().unwrap_or_else(|| {
+            (body.rotation() * Vec3::NEG_Z)
+                .with_y(0.0)
+                .normalize_or(Vec3::NEG_Z)
+        });
         let right = right_of(forward).normalize_or(body.rotation() * Vec3::X);
 
         // The ground under the character, read from the model itself: the model's origin is
         // the floor it was authored standing on, and the ankles rest a little above that.
         // Live rather than latched, so the feet follow the model when it is rescaled and,
         // more to the point, when it is dropped onto the map at spawn.
-        let Ok(model) = globals.get(legs.model_root) else { continue };
+        let Ok(model) = globals.get(legs.model_root) else {
+            continue;
+        };
         let model_scale = model.scale().y;
         let ground_y = model.translation().y + legs.foot_lift * model_scale;
         let gait_scale = legs.leg_length * model_scale / REFERENCE_LEG_LENGTH;
@@ -475,20 +499,28 @@ pub fn apply_leg_ik(
         // What the knee allows, in world metres: how near and how far the ankle can get
         // from the hip. Everything about reach is measured from `furthest` rather than from
         // `leg_world`, which is the length of a leg with a knee that locks.
-        let (nearest, furthest) = params
-            .knee
-            .span(legs.upper_length * model_scale, legs.lower_length * model_scale);
+        let (nearest, furthest) = params.knee.span(
+            legs.upper_length * model_scale,
+            legs.lower_length * model_scale,
+        );
 
         // Both legs hang off the same pelvis, and it is the pelvis the whole gait is
         // measured against.
-        let Ok(pelvis) = parents.get(legs.chains[0].upper).map(ChildOf::parent) else { continue };
+        let Ok(pelvis) = parents.get(legs.chains[0].upper).map(ChildOf::parent) else {
+            continue;
+        };
 
         // Where the hips are *this* frame, by forward kinematics from the model root rather
         // than from the thigh's own `GlobalTransform`, which is a frame stale and already
         // carries the previous frame's correction -- reading it back would compound. The
         // model root's staleness cancels: `ground_y` comes from the same transform, and only
         // the difference between them is used.
-        let hip_local = offset_within(legs.chains[0].upper, legs.model_root, &parents, &transforms.as_readonly());
+        let hip_local = offset_within(
+            legs.chains[0].upper,
+            legs.model_root,
+            &parents,
+            &transforms.as_readonly(),
+        );
         let Some(hip_local) = hip_local else { continue };
         let hip_height = model.mul_transform(hip_local).translation().y - ground_y;
 
@@ -501,8 +533,7 @@ pub fn apply_leg_ik(
             // since this frame's is not advanced until the gait updates below -- a frame of
             // lag on a curve this smooth is invisible.
             let cycle = legs.gait.as_ref().map_or(0.0, GaitState::cycle);
-            let wanted =
-                (params.hip_height + hip_bob_offset(cycle, params.hip_bob)) * leg_world;
+            let wanted = (params.hip_height + hip_bob_offset(cycle, params.hip_bob)) * leg_world;
             let lift = wanted - hip_height;
             if let Ok(parent_of_pelvis) = parents.get(pelvis).map(ChildOf::parent)
                 && let Ok(parent_world) = globals.get(parent_of_pelvis)
@@ -511,8 +542,10 @@ pub fn apply_leg_ik(
                 // World-space lift into the parent's frame: this rig's armature is rotated a
                 // quarter turn (Z-up source art) and the model root another half turn, so
                 // "up" is nowhere near +Y in the pelvis's own space.
-                pelvis_local.translation +=
-                    parent_world.affine().inverse().transform_vector3(Vec3::Y * lift);
+                pelvis_local.translation += parent_world
+                    .affine()
+                    .inverse()
+                    .transform_vector3(Vec3::Y * lift);
             }
             wanted
         } else {
@@ -522,9 +555,12 @@ pub fn apply_leg_ik(
         // Recomputed after the lift, so the solve works from where the pelvis now is rather
         // than where the animation left it. Everything below the pelvis is untouched, so
         // composing the locals gives its new world transform exactly.
-        let pelvis_world = offset_within(pelvis, legs.model_root, &parents, &transforms.as_readonly())
-            .map(|local| model.mul_transform(local));
-        let Some(pelvis_world) = pelvis_world else { continue };
+        let pelvis_world =
+            offset_within(pelvis, legs.model_root, &parents, &transforms.as_readonly())
+                .map(|local| model.mul_transform(local));
+        let Some(pelvis_world) = pelvis_world else {
+            continue;
+        };
 
         // Everything about reach is measured from the *mean* hip height rather than this
         // instant's. Planning against the bob would swing the stride up and down with it,
@@ -544,7 +580,11 @@ pub fn apply_leg_ik(
             right,
             ground_y,
             reach: horizontal_reach(furthest, mean_hip),
-            distance: if flat.length() > MOVING_EPSILON { flat.length() } else { 0.0 },
+            distance: if flat.length() > MOVING_EPSILON {
+                flat.length()
+            } else {
+                0.0
+            },
             dt,
         };
 
@@ -722,7 +762,11 @@ mod tests {
         assert_eq!(bone_side("foot_l"), Some(Foot::Left));
         assert_eq!(bone_side("foot_r"), Some(Foot::Right));
         assert_eq!(bone_side("foot.L"), Some(Foot::Left));
-        assert_eq!(bone_side("thigh_r_01"), Some(Foot::Right), "a numeric index is skipped");
+        assert_eq!(
+            bone_side("thigh_r_01"),
+            Some(Foot::Right),
+            "a numeric index is skipped"
+        );
         assert_eq!(bone_side("pelvis"), None);
     }
 
@@ -772,7 +816,11 @@ mod tests {
             &params,
             0.0,
         );
-        assert!(target.x < 0.0, "the left foot planted at x {}, on the right", target.x);
+        assert!(
+            target.x < 0.0,
+            "the left foot planted at x {}, on the right",
+            target.x
+        );
     }
 
     #[test]
@@ -792,9 +840,9 @@ mod tests {
 #[cfg(test)]
 mod world_tests {
     use super::*;
+    use bevy::MinimalPlugins;
     use bevy::app::App;
     use bevy::transform::TransformPlugin;
-    use bevy::MinimalPlugins;
 
     /// The game's own player, to scale: a character whose origin sits in the middle of its
     /// collider, wearing a model root that `fix_scene_transform` shrinks to a quarter size,
@@ -873,7 +921,10 @@ mod world_tests {
             .insert(ChildOf(character))
             .id();
         let pelvis = world
-            .spawn((Name::new("pelvis"), Transform::from_xyz(0.0, PELVIS_IN_MODEL, 0.0)))
+            .spawn((
+                Name::new("pelvis"),
+                Transform::from_xyz(0.0, PELVIS_IN_MODEL, 0.0),
+            ))
             .insert(ChildOf(model))
             .id();
 
@@ -914,7 +965,14 @@ mod world_tests {
         // One tick, deliberately: the legs must resolve on the very frame the model root is
         // fixed, which is the frame whose globals still say otherwise.
         app.update();
-        Rig { app, character, model, hip: pelvis, thigh: left_thigh, feet }
+        Rig {
+            app,
+            character,
+            model,
+            hip: pelvis,
+            thigh: left_thigh,
+            feet,
+        }
     }
 
     impl Rig {
@@ -992,7 +1050,10 @@ mod world_tests {
         let ground = rig.world_y(rig.model) + ANKLE_IN_MODEL * MODEL_SCALE;
         for foot in Foot::BOTH {
             let y = rig.world_y(rig.feet[foot.index()]);
-            assert!(y < hip_y, "{foot:?} foot is above the hip ({y} vs {hip_y}) after the fall");
+            assert!(
+                y < hip_y,
+                "{foot:?} foot is above the hip ({y} vs {hip_y}) after the fall"
+            );
             assert!(
                 (y - ground).abs() < 0.02,
                 "{foot:?} foot is at y {y}, left behind above the ground at {ground}"
@@ -1047,9 +1108,10 @@ mod world_tests {
         let tall = params
             .scaled(leg / REFERENCE_LEG_LENGTH)
             .fit_to_reach(upper, lower, 0.96 * leg);
-        let walking = params
-            .scaled(leg / REFERENCE_LEG_LENGTH)
-            .fit_to_reach(upper, lower, 0.90 * leg);
+        let walking =
+            params
+                .scaled(leg / REFERENCE_LEG_LENGTH)
+                .fit_to_reach(upper, lower, 0.90 * leg);
         assert!(
             walking.stride_length > tall.stride_length * 1.5,
             "hips at 90% gave a stride of {}, barely better than {} at 96%",
@@ -1062,7 +1124,12 @@ mod world_tests {
     fn the_feet_stay_under_the_character_while_it_walks() {
         let mut rig = rig();
         let step_height = {
-            let legs = rig.app.world().entity(rig.character).get::<Legs>().expect("legs");
+            let legs = rig
+                .app
+                .world()
+                .entity(rig.character)
+                .get::<Legs>()
+                .expect("legs");
             let gait_scale = legs.leg_length * MODEL_SCALE / REFERENCE_LEG_LENGTH;
             GaitParams::default().scaled(gait_scale).step_height
         };
@@ -1112,6 +1179,9 @@ mod world_tests {
         }
         // Leg length is 0.2, so half a leg ahead is a stride, and anything approaching a
         // metre means the human-scale defaults went in unscaled.
-        assert!(worst < 0.2, "a foot reached {worst} m from the hips of a 0.2 m leg");
+        assert!(
+            worst < 0.2,
+            "a foot reached {worst} m from the hips of a 0.2 m leg"
+        );
     }
 }

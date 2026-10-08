@@ -4,5 +4,6 @@ use bevy::prelude::Message;
 #[derive(Message, Clone)]
 pub struct BuildTower {
     pub position: Vec3,
-    pub model_definition_key: &'static str,
+    /// Index into `MapModelDefinitions::build_indicators`.
+    pub option: usize,
 }

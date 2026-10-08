@@ -16,6 +16,11 @@
 //!     ability: North,
 //!     next_build_item: DPadRight,
 //!     prev_build_item: DPadLeft,
+//!     interact: East,
+//!     throw_special: LeftTrigger,
+//!     reload: RightTrigger,
+//!     next_weapon: DPadUp,
+//!     prev_weapon: DPadDown,
 //!     stick_dead_zone: 0.2,
 //!     trigger_threshold: 0.3,
 //! )
@@ -48,6 +53,21 @@ pub struct GamepadBindings {
     pub next_build_item: GamepadButton,
     #[serde(default = "default_prev_build_item")]
     pub prev_build_item: GamepadButton,
+    /// Hold to revive a downed teammate. Default Circle (shared with exit-build, which
+    /// only applies in build mode).
+    #[serde(default = "default_interact")]
+    pub interact: GamepadButton,
+    /// Lob a grenade / molotov. Default L1.
+    #[serde(default = "default_throw_special")]
+    pub throw_special: GamepadButton,
+    /// Reload the held gun. Default R1.
+    #[serde(default = "default_reload")]
+    pub reload: GamepadButton,
+    /// Cycle the carried weapons. Default D-pad up / down.
+    #[serde(default = "default_next_weapon")]
+    pub next_weapon: GamepadButton,
+    #[serde(default = "default_prev_weapon")]
+    pub prev_weapon: GamepadButton,
     /// Sticks below this deflection read as centred (on top of Bevy's own dead zone).
     #[serde(default = "default_stick_dead_zone")]
     pub stick_dead_zone: f32,
@@ -56,15 +76,48 @@ pub struct GamepadBindings {
     pub trigger_threshold: f32,
 }
 
-fn default_fire() -> GamepadButton { GamepadButton::RightTrigger2 }
-fn default_build_mode() -> GamepadButton { GamepadButton::West }
-fn default_execute_build() -> GamepadButton { GamepadButton::South }
-fn default_exit_build() -> GamepadButton { GamepadButton::East }
-fn default_ability() -> GamepadButton { GamepadButton::North }
-fn default_next_build_item() -> GamepadButton { GamepadButton::DPadRight }
-fn default_prev_build_item() -> GamepadButton { GamepadButton::DPadLeft }
-fn default_stick_dead_zone() -> f32 { 0.2 }
-fn default_trigger_threshold() -> f32 { 0.3 }
+const fn default_fire() -> GamepadButton {
+    GamepadButton::RightTrigger2
+}
+const fn default_build_mode() -> GamepadButton {
+    GamepadButton::West
+}
+const fn default_execute_build() -> GamepadButton {
+    GamepadButton::South
+}
+const fn default_exit_build() -> GamepadButton {
+    GamepadButton::East
+}
+const fn default_ability() -> GamepadButton {
+    GamepadButton::North
+}
+const fn default_next_build_item() -> GamepadButton {
+    GamepadButton::DPadRight
+}
+const fn default_prev_build_item() -> GamepadButton {
+    GamepadButton::DPadLeft
+}
+const fn default_interact() -> GamepadButton {
+    GamepadButton::East
+}
+const fn default_throw_special() -> GamepadButton {
+    GamepadButton::LeftTrigger
+}
+const fn default_reload() -> GamepadButton {
+    GamepadButton::RightTrigger
+}
+const fn default_next_weapon() -> GamepadButton {
+    GamepadButton::DPadUp
+}
+const fn default_prev_weapon() -> GamepadButton {
+    GamepadButton::DPadDown
+}
+const fn default_stick_dead_zone() -> f32 {
+    0.2
+}
+const fn default_trigger_threshold() -> f32 {
+    0.3
+}
 
 impl Default for GamepadBindings {
     fn default() -> Self {
@@ -76,6 +129,11 @@ impl Default for GamepadBindings {
             ability: default_ability(),
             next_build_item: default_next_build_item(),
             prev_build_item: default_prev_build_item(),
+            interact: default_interact(),
+            throw_special: default_throw_special(),
+            reload: default_reload(),
+            next_weapon: default_next_weapon(),
+            prev_weapon: default_prev_weapon(),
             stick_dead_zone: default_stick_dead_zone(),
             trigger_threshold: default_trigger_threshold(),
         }
@@ -87,11 +145,11 @@ impl GamepadBindings {
         let path = std::path::Path::new(GAMEPAD_BINDINGS_PATH);
         if path.exists()
             && let Ok(text) = std::fs::read_to_string(path)
-            && let Ok(bindings) = ron::from_str::<GamepadBindings>(&text)
+            && let Ok(bindings) = ron::from_str::<Self>(&text)
         {
             return bindings;
         }
-        GamepadBindings::default()
+        Self::default()
     }
 
     /// Load, and write the defaults out if there is no file yet, so the bindings are
@@ -128,13 +186,24 @@ mod tests {
     fn a_partial_file_fills_the_rest_from_defaults() {
         // Every field is #[serde(default)], so users can override just one button.
         let bindings: GamepadBindings = ron::from_str("(ability: West)").expect("partial parses");
-        assert_eq!(bindings.ability, GamepadButton::West, "the override applies");
-        assert_eq!(bindings.fire, default_fire(), "the rest fall back to defaults");
+        assert_eq!(
+            bindings.ability,
+            GamepadButton::West,
+            "the override applies"
+        );
+        assert_eq!(
+            bindings.fire,
+            default_fire(),
+            "the rest fall back to defaults"
+        );
     }
 
     #[test]
     fn a_saved_file_round_trips() {
-        let bindings = GamepadBindings { fire: GamepadButton::LeftTrigger2, ..Default::default() };
+        let bindings = GamepadBindings {
+            fire: GamepadButton::LeftTrigger2,
+            ..Default::default()
+        };
         let text = ron::ser::to_string_pretty(&bindings, ron::ser::PrettyConfig::default())
             .expect("serializes");
         let back: GamepadBindings = ron::from_str(&text).expect("round trips");

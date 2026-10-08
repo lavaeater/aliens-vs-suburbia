@@ -25,8 +25,8 @@ pub struct CurrentAnimationKey {
 }
 
 impl CurrentAnimationKey {
-    pub fn new(group: String, key: AnimationKey) -> Self {
-        CurrentAnimationKey { group, key }
+    pub const fn new(group: String, key: AnimationKey) -> Self {
+        Self { group, key }
     }
 }
 
@@ -84,17 +84,18 @@ pub enum AnimationKey {
     Death,
     HitReact,
     // ── Game-intent keys (resolved to composite clips by CharacterState) ───
-    Throwing,   // → IdleShoot or WalkShoot depending on movement
-    Building,   // direct clip ("interact" / "wave") or falls back to Idle
+    Throwing, // → IdleShoot or WalkShoot depending on movement
+    Building, // direct clip ("interact" / "wave") or falls back to Idle
+    Reload,   // one-shot while a magazine is swapped; freezes if the rig has no clip
 }
 
 impl AnimationKey {
     /// Whether this animation should loop.  One-shot animations (Death,
     /// reactions, landing) hold their last frame instead of restarting.
-    pub fn loops(self) -> bool {
+    pub const fn loops(self) -> bool {
         !matches!(
             self,
-            AnimationKey::Death | AnimationKey::HitReact | AnimationKey::JumpLand
+            Self::Death | Self::HitReact | Self::JumpLand | Self::Reload
         )
     }
 
@@ -102,27 +103,27 @@ impl AnimationKey {
     /// mapping.  Matched against the last `|`-delimited segment of the GLTF
     /// clip name (case-insensitive exact), then as a full-name suffix, then
     /// as a substring.  See `clip_matches()`.
-    pub fn default_search(self) -> &'static str {
+    pub const fn default_search(self) -> &'static str {
         match self {
-            AnimationKey::Idle      => "idle",
-            AnimationKey::IdleShoot => "idle_shoot",
-            AnimationKey::Walk      => "walk",
-            AnimationKey::WalkShoot => "walk_shoot",
-            AnimationKey::Run       => "run",
-            AnimationKey::RunShoot  => "run_shoot",
-            AnimationKey::RunGun    => "run_gun",
-            AnimationKey::Duck      => "duck",
-            AnimationKey::Jump      => "jump",
-            AnimationKey::JumpIdle  => "jump_idle",
-            AnimationKey::JumpLand  => "jump_land",
-            AnimationKey::Punch     => "punch",
-            AnimationKey::Wave      => "wave",
-            AnimationKey::Yes       => "yes",
-            AnimationKey::No        => "no",
-            AnimationKey::Death     => "death",
-            AnimationKey::HitReact  => "hitreact",
-            AnimationKey::Throwing  => "punch",
-            AnimationKey::Building  => "interact",
+            Self::Idle => "idle",
+            Self::IdleShoot => "idle_shoot",
+            Self::Walk => "walk",
+            Self::WalkShoot => "walk_shoot",
+            Self::Run => "run",
+            Self::RunShoot => "run_shoot",
+            Self::RunGun => "run_gun",
+            Self::Duck => "duck",
+            Self::Jump => "jump",
+            Self::JumpIdle => "jump_idle",
+            Self::JumpLand => "jump_land",
+            Self::Punch | Self::Throwing => "punch",
+            Self::Wave => "wave",
+            Self::Yes => "yes",
+            Self::No => "no",
+            Self::Death => "death",
+            Self::HitReact => "hitreact",
+            Self::Building => "interact",
+            Self::Reload => "reload",
         }
     }
 }
@@ -164,6 +165,7 @@ pub const ANIM_KEYS: &[AnimationKey] = &[
     AnimationKey::HitReact,
     AnimationKey::Throwing,
     AnimationKey::Building,
+    AnimationKey::Reload,
 ];
 
 /*
@@ -227,7 +229,13 @@ pub fn leave_animation_state_handler(
         {
             let old = current_key.key;
             current_key.key = resolved;
-            anim_thingie(&anim_store, &current_key.group, resolved, &mut player, Some(old));
+            anim_thingie(
+                &anim_store,
+                &current_key.group,
+                resolved,
+                &mut player,
+                Some(old),
+            );
         }
     }
 }
@@ -271,7 +279,13 @@ pub fn goto_animation_state_handler(
         {
             let old = current_key.key;
             current_key.key = resolved;
-            anim_thingie(&anim_store, &current_key.group, resolved, &mut player, Some(old));
+            anim_thingie(
+                &anim_store,
+                &current_key.group,
+                resolved,
+                &mut player,
+                Some(old),
+            );
         }
     }
 }
@@ -360,7 +374,7 @@ pub fn get_child_with_component_recursive<T: Component<Mutability = Mutable>>(
     } else {
         match child_query.get(entity) {
             Ok(children) => {
-                for child in children.into_iter() {
+                for child in children {
                     if let Some(ent) =
                         get_child_with_component_recursive(*child, child_query, component_query)
                     {

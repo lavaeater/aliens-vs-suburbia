@@ -1,0 +1,13 @@
+// What a plain alien leaves behind. Coins always; otherwise mostly nothing.
+(
+    rolls: 1,
+    always: [
+        Item(weight: 1.0, kind: Coins(value: 5), count: 1),
+    ],
+    entries: [
+        Nothing(weight: 70.0),
+        Table(weight: 18.0, table: "small_ammo"),
+        Item(weight: 8.0, kind: HealthPickup(amount: 25.0), count: 1),
+        Item(weight: 4.0, kind: AmmoPickup(kind: Grenade, rounds: 1), count: 1),
+    ],
+)

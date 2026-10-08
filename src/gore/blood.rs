@@ -10,7 +10,8 @@ use bevy::image::Image;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
-use crate::gore::components::{DamageDealt, DamageKind, Ephemeral, GoreBudget};
+use crate::general::systems::map_systems::TileDefinitions;
+use crate::gore::components::{DECAL_LIFT, DamageDealt, DamageKind, Ephemeral, GoreBudget};
 
 /// Shared, pre-built blood art. Materials are shared where they can be (opaque
 /// ground decals) and cloned where the puff needs its own fading alpha.
@@ -29,7 +30,7 @@ const TEX_SIZE: u32 = 64;
 /// Deterministic little PRNG so the texture looks organic without pulling in a dep.
 struct Rng(u32);
 impl Rng {
-    fn next(&mut self) -> u32 {
+    const fn next(&mut self) -> u32 {
         // xorshift32
         let mut x = self.0;
         x ^= x << 13;
@@ -52,7 +53,7 @@ fn make_blood_texture() -> Image {
 
     // A few droplets: (cx, cy, radius) in [0,1] texel space.
     let mut droplets = [(0.0f32, 0.0f32, 0.0f32); 6];
-    for d in droplets.iter_mut() {
+    for d in &mut droplets {
         let ang = rng.f32() * std::f32::consts::TAU;
         let dist = 0.28 + rng.f32() * 0.20;
         d.0 = 0.5 + ang.cos() * dist;
@@ -86,10 +87,12 @@ fn make_blood_texture() -> Image {
             // Darker toward the middle (pooled), brighter at the thin edges.
             let dark = 0.35 + 0.25 * (r / 0.4).clamp(0.0, 1.0);
             let idx = (y * n + x) * 4;
-            data[idx] = (0.45 * dark * 255.0) as u8; // R
-            data[idx + 1] = (0.02 * 255.0) as u8; // G
-            data[idx + 2] = (0.02 * 255.0) as u8; // B
-            data[idx + 3] = (a * 255.0) as u8; // A
+            if let Some([r_px, g_px, b_px, a_px]) = data.get_mut(idx..idx + 4) {
+                *r_px = (0.45 * dark * 255.0) as u8;
+                *g_px = (0.02 * 255.0) as u8;
+                *b_px = (0.02 * 255.0) as u8;
+                *a_px = (a * 255.0) as u8;
+            }
         }
     }
 
@@ -141,6 +144,7 @@ pub fn spawn_blood_on_damage(
     mut meshes: ResMut<Assets<Mesh>>,
     mut budget: ResMut<GoreBudget>,
     blood: Option<Res<BloodAssets>>,
+    tile_defs: Res<TileDefinitions>,
 ) {
     let Some(blood) = blood else { return };
 
@@ -166,7 +170,10 @@ pub fn spawn_blood_on_damage(
         });
         let puff_size = 0.18 * mag;
         commands.spawn((
-            Mesh3d(meshes.add(Mesh::from(Plane3d::new(hit.normal.normalize_or(Vec3::Y), Vec2::splat(0.5))))),
+            Mesh3d(meshes.add(Mesh::from(Plane3d::new(
+                hit.normal.normalize_or(Vec3::Y),
+                Vec2::splat(0.5),
+            )))),
             MeshMaterial3d(puff_mat),
             Transform::from_translation(hit.position + hit.normal.normalize_or(Vec3::Y) * 0.05)
                 .with_scale(Vec3::splat(puff_size)),
@@ -176,7 +183,8 @@ pub fn spawn_blood_on_damage(
         ));
 
         // ── Ground stain: persistent, budget-capped. Flat quad just above the floor,
-        //    directly under the hit (maps are flat, so y≈0 works without a raycast). ─
+        //    directly under the hit (maps are flat, so the floor plane works without a
+        //    raycast -- but that plane is `floor_level`, not 0). ───────────────────────
         let yaw = (hit.position.x * 12.9898 + hit.position.z * 78.233).sin() * 43_758.547;
         let yaw = (yaw - yaw.floor()) * std::f32::consts::TAU;
         let size = (0.6 + mag * 0.5) * (0.8 + 0.4 * (yaw / std::f32::consts::TAU));
@@ -184,9 +192,13 @@ pub fn spawn_blood_on_damage(
             .spawn((
                 Mesh3d(blood.decal_mesh.clone()),
                 MeshMaterial3d(blood.decal_material.clone()),
-                Transform::from_xyz(hit.position.x, 0.02, hit.position.z)
-                    .with_rotation(Quat::from_rotation_y(yaw))
-                    .with_scale(Vec3::splat(size)),
+                Transform::from_xyz(
+                    hit.position.x,
+                    tile_defs.floor_level + DECAL_LIFT,
+                    hit.position.z,
+                )
+                .with_rotation(Quat::from_rotation_y(yaw))
+                .with_scale(Vec3::splat(size)),
             ))
             .id();
         if let Some(evicted) = budget.push_decal(decal) {

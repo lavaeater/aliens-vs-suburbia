@@ -1,7 +1,7 @@
-use bevy::prelude::*;
 use crate::alien::components::general::AlienCounter;
 use crate::game_state::score_keeper::{LevelState, LevelTracker};
 use crate::general::components::map_components::AlienSpawnPoint;
+use bevy::prelude::*;
 
 /// Definition for one wave of alien spawns.
 #[derive(Clone)]
@@ -10,6 +10,14 @@ pub struct WaveDef {
     pub spawn_rate_per_minute: f32,
     /// Seconds to wait after the previous wave (or level start) before this wave begins.
     pub delay_before: f32,
+    /// Enemy def path for this wave. Empty = the built-in alien.
+    pub enemy_def: String,
+}
+
+impl WaveDef {
+    pub fn enemy_def(&self) -> Option<String> {
+        (!self.enemy_def.is_empty()).then(|| self.enemy_def.clone())
+    }
 }
 
 #[derive(Resource)]
@@ -28,9 +36,24 @@ impl Default for WaveManager {
     fn default() -> Self {
         Self {
             waves: vec![
-                WaveDef { alien_count: 1, spawn_rate_per_minute:  6.0, delay_before:  60.0 },
-                WaveDef { alien_count: 15, spawn_rate_per_minute:  9.0, delay_before: 30.0 },
-                WaveDef { alien_count: 20, spawn_rate_per_minute: 12.0, delay_before: 20.0 },
+                WaveDef {
+                    alien_count: 1,
+                    spawn_rate_per_minute: 6.0,
+                    delay_before: 60.0,
+                    enemy_def: String::new(),
+                },
+                WaveDef {
+                    alien_count: 15,
+                    spawn_rate_per_minute: 9.0,
+                    delay_before: 30.0,
+                    enemy_def: String::new(),
+                },
+                WaveDef {
+                    alien_count: 20,
+                    spawn_rate_per_minute: 12.0,
+                    delay_before: 20.0,
+                    enemy_def: String::new(),
+                },
             ],
             current_wave: 0,
             wave_timer: 60.0, // initial countdown before wave 1
@@ -41,11 +64,34 @@ impl Default for WaveManager {
 }
 
 impl WaveManager {
+    /// Waves authored in a map file. The first wave starts after `first_delay` seconds,
+    /// later ones `between` seconds after the previous wave is cleared.
+    pub fn from_map(waves: &[crate::general::components::map_components::WaveDef]) -> Self {
+        const FIRST_DELAY: f32 = 5.0;
+        const BETWEEN: f32 = 15.0;
+        Self {
+            waves: waves
+                .iter()
+                .enumerate()
+                .map(|(i, w)| WaveDef {
+                    alien_count: w.count as i32,
+                    spawn_rate_per_minute: w.spawn_rate_per_minute,
+                    delay_before: if i == 0 { FIRST_DELAY } else { BETWEEN },
+                    enemy_def: w.enemy_def.clone(),
+                })
+                .collect(),
+            current_wave: 0,
+            wave_timer: FIRST_DELAY,
+            spawning: false,
+            spawned_this_wave: 0,
+        }
+    }
+
     pub fn total_aliens(&self) -> i32 {
         self.waves.iter().map(|w| w.alien_count).sum()
     }
 
-    pub fn waves_remaining(&self) -> bool {
+    pub const fn waves_remaining(&self) -> bool {
         self.current_wave < self.waves.len()
     }
 
@@ -54,9 +100,18 @@ impl WaveManager {
             return "All waves done".to_string();
         }
         if self.spawning {
-            format!("Wave {} / {}", self.current_wave + 1, self.waves.len())
+            format!(
+                "Wave {} / {}",
+                self.current_wave.saturating_add(1),
+                self.waves.len()
+            )
         } else {
-            format!("Wave {} / {} in {:.0}s", self.current_wave + 1, self.waves.len(), self.wave_timer)
+            format!(
+                "Wave {} / {} in {:.0}s",
+                self.current_wave.saturating_add(1),
+                self.waves.len(),
+                self.wave_timer
+            )
         }
     }
 }
@@ -69,28 +124,43 @@ pub fn wave_system(
     mut spawn_points: Query<&mut AlienSpawnPoint>,
     alien_counter: Res<AlienCounter>,
 ) {
-    if !matches!(tracker.level_state, LevelState::InProgress) { return; }
-    if !manager.waves_remaining() { return; }
+    if !matches!(tracker.level_state, LevelState::InProgress) {
+        return;
+    }
+    if !manager.waves_remaining() {
+        return;
+    }
 
     let dt = time.delta_secs();
 
     if manager.spawning {
-        let wave = &manager.waves[manager.current_wave];
-        let finished = manager.spawned_this_wave >= wave.alien_count
-            && alien_counter.count == 0;
+        let Some(alien_count) = manager
+            .waves
+            .get(manager.current_wave)
+            .map(|w| w.alien_count)
+        else {
+            return;
+        };
+        let finished = manager.spawned_this_wave >= alien_count && alien_counter.count == 0;
 
         if finished {
-            manager.current_wave += 1;
+            manager.current_wave = manager.current_wave.saturating_add(1);
             manager.spawning = false;
             manager.spawned_this_wave = 0;
-            if manager.waves_remaining() {
-                manager.wave_timer = manager.waves[manager.current_wave].delay_before;
+            if let Some(delay) = manager
+                .waves
+                .get(manager.current_wave)
+                .map(|w| w.delay_before)
+            {
+                manager.wave_timer = delay;
             }
         }
     } else {
         manager.wave_timer -= dt;
         if manager.wave_timer <= 0.0 {
-            let wave = &manager.waves[manager.current_wave];
+            let Some(wave) = manager.waves.get(manager.current_wave) else {
+                return;
+            };
             let rate = wave.spawn_rate_per_minute;
             for mut sp in spawn_points.iter_mut() {
                 sp.spawn_rate_per_minute = rate;
@@ -104,14 +174,17 @@ pub fn wave_system(
 }
 
 #[allow(dead_code)]
-pub fn count_wave_spawn(
-    mut manager: ResMut<WaveManager>,
-    tracker: Res<LevelTracker>,
-) {
+pub fn count_wave_spawn(mut manager: ResMut<WaveManager>, tracker: Res<LevelTracker>) {
     // Sync spawned_this_wave from the global spawned count.
-    let wave_offset: i32 = manager.waves[..manager.current_wave]
-        .iter().map(|w| w.alien_count).sum();
-    manager.spawned_this_wave = (tracker.aliens_to_spawn - tracker.aliens_left_to_spawn - wave_offset).max(0);
+    let wave_offset: i32 = manager
+        .waves
+        .get(..manager.current_wave)
+        .unwrap_or_default()
+        .iter()
+        .map(|w| w.alien_count)
+        .sum();
+    manager.spawned_this_wave =
+        (tracker.aliens_to_spawn - tracker.aliens_left_to_spawn - wave_offset).max(0);
 }
 
 #[cfg(test)]
@@ -135,37 +208,54 @@ mod tests {
 
 #[cfg(test)]
 mod wave_system_tests {
-    use super::{wave_system, WaveManager};
-    use bevy::prelude::*;
-    use std::time::Duration;
+    use super::{WaveManager, wave_system};
     use crate::alien::components::general::AlienCounter;
     use crate::game_state::score_keeper::{LevelState, LevelTracker};
     use crate::general::components::map_components::AlienSpawnPoint;
+    use bevy::prelude::*;
+    use std::time::Duration;
 
     fn test_app(manager: WaveManager) -> App {
         let mut app = App::new();
         app.init_resource::<Time>();
-        let tracker = LevelTracker { level_state: LevelState::InProgress, ..Default::default() };
+        let tracker = LevelTracker {
+            level_state: LevelState::InProgress,
+            ..Default::default()
+        };
         app.insert_resource(tracker);
         app.insert_resource(manager);
-        app.insert_resource(AlienCounter { count: 0, max_count: 100 });
+        app.insert_resource(AlienCounter {
+            count: 0,
+            max_count: 100,
+        });
         app.add_systems(Update, wave_system);
         app
     }
 
     #[test]
     fn the_countdown_starts_the_wave_and_arms_the_spawn_points() {
-        let manager = WaveManager { wave_timer: 0.5, ..Default::default() }; // about to start wave 0 (rate 6/min)
+        let manager = WaveManager {
+            wave_timer: 0.5,
+            ..Default::default()
+        }; // about to start wave 0 (rate 6/min)
         let mut app = test_app(manager);
         let sp = app.world_mut().spawn(AlienSpawnPoint::new(0.0)).id();
 
         // Advance past the remaining countdown.
-        app.world_mut().resource_mut::<Time>().advance_by(Duration::from_millis(600));
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(Duration::from_millis(600));
         app.update();
 
-        assert!(app.world().resource::<WaveManager>().spawning, "the wave should be spawning");
+        assert!(
+            app.world().resource::<WaveManager>().spawning,
+            "the wave should be spawning"
+        );
         let spawn_point = app.world().get::<AlienSpawnPoint>(sp).unwrap();
-        assert_eq!(spawn_point.spawn_rate_per_minute, 6.0, "spawn point armed with wave 0's rate");
+        assert_eq!(
+            spawn_point.spawn_rate_per_minute, 6.0,
+            "spawn point armed with wave 0's rate"
+        );
     }
 
     #[test]
@@ -195,6 +285,10 @@ mod wave_system_tests {
 
         app.update();
 
-        assert_eq!(app.world().resource::<WaveManager>().current_wave, 0, "wave not cleared yet");
+        assert_eq!(
+            app.world().resource::<WaveManager>().current_wave,
+            0,
+            "wave not cleared yet"
+        );
     }
 }

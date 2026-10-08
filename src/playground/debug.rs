@@ -17,9 +17,9 @@ use bevy::prelude::*;
 use crate::assets::gizmos::{bone_map, draw_hardpoints, draw_skeleton, joints_under};
 use crate::model_settings::plugin::PlayerAssetDef;
 use crate::player::components::Player;
+use crate::player::systems::equip::EquippedWeapon;
 use crate::player::systems::gait::Foot;
 use crate::player::systems::leg_ik::Legs;
-use crate::player::systems::equip::EquippedWeapon;
 use crate::playground::hardpoints::PlaygroundWeaponDef;
 
 #[derive(Resource, Default)]
@@ -36,17 +36,17 @@ pub struct PlaygroundDebug {
 }
 
 impl PlaygroundDebug {
-    pub fn toggle_skeleton(&mut self) {
+    pub const fn toggle_skeleton(&mut self) {
         self.skeleton = !self.skeleton;
         self.ui_dirty = true;
     }
 
-    pub fn toggle_hardpoints(&mut self) {
+    pub const fn toggle_hardpoints(&mut self) {
         self.hardpoints = !self.hardpoints;
         self.ui_dirty = true;
     }
 
-    pub fn toggle_gait(&mut self) {
+    pub const fn toggle_gait(&mut self) {
         self.gait = !self.gait;
         self.ui_dirty = true;
     }
@@ -60,7 +60,7 @@ impl PlaygroundDebug {
 const LEFT_COLOR: Color = Color::srgb(1.0, 0.55, 0.15);
 const RIGHT_COLOR: Color = Color::srgb(0.25, 0.7, 1.0);
 
-fn foot_color(foot: Foot) -> Color {
+const fn foot_color(foot: Foot) -> Color {
     match foot {
         Foot::Left => LEFT_COLOR,
         Foot::Right => RIGHT_COLOR,
@@ -69,6 +69,9 @@ fn foot_color(foot: Foot) -> Color {
 
 /// Draw the gait: the reach the legs have, the line each foot walks along, where it is
 /// supposed to touch down and leave the ground, and where it is right now.
+// Indexed only by `Foot::index()` (0/1 over a two-variant enum) into `[T; 2]`
+// arrays -- structurally in bounds, not a real panic risk.
+#[allow(clippy::indexing_slicing)]
 pub fn draw_gait_gizmos(debug: Res<PlaygroundDebug>, mut gizmos: Gizmos, players: Query<&Legs>) {
     if !debug.gait {
         return;
@@ -89,7 +92,11 @@ pub fn draw_gait_gizmos(debug: Res<PlaygroundDebug>, mut gizmos: Gizmos, players
             Color::srgb(0.55, 0.5, 0.2),
         );
         // The hips themselves, and the centreline the feet are placed either side of.
-        gizmos.line(f.hip_ground, f.hip_ground + Vec3::Y * 0.25, Color::srgb(0.6, 0.6, 0.6));
+        gizmos.line(
+            f.hip_ground,
+            f.hip_ground + Vec3::Y * 0.25,
+            Color::srgb(0.6, 0.6, 0.6),
+        );
 
         for foot in Foot::BOTH {
             let i = foot.index();

@@ -1,16 +1,22 @@
-use bevy::prelude::{info, Query, Vec3, With};
+use crate::control::components::{
+    CharacterControl, ControlDirection, ControlRotation, KinematicMovement,
+};
 use avian3d::prelude::{AngularVelocity, LinearVelocity, Rotation};
-use crate::control::components::{ControlDirection, CharacterControl, ControlRotation, KinematicMovement};
+use bevy::prelude::{Query, Vec3, With, info};
 
 pub fn kinematic_movement(
-    mut query: Query<(&mut LinearVelocity, &mut AngularVelocity, &Rotation, &CharacterControl), With<KinematicMovement>>,
+    mut query: Query<
+        (
+            &mut LinearVelocity,
+            &mut AngularVelocity,
+            &Rotation,
+            &CharacterControl,
+        ),
+        With<KinematicMovement>,
+    >,
 ) {
     let force_factor = 1.0;
-    for (
-        mut linear_velocity,
-        mut angular_velocity,
-        rotation,
-        controller) in query.iter_mut() {
+    for (mut linear_velocity, mut angular_velocity, rotation, controller) in query.iter_mut() {
         let mut force = Vec3::ZERO;
         let mut torque = Vec3::ZERO;
 

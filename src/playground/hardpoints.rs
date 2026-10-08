@@ -21,7 +21,7 @@ use bevy::prelude::*;
 use crate::assets::asset_definition::{AssetDefinition, Hardpoint, ModelType};
 use crate::model_settings::plugin::PlayerAssetDef;
 use crate::player::components::Player;
-use crate::player::systems::equip::{EquippedWeapon, WeaponModel, GRIP_ROLE, MUZZLE_ROLE};
+use crate::player::systems::equip::{EquippedWeapon, GRIP_ROLE, MUZZLE_ROLE, WeaponModel};
 use crate::player::systems::shoot::Weapon;
 
 /// Roles offered in the panel. Characters really only use `grip`; the rest are here
@@ -46,17 +46,17 @@ pub enum HardpointSide {
 }
 
 impl HardpointSide {
-    pub fn roles(self) -> &'static [&'static str] {
+    pub const fn roles(self) -> &'static [&'static str] {
         match self {
-            HardpointSide::Character => &ROLES,
-            HardpointSide::Weapon => &WEAPON_ROLES,
+            Self::Character => &ROLES,
+            Self::Weapon => &WEAPON_ROLES,
         }
     }
 
-    pub fn label(self) -> &'static str {
+    pub const fn label(self) -> &'static str {
         match self {
-            HardpointSide::Character => "character",
-            HardpointSide::Weapon => "weapon",
+            Self::Character => "character",
+            Self::Weapon => "weapon",
         }
     }
 }
@@ -76,7 +76,10 @@ pub struct PlaygroundWeaponDef {
 impl PlaygroundWeaponDef {
     pub fn name(&self) -> Option<&str> {
         self.def_path.as_deref().map(|path| {
-            std::path::Path::new(path).file_stem().and_then(|s| s.to_str()).unwrap_or(path)
+            std::path::Path::new(path)
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or(path)
         })
     }
 }
@@ -103,7 +106,9 @@ pub fn sync_weapon_def(
     if wanted == weapon_def.def_path {
         return;
     }
-    weapon_def.def = wanted.as_deref().and_then(AssetDefinition::load_from_def_path);
+    weapon_def.def = wanted
+        .as_deref()
+        .and_then(AssetDefinition::load_from_def_path);
     weapon_def.def_path = wanted;
 }
 
@@ -146,14 +151,14 @@ impl HardpointEditor {
         self.ui_dirty = true;
     }
 
-    pub fn dirty(&self, side: HardpointSide) -> bool {
+    pub const fn dirty(&self, side: HardpointSide) -> bool {
         match side {
             HardpointSide::Character => self.character_dirty,
             HardpointSide::Weapon => self.weapon_dirty,
         }
     }
 
-    pub fn set_dirty(&mut self, side: HardpointSide, dirty: bool) {
+    pub const fn set_dirty(&mut self, side: HardpointSide, dirty: bool) {
         match side {
             HardpointSide::Character => self.character_dirty = dirty,
             HardpointSide::Weapon => self.weapon_dirty = dirty,
@@ -174,12 +179,13 @@ impl HardpointEditor {
 /// hardpoint is anchored to some bone and guessing the model origin instead would put the
 /// gizmo at the character's feet, far from anything.
 pub fn ensure_role<'a>(def: &'a mut AssetDefinition, role: &str) -> &'a mut Hardpoint {
-    if !def.hardpoints.contains_key(role) {
-        let inherited = def.hardpoints.values().find_map(|hp| hp.anchor.clone());
-        def.hardpoints
-            .insert(role.to_string(), Hardpoint { anchor: inherited, ..Default::default() });
-    }
-    def.hardpoints.get_mut(role).expect("just inserted")
+    let inherited = def.hardpoints.values().find_map(|hp| hp.anchor.clone());
+    def.hardpoints
+        .entry(role.to_string())
+        .or_insert_with(|| Hardpoint {
+            anchor: inherited,
+            ..Default::default()
+        })
 }
 
 /// Nudge one translation axis. `axis` is 0/1/2 for x/y/z.
@@ -202,7 +208,11 @@ pub fn nudge_rotation(hardpoint: &mut Hardpoint, axis: usize, delta_degrees: f32
 pub fn wrap_degrees(degrees: f32) -> f32 {
     let wrapped = (degrees + 180.0).rem_euclid(360.0) - 180.0;
     // rem_euclid maps exactly -180 onto -180; prefer +180 so a half-turn reads naturally.
-    if wrapped == -180.0 { 180.0 } else { wrapped }
+    // rem_euclid lands exactly on -180.0 here; this is an identity test, not a
+    // tolerance test.
+    #[allow(clippy::float_cmp)]
+    let half_turn = wrapped == -180.0;
+    if half_turn { 180.0 } else { wrapped }
 }
 
 /// Push the edited `grip` into the live weapon so it moves with the gizmo.
@@ -217,8 +227,12 @@ pub fn apply_grip_to_equipped_weapon(
     if !player_def.is_changed() {
         return;
     }
-    let Some(def) = player_def.0.as_ref() else { return };
-    let Some(grip) = def.hardpoints.get(GRIP_ROLE) else { return };
+    let Some(def) = player_def.0.as_ref() else {
+        return;
+    };
+    let Some(grip) = def.hardpoints.get(GRIP_ROLE) else {
+        return;
+    };
 
     for equipped in players.iter() {
         if let Ok(mut weapon) = weapons.get_mut(equipped.0) {
@@ -241,10 +255,14 @@ pub fn apply_weapon_def_to_equipped_weapon(
     if !weapon_def.is_changed() {
         return;
     }
-    let Some(def) = weapon_def.def.as_ref() else { return };
+    let Some(def) = weapon_def.def.as_ref() else {
+        return;
+    };
 
     for equipped in players.iter() {
-        let Ok((mut model, mut weapon)) = weapons.get_mut(equipped.0) else { continue };
+        let Ok((mut model, mut weapon)) = weapons.get_mut(equipped.0) else {
+            continue;
+        };
         if let Some(grip) = def.hardpoints.get(GRIP_ROLE) {
             model.set_weapon_grip(grip.clone());
         }
@@ -287,7 +305,10 @@ mod tests {
         let mut def = AssetDefinition::default();
         def.hardpoints.insert(
             "grip".to_string(),
-            Hardpoint { anchor: Some(bone.to_string()), ..Default::default() },
+            Hardpoint {
+                anchor: Some(bone.to_string()),
+                ..Default::default()
+            },
         );
         def
     }
@@ -374,7 +395,10 @@ mod tests {
         editor.select_side(HardpointSide::Weapon);
         editor.touch();
         editor.set_dirty(HardpointSide::Weapon, false);
-        assert!(editor.dirty(HardpointSide::Character), "character edits still unsaved");
+        assert!(
+            editor.dirty(HardpointSide::Character),
+            "character edits still unsaved"
+        );
         assert!(!editor.dirty(HardpointSide::Weapon));
     }
 
@@ -388,7 +412,10 @@ mod tests {
             }),
             ..Default::default()
         };
-        assert_eq!(weapon_def_path(&def).as_deref(), Some("assets/defs/Pistol.ron"));
+        assert_eq!(
+            weapon_def_path(&def).as_deref(),
+            Some("assets/defs/Pistol.ron")
+        );
     }
 
     /// A weapon def is reached by the explicit path in `PlayerProps::weapon`, so the
@@ -410,6 +437,10 @@ mod tests {
         assert_eq!(wrap_degrees(-90.0), -90.0);
         assert_eq!(wrap_degrees(190.0), -170.0);
         assert_eq!(wrap_degrees(-190.0), 170.0);
-        assert_eq!(wrap_degrees(180.0), 180.0, "a half turn reads as +180, not -180");
+        assert_eq!(
+            wrap_degrees(180.0),
+            180.0,
+            "a half turn reads as +180, not -180"
+        );
     }
 }

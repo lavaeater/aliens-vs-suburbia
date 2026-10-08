@@ -1,10 +1,8 @@
-use bevy::math::Quat;
 use bevy::light::{CascadeShadowConfigBuilder, DirectionalLight, GlobalAmbientLight};
+use bevy::math::Quat;
 use bevy::prelude::{Color, Commands, EulerRot, Name, Transform, default};
 
-pub fn spawn_lights(
-    mut commands: Commands,
-) {
+pub fn spawn_lights(mut commands: Commands) {
     commands.insert_resource(GlobalAmbientLight {
         color: Color::WHITE,
         brightness: 300.0,
@@ -25,6 +23,7 @@ pub fn spawn_lights(
             first_cascade_far_bound: 4.0,
             maximum_distance: 10.0,
             ..default()
-        }.build(),
+        }
+        .build(),
     ));
 }

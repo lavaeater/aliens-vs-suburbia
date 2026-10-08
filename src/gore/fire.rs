@@ -11,7 +11,9 @@ use bevy::prelude::*;
 
 use crate::alien::components::general::Alien;
 use crate::general::components::Health;
-use crate::gore::components::{DamageDealt, DamageKind, Ephemeral, GoreBudget};
+use crate::general::damage::ApplyDamage;
+use crate::general::systems::map_systems::TileDefinitions;
+use crate::gore::components::{DECAL_LIFT, DamageKind, Ephemeral, GoreBudget};
 use crate::player::components::Player;
 
 /// Start a fire field. Position is on the ground; radius/duration/dps shape it.
@@ -135,9 +137,10 @@ pub fn tick_fire_fields(
     mut budget: ResMut<GoreBudget>,
     fire_assets: Option<Res<FireAssets>>,
     mut fields: Query<(Entity, &mut FireField, &Transform)>,
-    mut targets: Query<(Entity, &Position, &mut Health, Has<Alien>, Has<Player>)>,
-    mut damage_mw: MessageWriter<DamageDealt>,
+    targets: Query<(Entity, &Position, Has<Alien>, Has<Player>), With<Health>>,
+    mut damage_mw: MessageWriter<ApplyDamage>,
     mut rng_seed: Local<u32>,
+    tile_defs: Res<TileDefinitions>,
 ) {
     let dt = time.delta();
     for (entity, mut field, transform) in fields.iter_mut() {
@@ -152,20 +155,17 @@ pub fn tick_fire_fields(
             let amount = (field.dps * field.damage_tick.duration().as_secs_f32()) as i32;
             if amount > 0 {
                 let r2 = field.radius * field.radius;
-                for (target, pos, mut health, is_alien, is_player) in targets.iter_mut() {
+                for (target, pos, is_alien, is_player) in targets.iter() {
                     if !(is_alien || is_player) {
                         continue;
                     }
                     if pos.0.distance_squared(center) <= r2 {
-                        health.health -= amount;
-                        damage_mw.write(DamageDealt {
+                        damage_mw.write(ApplyDamage::at(
                             target,
-                            position: pos.0 + Vec3::Y * 0.4,
-                            normal: Vec3::Y,
                             amount,
-                            kind: DamageKind::Fire,
-                            lethal: health.health <= 0,
-                        });
+                            DamageKind::Fire,
+                            pos.0 + Vec3::Y * 0.4,
+                        ));
                     }
                 }
             }
@@ -173,7 +173,7 @@ pub fn tick_fire_fields(
 
         // ── Flame puffs: small rising, fading emissive blobs. ──────────────────
         if field.flame_tick.just_finished() {
-            *rng_seed = rng_seed.wrapping_add(0x9E3779B9);
+            *rng_seed = rng_seed.wrapping_add(0x9E37_79B9);
             let mut rng = Rng(*rng_seed ^ entity.to_bits() as u32);
             let off = Vec3::new(rng.signed(), 0.0, rng.signed()) * field.radius * 0.7;
             let size = 0.25 + rng.unit() * 0.35;
@@ -185,15 +185,18 @@ pub fn tick_fire_fields(
                 ..default()
             });
             let fa = fire_assets.as_ref();
-            let mesh = fa
-                .map(|a| a.flame_mesh.clone())
-                .unwrap_or_else(|| meshes.add(Mesh::from(Sphere::new(0.5))));
+            let mesh = fa.map_or_else(
+                || meshes.add(Mesh::from(Sphere::new(0.5))),
+                |a| a.flame_mesh.clone(),
+            );
             commands.spawn((
                 Mesh3d(mesh),
                 MeshMaterial3d(mat),
                 Transform::from_translation(center + off + Vec3::Y * 0.2)
                     .with_scale(Vec3::splat(size)),
-                Ephemeral::new(0.35).with_grow(1.8).base_scale(Vec3::splat(size)),
+                Ephemeral::new(0.35)
+                    .with_grow(1.8)
+                    .base_scale(Vec3::splat(size)),
             ));
         }
 
@@ -204,7 +207,7 @@ pub fn tick_fire_fields(
                     .spawn((
                         Mesh3d(fa.scorch_mesh.clone()),
                         MeshMaterial3d(fa.scorch_material.clone()),
-                        Transform::from_xyz(center.x, 0.02, center.z)
+                        Transform::from_xyz(center.x, tile_defs.floor_level + DECAL_LIFT, center.z)
                             .with_scale(Vec3::splat(field.radius * 2.2)),
                     ))
                     .id();
@@ -219,13 +222,16 @@ pub fn tick_fire_fields(
 
 #[cfg(test)]
 mod tests {
-    use super::{tick_fire_fields, FireField};
+    use super::{FireField, tick_fire_fields};
+    use crate::alien::components::general::Alien;
+    use crate::game_state::score_keeper::GameTrackingEvent;
+    use crate::general::components::Health;
+    use crate::general::damage::{ApplyDamage, DamageRules, apply_damage};
+    use crate::general::systems::map_systems::TileDefinitions;
+    use crate::gore::components::{DamageDealt, DamageKind, GoreBudget};
     use avian3d::prelude::Position;
     use bevy::prelude::*;
     use std::time::Duration;
-    use crate::alien::components::general::Alien;
-    use crate::general::components::Health;
-    use crate::gore::components::{DamageDealt, DamageKind, GoreBudget};
 
     #[derive(Resource, Default)]
     struct Caught(Vec<DamageDealt>);
@@ -240,31 +246,63 @@ mod tests {
     fn fire_burns_creatures_inside_the_radius_only() {
         let mut app = App::new();
         app.add_message::<DamageDealt>();
+        app.add_message::<ApplyDamage>();
+        app.add_message::<GameTrackingEvent>();
+        app.init_resource::<DamageRules>();
         app.init_resource::<Caught>();
         app.init_resource::<Time>();
         app.init_resource::<GoreBudget>();
         app.init_resource::<Assets<Mesh>>();
         app.init_resource::<Assets<StandardMaterial>>();
+        // Scorch marks are placed on the floor plane, so the tile metrics have to exist.
+        app.insert_resource(TileDefinitions::new(1.0, 32.0, 9.5, 1.0));
         // No FireAssets resource -> flame puffs use the mesh fallback; fine for a test.
-        app.add_systems(Update, (tick_fire_fields, catch).chain());
+        app.add_systems(Update, (tick_fire_fields, apply_damage, catch).chain());
 
         // Fire at the origin: radius 2, 40 dps.
-        app.world_mut().spawn((FireField::new(5.0, 40.0, 2.0), Transform::from_translation(Vec3::ZERO)));
+        app.world_mut().spawn((
+            FireField::new(5.0, 40.0, 2.0),
+            Transform::from_translation(Vec3::ZERO),
+        ));
         let inside = app
             .world_mut()
-            .spawn((Alien, Health { health: 100, max_health: 100 }, Position(Vec3::new(1.0, 0.0, 0.0))))
+            .spawn((
+                Alien,
+                Health {
+                    health: 100,
+                    max_health: 100,
+                },
+                Position(Vec3::new(1.0, 0.0, 0.0)),
+            ))
             .id();
         let outside = app
             .world_mut()
-            .spawn((Alien, Health { health: 100, max_health: 100 }, Position(Vec3::new(9.0, 0.0, 0.0))))
+            .spawn((
+                Alien,
+                Health {
+                    health: 100,
+                    max_health: 100,
+                },
+                Position(Vec3::new(9.0, 0.0, 0.0)),
+            ))
             .id();
 
         // 0.3s -> one 0.25s damage tick -> 40 * 0.25 = 10 damage.
-        app.world_mut().resource_mut::<Time>().advance_by(Duration::from_millis(300));
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(Duration::from_millis(300));
         app.update();
 
-        assert_eq!(app.world().get::<Health>(inside).unwrap().health, 90, "creature in the fire burns");
-        assert_eq!(app.world().get::<Health>(outside).unwrap().health, 100, "creature outside is safe");
+        assert_eq!(
+            app.world().get::<Health>(inside).unwrap().health,
+            90,
+            "creature in the fire burns"
+        );
+        assert_eq!(
+            app.world().get::<Health>(outside).unwrap().health,
+            100,
+            "creature outside is safe"
+        );
 
         let caught = &app.world().resource::<Caught>().0;
         assert_eq!(caught.len(), 1);

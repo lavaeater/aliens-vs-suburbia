@@ -1,6 +1,6 @@
-use bevy::prelude::*;
-use avian3d::prelude::Position;
 use crate::general::components::Health;
+use avian3d::prelude::Position;
+use bevy::prelude::*;
 
 #[derive(Component)]
 pub struct DeathEffect {
@@ -23,7 +23,9 @@ pub fn spawn_death_effects(
                 ..default()
             });
             commands.spawn((
-                DeathEffect { timer: Timer::from_seconds(0.35, TimerMode::Once) },
+                DeathEffect {
+                    timer: Timer::from_seconds(0.35, TimerMode::Once),
+                },
                 Mesh3d(meshes.add(Sphere::new(0.2))),
                 MeshMaterial3d(mat),
                 Transform::from_translation(pos.0),
@@ -33,7 +35,12 @@ pub fn spawn_death_effects(
 }
 
 pub fn tick_death_effects(
-    mut query: Query<(Entity, &mut DeathEffect, &mut Transform, &MeshMaterial3d<StandardMaterial>)>,
+    mut query: Query<(
+        Entity,
+        &mut DeathEffect,
+        &mut Transform,
+        &MeshMaterial3d<StandardMaterial>,
+    )>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     time: Res<Time>,
     mut commands: Commands,

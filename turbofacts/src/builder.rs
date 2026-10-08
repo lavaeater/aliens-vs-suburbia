@@ -36,7 +36,7 @@ pub struct StoryBuilder {
 
 impl StoryBuilder {
     pub fn new(name: impl Into<String>) -> Self {
-        StoryBuilder {
+        Self {
             name: name.into(),
             description: String::new(),
             repeat: true,
@@ -47,22 +47,26 @@ impl StoryBuilder {
         }
     }
 
+    #[must_use]
     pub fn description(mut self, description: impl Into<String>) -> Self {
         self.description = description.into();
         self
     }
 
-    pub fn repeat(mut self, repeat: bool) -> Self {
+    #[must_use]
+    pub const fn repeat(mut self, repeat: bool) -> Self {
         self.repeat = repeat;
         self
     }
 
-    pub fn exclusive(mut self, exclusive: bool) -> Self {
+    #[must_use]
+    pub const fn exclusive(mut self, exclusive: bool) -> Self {
         self.exclusive = exclusive;
         self
     }
 
     /// Adds a named rule, configured via a closure on a [`RuleBuilder`].
+    #[must_use]
     pub fn rule(mut self, name: impl Into<String>, build: impl FnOnce(&mut RuleBuilder)) -> Self {
         let mut rb = RuleBuilder {
             name: name.into(),
@@ -78,21 +82,25 @@ impl StoryBuilder {
 
     // --- init facts (seeded silently on activation) -------------------------
 
+    #[must_use]
     pub fn init_bool(mut self, key: impl Into<String>, value: bool) -> Self {
         self.init_facts.push((key.into(), FactValue::Bool(value)));
         self
     }
 
+    #[must_use]
     pub fn init_int(mut self, key: impl Into<String>, value: i64) -> Self {
         self.init_facts.push((key.into(), FactValue::Int(value)));
         self
     }
 
+    #[must_use]
     pub fn init_float(mut self, key: impl Into<String>, value: f32) -> Self {
         self.init_facts.push((key.into(), FactValue::Float(value)));
         self
     }
 
+    #[must_use]
     pub fn init_text(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
         self.init_facts
             .push((key.into(), FactValue::Text(value.into())));
@@ -101,6 +109,7 @@ impl StoryBuilder {
 
     // --- consequences -------------------------------------------------------
 
+    #[must_use]
     pub fn set_fact(mut self, key: impl Into<String>, value: FactValue) -> Self {
         self.consequences.push(Consequence::SetFact {
             key: key.into(),
@@ -109,18 +118,22 @@ impl StoryBuilder {
         self
     }
 
+    #[must_use]
     pub fn set_true(self, key: impl Into<String>) -> Self {
         self.set_fact(key, FactValue::Bool(true))
     }
 
+    #[must_use]
     pub fn set_false(self, key: impl Into<String>) -> Self {
         self.set_fact(key, FactValue::Bool(false))
     }
 
+    #[must_use]
     pub fn set_int(self, key: impl Into<String>, value: i64) -> Self {
         self.set_fact(key, FactValue::Int(value))
     }
 
+    #[must_use]
     pub fn add_int(mut self, key: impl Into<String>, delta: i64) -> Self {
         self.consequences.push(Consequence::AddInt {
             key: key.into(),
@@ -129,6 +142,7 @@ impl StoryBuilder {
         self
     }
 
+    #[must_use]
     pub fn emit(mut self, effect: impl Into<String>) -> Self {
         self.consequences.push(Consequence::Emit {
             effect: effect.into(),
@@ -161,71 +175,149 @@ impl RuleBuilder {
 
     // booleans
     pub fn is_true(&mut self, key: impl Into<String>) -> &mut Self {
-        self.push(Criterion::BoolIs { key: key.into(), expected: true })
+        self.push(Criterion::BoolIs {
+            key: key.into(),
+            expected: true,
+        })
     }
     pub fn is_false(&mut self, key: impl Into<String>) -> &mut Self {
-        self.push(Criterion::BoolIs { key: key.into(), expected: false })
+        self.push(Criterion::BoolIs {
+            key: key.into(),
+            expected: false,
+        })
     }
     pub fn any_true(&mut self, pattern: impl Into<String>) -> &mut Self {
-        self.push(Criterion::AnyBool { pattern: pattern.into(), expected: true })
+        self.push(Criterion::AnyBool {
+            pattern: pattern.into(),
+            expected: true,
+        })
     }
     pub fn any_false(&mut self, pattern: impl Into<String>) -> &mut Self {
-        self.push(Criterion::AnyBool { pattern: pattern.into(), expected: false })
+        self.push(Criterion::AnyBool {
+            pattern: pattern.into(),
+            expected: false,
+        })
     }
     pub fn all_true(&mut self, pattern: impl Into<String>) -> &mut Self {
-        self.push(Criterion::AllBool { pattern: pattern.into(), expected: true })
+        self.push(Criterion::AllBool {
+            pattern: pattern.into(),
+            expected: true,
+        })
     }
     pub fn all_false(&mut self, pattern: impl Into<String>) -> &mut Self {
-        self.push(Criterion::AllBool { pattern: pattern.into(), expected: false })
+        self.push(Criterion::AllBool {
+            pattern: pattern.into(),
+            expected: false,
+        })
     }
 
     // ints
     pub fn int_more_than(&mut self, key: impl Into<String>, value: i64) -> &mut Self {
-        self.push(Criterion::IntCmp { key: key.into(), op: NumOp::Gt, value })
+        self.push(Criterion::IntCmp {
+            key: key.into(),
+            op: NumOp::Gt,
+            value,
+        })
     }
     pub fn int_less_than(&mut self, key: impl Into<String>, value: i64) -> &mut Self {
-        self.push(Criterion::IntCmp { key: key.into(), op: NumOp::Lt, value })
+        self.push(Criterion::IntCmp {
+            key: key.into(),
+            op: NumOp::Lt,
+            value,
+        })
     }
     pub fn int_equals(&mut self, key: impl Into<String>, value: i64) -> &mut Self {
-        self.push(Criterion::IntCmp { key: key.into(), op: NumOp::Eq, value })
+        self.push(Criterion::IntCmp {
+            key: key.into(),
+            op: NumOp::Eq,
+            value,
+        })
     }
-    pub fn int_more_than_fact(&mut self, lhs: impl Into<String>, rhs: impl Into<String>) -> &mut Self {
-        self.push(Criterion::IntVsInt { lhs: lhs.into(), op: NumOp::Gt, rhs: rhs.into() })
+    pub fn int_more_than_fact(
+        &mut self,
+        lhs: impl Into<String>,
+        rhs: impl Into<String>,
+    ) -> &mut Self {
+        self.push(Criterion::IntVsInt {
+            lhs: lhs.into(),
+            op: NumOp::Gt,
+            rhs: rhs.into(),
+        })
     }
-    pub fn int_less_than_fact(&mut self, lhs: impl Into<String>, rhs: impl Into<String>) -> &mut Self {
-        self.push(Criterion::IntVsInt { lhs: lhs.into(), op: NumOp::Lt, rhs: rhs.into() })
+    pub fn int_less_than_fact(
+        &mut self,
+        lhs: impl Into<String>,
+        rhs: impl Into<String>,
+    ) -> &mut Self {
+        self.push(Criterion::IntVsInt {
+            lhs: lhs.into(),
+            op: NumOp::Lt,
+            rhs: rhs.into(),
+        })
     }
 
     // floats
     pub fn float_more_than(&mut self, key: impl Into<String>, value: f32) -> &mut Self {
-        self.push(Criterion::FloatCmp { key: key.into(), op: NumOp::Gt, value })
+        self.push(Criterion::FloatCmp {
+            key: key.into(),
+            op: NumOp::Gt,
+            value,
+        })
     }
     pub fn float_less_than(&mut self, key: impl Into<String>, value: f32) -> &mut Self {
-        self.push(Criterion::FloatCmp { key: key.into(), op: NumOp::Lt, value })
+        self.push(Criterion::FloatCmp {
+            key: key.into(),
+            op: NumOp::Lt,
+            value,
+        })
     }
 
     // text
     pub fn text_equals(&mut self, key: impl Into<String>, value: impl Into<String>) -> &mut Self {
-        self.push(Criterion::TextEq { key: key.into(), value: value.into() })
+        self.push(Criterion::TextEq {
+            key: key.into(),
+            value: value.into(),
+        })
     }
     pub fn text_contains(&mut self, key: impl Into<String>, value: impl Into<String>) -> &mut Self {
-        self.push(Criterion::TextContains { key: key.into(), value: value.into() })
+        self.push(Criterion::TextContains {
+            key: key.into(),
+            value: value.into(),
+        })
     }
 
     // collections
     pub fn list_contains(&mut self, key: impl Into<String>, value: impl Into<String>) -> &mut Self {
-        self.push(Criterion::ListContains { key: key.into(), value: value.into() })
+        self.push(Criterion::ListContains {
+            key: key.into(),
+            value: value.into(),
+        })
     }
     pub fn list_size_more_than(&mut self, key: impl Into<String>, value: usize) -> &mut Self {
-        self.push(Criterion::ListSize { key: key.into(), op: NumOp::Gt, value })
+        self.push(Criterion::ListSize {
+            key: key.into(),
+            op: NumOp::Gt,
+            value,
+        })
     }
     pub fn list_size_equals(&mut self, key: impl Into<String>, value: usize) -> &mut Self {
-        self.push(Criterion::ListSize { key: key.into(), op: NumOp::Eq, value })
+        self.push(Criterion::ListSize {
+            key: key.into(),
+            op: NumOp::Eq,
+            value,
+        })
     }
     pub fn set_contains(&mut self, key: impl Into<String>, value: impl Into<String>) -> &mut Self {
-        self.push(Criterion::SetContains { key: key.into(), value: value.into() })
+        self.push(Criterion::SetContains {
+            key: key.into(),
+            value: value.into(),
+        })
     }
     pub fn set_size_equals(&mut self, key: impl Into<String>, value: usize) -> &mut Self {
-        self.push(Criterion::SetSize { key: key.into(), op: NumOp::Eq, value })
+        self.push(Criterion::SetSize {
+            key: key.into(),
+            op: NumOp::Eq,
+            value,
+        })
     }
 }

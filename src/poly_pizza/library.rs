@@ -1,7 +1,7 @@
-use std::collections::HashMap;
+use crate::poly_pizza::types::PizzaModel;
 use bevy::prelude::Resource;
 use serde::{Deserialize, Serialize};
-use crate::poly_pizza::types::PizzaModel;
+use std::collections::HashMap;
 
 const LIBRARY_PATH: &str = "assets/poly_pizza_library.json";
 
@@ -39,19 +39,20 @@ impl ModelLibrary {
 
     /// Returns existing tags for a model, space-joined, or an empty string.
     pub fn tags_string(&self, id: &str) -> String {
-        self.entries.get(id)
-            .map(|e| e.tags.join(" "))
-            .unwrap_or_default()
+        self.entries.get(id).map_or_default(|e| e.tags.join(" "))
     }
 
     /// Saves or updates a model entry. Tags come from a space-separated string.
     pub fn upsert(&mut self, model: &PizzaModel, local_glb: Option<String>, tag_str: &str) {
         let tags: Vec<String> = tag_str.split_whitespace().map(String::from).collect();
-        self.entries.insert(model.id.clone(), LibraryEntry {
-            model: model.clone(),
-            local_glb,
-            tags,
-        });
+        self.entries.insert(
+            model.id.clone(),
+            LibraryEntry {
+                model: model.clone(),
+                local_glb,
+                tags,
+            },
+        );
     }
 
     pub fn remove(&mut self, id: &str) {

@@ -1,15 +1,23 @@
-use bevy::math::Vec3Swizzles;
-use bevy::prelude::{Color, Gizmos, GlobalTransform, Query, With, Without};
 use crate::alien::components::general::Alien;
 use crate::constants::PLAYER_FOV_DOT;
 use crate::control::components::{CharacterControl, ControlCommand, InputKeyboard};
 use crate::control::gamepad_input::InputGamepad;
 use crate::player::components::{AutoAim, Player};
+use bevy::math::Vec3Swizzles;
+use bevy::prelude::{Color, Gizmos, GlobalTransform, Query, With, Without};
 
 // Keyboard players aim with the mouse (see control::mouse_aim); auto-aim is for gamepads.
 #[allow(clippy::type_complexity)]
 pub fn auto_aim(
-    mut player_query: Query<(&GlobalTransform, &mut AutoAim, &CharacterControl, Option<&InputGamepad>), (With<Player>, Without<InputKeyboard>)>,
+    mut player_query: Query<
+        (
+            &GlobalTransform,
+            &mut AutoAim,
+            &CharacterControl,
+            Option<&InputGamepad>,
+        ),
+        (With<Player>, Without<InputKeyboard>),
+    >,
     alien_query: Query<&GlobalTransform, With<Alien>>,
 ) {
     for (player_transform, mut auto_aim, character_control, gamepad) in player_query.iter_mut() {
@@ -19,27 +27,22 @@ pub fn auto_aim(
         }
         if character_control.triggers.contains(&ControlCommand::Throw) {
             let forward = player_transform.forward();
-            let closest =
-                alien_query
-                    .iter()
-                    .filter(|t|
-                        forward
-                            .xz()
-                            .dot(
-                                (t.translation().xz() - player_transform.translation().xz()).normalize()) > PLAYER_FOV_DOT)
-                    .min_by(|a, b|
-                        player_transform
-                            .translation()
-                            .distance(a.translation())
-                            .total_cmp(
-                                &player_transform
-                                    .translation()
-                                    .distance(b.translation())
-                            )
-                    );
+            let closest = alien_query
+                .iter()
+                .filter(|t| {
+                    forward.xz().dot(
+                        (t.translation().xz() - player_transform.translation().xz()).normalize(),
+                    ) > PLAYER_FOV_DOT
+                })
+                .min_by(|a, b| {
+                    player_transform
+                        .translation()
+                        .distance(a.translation())
+                        .total_cmp(&player_transform.translation().distance(b.translation()))
+                });
             if let Some(closest) = closest {
                 auto_aim.0 = (closest.translation() - player_transform.translation()).normalize();
-                auto_aim.0.y = 0.0
+                auto_aim.0.y = 0.0;
             } else {
                 auto_aim.0 = *player_transform.forward();
             }

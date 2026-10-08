@@ -1,5 +1,5 @@
-use bevy::prelude::Resource;
 use crate::assets::asset_definition::{AssetDefinition, ModelType};
+use bevy::prelude::Resource;
 
 pub const MAX_PLAYERS: usize = 4;
 
@@ -13,15 +13,15 @@ pub enum InputDevice {
 
 impl InputDevice {
     /// Setup screen convention: slot 0 is the keyboard, the rest are gamepads in order.
-    pub fn for_slot(slot: usize) -> Self {
+    pub const fn for_slot(slot: usize) -> Self {
         match slot {
-            0 => InputDevice::Keyboard,
-            n => InputDevice::Gamepad(n - 1),
+            0 => Self::Keyboard,
+            n => Self::Gamepad(n - 1),
         }
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum SlotState {
     Empty,
     Selecting { def_index: usize },
@@ -48,33 +48,47 @@ impl Default for PlayerSetupState {
 
 impl PlayerSetupState {
     pub fn join(&mut self, slot: usize) {
-        if slot >= MAX_PLAYERS { return; }
-        if self.slots[slot] == SlotState::Empty {
-            self.slots[slot] = SlotState::Selecting { def_index: 0 };
+        let Some(state) = self.slots.get_mut(slot) else {
+            return;
+        };
+        if *state == SlotState::Empty {
+            *state = SlotState::Selecting { def_index: 0 };
             self.dirty = true;
         }
     }
 
     pub fn confirm(&mut self, slot: usize) {
-        if slot >= MAX_PLAYERS { return; }
-        if let SlotState::Selecting { def_index } = self.slots[slot] {
+        let Some(state) = self.slots.get_mut(slot) else {
+            return;
+        };
+        if let SlotState::Selecting { def_index } = *state {
             let path = self.player_defs.get(def_index).cloned().unwrap_or_default();
-            self.slots[slot] = SlotState::Confirmed { def_path: path };
+            *state = SlotState::Confirmed { def_path: path };
             self.dirty = true;
         }
     }
 
     pub fn cycle_next(&mut self, slot: usize) {
-        if self.player_defs.is_empty() { return; }
-        if let SlotState::Selecting { ref mut def_index } = self.slots[slot] {
+        if self.player_defs.is_empty() {
+            return;
+        }
+        let Some(state) = self.slots.get_mut(slot) else {
+            return;
+        };
+        if let SlotState::Selecting { def_index } = state {
             *def_index = (*def_index + 1) % self.player_defs.len();
             self.dirty = true;
         }
     }
 
     pub fn cycle_prev(&mut self, slot: usize) {
-        if self.player_defs.is_empty() { return; }
-        if let SlotState::Selecting { ref mut def_index } = self.slots[slot] {
+        if self.player_defs.is_empty() {
+            return;
+        }
+        let Some(state) = self.slots.get_mut(slot) else {
+            return;
+        };
+        if let SlotState::Selecting { def_index } = state {
             let len = self.player_defs.len();
             *def_index = (*def_index + len - 1) % len;
             self.dirty = true;
@@ -82,32 +96,47 @@ impl PlayerSetupState {
     }
 
     pub fn any_confirmed(&self) -> bool {
-        self.slots.iter().any(|s| matches!(s, SlotState::Confirmed { .. }))
+        self.slots
+            .iter()
+            .any(|s| matches!(s, SlotState::Confirmed { .. }))
     }
 
     pub fn confirmed_paths(&self) -> Vec<String> {
-        self.slots.iter().filter_map(|s| {
-            if let SlotState::Confirmed { def_path } = s { Some(def_path.clone()) } else { None }
-        }).collect()
+        self.slots
+            .iter()
+            .filter_map(|s| {
+                if let SlotState::Confirmed { def_path } = s {
+                    Some(def_path.clone())
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
 
     /// Which device drives each confirmed slot, in the same order as `confirmed_paths`.
     /// Slot 0 is the keyboard; slot N is the (N-1)th connected gamepad — the same mapping
     /// `handle_setup_input` uses when reading the join buttons.
     pub fn confirmed_devices(&self) -> Vec<InputDevice> {
-        self.slots.iter().enumerate()
+        self.slots
+            .iter()
+            .enumerate()
             .filter(|(_, s)| matches!(s, SlotState::Confirmed { .. }))
             .map(|(slot, _)| InputDevice::for_slot(slot))
             .collect()
     }
 
     pub fn display_name(&self, slot: usize) -> String {
-        match &self.slots[slot] {
+        let Some(state) = self.slots.get(slot) else {
+            return format!("Player {}  --  press Enter to join", slot + 1);
+        };
+        match state {
             SlotState::Empty => format!("Player {}  --  press Enter to join", slot + 1),
             SlotState::Selecting { def_index } => {
-                let name = self.player_defs.get(*def_index)
-                    .map(|p| def_stem(p))
-                    .unwrap_or("(no models)");
+                let name = self
+                    .player_defs
+                    .get(*def_index)
+                    .map_or("(no models)", |p| def_stem(p));
                 format!("Player {}  <  {}  >  [Enter] confirm", slot + 1, name)
             }
             SlotState::Confirmed { def_path } => {
@@ -127,14 +156,23 @@ fn def_stem(path: &str) -> &str {
 /// Returns paths of all defs in assets/defs/ whose ModelType is Player.
 pub(crate) fn scan_player_defs() -> Vec<String> {
     let dir = std::path::Path::new("assets/defs");
-    let Ok(entries) = std::fs::read_dir(dir) else { return vec![] };
-    let mut paths: Vec<String> = entries.flatten()
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return vec![];
+    };
+    let mut paths: Vec<String> = entries
+        .flatten()
         .filter_map(|e| {
             let p = e.path();
-            if p.extension()?.to_str()? != "ron" { return None; }
+            if p.extension()?.to_str()? != "ron" {
+                return None;
+            }
             let text = std::fs::read_to_string(&p).ok()?;
             let def: AssetDefinition = ron::from_str(&text).ok()?;
-            if matches!(def.model_type, ModelType::Player(_)) { Some(p.to_string_lossy().replace('\\', "/")) } else { None }
+            if matches!(def.model_type, ModelType::Player(_)) {
+                Some(p.to_string_lossy().replace('\\', "/"))
+            } else {
+                None
+            }
         })
         .collect();
     paths.sort();
@@ -155,7 +193,11 @@ mod tests {
     use super::{InputDevice, PlayerSetupState, SlotState};
 
     fn state_with(slots: [SlotState; 4]) -> PlayerSetupState {
-        PlayerSetupState { slots, player_defs: vec!["a.ron".into()], dirty: false }
+        PlayerSetupState {
+            slots,
+            player_defs: vec!["a.ron".into()],
+            dirty: false,
+        }
     }
 
     #[test]

@@ -3,6 +3,9 @@ name = "aliens-vs-suburbia"
 version = "0.1.0"
 edition = "2024"
 
+[lints]
+workspace = true
+
 # The root package is itself a member; list the local crates whose tests should also run
 # under `cargo test` / `cargo nextest run` from the workspace root.
 [workspace]
@@ -13,8 +16,59 @@ resolver = "2"
 
 [workspace.lints.clippy]
 pedantic = { level = "warn", priority = -1 }
-must_use_candidate = "allow"
+#nursery = { level = "warn", priority = -1 }    # BETA LINTS
+# Nursery lint that (a) fires inside `#[derive(Reflect)]` output, where nothing can be
+# done, and (b) turns readable if/else blocks into map_or_else closure soup.
+option_if_let_else = "allow"
+# Nursery: wants `a.mul_add(b, c)` and `.hypot()` in place of plain float expressions.
+# Game maths is not numerics; the rewrites cost readability for no visible gain.
+suboptimal_flops = "allow"
+imprecise_flops = "allow"
+# Nursery: `pub(crate)` items inside private modules. Stylistic; the explicit
+# visibility documents intent even where it is technically redundant.
+redundant_pub_crate = "allow"
+# Downgraded from deny: grid/procgen math dominates the findings and is mostly
+# structurally bounded by loop ranges, not genuinely overflow-prone. Fixed
+# opportunistically where it could matter; see the module-level allows in
+# src/map/* and src/general/systems/map_systems.rs for the bulk of it.
+arithmetic_side_effects = "allow"
+as_conversions = "allow"
+# Grid <-> world maths casts between f32/i32/usize constantly. The try_from/from
+# rewrites these lints ask for are noise for values bounded by the map size.
+cast_precision_loss = "allow"
+cast_possible_truncation = "allow"
+cast_sign_loss = "allow"
+cast_possible_wrap = "allow"
+# Local helper fns/consts declared next to their use site read fine.
+items_after_statements = "allow"
+# Bevy systems and component flag structs legitimately carry many bools.
+struct_excessive_bools = "allow"
+# Wants `&self` getters on small Copy components taken by value. Bevy queries hand
+# out references; `self`-by-value reads as an oddity for a few bytes that the
+# compiler copies anyway.
+trivially_copy_pass_by_ref = "allow"
+# Wants `assert_eq!(x, [] as [T; 0])` in place of `assert!(x.is_empty())`. The
+# turbofish-heavy rewrite is harder to read than what it replaces.
+assert_is_empty = "allow"
+doc_markdown = "allow"
+exit = "deny"
+expect_used = "deny"
+indexing_slicing = "deny"
 missing_errors_doc = "allow"
+must_use_candidate = "allow"
+needless_pass_by_value = "allow"
+panic = "deny"
+panic_in_result_fn = "deny"
+similar_names = "allow"
+string_slice = "deny"
+todo = "deny"
+too_many_lines = "allow"
+unchecked_time_subtraction = "deny"
+unimplemented = "deny"
+unreachable = "deny"
+unwrap_used = "deny"
+used_underscore_binding = "allow"
+wildcard_imports = "allow"
 
 [dependencies]
 bevy = { version = "0.19.0", features = ["wayland", "3d", "ui", "bevy_feathers", "webp"] }
@@ -51,3 +105,22 @@ bevy_seedling = { git = "https://github.com/corvusprudens/bevy_seedling", rev = 
 # Enable max optimisations for dependencies, but not for our code:h
 [profile.dev.package."*"]
 opt-level = 3
+
+# Enable more optimization in the release profile at the cost of compile time.
+[profile.release]
+# Compile the entire crate as one unit.
+# Slows compile times, marginal improvements.
+codegen-units = 1
+# Do a second optimization pass over the entire program, including dependencies.
+# Slows compile times, marginal improvements.
+lto = "thin"
+
+# Optimize for size in the wasm-release profile to reduce load times and bandwidth usage on web.
+[profile.wasm-release]
+# Default to release profile values.
+inherits = "release"
+# Optimize with size in mind (also try "z", sometimes it is better).
+# Slightly slows compile times, great improvements to file size and runtime performance.
+opt-level = "s"
+# Strip all debugging information from the binary to slightly reduce file size.
+strip = "debuginfo"

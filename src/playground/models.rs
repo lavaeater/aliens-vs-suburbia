@@ -60,7 +60,10 @@ pub struct PlaygroundModels {
 
 impl PlaygroundModels {
     pub fn fresh() -> Self {
-        let mut models = Self { browse_folder: "packs".to_string(), ..Default::default() };
+        let mut models = Self {
+            browse_folder: "packs".to_string(),
+            ..Default::default()
+        };
         models.refresh_defs();
         models.refresh_browser();
         // Come back wearing whatever you last wore, so the session starts on a rig you
@@ -114,8 +117,11 @@ impl PlaygroundModels {
 
     /// Remember this model for next time. Called once the swap is actually applied, so a
     /// def that fails to load is not the one you come back to.
-    fn remember(&self, def_path: &str) {
-        PlaygroundPrefs { last_model_def: Some(def_path.to_string()) }.save();
+    fn remember(def_path: &str) {
+        PlaygroundPrefs {
+            last_model_def: Some(def_path.to_string()),
+        }
+        .save();
     }
 
     /// Write a minimal def for `model_path` so the model becomes selectable.
@@ -126,8 +132,10 @@ impl PlaygroundModels {
     /// Refuses geometry-less files outright — see [`classify`].
     pub fn import(&mut self, model_path: &str) {
         if classify(model_path) == ImportKind::AnimationLibrary {
-            self.status =
-                format!("{} has no meshes - add it as an animation source", def_stem(model_path));
+            self.status = format!(
+                "{} has no meshes - add it as an animation source",
+                def_stem(model_path)
+            );
             return;
         }
         let path = AssetDefinition::def_path(model_path);
@@ -151,7 +159,9 @@ impl PlaygroundModels {
 /// The counterpart of `scan_player_defs`, kept here rather than beside it because the
 /// player-setup screen has no use for weapons — only the playground hands them out.
 pub fn scan_weapon_defs() -> Vec<String> {
-    let Ok(entries) = std::fs::read_dir("assets/defs") else { return vec![] };
+    let Ok(entries) = std::fs::read_dir("assets/defs") else {
+        return vec![];
+    };
     let mut paths: Vec<String> = entries
         .flatten()
         .filter_map(|entry| {
@@ -173,7 +183,9 @@ pub fn scan_weapon_defs() -> Vec<String> {
 /// Returns `false` for a def that is not a character — `PlayerProps` is where the weapon
 /// lives, and there is nowhere to put it on a tower or an alien.
 pub fn set_weapon(def: &mut AssetDefinition, weapon_def_path: Option<&str>) -> bool {
-    let ModelType::Player(props) = &mut def.model_type else { return false };
+    let ModelType::Player(props) = &mut def.model_type else {
+        return false;
+    };
     props.weapon = weapon_def_path.map(str::to_string);
     true
 }
@@ -217,9 +229,13 @@ pub fn add_animation_source(def: &mut AssetDefinition, source_path: &str) -> (bo
 
     def.animation_sources.push(source_path.to_string());
     for clip in &info.animations {
-        def.clip_tags.insert(format!("{stem}|{clip}"), format!("{stem}/{clip}"));
+        def.clip_tags
+            .insert(format!("{stem}|{clip}"), format!("{stem}/{clip}"));
     }
-    (true, format!("added {stem} ({} clips)", info.animations.len()))
+    (
+        true,
+        format!("added {stem} ({} clips)", info.animations.len()),
+    )
 }
 
 /// A brand-new def for an imported model: playable, and nothing else assumed.
@@ -237,13 +253,17 @@ pub fn new_player_def(model_path: &str) -> AssetDefinition {
 
 /// Append `name` to a browser folder path, treating an empty path as the `assets/` root.
 pub fn join_folder(current: &str, name: &str) -> String {
-    if current.is_empty() { name.to_string() } else { format!("{current}/{name}") }
+    if current.is_empty() {
+        name.to_string()
+    } else {
+        format!("{current}/{name}")
+    }
 }
 
 /// Step one level up. The root is its own parent, so repeated "up" is harmless.
 pub fn parent_folder(current: &str) -> String {
     match current.rfind('/') {
-        Some(i) => current[..i].to_string(),
+        Some(i) => current.get(..i).unwrap_or_default().to_string(),
         None => String::new(),
     }
 }
@@ -279,7 +299,7 @@ pub enum SwapStep {
 /// immediately could race the map's spawn and leave the default model on screen with the
 /// pending swap already consumed. Waiting for a player means the swap always takes the same
 /// path it takes for a click.
-pub fn decide_swap(player_position: Option<Vec3>, frames_waited: u32) -> SwapStep {
+pub const fn decide_swap(player_position: Option<Vec3>, frames_waited: u32) -> SwapStep {
     match player_position {
         Some(position) => SwapStep::Replace(position),
         None if frames_waited < SWAP_WAIT_FRAMES => SwapStep::Wait,
@@ -328,7 +348,7 @@ pub fn swap_player_model(
             def_paths: vec![def_path.clone()],
             devices: vec![InputDevice::Keyboard],
         });
-        models.remember(&def_path);
+        PlaygroundModels::remember(&def_path);
         models.selected = Some(def_path);
         models.pending_position = Some(position);
         return;
@@ -337,7 +357,11 @@ pub fn swap_player_model(
     if let Some(position) = models.pending_position
         && players.is_empty()
     {
-        spawn_player_mw.write(SpawnPlayer { position });
+        spawn_player_mw.write(SpawnPlayer {
+            position,
+            slot: None,
+            lives: None,
+        });
         models.pending_position = None;
     }
 }
@@ -352,8 +376,12 @@ mod tests {
     fn an_added_source_tags_every_clip_it_brings() {
         let mut def = AssetDefinition::default();
         // Bypass the file read: this is the tagging half, exercised directly.
-        def.animation_sources.push("models/male-anims.glb".to_string());
-        def.clip_tags.insert("male-anims|Backflip".to_string(), "male-anims/Backflip".to_string());
+        def.animation_sources
+            .push("models/male-anims.glb".to_string());
+        def.clip_tags.insert(
+            "male-anims|Backflip".to_string(),
+            "male-anims/Backflip".to_string(),
+        );
 
         let (changed, status) = add_animation_source(&mut def, "models/male-anims.glb");
         assert!(!changed, "a source already listed is not added twice");
@@ -366,9 +394,16 @@ mod tests {
     #[test]
     fn a_tagged_external_clip_resolves_back_through_its_tag() {
         let mut def = AssetDefinition::default();
-        def.clip_tags.insert("male-anims|Backflip".to_string(), "male-anims/Backflip".to_string());
-        def.animation_bindings.insert("jump".to_string(), "male-anims/Backflip".to_string());
-        assert_eq!(def.resolved_clip("jump").as_deref(), Some("male-anims|Backflip"));
+        def.clip_tags.insert(
+            "male-anims|Backflip".to_string(),
+            "male-anims/Backflip".to_string(),
+        );
+        def.animation_bindings
+            .insert("jump".to_string(), "male-anims/Backflip".to_string());
+        assert_eq!(
+            def.resolved_clip("jump").as_deref(),
+            Some("male-anims|Backflip")
+        );
     }
 
     /// A file we cannot inspect must stay importable — an inspector that guesses wrong
@@ -388,7 +423,11 @@ mod tests {
     fn stepping_up_from_the_root_stays_at_the_root() {
         assert_eq!(parent_folder("packs/toon-shooter"), "packs");
         assert_eq!(parent_folder("packs"), "");
-        assert_eq!(parent_folder(""), "", "up from the root is a no-op, not a crash");
+        assert_eq!(
+            parent_folder(""),
+            "",
+            "up from the root is a no-op, not a crash"
+        );
     }
 
     #[test]
@@ -396,8 +435,14 @@ mod tests {
         let def = new_player_def("packs/foo/Bar.glb");
         assert_eq!(def.model_path, "packs/foo/Bar.glb");
         assert!(matches!(def.model_type, ModelType::Player(_)));
-        assert!(def.hardpoints.is_empty(), "hardpoints are authored, not guessed");
-        assert!(def.aim_bones.is_empty(), "the twist falls back to the default chain");
+        assert!(
+            def.hardpoints.is_empty(),
+            "hardpoints are authored, not guessed"
+        );
+        assert!(
+            def.aim_bones.is_empty(),
+            "the twist falls back to the default chain"
+        );
     }
 
     /// The def path is what makes an import show up in the list, and what the

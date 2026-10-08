@@ -20,7 +20,10 @@ pub fn tick_ephemeral(
         eph.timer.tick(time.delta());
         let t = eph.timer.fraction();
 
-        if eph.grow_to != 1.0 {
+        // 1.0 is the "no growth" sentinel, written literally, never computed.
+        #[allow(clippy::float_cmp)]
+        let grows = eph.grow_to != 1.0;
+        if grows {
             let s = 1.0 + (eph.grow_to - 1.0) * t;
             transform.scale = eph.base_scale * s;
         }
@@ -53,8 +56,8 @@ pub fn record_last_hit(mut damage: MessageReader<DamageDealt>, mut commands: Com
 #[cfg(test)]
 mod tests {
     use super::record_last_hit;
-    use bevy::prelude::*;
     use crate::gore::components::{DamageDealt, DamageKind, LastHit};
+    use bevy::prelude::*;
 
     #[derive(Resource)]
     struct Target(Entity);
@@ -81,7 +84,10 @@ mod tests {
 
         app.update();
 
-        let last = app.world().get::<LastHit>(target).expect("LastHit should be inserted");
+        let last = app
+            .world()
+            .get::<LastHit>(target)
+            .expect("LastHit should be inserted");
         assert_eq!(last.normal, Vec3::X);
         assert_eq!(last.kind, DamageKind::Fire);
     }

@@ -1,7 +1,7 @@
 //! Firing equipped guns. Hitscan: on the fire input, cast a ray from the weapon's
-//! `muzzle` hardpoint along the player's auto-aim, apply damage to whatever it hits,
-//! and emit [`DamageDealt`] so the gore layer sprays blood. Muzzle flash + tracer are
-//! cheap [`Ephemeral`] visuals.
+//! `muzzle` hardpoint along the player's auto-aim and request [`ApplyDamage`] on whatever
+//! it hits — the damage pipeline decides whether it lands and tells the gore layer.
+//! Muzzle flash + tracer are cheap [`Ephemeral`] visuals.
 //!
 //! Guns replace throwing while equipped — `throwing` is gated `Without<EquippedWeapon>`
 //! and this system requires it, so the same fire button does one or the other.
@@ -9,12 +9,15 @@
 use avian3d::prelude::{Position, SpatialQuery, SpatialQueryFilter};
 use bevy::prelude::*;
 
-use crate::alien::components::general::{Alien, AlienCounter};
-use crate::assets::asset_definition::{Hardpoint, WeaponProps};
+use crate::animation::animation_plugin::{AnimationEvent, AnimationEventType, AnimationKey};
+use crate::assets::asset_definition::{AmmoKind, Hardpoint, WeaponProps};
 use crate::control::components::{CharacterControl, ControlCommand};
 use crate::game_state::score_keeper::GameTrackingEvent;
-use crate::general::components::{CollisionLayer, Health};
-use crate::gore::components::{DamageDealt, DamageKind, Ephemeral};
+use crate::general::components::CollisionLayer;
+use crate::general::damage::ApplyDamage;
+use crate::general::projectiles::{self, ProjectileProps};
+use crate::gore::components::{DamageKind, Ephemeral};
+use crate::player::ammo::AmmoPouch;
 use crate::player::components::{AutoAim, Player, PlayerDead};
 use crate::player::systems::equip::EquippedWeapon;
 
@@ -37,6 +40,15 @@ pub struct Weapon {
     pub recoil: f32,
     /// Whether the fire input was held last frame (for semi-auto edge detection).
     pub was_firing: bool,
+    /// Pool this gun draws from. `Infinite` skips all magazine bookkeeping.
+    pub ammo: AmmoKind,
+    pub magazine: u32,
+    pub rounds_in_mag: u32,
+    pub reload_secs: f32,
+    /// Counting down while a reload is in progress.
+    pub reloading: Option<Timer>,
+    /// Set for launcher-type guns; `None` = hitscan.
+    pub projectile: Option<ProjectileProps>,
 }
 
 impl Weapon {
@@ -45,6 +57,11 @@ impl Weapon {
             60.0 / props.fire_rate_per_minute
         } else {
             0.5
+        };
+        let magazine = if props.ammo == AmmoKind::Infinite {
+            0
+        } else {
+            props.magazine.max(1)
         };
         Self {
             muzzle,
@@ -57,7 +74,98 @@ impl Weapon {
             auto: props.auto,
             recoil: 0.0,
             was_firing: false,
+            ammo: props.ammo,
+            magazine,
+            rounds_in_mag: magazine,
+            reload_secs: props.reload_secs.max(0.05),
+            reloading: None,
+            projectile: props.projectile.clone(),
         }
+    }
+
+    pub fn uses_ammo(&self) -> bool {
+        self.ammo != AmmoKind::Infinite
+    }
+
+    /// Whether the trigger can be pulled right now (loaded and not mid-reload).
+    pub fn can_fire(&self) -> bool {
+        self.reloading.is_none() && (!self.uses_ammo() || self.rounds_in_mag > 0)
+    }
+
+    /// Begin a reload if there is something to reload with. Returns whether one started.
+    pub fn start_reload(&mut self, pouch_rounds: u32) -> bool {
+        if !self.uses_ammo()
+            || self.reloading.is_some()
+            || self.rounds_in_mag >= self.magazine
+            || pouch_rounds == 0
+        {
+            return false;
+        }
+        self.reloading = Some(Timer::from_seconds(self.reload_secs, TimerMode::Once));
+        true
+    }
+
+    /// Rounds needed to top the magazine up.
+    pub const fn missing(&self) -> u32 {
+        self.magazine.saturating_sub(self.rounds_in_mag)
+    }
+}
+
+/// Asks a player's held weapon to reload. Written by the R key / gamepad binding and by
+/// `shoot_weapons` on a dry trigger pull.
+#[derive(Message, Clone, Copy, Debug)]
+pub struct ReloadRequest(pub Entity);
+
+/// Starts reloads on request and finishes the ones in progress, moving rounds from the
+/// player's [`AmmoPouch`] into the magazine.
+#[allow(clippy::type_complexity)]
+pub fn tick_reloads(
+    time: Res<Time>,
+    mut requests: MessageReader<ReloadRequest>,
+    mut players: Query<
+        (Entity, &EquippedWeapon, &mut AmmoPouch),
+        (With<Player>, Without<PlayerDead>),
+    >,
+    mut weapons: Query<&mut Weapon>,
+    mut anim_ew: MessageWriter<AnimationEvent>,
+) {
+    for ReloadRequest(player) in requests.read() {
+        let Ok((_, equipped, pouch)) = players.get_mut(*player) else {
+            continue;
+        };
+        let Ok(mut weapon) = weapons.get_mut(equipped.0) else {
+            continue;
+        };
+        let available = pouch.rounds(weapon.ammo);
+        if weapon.start_reload(available) {
+            anim_ew.write(AnimationEvent(
+                AnimationEventType::GotoAnimState,
+                *player,
+                AnimationKey::Reload,
+            ));
+        }
+    }
+
+    for (player, equipped, mut pouch) in players.iter_mut() {
+        let Ok(mut weapon) = weapons.get_mut(equipped.0) else {
+            continue;
+        };
+        let Some(timer) = weapon.reloading.as_mut() else {
+            continue;
+        };
+        timer.tick(time.delta());
+        if !timer.is_finished() {
+            continue;
+        }
+        weapon.reloading = None;
+        let wanted = weapon.missing();
+        let got = pouch.take(weapon.ammo, wanted);
+        weapon.rounds_in_mag += got;
+        anim_ew.write(AnimationEvent(
+            AnimationEventType::LeaveAnimState,
+            player,
+            AnimationKey::Reload,
+        ));
     }
 }
 
@@ -85,24 +193,32 @@ pub fn shoot_weapons(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    players: Query<(Entity, &AutoAim, &CharacterControl, &EquippedWeapon, &Position), (With<Player>, Without<PlayerDead>)>,
+    players: Query<
+        (
+            Entity,
+            &AutoAim,
+            &CharacterControl,
+            &EquippedWeapon,
+            &Position,
+        ),
+        (With<Player>, Without<PlayerDead>),
+    >,
     mut weapons: Query<(&mut Weapon, &GlobalTransform)>,
-    mut targets: Query<(&mut Health, Has<Alien>)>,
-    mut alien_counter: ResMut<AlienCounter>,
     mut game_mw: MessageWriter<GameTrackingEvent>,
-    mut damage_mw: MessageWriter<DamageDealt>,
+    mut damage_mw: MessageWriter<ApplyDamage>,
+    mut reload_mw: MessageWriter<ReloadRequest>,
     mut rng_seed: Local<u32>,
 ) {
     let dt = time.delta_secs();
 
     // Only aliens and world geometry stop bullets — never the shooter.
-    let filter = SpatialQueryFilter::from_mask([
-        CollisionLayer::Alien,
-        CollisionLayer::ImpassableAll,
-    ]);
+    let filter =
+        SpatialQueryFilter::from_mask([CollisionLayer::Alien, CollisionLayer::ImpassableAll]);
 
     for (player, aim, control, equipped, player_pos) in players.iter() {
-        let Ok((mut weapon, weapon_gt)) = weapons.get_mut(equipped.0) else { continue };
+        let Ok((mut weapon, weapon_gt)) = weapons.get_mut(equipped.0) else {
+            continue;
+        };
 
         if weapon.cooldown > 0.0 {
             weapon.cooldown -= dt;
@@ -116,8 +232,18 @@ pub fn shoot_weapons(
         if !trigger || weapon.cooldown > 0.0 {
             continue;
         }
+        if !weapon.can_fire() {
+            // Dry trigger pull on an empty magazine starts the reload for you.
+            if weapon.reloading.is_none() {
+                reload_mw.write(ReloadRequest(player));
+            }
+            continue;
+        }
         weapon.cooldown = weapon.shot_interval;
         weapon.recoil = 0.28;
+        if weapon.uses_ammo() {
+            weapon.rounds_in_mag -= 1;
+        }
 
         // Muzzle world position (fall back to just in front of the player).
         let origin = match &weapon.muzzle {
@@ -128,7 +254,22 @@ pub fn shoot_weapons(
 
         game_mw.write(GameTrackingEvent::ShotFired(player));
 
-        *rng_seed = rng_seed.wrapping_add(0x9E3779B9);
+        // Launcher-type guns fire a physics projectile instead of a ray.
+        if let Some(props) = &weapon.projectile {
+            projectiles::launch(
+                &mut commands,
+                &mut meshes,
+                &mut materials,
+                player,
+                origin,
+                aim_dir * props.speed,
+                props,
+            );
+            spawn_muzzle_flash(&mut commands, &mut meshes, &mut materials, origin);
+            continue;
+        }
+
+        *rng_seed = rng_seed.wrapping_add(0x9E37_79B9);
         let mut rng = Rng(*rng_seed ^ player.to_bits() as u32);
 
         for _ in 0..weapon.pellets {
@@ -138,25 +279,15 @@ pub fn shoot_weapons(
             let dir = (aim_dir + jitter).normalize_or(aim_dir);
             let Ok(dir3) = Dir3::new(dir) else { continue };
 
-            let end = if let Some(hit) = spatial.cast_ray(origin, dir3, weapon.range, true, &filter) {
+            let end = if let Some(hit) = spatial.cast_ray(origin, dir3, weapon.range, true, &filter)
+            {
                 let point = origin + dir * hit.distance;
-                if let Ok((mut health, is_alien)) = targets.get_mut(hit.entity) {
-                    health.health -= weapon.damage;
-                    let lethal = health.health <= 0;
-                    damage_mw.write(DamageDealt {
-                        target: hit.entity,
-                        position: point,
-                        normal: -dir,
-                        amount: weapon.damage,
-                        kind: DamageKind::Ballistic,
-                        lethal,
-                    });
-                    game_mw.write(GameTrackingEvent::ShotHit(hit.entity));
-                    if lethal && is_alien {
-                        game_mw.write(GameTrackingEvent::AlienKilled(hit.entity));
-                        alien_counter.count -= 1;
-                    }
-                }
+                // Whatever it is — alien, wall, tower — `apply_damage` decides if it hurts.
+                damage_mw.write(
+                    ApplyDamage::at(hit.entity, weapon.damage, DamageKind::Ballistic, point)
+                        .from(player)
+                        .along(-dir),
+                );
                 point
             } else {
                 origin + dir * weapon.range
@@ -227,22 +358,40 @@ mod tests {
 
     #[test]
     fn shot_interval_is_derived_from_fire_rate() {
-        let props = WeaponProps { fire_rate_per_minute: 300.0, ..Default::default() }; // 5 shots/sec
+        let props = WeaponProps {
+            fire_rate_per_minute: 300.0,
+            ..Default::default()
+        }; // 5 shots/sec
         let w = Weapon::from_props(&props, None);
-        assert!((w.shot_interval - 0.2).abs() < 1e-6, "300 rpm -> 0.2s between shots");
+        assert!(
+            (w.shot_interval - 0.2).abs() < 1e-6,
+            "300 rpm -> 0.2s between shots"
+        );
     }
 
     #[test]
     fn zero_fire_rate_falls_back_to_a_sane_interval() {
-        let props = WeaponProps { fire_rate_per_minute: 0.0, ..Default::default() };
+        let props = WeaponProps {
+            fire_rate_per_minute: 0.0,
+            ..Default::default()
+        };
         let w = Weapon::from_props(&props, None);
-        assert!(w.shot_interval > 0.0, "must not divide by zero into an infinite fire rate");
+        assert!(
+            w.shot_interval > 0.0,
+            "must not divide by zero into an infinite fire rate"
+        );
     }
 
     #[test]
     fn pellets_are_clamped_to_at_least_one() {
-        let props = WeaponProps { pellets: 0, ..Default::default() };
+        let props = WeaponProps {
+            pellets: 0,
+            ..Default::default()
+        };
         let w = Weapon::from_props(&props, None);
-        assert_eq!(w.pellets, 1, "a weapon with 0 pellets would never hit anything");
+        assert_eq!(
+            w.pellets, 1,
+            "a weapon with 0 pellets would never hit anything"
+        );
     }
 }

@@ -17,23 +17,30 @@ pub struct IsBuildIndicator;
 
 #[derive(Hash, PartialEq, Eq, Clone, Component, Default, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "avs"]
+#[type_path = "avs"]
 pub struct IsObstacle;
 
 #[derive(Hash, PartialEq, Eq, Clone, Component, Default, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "avs"]
+#[type_path = "avs"]
 pub struct ShootingTower;
 
 #[derive(Component, Default, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "avs"]
+#[type_path = "avs"]
 pub struct AutoAim(pub Vec3);
+
+/// Which roster slot this player occupies (0 = first joined). Stable for the whole
+/// session: the HUD, respawns and device binding all key on it.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash, Reflect)]
+#[reflect(Component)]
+#[type_path = "avs"]
+pub struct PlayerSlot(pub usize);
 
 /// Marks a player entity whose weapon nodes have been hidden.
 #[derive(Component, Default, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "avs"]
+#[type_path = "avs"]
 pub struct WeaponsHidden;
 
 /// Marks a player who is downed (health ≤ 0) and waiting for a revive.
@@ -41,13 +48,21 @@ pub struct WeaponsHidden;
 /// Removed when a teammate completes a revive.
 #[derive(Component, Default, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "avs"]
+#[type_path = "avs"]
 pub struct PlayerDead {
     /// Accumulated revive progress from 0.0 (none) to 1.0 (complete).
     pub revive_progress: f32,
     /// Entity of the WorldFollower revive-progress bar, spawned on death.
     pub revive_bar: Option<Entity>,
+    /// Seconds left before the player bleeds out and has to respawn.
+    pub bleed_out: f32,
 }
+
+/// Respawns left this level. Reaching zero and bleeding out means the player is out.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Reflect)]
+#[reflect(Component)]
+#[type_path = "avs"]
+pub struct Lives(pub u32);
 
 /// Weapon mesh-node names present in the toon-shooter character models.
 /// Nodes matching any of these names are hidden on spawn and can be revealed
@@ -59,8 +74,8 @@ pub const WEAPON_NODES: &[&str] = &[
     "Knife_1",
     "Knife_2",
     "Pistol",
-  "Pistol_1",
-  "Pistol_2",
+    "Pistol_1",
+    "Pistol_2",
     "Revolver",
     "Revolver_1",
     "Revolver_2",

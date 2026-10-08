@@ -43,7 +43,11 @@ impl CollapsedSections {
 
     /// Marker shown in the header. ASCII only — Bevy's embedded font has nothing else.
     pub fn marker(&self, section: &str) -> &'static str {
-        if self.is_collapsed(section) { "[+]" } else { "[-]" }
+        if self.is_collapsed(section) {
+            "[+]"
+        } else {
+            "[-]"
+        }
     }
 }
 
@@ -61,9 +65,11 @@ pub fn section_header(builder: &mut UIBuilder, section: &'static str, theme: &Te
             })
             .insert(bevy::picking::hover::Hovered::default())
             .insert(bevy::ui_widgets::Button)
-            .observe(move |_: On<Activate>, mut collapsed: ResMut<CollapsedSections>| {
-                collapsed.toggle(section);
-            })
+            .observe(
+                move |_: On<Activate>, mut collapsed: ResMut<CollapsedSections>| {
+                    collapsed.toggle(section);
+                },
+            )
             .modify_node(|mut n| {
                 n.align_self = AlignSelf::Stretch;
                 n.padding = UiRect::axes(Val::Px(4.0), Val::Px(3.0));
@@ -88,7 +94,11 @@ pub fn sync_section_collapse(
     *synced = true;
 
     for (body, mut node) in bodies.iter_mut() {
-        let wanted = if collapsed.is_collapsed(body.0) { Display::None } else { Display::Flex };
+        let wanted = if collapsed.is_collapsed(body.0) {
+            Display::None
+        } else {
+            Display::Flex
+        };
         if node.display != wanted {
             node.display = wanted;
         }

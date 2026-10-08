@@ -1,6 +1,6 @@
+use crate::animation::animation_plugin::AnimationKey;
 use bevy::prelude::Resource;
 use serde::{Deserialize, Serialize};
-use crate::animation::animation_plugin::AnimationKey;
 
 pub const MODEL_SETTINGS_PATH: &str = "player-settings.ron";
 pub const DEFAULT_CHARACTER_FOLDER: &str = "packs/toon-shooter/characters";
@@ -10,73 +10,96 @@ pub const DEFAULT_CHARACTER_FOLDER: &str = "packs/toon-shooter/characters";
 /// matched against GLTF clip names via `clip_matches()`.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct AnimMapping {
-    #[serde(default)] pub idle: String,
-    #[serde(default)] pub idle_shoot: String,
-    #[serde(default)] pub walk: String,
-    #[serde(default)] pub walk_shoot: String,
-    #[serde(default)] pub run: String,
-    #[serde(default)] pub run_shoot: String,
-    #[serde(default)] pub run_gun: String,
-    #[serde(default)] pub duck: String,
-    #[serde(default)] pub jump: String,
-    #[serde(default)] pub jump_idle: String,
-    #[serde(default)] pub jump_land: String,
-    #[serde(default)] pub punch: String,
-    #[serde(default)] pub wave: String,
-    #[serde(default)] pub yes: String,
-    #[serde(default)] pub no: String,
-    #[serde(default)] pub death: String,
-    #[serde(default)] pub hit_react: String,
-    #[serde(default)] pub throwing: String,
-    #[serde(default)] pub building: String,
+    #[serde(default)]
+    pub idle: String,
+    #[serde(default)]
+    pub idle_shoot: String,
+    #[serde(default)]
+    pub walk: String,
+    #[serde(default)]
+    pub walk_shoot: String,
+    #[serde(default)]
+    pub run: String,
+    #[serde(default)]
+    pub run_shoot: String,
+    #[serde(default)]
+    pub run_gun: String,
+    #[serde(default)]
+    pub duck: String,
+    #[serde(default)]
+    pub jump: String,
+    #[serde(default)]
+    pub jump_idle: String,
+    #[serde(default)]
+    pub jump_land: String,
+    #[serde(default)]
+    pub punch: String,
+    #[serde(default)]
+    pub wave: String,
+    #[serde(default)]
+    pub yes: String,
+    #[serde(default)]
+    pub no: String,
+    #[serde(default)]
+    pub death: String,
+    #[serde(default)]
+    pub hit_react: String,
+    #[serde(default)]
+    pub throwing: String,
+    #[serde(default)]
+    pub building: String,
+    #[serde(default)]
+    pub reload: String,
 }
 
 impl AnimMapping {
     pub fn get(&self, key: AnimationKey) -> &str {
         match key {
-            AnimationKey::Idle      => &self.idle,
+            AnimationKey::Idle => &self.idle,
             AnimationKey::IdleShoot => &self.idle_shoot,
-            AnimationKey::Walk      => &self.walk,
+            AnimationKey::Walk => &self.walk,
             AnimationKey::WalkShoot => &self.walk_shoot,
-            AnimationKey::Run       => &self.run,
-            AnimationKey::RunShoot  => &self.run_shoot,
-            AnimationKey::RunGun    => &self.run_gun,
-            AnimationKey::Duck      => &self.duck,
-            AnimationKey::Jump      => &self.jump,
-            AnimationKey::JumpIdle  => &self.jump_idle,
-            AnimationKey::JumpLand  => &self.jump_land,
-            AnimationKey::Punch     => &self.punch,
-            AnimationKey::Wave      => &self.wave,
-            AnimationKey::Yes       => &self.yes,
-            AnimationKey::No        => &self.no,
-            AnimationKey::Death     => &self.death,
-            AnimationKey::HitReact  => &self.hit_react,
-            AnimationKey::Throwing  => &self.throwing,
-            AnimationKey::Building  => &self.building,
+            AnimationKey::Run => &self.run,
+            AnimationKey::RunShoot => &self.run_shoot,
+            AnimationKey::RunGun => &self.run_gun,
+            AnimationKey::Duck => &self.duck,
+            AnimationKey::Jump => &self.jump,
+            AnimationKey::JumpIdle => &self.jump_idle,
+            AnimationKey::JumpLand => &self.jump_land,
+            AnimationKey::Punch => &self.punch,
+            AnimationKey::Wave => &self.wave,
+            AnimationKey::Yes => &self.yes,
+            AnimationKey::No => &self.no,
+            AnimationKey::Death => &self.death,
+            AnimationKey::HitReact => &self.hit_react,
+            AnimationKey::Throwing => &self.throwing,
+            AnimationKey::Building => &self.building,
+            AnimationKey::Reload => &self.reload,
         }
     }
 
     pub fn set(&mut self, key: AnimationKey, name: String) {
         match key {
-            AnimationKey::Idle      => self.idle       = name,
+            AnimationKey::Idle => self.idle = name,
             AnimationKey::IdleShoot => self.idle_shoot = name,
-            AnimationKey::Walk      => self.walk       = name,
+            AnimationKey::Walk => self.walk = name,
             AnimationKey::WalkShoot => self.walk_shoot = name,
-            AnimationKey::Run       => self.run        = name,
-            AnimationKey::RunShoot  => self.run_shoot  = name,
-            AnimationKey::RunGun    => self.run_gun    = name,
-            AnimationKey::Duck      => self.duck       = name,
-            AnimationKey::Jump      => self.jump       = name,
-            AnimationKey::JumpIdle  => self.jump_idle  = name,
-            AnimationKey::JumpLand  => self.jump_land  = name,
-            AnimationKey::Punch     => self.punch      = name,
-            AnimationKey::Wave      => self.wave       = name,
-            AnimationKey::Yes       => self.yes        = name,
-            AnimationKey::No        => self.no         = name,
-            AnimationKey::Death     => self.death      = name,
-            AnimationKey::HitReact  => self.hit_react  = name,
-            AnimationKey::Throwing  => self.throwing   = name,
-            AnimationKey::Building  => self.building   = name,
+            AnimationKey::Run => self.run = name,
+            AnimationKey::RunShoot => self.run_shoot = name,
+            AnimationKey::RunGun => self.run_gun = name,
+            AnimationKey::Duck => self.duck = name,
+            AnimationKey::Jump => self.jump = name,
+            AnimationKey::JumpIdle => self.jump_idle = name,
+            AnimationKey::JumpLand => self.jump_land = name,
+            AnimationKey::Punch => self.punch = name,
+            AnimationKey::Wave => self.wave = name,
+            AnimationKey::Yes => self.yes = name,
+            AnimationKey::No => self.no = name,
+            AnimationKey::Death => self.death = name,
+            AnimationKey::HitReact => self.hit_react = name,
+            AnimationKey::Throwing => self.throwing = name,
+            AnimationKey::Building => self.building = name,
+            AnimationKey::Reload => self.reload = name,
         }
     }
 }
@@ -136,15 +159,24 @@ pub struct ModelSettings {
     pub character_index: usize,
     #[serde(default = "default_scale")]
     pub scale: f32,
-    #[serde(default)] pub translation_x: f32,
-    #[serde(default)] pub translation_y: f32,
-    #[serde(default)] pub translation_z: f32,
-    #[serde(default)] pub rotation_y_degrees: f32,
-    #[serde(default)] pub anim_mapping: AnimMapping,
+    #[serde(default)]
+    pub translation_x: f32,
+    #[serde(default)]
+    pub translation_y: f32,
+    #[serde(default)]
+    pub translation_z: f32,
+    #[serde(default)]
+    pub rotation_y_degrees: f32,
+    #[serde(default)]
+    pub anim_mapping: AnimMapping,
 }
 
-fn default_character_folder() -> String { DEFAULT_CHARACTER_FOLDER.to_string() }
-fn default_scale() -> f32 { 1.0 }
+fn default_character_folder() -> String {
+    DEFAULT_CHARACTER_FOLDER.to_string()
+}
+const fn default_scale() -> f32 {
+    1.0
+}
 
 impl Default for ModelSettings {
     fn default() -> Self {
@@ -164,17 +196,19 @@ impl Default for ModelSettings {
 impl ModelSettings {
     /// Full asset-relative path for the currently selected character.
     pub fn current_model_path(&self, folder: &CharacterFolder) -> Option<String> {
-        folder.files.get(self.character_index)
+        folder
+            .files
+            .get(self.character_index)
             .map(|f| format!("{}/{f}", self.character_folder))
     }
 
     pub fn load() -> Self {
         if let Ok(text) = std::fs::read_to_string(MODEL_SETTINGS_PATH)
-            && let Ok(s) = ron::from_str::<ModelSettings>(&text)
+            && let Ok(s) = ron::from_str::<Self>(&text)
         {
             return s;
         }
-        ModelSettings::default()
+        Self::default()
     }
 
     pub fn save(&self) {

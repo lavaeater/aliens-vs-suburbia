@@ -5,19 +5,19 @@ use bevy_seedling::prelude::AudioSample;
 use rusty_music::musicians::arpeggiator::Arpeggiator;
 use rusty_music::musicians::bassist::Bassist;
 use rusty_music::musicians::drummer::{
-    generate_double_time_kick_beat, generate_double_time_snare_beat, generate_half_time_kick_beat,
-    generate_half_time_snare_beat, generate_hihat_beat, generate_kick_beat, generate_snare_beat,
-    SuperDrummer,
+    SuperDrummer, generate_double_time_kick_beat, generate_double_time_snare_beat,
+    generate_half_time_kick_beat, generate_half_time_snare_beat, generate_hihat_beat,
+    generate_kick_beat, generate_snare_beat,
 };
 use rusty_music::musicians::soloist::Soloist;
 use rusty_music::musicians::{Chord, Musician, Muted, Note, Sampler};
 use rusty_music::player::Intensity;
-use rusty_music::{create_drummer_only, make_conductor, MusicPlugin};
+use rusty_music::{MusicPlugin, create_drummer_only, make_conductor};
 
 use crate::alien::components::general::AlienCounter;
 use crate::alien::wave_manager::WaveManager;
-use crate::game_state::score_keeper::{LevelState, LevelTracker};
 use crate::game_state::GameState;
+use crate::game_state::score_keeper::{LevelState, LevelTracker};
 use crate::general::components::Health;
 use crate::music::players::{ChordStabs, PadPlayer, UfoStingers};
 use crate::player::components::Player;
@@ -168,7 +168,7 @@ fn suburbia_chords() -> Vec<Chord> {
                 Note::new(-1, 0.5), // G# low
                 Note::new(14, 0.3), // B high
             ],
-            scale.clone(),
+            scale,
         ),
     ]
 }
@@ -230,7 +230,7 @@ fn setup_band(mut commands: Commands, asset_server: Res<AssetServer>) {
     let mut drums = SuperDrummer::new(vec![
         create_drummer_only(kick.clone(), 0.0, generate_kick_beat()),
         create_drummer_only(snare.clone(), -2.0, generate_snare_beat()),
-        create_drummer_only(hihat.clone(), -8.0, generate_hihat_beat()),
+        create_drummer_only(hihat, -8.0, generate_hihat_beat()),
     ]);
     drums.auto_time_feel = true;
     drums.half_time_drums = vec![
@@ -258,38 +258,82 @@ fn setup_band(mut commands: Commands, asset_server: Res<AssetServer>) {
             create_drummer_only(tom_lo, -3.0, HashMap::from([((3, 3), Note::new(0, 0.9))])),
         ],
     );
-    commands.spawn((Musician::new("Drums".into(), drums), MusicChannel::Groove, Muted));
+    commands.spawn((
+        Musician::new("Drums".into(), drums),
+        MusicChannel::Groove,
+        Muted,
+    ));
 
     // ── Groove: moog bass, riffing in 2-bar loops ────────────────────────────
-    let mut bassist = Bassist::new(Sampler { handle: moog, volume: -1.0 });
+    let mut bassist = Bassist::new(Sampler {
+        handle: moog,
+        volume: -1.0,
+    });
     bassist.memory_bars = 2;
     bassist.memory_repeats = 2;
-    commands.spawn((Musician::new("Bass".into(), bassist), MusicChannel::Groove, Muted));
+    commands.spawn((
+        Musician::new("Bass".into(), bassist),
+        MusicChannel::Groove,
+        Muted,
+    ));
 
     // ── Ambient: pad swells + pluck arpeggio ─────────────────────────────────
     commands.spawn((
-        Musician::new("Pad".into(), PadPlayer { sampler: Sampler { handle: pad, volume: -4.0 } }),
+        Musician::new(
+            "Pad".into(),
+            PadPlayer {
+                sampler: Sampler {
+                    handle: pad,
+                    volume: -4.0,
+                },
+            },
+        ),
         MusicChannel::Ambient,
     ));
-    let mut arp = Arpeggiator::new(Sampler { handle: pluck, volume: -6.0 });
+    let mut arp = Arpeggiator::new(Sampler {
+        handle: pluck,
+        volume: -6.0,
+    });
     arp.use_scale_runs = true;
     commands.spawn((Musician::new("Arp".into(), arp), MusicChannel::Ambient));
 
     // ── Combat: sax lead (AABA phrases) + surf stabs ─────────────────────────
     commands.spawn((
-        Musician::new("Sax".into(), Soloist::new(Sampler { handle: sax, volume: -3.0 }, 4)),
+        Musician::new(
+            "Sax".into(),
+            Soloist::new(
+                Sampler {
+                    handle: sax,
+                    volume: -3.0,
+                },
+                4,
+            ),
+        ),
         MusicChannel::Combat,
         Muted,
     ));
     commands.spawn((
-        Musician::new("Stabs".into(), ChordStabs { samples: vec![stab, hit1, hit2], volume: -5.0 }),
+        Musician::new(
+            "Stabs".into(),
+            ChordStabs {
+                samples: vec![stab, hit1, hit2],
+                volume: -5.0,
+            },
+        ),
         MusicChannel::Combat,
         Muted,
     ));
 
     // ── Danger: alien FX ─────────────────────────────────────────────────────
     commands.spawn((
-        Musician::new("Saucer".into(), UfoStingers { ufo, sid, volume: -6.0 }),
+        Musician::new(
+            "Saucer".into(),
+            UfoStingers {
+                ufo,
+                sid,
+                volume: -6.0,
+            },
+        ),
         MusicChannel::Danger,
         Muted,
     ));
@@ -341,7 +385,10 @@ fn update_game_moods(
     moods.target_danger = goal_pressure.max(hurt);
 
     // Level over: let everything wind down to the ambient layer.
-    if matches!(tracker.level_state, LevelState::Completed | LevelState::Failed) {
+    if matches!(
+        tracker.level_state,
+        LevelState::Completed | LevelState::Failed
+    ) {
         moods.target_combat = 0.0;
         moods.target_danger = 0.0;
     }

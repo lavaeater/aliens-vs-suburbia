@@ -1,89 +1,175 @@
-use bevy::app::{App, Plugin, Startup, Update};
-use std::collections::HashMap;
-use avian3d::prelude::{LayerMask, RigidBody};
-use pathfinding::grid::Grid;
-use std::collections::HashSet;
-use bevy::ecs::schedule::SystemCondition;
-use bevy::prelude::{in_state, IntoScheduleConfigs, OnEnter};
 use crate::alien::components::general::AlienCounter;
 use crate::game_state::GameState;
 use crate::general::components::CollisionLayer;
-use crate::general::components::map_components::{ModelDefinition, MapModelDefinitions};
+use crate::general::components::map_components::{
+    BuildOption, MapModelDefinitions, ModelDefinition,
+};
 use crate::general::events::map_events::{LoadMap, SpawnAlien, SpawnPlayer};
 use crate::general::resources::map_resources::MapGraph;
-use crate::general::systems::map_systems::{load_map_one, load_map_showcase, map_loader, TileDefinitions, update_current_tile_system};
+use crate::general::systems::map_systems::{
+    TileDefinitions, load_map_one, load_map_showcase, map_loader, update_current_tile_system,
+};
+use avian3d::prelude::{LayerMask, RigidBody};
+use bevy::app::{App, Plugin, Startup, Update};
+use bevy::ecs::schedule::SystemCondition;
+use bevy::prelude::{IntoScheduleConfigs, OnEnter, in_state};
+use pathfinding::grid::Grid;
+use std::collections::HashMap;
+use std::collections::HashSet;
 
 pub struct NonStateMapStuff;
 
 impl Plugin for NonStateMapStuff {
     fn build(&self, app: &mut App) {
-        app
-            .add_message::<LoadMap>()
+        app.add_message::<LoadMap>()
             .add_message::<SpawnPlayer>()
             .add_message::<SpawnAlien>()
-            .insert_resource(
-                MapModelDefinitions {
-                    definitions: HashMap::from(
-                        [
-                            ("floor", ModelDefinition {
-                                name: "floor",
-                                file: "map/floor_small.glb#Scene0",
-                                width: 16.0,
-                                height: 1.0,
-                                depth: 16.0,
-                                rigid_body: RigidBody::Static,
-                                group: LayerMask::from([CollisionLayer::Floor]),
-                                mask: LayerMask::from([CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
+            .insert_resource(MapModelDefinitions {
+                definitions: HashMap::from([
+                    (
+                        "floor",
+                        ModelDefinition {
+                            name: "floor",
+                            file: "map/floor_small.glb#Scene0",
+                            width: 16.0,
+                            height: 1.0,
+                            depth: 16.0,
+                            rigid_body: RigidBody::Static,
+                            group: LayerMask::from([CollisionLayer::Floor]),
+                            mask: LayerMask::from([
+                                CollisionLayer::Ball,
+                                CollisionLayer::Alien,
+                                CollisionLayer::Player,
+                            ]),
+                        },
+                    ),
+                    (
+                        "obstacle",
+                        ModelDefinition {
+                            name: "obstacle",
+                            file: "map/obstacle.glb#Scene0",
+                            width: 16.0,
+                            height: 4.0,
+                            depth: 16.0,
+                            rigid_body: RigidBody::Kinematic,
+                            group: LayerMask::from([CollisionLayer::ImpassableAll]),
+                            mask: LayerMask::from([
+                                CollisionLayer::Ball,
+                                CollisionLayer::Alien,
+                                CollisionLayer::Player,
+                            ]),
+                        },
+                    ),
+                    (
+                        "tower",
+                        ModelDefinition {
+                            name: "tower",
+                            file: "map/tower_balls.glb#Scene0",
+                            width: 16.0,
+                            height: 8.0,
+                            depth: 16.0,
+                            rigid_body: RigidBody::Kinematic,
+                            group: LayerMask::from([CollisionLayer::ImpassableAll]),
+                            mask: LayerMask::from([
+                                CollisionLayer::Ball,
+                                CollisionLayer::Alien,
+                                CollisionLayer::Player,
+                            ]),
+                        },
+                    ),
+                    (
+                        "tower_slow",
+                        ModelDefinition {
+                            name: "Slow Tower",
+                            file: "packs/toon-shooter/map/Water Tank.glb#Scene0",
+                            width: 16.0,
+                            height: 8.0,
+                            depth: 16.0,
+                            rigid_body: RigidBody::Kinematic,
+                            group: LayerMask::from([CollisionLayer::ImpassableAll]),
+                            mask: LayerMask::from([
+                                CollisionLayer::Ball,
+                                CollisionLayer::Alien,
+                                CollisionLayer::Player,
+                            ]),
+                        },
+                    ),
+                    (
+                        "tower_area",
+                        ModelDefinition {
+                            name: "Area Tower",
+                            file: "packs/toon-shooter/map/Shipping Container.glb#Scene0",
+                            width: 16.0,
+                            height: 8.0,
+                            depth: 16.0,
+                            rigid_body: RigidBody::Kinematic,
+                            group: LayerMask::from([CollisionLayer::ImpassableAll]),
+                            mask: LayerMask::from([
+                                CollisionLayer::Ball,
+                                CollisionLayer::Alien,
+                                CollisionLayer::Player,
+                            ]),
+                        },
+                    ),
+                ]),
+                build_indicators: {
+                    use crate::assets::asset_definition::{TowerKind, TowerProps};
+                    let mut options = vec![
+                        BuildOption::builtin(
+                            "Wall",
+                            "obstacle",
+                            "map/obstacle.glb#Scene0",
+                            0,
+                            None,
+                        ),
+                        BuildOption::builtin(
+                            "Ball Tower",
+                            "tower",
+                            "map/tower_balls.glb#Scene0",
+                            50,
+                            Some(TowerProps {
+                                cost: 50,
+                                range: 3.0,
+                                fire_rate_per_minute: 20.0,
+                                kind: TowerKind::Shooter,
+                                description: "Lobs balls at the nearest alien".into(),
+                                ..Default::default()
                             }),
-                            ("obstacle", ModelDefinition {
-                                name: "obstacle",
-                                file: "map/obstacle.glb#Scene0",
-                                width: 16.0,
-                                height: 4.0,
-                                depth: 16.0,
-                                rigid_body: RigidBody::Kinematic,
-                                group: LayerMask::from([CollisionLayer::ImpassableAll]),
-                                mask: LayerMask::from([CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
+                        ),
+                        BuildOption::builtin(
+                            "Slow Tower",
+                            "tower_slow",
+                            "packs/toon-shooter/map/Water Tank.glb#Scene0",
+                            75,
+                            Some(TowerProps {
+                                cost: 75,
+                                range: 2.5,
+                                kind: TowerKind::Slow { factor: 0.35 },
+                                description: "Aliens crawl while inside".into(),
+                                ..Default::default()
                             }),
-                            ("tower", ModelDefinition {
-                                name: "tower",
-                                file: "map/tower_balls.glb#Scene0",
-                                width: 16.0,
-                                height: 8.0,
-                                depth: 16.0,
-                                rigid_body: RigidBody::Kinematic,
-                                group: LayerMask::from([CollisionLayer::ImpassableAll]),
-                                mask: LayerMask::from([CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
+                        ),
+                        BuildOption::builtin(
+                            "Area Tower",
+                            "tower_area",
+                            "packs/toon-shooter/map/Shipping Container.glb#Scene0",
+                            100,
+                            Some(TowerProps {
+                                cost: 100,
+                                range: 2.0,
+                                damage: 15.0,
+                                kind: TowerKind::Area { tick_hz: 4.0 },
+                                description: "Burns everything inside".into(),
+                                ..Default::default()
                             }),
-                            ("tower_slow", ModelDefinition {
-                                name: "Slow Tower",
-                                file: "packs/toon-shooter/map/Water Tank.glb#Scene0",
-                                width: 16.0,
-                                height: 8.0,
-                                depth: 16.0,
-                                rigid_body: RigidBody::Kinematic,
-                                group: LayerMask::from([CollisionLayer::ImpassableAll]),
-                                mask: LayerMask::from([CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
-                            }),
-                            ("tower_area", ModelDefinition {
-                                name: "Area Tower",
-                                file: "packs/toon-shooter/map/Shipping Container.glb#Scene0",
-                                width: 16.0,
-                                height: 8.0,
-                                depth: 16.0,
-                                rigid_body: RigidBody::Kinematic,
-                                group: LayerMask::from([CollisionLayer::ImpassableAll]),
-                                mask: LayerMask::from([CollisionLayer::Ball, CollisionLayer::Alien, CollisionLayer::Player]),
-                            }),
-                        ]),
-                    build_indicators: vec!["obstacle", "tower", "tower_slow", "tower_area"],
-
-                }
-            ).insert_resource(
-            TileDefinitions::new(1.0,
-                                 32.0,
-                                 9.5,
-                                 1.0,))
+                        ),
+                    ];
+                    // Anything authored as a Tower def joins the menu after the built-ins.
+                    options.extend(BuildOption::scan_defs("assets/defs"));
+                    options
+                },
+            })
+            .insert_resource(TileDefinitions::new(1.0, 32.0, 9.5, 1.0))
             .insert_resource(AlienCounter::new(50))
             .insert_resource(MapGraph {
                 path_finding_grid: Grid::new(0, 0),
@@ -98,16 +184,17 @@ pub struct StatefulMapPlugin;
 
 impl Plugin for StatefulMapPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_plugins(NonStateMapStuff)
-            .add_systems(OnEnter(GameState::InGame), load_map_one.run_if(crate::playground::state::in_normal_game))
+        app.add_plugins(NonStateMapStuff)
+            .add_systems(
+                OnEnter(GameState::InGame),
+                load_map_one.run_if(crate::playground::state::in_normal_game),
+            )
             .add_systems(OnEnter(GameState::ModelShowcase), load_map_showcase)
             .add_systems(
-                Update, (
-                    update_current_tile_system,
-                    map_loader,
-                )
-                    .run_if(in_state(GameState::InGame).or_else(in_state(GameState::ModelShowcase))),
+                Update,
+                (update_current_tile_system, map_loader).run_if(
+                    in_state(GameState::InGame).or_else(in_state(GameState::ModelShowcase)),
+                ),
             );
     }
 }
@@ -116,17 +203,8 @@ pub struct MapPlugin;
 
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_plugins(NonStateMapStuff)
-            .add_systems(
-                Startup,
-                (
-                    load_map_one,
-                ),
-            )
-            .add_systems(Update, (
-                update_current_tile_system,
-                map_loader, ),
-            );
+        app.add_plugins(NonStateMapStuff)
+            .add_systems(Startup, (load_map_one,))
+            .add_systems(Update, (update_current_tile_system, map_loader));
     }
 }

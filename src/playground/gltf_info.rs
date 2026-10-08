@@ -24,7 +24,7 @@ pub struct GltfInfo {
 
 impl GltfInfo {
     /// Nothing to draw. Such a file is an animation library, not a model.
-    pub fn is_animation_only(&self) -> bool {
+    pub const fn is_animation_only(&self) -> bool {
         self.mesh_count == 0 && !self.animations.is_empty()
     }
 }
@@ -52,11 +52,11 @@ pub fn inspect_file(path: &Path) -> Option<GltfInfo> {
 /// Layout: a 12-byte header (`glTF`, version, total length) then chunks, each a 4-byte
 /// length, a 4-byte type, and the payload. The JSON chunk is required to be first.
 fn glb_json(bytes: &[u8]) -> Option<String> {
-    if bytes.len() < 20 || &bytes[0..4] != b"glTF" {
+    if bytes.len() < 20 || bytes.get(0..4)? != b"glTF" {
         return None;
     }
-    let chunk_len = u32::from_le_bytes(bytes[12..16].try_into().ok()?) as usize;
-    if &bytes[16..20] != b"JSON" {
+    let chunk_len = u32::from_le_bytes(bytes.get(12..16)?.try_into().ok()?) as usize;
+    if bytes.get(16..20)? != b"JSON" {
         return None;
     }
     let end = 20usize.checked_add(chunk_len)?;
@@ -70,24 +70,28 @@ fn glb_json(bytes: &[u8]) -> Option<String> {
 /// fields, and both live at the top level of the document.
 fn parse_info(json: &str) -> Option<GltfInfo> {
     let value: serde_json::Value = serde_json::from_str(json).ok()?;
-    let mesh_count = value.get("meshes").and_then(|m| m.as_array()).map_or(0, |m| m.len());
+    let mesh_count = value
+        .get("meshes")
+        .and_then(|m| m.as_array())
+        .map_or(0, std::vec::Vec::len);
     let animations = value
         .get("animations")
         .and_then(|a| a.as_array())
-        .map(|clips| {
+        .map_or_default(|clips| {
             clips
                 .iter()
                 .enumerate()
                 .map(|(index, clip)| {
                     clip.get("name")
                         .and_then(|n| n.as_str())
-                        .map(str::to_string)
-                        .unwrap_or_else(|| format!("Animation{index}"))
+                        .map_or_else(|| format!("Animation{index}"), str::to_string)
                 })
                 .collect()
-        })
-        .unwrap_or_default();
-    Some(GltfInfo { mesh_count, animations })
+        });
+    Some(GltfInfo {
+        mesh_count,
+        animations,
+    })
 }
 
 #[cfg(test)]

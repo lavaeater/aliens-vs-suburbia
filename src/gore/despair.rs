@@ -52,9 +52,12 @@ pub fn apply_despair(
     settings: Res<DespairSettings>,
     moods: Option<Res<MusicMoods>>,
     ambient: Option<ResMut<GlobalAmbientLight>>,
-    mut cameras: Query<(Entity, Option<&mut ColorGrading>, Option<&mut DistanceFog>), With<GameCamera>>,
+    mut cameras: Query<
+        (Entity, Option<&mut ColorGrading>, Option<&mut DistanceFog>),
+        With<GameCamera>,
+    >,
 ) {
-    let danger = moods.map(|m| m.danger).unwrap_or(0.0).clamp(0.0, 1.0);
+    let danger = moods.map_or(0.0, |m| m.danger).clamp(0.0, 1.0);
     let d = danger * settings.max_strength;
 
     // ── Ambient light: the room dims as dread rises. ──────────────────────────
@@ -105,7 +108,9 @@ fn despair_fog(d: f32) -> DistanceFog {
         color: Color::srgba(0.12, 0.13, 0.11, d * 0.9),
         directional_light_color: Color::NONE,
         directional_light_exponent: 8.0,
-        falloff: FogFalloff::Exponential { density: lerp(0.0, 0.035, d) },
+        falloff: FogFalloff::Exponential {
+            density: lerp(0.0, 0.035, d),
+        },
     }
 }
 
@@ -118,7 +123,9 @@ pub struct Heartbeat {
 impl Default for Heartbeat {
     fn default() -> Self {
         // Repeating; we reset the duration each beat from current health.
-        Self { timer: Timer::from_seconds(1.0, TimerMode::Repeating) }
+        Self {
+            timer: Timer::from_seconds(1.0, TimerMode::Repeating),
+        }
     }
 }
 
@@ -150,8 +157,13 @@ pub fn despair_heartbeat(
     let interval = lerp(0.4, 1.1, t);
     heart.timer.tick(time.delta());
     if heart.timer.just_finished() {
-        heart.timer.set_duration(std::time::Duration::from_secs_f32(interval));
-        sfx.write(PlaySfx { kind: SfxKind::Heartbeat, gain_db: -4.0 });
+        heart
+            .timer
+            .set_duration(std::time::Duration::from_secs_f32(interval));
+        sfx.write(PlaySfx {
+            kind: SfxKind::Heartbeat,
+            gain_db: -4.0,
+        });
     }
 }
 
@@ -165,7 +177,11 @@ mod tests {
         let g = despair_grade(0.0);
         assert_eq!(g.global.post_saturation, 1.0, "no desaturation when calm");
         assert_eq!(g.global.exposure, 0.0);
-        assert_eq!(despair_fog(0.0).color.alpha(), 0.0, "fog invisible when calm");
+        assert_eq!(
+            despair_fog(0.0).color.alpha(),
+            0.0,
+            "fog invisible when calm"
+        );
     }
 
     #[test]

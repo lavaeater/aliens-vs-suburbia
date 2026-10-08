@@ -1,6 +1,4 @@
-use bevy::math::{EulerRot, Quat};
-use bevy::prelude::*;
-use bevy::reflect::Reflect;
+use crate::CurrentTile;
 use crate::ai::components::avoid_wall_components::AvoidWallsData;
 use crate::ai::components::move_towards_goal_components::MoveTowardsGoalData;
 use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
@@ -8,16 +6,17 @@ use crate::control::components::{CharacterControl, KinematicMovement};
 use crate::general::components::{Attack, CollisionLayer, Health, HittableTarget, TouchDamage};
 use crate::player::systems::spawn_players::FixSceneTransform;
 use avian3d::prelude::{
-    AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes,
-    RigidBody
+    AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody,
 };
-use crate::CurrentTile;
+use bevy::math::{EulerRot, Quat};
+use bevy::prelude::*;
+use bevy::reflect::Reflect;
 
-fn locked_axes()-> LockedAxes {
+const fn locked_axes() -> LockedAxes {
     LockedAxes::new().lock_rotation_x().lock_rotation_z()
 }
 
-#[derive(Component, Default, Reflect, Clone, Copy, Debug, PartialEq)]
+#[derive(Component, Default, Reflect, Clone, Copy, Debug, PartialEq, Eq)]
 #[type_path = "avs"]
 #[require(
     Name::from("Alien"),
@@ -73,7 +72,7 @@ pub struct AlienSightShape {
 
 impl Default for AlienSightShape {
     fn default() -> Self {
-        AlienSightShape {
+        Self {
             shape: Collider::cone(5.0, 4.0),
             rotation: Quat::from_euler(EulerRot::YXZ, 0.0, -90.0, 0.0),
             range: 5.0,
@@ -83,12 +82,12 @@ impl Default for AlienSightShape {
 
 #[derive(Resource, Clone, Debug)]
 pub struct AlienCounter {
-    pub count: u32,
-    pub max_count: u32,
+    pub count: i32,
+    pub max_count: i32,
 }
 
 impl AlienCounter {
-    pub fn new(max_count: u32) -> Self {
+    pub const fn new(max_count: i32) -> Self {
         Self {
             count: 0,
             max_count,

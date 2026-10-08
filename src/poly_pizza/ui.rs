@@ -1,14 +1,17 @@
-use bevy::prelude::*;
-use bevy::input::keyboard::{Key, KeyboardInput};
-use bevy::input::ButtonState;
-use bevy::ui_widgets::Activate;
-use lava_ui_builder::{LavaTheme, TextTheme, UIBuilder};
 use crate::game_state::GameState;
 use crate::poly_pizza::async_bridge::{ApiChannels, ApiRequest, ApiResponse};
 use crate::poly_pizza::client::SearchFilters;
-use crate::poly_pizza::state::PolyPizzaState;
+use crate::poly_pizza::state::{
+    PolyPizzaState, find_thumb_asset_path, glb_asset_path, glb_cache_path, has_cached_thumb,
+    thumb_cache_path,
+};
 use crate::poly_pizza::viewer::spawn_viewer_model;
 use crate::ui::spawn_ui::StateMarker;
+use bevy::input::ButtonState;
+use bevy::input::keyboard::{Key, KeyboardInput};
+use bevy::prelude::*;
+use bevy::ui_widgets::Activate;
+use lava_ui_builder::{LavaTheme, TextTheme, UIBuilder};
 
 // ── Marker components ─────────────────────────────────────────────────────────
 
@@ -92,11 +95,14 @@ pub fn spawn_polypizza_screen(
                 .border_all_px(1.0, Color::srgb(0.3, 0.5, 0.7));
 
             row.with_child(|lbl| {
-                lbl.insert_bundle(lava_ui_builder::label("> _", &TextTheme {
-                    label_size: 14.0,
-                    label_color: Color::srgb(0.8, 0.9, 1.0),
-                    ..text_theme.clone()
-                }))
+                lbl.insert_bundle(lava_ui_builder::label(
+                    "> _",
+                    &TextTheme {
+                        label_size: 14.0,
+                        label_color: Color::srgb(0.8, 0.9, 1.0),
+                        ..text_theme.clone()
+                    },
+                ))
                 .insert(SearchLabel);
             });
         })
@@ -107,7 +113,9 @@ pub fn spawn_polypizza_screen(
         // Search button
         left.add_button_observe(
             "Search",
-            |b| { b.size_px(240.0, 36.0).font_size(14.0); },
+            |b| {
+                b.size_px(240.0, 36.0).font_size(14.0);
+            },
             |_: On<Activate>, mut state: ResMut<PolyPizzaState>| {
                 state.search_requested = true;
             },
@@ -115,54 +123,109 @@ pub fn spawn_polypizza_screen(
 
         // Category filters
         left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label("Category", &TextTheme {
-                label_size: 12.0,
-                label_color: Color::srgb(0.5, 0.7, 0.5),
-                ..text_theme.clone()
-            }));
+            c.insert_bundle(lava_ui_builder::label(
+                "Category",
+                &TextTheme {
+                    label_size: 12.0,
+                    label_color: Color::srgb(0.5, 0.7, 0.5),
+                    ..text_theme.clone()
+                },
+            ));
         });
 
         left.add_row(|row| {
             row.gap_px(4.0);
-            row.add_button_observe("All", |b| { b.size_px(110.0, 24.0).font_size(11.0); },
-                |_: On<Activate>, mut s: ResMut<PolyPizzaState>| { s.category_filter = None; },
+            row.add_button_observe(
+                "All",
+                |b| {
+                    b.size_px(110.0, 24.0).font_size(11.0);
+                },
+                |_: On<Activate>, mut s: ResMut<PolyPizzaState>| {
+                    s.category_filter = None;
+                },
             );
-            row.add_button_observe("Animals", |b| { b.size_px(110.0, 24.0).font_size(11.0); },
-                |_: On<Activate>, mut s: ResMut<PolyPizzaState>| { s.category_filter = Some(7); },
-            );
-        });
-        left.add_row(|row| {
-            row.gap_px(4.0);
-            row.add_button_observe("People", |b| { b.size_px(110.0, 24.0).font_size(11.0); },
-                |_: On<Activate>, mut s: ResMut<PolyPizzaState>| { s.category_filter = Some(9); },
-            );
-            row.add_button_observe("Vehicles", |b| { b.size_px(110.0, 24.0).font_size(11.0); },
-                |_: On<Activate>, mut s: ResMut<PolyPizzaState>| { s.category_filter = Some(3); },
-            );
-        });
-        left.add_row(|row| {
-            row.gap_px(4.0);
-            row.add_button_observe("Nature", |b| { b.size_px(110.0, 24.0).font_size(11.0); },
-                |_: On<Activate>, mut s: ResMut<PolyPizzaState>| { s.category_filter = Some(6); },
-            );
-            row.add_button_observe("Objects", |b| { b.size_px(110.0, 24.0).font_size(11.0); },
-                |_: On<Activate>, mut s: ResMut<PolyPizzaState>| { s.category_filter = Some(5); },
+            row.add_button_observe(
+                "Animals",
+                |b| {
+                    b.size_px(110.0, 24.0).font_size(11.0);
+                },
+                |_: On<Activate>, mut s: ResMut<PolyPizzaState>| {
+                    s.category_filter = Some(7);
+                },
             );
         });
         left.add_row(|row| {
             row.gap_px(4.0);
-            row.add_button_observe("Weapons", |b| { b.size_px(110.0, 24.0).font_size(11.0); },
-                |_: On<Activate>, mut s: ResMut<PolyPizzaState>| { s.category_filter = Some(2); },
+            row.add_button_observe(
+                "People",
+                |b| {
+                    b.size_px(110.0, 24.0).font_size(11.0);
+                },
+                |_: On<Activate>, mut s: ResMut<PolyPizzaState>| {
+                    s.category_filter = Some(9);
+                },
             );
-            row.add_button_observe("Buildings", |b| { b.size_px(110.0, 24.0).font_size(11.0); },
-                |_: On<Activate>, mut s: ResMut<PolyPizzaState>| { s.category_filter = Some(8); },
+            row.add_button_observe(
+                "Vehicles",
+                |b| {
+                    b.size_px(110.0, 24.0).font_size(11.0);
+                },
+                |_: On<Activate>, mut s: ResMut<PolyPizzaState>| {
+                    s.category_filter = Some(3);
+                },
+            );
+        });
+        left.add_row(|row| {
+            row.gap_px(4.0);
+            row.add_button_observe(
+                "Nature",
+                |b| {
+                    b.size_px(110.0, 24.0).font_size(11.0);
+                },
+                |_: On<Activate>, mut s: ResMut<PolyPizzaState>| {
+                    s.category_filter = Some(6);
+                },
+            );
+            row.add_button_observe(
+                "Objects",
+                |b| {
+                    b.size_px(110.0, 24.0).font_size(11.0);
+                },
+                |_: On<Activate>, mut s: ResMut<PolyPizzaState>| {
+                    s.category_filter = Some(5);
+                },
+            );
+        });
+        left.add_row(|row| {
+            row.gap_px(4.0);
+            row.add_button_observe(
+                "Weapons",
+                |b| {
+                    b.size_px(110.0, 24.0).font_size(11.0);
+                },
+                |_: On<Activate>, mut s: ResMut<PolyPizzaState>| {
+                    s.category_filter = Some(2);
+                },
+            );
+            row.add_button_observe(
+                "Buildings",
+                |b| {
+                    b.size_px(110.0, 24.0).font_size(11.0);
+                },
+                |_: On<Activate>, mut s: ResMut<PolyPizzaState>| {
+                    s.category_filter = Some(8);
+                },
             );
         });
 
         // Animated filter — button text updated at runtime by update_animated_filter_button
         left.add_button_observe(
             "Animated only: OFF",
-            |b| { b.size_px(240.0, 28.0).font_size(12.0).insert(AnimatedFilterButton); },
+            |b| {
+                b.size_px(240.0, 28.0)
+                    .font_size(12.0)
+                    .insert(AnimatedFilterButton);
+            },
             |_: On<Activate>, mut s: ResMut<PolyPizzaState>| {
                 s.animated_only = !s.animated_only;
             },
@@ -171,25 +234,40 @@ pub fn spawn_polypizza_screen(
         // Pagination
         left.add_row(|row| {
             row.gap_px(8.0).align_items_center();
-            row.add_button_observe("< Prev", |b| { b.size_px(100.0, 28.0).font_size(12.0); },
+            row.add_button_observe(
+                "< Prev",
+                |b| {
+                    b.size_px(100.0, 28.0).font_size(12.0);
+                },
                 |_: On<Activate>, mut s: ResMut<PolyPizzaState>| {
-                    if s.page > 0 { s.page -= 1; s.search_requested = true; }
+                    if s.page > 0 {
+                        s.page -= 1;
+                        s.search_requested = true;
+                    }
                 },
             );
-            row.add_button_observe("Next >", |b| { b.size_px(100.0, 28.0).font_size(12.0); },
+            row.add_button_observe(
+                "Next >",
+                |b| {
+                    b.size_px(100.0, 28.0).font_size(12.0);
+                },
                 |_: On<Activate>, mut s: ResMut<PolyPizzaState>| {
-                    s.page += 1; s.search_requested = true;
+                    s.page += 1;
+                    s.search_requested = true;
                 },
             );
         });
 
         // ── User search ───────────────────────────────────────────────────────
         left.with_child(|sep| {
-            sep.insert_bundle(lava_ui_builder::label("-- By creator --", &TextTheme {
-                label_size: 11.0,
-                label_color: Color::srgb(0.4, 0.6, 0.4),
-                ..text_theme.clone()
-            }));
+            sep.insert_bundle(lava_ui_builder::label(
+                "-- By creator --",
+                &TextTheme {
+                    label_size: 11.0,
+                    label_color: Color::srgb(0.4, 0.6, 0.4),
+                    ..text_theme.clone()
+                },
+            ));
         });
 
         // Username input display — clicking switches focus to it
@@ -203,11 +281,14 @@ pub fn spawn_polypizza_screen(
                 .border_all_px(1.0, Color::srgb(0.3, 0.5, 0.5));
 
             row.with_child(|lbl| {
-                lbl.insert_bundle(lava_ui_builder::label("user: _", &TextTheme {
-                    label_size: 14.0,
-                    label_color: Color::srgb(0.7, 0.9, 0.8),
-                    ..text_theme.clone()
-                }))
+                lbl.insert_bundle(lava_ui_builder::label(
+                    "user: _",
+                    &TextTheme {
+                        label_size: 14.0,
+                        label_color: Color::srgb(0.7, 0.9, 0.8),
+                        ..text_theme.clone()
+                    },
+                ))
                 .insert(UsernameLabel);
             });
         })
@@ -217,7 +298,9 @@ pub fn spawn_polypizza_screen(
 
         left.add_button_observe(
             "Search by user",
-            |b| { b.size_px(240.0, 32.0).font_size(13.0); },
+            |b| {
+                b.size_px(240.0, 32.0).font_size(13.0);
+            },
             |_: On<Activate>, mut s: ResMut<PolyPizzaState>| {
                 s.user_search_requested = true;
             },
@@ -225,30 +308,39 @@ pub fn spawn_polypizza_screen(
 
         // Status label
         left.with_child(|lbl| {
-            lbl.insert_bundle(lava_ui_builder::label("", &TextTheme {
-                label_size: 12.0,
-                label_color: Color::srgb(0.6, 0.7, 0.6),
-                ..text_theme.clone()
-            }))
+            lbl.insert_bundle(lava_ui_builder::label(
+                "",
+                &TextTheme {
+                    label_size: 12.0,
+                    label_color: Color::srgb(0.6, 0.7, 0.6),
+                    ..text_theme.clone()
+                },
+            ))
             .insert(StatusLabel);
         });
 
         // Toon toggle hint
         left.with_child(|lbl| {
-            lbl.insert_bundle(lava_ui_builder::label("[T] toggle toon shader", &TextTheme {
-                label_size: 11.0,
-                label_color: Color::srgb(0.4, 0.5, 0.4),
-                ..text_theme.clone()
-            }));
+            lbl.insert_bundle(lava_ui_builder::label(
+                "[T] toggle toon shader",
+                &TextTheme {
+                    label_size: 11.0,
+                    label_color: Color::srgb(0.4, 0.5, 0.4),
+                    ..text_theme.clone()
+                },
+            ));
         });
 
         // Attribution
         left.with_child(|lbl| {
-            lbl.insert_bundle(lava_ui_builder::label("", &TextTheme {
-                label_size: 10.0,
-                label_color: Color::srgb(0.5, 0.6, 0.5),
-                ..text_theme.clone()
-            }))
+            lbl.insert_bundle(lava_ui_builder::label(
+                "",
+                &TextTheme {
+                    label_size: 10.0,
+                    label_color: Color::srgb(0.5, 0.6, 0.5),
+                    ..text_theme.clone()
+                },
+            ))
             .insert(AttributionLabel)
             .modify_node(|mut n| {
                 n.overflow = Overflow::clip();
@@ -261,7 +353,9 @@ pub fn spawn_polypizza_screen(
         });
         left.add_button_observe(
             "<- Back to Menu",
-            |b| { b.size_px(240.0, 40.0).font_size(14.0); },
+            |b| {
+                b.size_px(240.0, 40.0).font_size(14.0);
+            },
             |_: On<Activate>, mut next: ResMut<NextState<GameState>>| {
                 next.set(GameState::Menu);
             },
@@ -283,7 +377,8 @@ pub fn spawn_polypizza_screen(
 
     // ── Viewer column — transparent, Camera3d viewport locked to this rect ────
     ui.with_child(|viewer| {
-        viewer.with_flex_grow(1.0)
+        viewer
+            .with_flex_grow(1.0)
             .height_percent(100.0)
             .display_flex()
             .flex_column()
@@ -291,43 +386,56 @@ pub fn spawn_polypizza_screen(
             .insert(ViewerPanel);
 
         // Spacer pushes bottom bar down
-        viewer.with_child(|spacer| { spacer.with_flex_grow(1.0); });
+        viewer.with_child(|spacer| {
+            spacer.with_flex_grow(1.0);
+        });
 
         // Tag input row — click to focus, type space-separated tags
+        viewer
+            .with_child(|row| {
+                row.display_flex()
+                    .flex_row()
+                    .gap_px(6.0)
+                    .align_items_center()
+                    .padding_all_px(6.0)
+                    .bg_color(Color::srgba(0.06, 0.08, 0.12, 0.85))
+                    .border_all_px(1.0, Color::srgb(0.3, 0.5, 0.4));
+
+                row.with_child(|lbl| {
+                    lbl.insert_bundle(lava_ui_builder::label(
+                        "tags:",
+                        &lava_ui_builder::TextTheme {
+                            label_size: 11.0,
+                            label_color: Color::srgba(0.6, 0.8, 0.6, 0.7),
+                            ..Default::default()
+                        },
+                    ));
+                });
+
+                row.with_child(|lbl| {
+                    lbl.insert_bundle(lava_ui_builder::label(
+                        "_",
+                        &lava_ui_builder::TextTheme {
+                            label_size: 12.0,
+                            label_color: Color::srgb(0.8, 0.95, 0.8),
+                            ..Default::default()
+                        },
+                    ))
+                    .insert(TagInputLabel)
+                    .with_flex_grow(1.0);
+                });
+            })
+            .observe(|_: On<Pointer<Click>>, mut s: ResMut<PolyPizzaState>| {
+                s.input_focus = crate::poly_pizza::state::InputFocus::Tags;
+            });
+
+        // Bottom hint + save/remove buttons
         viewer.with_child(|row| {
             row.display_flex()
                 .flex_row()
                 .gap_px(6.0)
                 .align_items_center()
-                .padding_all_px(6.0)
-                .bg_color(Color::srgba(0.06, 0.08, 0.12, 0.85))
-                .border_all_px(1.0, Color::srgb(0.3, 0.5, 0.4));
-
-            row.with_child(|lbl| {
-                lbl.insert_bundle(lava_ui_builder::label("tags:", &lava_ui_builder::TextTheme {
-                    label_size: 11.0,
-                    label_color: Color::srgba(0.6, 0.8, 0.6, 0.7),
-                    ..Default::default()
-                }));
-            });
-
-            row.with_child(|lbl| {
-                lbl.insert_bundle(lava_ui_builder::label("_", &lava_ui_builder::TextTheme {
-                    label_size: 12.0,
-                    label_color: Color::srgb(0.8, 0.95, 0.8),
-                    ..Default::default()
-                }))
-                .insert(TagInputLabel)
-                .with_flex_grow(1.0);
-            });
-        })
-        .observe(|_: On<Pointer<Click>>, mut s: ResMut<PolyPizzaState>| {
-            s.input_focus = crate::poly_pizza::state::InputFocus::Tags;
-        });
-
-        // Bottom hint + save/remove buttons
-        viewer.with_child(|row| {
-            row.display_flex().flex_row().gap_px(6.0).align_items_center().padding_all_px(4.0);
+                .padding_all_px(4.0);
 
             row.with_child(|hint| {
                 hint.insert_bundle(lava_ui_builder::label(
@@ -340,18 +448,22 @@ pub fn spawn_polypizza_screen(
                 ));
             });
 
-            row.with_child(|sp| { sp.with_flex_grow(1.0); });
+            row.with_child(|sp| {
+                sp.with_flex_grow(1.0);
+            });
 
             // Save / update button — always upserts with current tags
             row.add_button_observe(
                 "[ ] Save",
-                |b| { b.size_px(80.0, 28.0).font_size(13.0).insert(SaveButton); },
+                |b| {
+                    b.size_px(80.0, 28.0).font_size(13.0).insert(SaveButton);
+                },
                 |_: On<Activate>,
                  mut state: ResMut<PolyPizzaState>,
                  mut library: ResMut<crate::poly_pizza::library::ModelLibrary>| {
                     if let Some(model) = state.selected_model.clone() {
-                        let local_glb = if state.glb_cache_path(&model.id).exists() {
-                            Some(state.glb_asset_path(&model.id))
+                        let local_glb = if glb_cache_path(&model.id).exists() {
+                            Some(glb_asset_path(&model.id))
                         } else {
                             None
                         };
@@ -365,7 +477,9 @@ pub fn spawn_polypizza_screen(
             // Remove button — only meaningful when saved, but always present
             row.add_button_observe(
                 "X",
-                |b| { b.size_px(28.0, 28.0).font_size(13.0).insert(RemoveButton); },
+                |b| {
+                    b.size_px(28.0, 28.0).font_size(13.0).insert(RemoveButton);
+                },
                 |_: On<Activate>,
                  mut state: ResMut<PolyPizzaState>,
                  mut library: ResMut<crate::poly_pizza::library::ModelLibrary>| {
@@ -391,7 +505,9 @@ pub fn handle_key_input(
 ) {
     use crate::poly_pizza::state::InputFocus;
     for event in keyboard_reader.read() {
-        if event.state != ButtonState::Pressed { continue; }
+        if event.state != ButtonState::Pressed {
+            continue;
+        }
         match &event.logical_key {
             Key::Tab => {
                 state.input_focus = match state.input_focus {
@@ -400,34 +516,32 @@ pub fn handle_key_input(
                     InputFocus::Tags => InputFocus::Keyword,
                 };
             }
-            Key::Character(s) => {
-                match state.input_focus {
-                    InputFocus::Keyword => state.search_term.push_str(s.as_str()),
-                    InputFocus::Username => state.username_term.push_str(s.as_str()),
-                    InputFocus::Tags => state.tag_input.push_str(s.as_str()),
+            Key::Character(s) => match state.input_focus {
+                InputFocus::Keyword => state.search_term.push_str(s.as_str()),
+                InputFocus::Username => state.username_term.push_str(s.as_str()),
+                InputFocus::Tags => state.tag_input.push_str(s.as_str()),
+            },
+            Key::Space => match state.input_focus {
+                InputFocus::Keyword => state.search_term.push(' '),
+                InputFocus::Username => state.username_term.push(' '),
+                InputFocus::Tags => state.tag_input.push(' '),
+            },
+            Key::Backspace => match state.input_focus {
+                InputFocus::Keyword => {
+                    state.search_term.pop();
                 }
-            }
-            Key::Space => {
-                match state.input_focus {
-                    InputFocus::Keyword => state.search_term.push(' '),
-                    InputFocus::Username => state.username_term.push(' '),
-                    InputFocus::Tags => state.tag_input.push(' '),
+                InputFocus::Username => {
+                    state.username_term.pop();
                 }
-            }
-            Key::Backspace => {
-                match state.input_focus {
-                    InputFocus::Keyword => { state.search_term.pop(); }
-                    InputFocus::Username => { state.username_term.pop(); }
-                    InputFocus::Tags => { state.tag_input.pop(); }
+                InputFocus::Tags => {
+                    state.tag_input.pop();
                 }
-            }
-            Key::Enter => {
-                match state.input_focus {
-                    InputFocus::Keyword => state.search_requested = true,
-                    InputFocus::Username => state.user_search_requested = true,
-                    InputFocus::Tags => {}
-                }
-            }
+            },
+            Key::Enter => match state.input_focus {
+                InputFocus::Keyword => state.search_requested = true,
+                InputFocus::Username => state.user_search_requested = true,
+                InputFocus::Tags => {}
+            },
             _ => {}
         }
     }
@@ -435,11 +549,10 @@ pub fn handle_key_input(
 
 // ── Submit search when requested ──────────────────────────────────────────────
 
-pub fn handle_search_submit(
-    mut state: ResMut<PolyPizzaState>,
-    channels: Res<ApiChannels>,
-) {
-    if !state.search_requested || state.pending { return; }
+pub fn handle_search_submit(mut state: ResMut<PolyPizzaState>, channels: Res<ApiChannels>) {
+    if !state.search_requested || state.pending {
+        return;
+    }
     state.search_requested = false;
     state.pending = true;
     state.status = "Searching...".to_string();
@@ -454,7 +567,10 @@ pub fn handle_search_submit(
     let request = if state.search_term.trim().is_empty() {
         ApiRequest::SearchFilters { filters }
     } else {
-        ApiRequest::SearchKeyword { keyword: state.search_term.trim().to_string(), filters }
+        ApiRequest::SearchKeyword {
+            keyword: state.search_term.trim().to_string(),
+            filters,
+        }
     };
 
     channels.tx.send(request).ok();
@@ -468,7 +584,12 @@ pub fn handle_api_responses(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
-    let rx = channels.rx.lock().unwrap();
+    // A poisoned lock still holds a usable queue; recovering it beats losing API
+    // responses because some other system panicked while holding it.
+    let rx = channels
+        .rx
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     loop {
         match rx.try_recv() {
             Err(_) => break,
@@ -500,7 +621,7 @@ pub fn handle_api_responses(
                 ApiResponse::DownloadComplete { id } => {
                     state.viewer_downloading = false;
                     if state.selected_model.as_ref().map(|m| m.id.as_str()) == Some(&id) {
-                        let handle = asset_server.load(state.glb_asset_path(&id));
+                        let handle = asset_server.load(glb_asset_path(&id));
                         let entity = spawn_viewer_model(&mut commands, handle, state.toon_shader);
                         state.viewer_entity = Some(entity);
                         state.status = "Model loaded".to_string();
@@ -521,18 +642,20 @@ pub fn handle_api_responses(
 }
 
 fn queue_thumbnail_downloads(state: &mut PolyPizzaState, channels: &ApiChannels) {
-    let to_fetch: Vec<_> = state.results.iter()
-        .filter(|m| {
-            !state.downloading_thumbnails.contains(&m.id)
-                && !state.has_cached_thumb(&m.id)
-        })
+    let to_fetch: Vec<_> = state
+        .results
+        .iter()
+        .filter(|m| !state.downloading_thumbnails.contains(&m.id) && !has_cached_thumb(&m.id))
         .map(|m| (m.id.clone(), m.thumbnail_url.clone()))
         .collect();
 
     for (id, url) in to_fetch {
-        let dest = state.thumb_cache_path(&id, &url);
+        let dest = thumb_cache_path(&id, &url);
         state.downloading_thumbnails.insert(id.clone());
-        channels.tx.send(ApiRequest::DownloadThumbnail { id, url, dest }).ok();
+        channels
+            .tx
+            .send(ApiRequest::DownloadThumbnail { id, url, dest })
+            .ok();
     }
 }
 
@@ -545,10 +668,14 @@ pub fn rebuild_results_ui(
     library: Res<crate::poly_pizza::library::ModelLibrary>,
     asset_server: Res<AssetServer>,
 ) {
-    if !state.results_dirty { return; }
+    if !state.results_dirty {
+        return;
+    }
     state.results_dirty = false;
 
-    let Ok(container) = container_query.single() else { return; };
+    let Ok(container) = container_query.single() else {
+        return;
+    };
     commands.entity(container).despawn_related::<Children>();
 
     struct CardData {
@@ -563,8 +690,11 @@ pub fn rebuild_results_ui(
         saved: bool,
     }
 
-    let cards: Vec<CardData> = state.results.iter().enumerate().map(|(i, m)| {
-        CardData {
+    let cards: Vec<CardData> = state
+        .results
+        .iter()
+        .enumerate()
+        .map(|(i, m)| CardData {
             index: i,
             title: m.title.clone(),
             creator: m.creator.username.clone(),
@@ -572,40 +702,44 @@ pub fn rebuild_results_ui(
             animated: m.animated.unwrap_or(false),
             saved: library.is_saved(&m.id),
             model_id: m.id.clone(),
-            thumb_asset: state.find_thumb_asset_path(&m.id),
-        }
-    }).collect();
+            thumb_asset: find_thumb_asset_path(&m.id),
+        })
+        .collect();
 
     commands.entity(container).with_children(|parent| {
         for card in cards {
             let anim_tag = if card.animated { " (anim)" } else { "" };
             let saved_tag = if card.saved { "* " } else { "" };
-            let detail = format!("{saved_tag}{}{anim_tag}\n  {} - {}t",
-                card.title, card.creator, card.tri_count);
+            let detail = format!(
+                "{saved_tag}{}{anim_tag}\n  {} - {}t",
+                card.title, card.creator, card.tri_count
+            );
 
-            let card_entity = parent.spawn((
-                Node {
-                    width: Val::Percent(100.0),
-                    padding: UiRect::all(Val::Px(6.0)),
-                    margin: UiRect::bottom(Val::Px(2.0)),
-                    flex_direction: FlexDirection::Row,
-                    align_items: AlignItems::Center,
-                    column_gap: Val::Px(8.0),
-                    border_radius: BorderRadius::all(Val::Px(4.0)),
-                    border: UiRect::all(Val::Px(1.0)),
-                    ..Default::default()
-                },
-                BorderColor::all(Color::srgba(0.3, 0.5, 0.7, 0.4)),
-                BackgroundColor(Color::srgba(0.08, 0.12, 0.20, 0.9)),
-                lava_ui_builder::InteractionPalette {
-                    none: Color::srgba(0.08, 0.12, 0.20, 0.9),
-                    hovered: Color::srgba(0.15, 0.22, 0.35, 0.95),
-                    pressed: Color::srgba(0.05, 0.08, 0.15, 1.0),
-                },
-                bevy::picking::hover::Hovered::default(),
-                bevy::ui_widgets::Button,
-                ResultCard { index: card.index },
-            )).id();
+            let card_entity = parent
+                .spawn((
+                    Node {
+                        width: Val::Percent(100.0),
+                        padding: UiRect::all(Val::Px(6.0)),
+                        margin: UiRect::bottom(Val::Px(2.0)),
+                        flex_direction: FlexDirection::Row,
+                        align_items: AlignItems::Center,
+                        column_gap: Val::Px(8.0),
+                        border_radius: BorderRadius::all(Val::Px(4.0)),
+                        border: UiRect::all(Val::Px(1.0)),
+                        ..Default::default()
+                    },
+                    BorderColor::all(Color::srgba(0.3, 0.5, 0.7, 0.4)),
+                    BackgroundColor(Color::srgba(0.08, 0.12, 0.20, 0.9)),
+                    lava_ui_builder::InteractionPalette {
+                        none: Color::srgba(0.08, 0.12, 0.20, 0.9),
+                        hovered: Color::srgba(0.15, 0.22, 0.35, 0.95),
+                        pressed: Color::srgba(0.05, 0.08, 0.15, 1.0),
+                    },
+                    bevy::picking::hover::Hovered::default(),
+                    bevy::ui_widgets::Button,
+                    ResultCard { index: card.index },
+                ))
+                .id();
 
             parent.commands().entity(card_entity).with_children(|row| {
                 // Thumbnail or placeholder
@@ -642,7 +776,10 @@ pub fn rebuild_results_ui(
                 ));
             });
 
-            parent.commands().entity(card_entity).observe(result_card_clicked);
+            parent
+                .commands()
+                .entity(card_entity)
+                .observe(result_card_clicked);
         }
     });
 }
@@ -654,11 +791,13 @@ fn result_card_clicked(
     channels: Res<ApiChannels>,
     library: Res<crate::poly_pizza::library::ModelLibrary>,
 ) {
-    let Ok(card) = cards.get(trigger.event().entity) else { return; };
+    let Ok(card) = cards.get(trigger.event().entity) else {
+        return;
+    };
     let index = card.index;
-    if index >= state.results.len() { return; }
-
-    let model = state.results[index].clone();
+    let Some(model) = state.results.get(index).cloned() else {
+        return;
+    };
     let id = model.id.clone();
     let download_url = model.download_url.clone();
 
@@ -669,23 +808,32 @@ fn result_card_clicked(
     state.viewer_needs_load = true;
 
     // If not cached, kick off the download now
-    let dest = state.glb_cache_path(&id);
+    let dest = glb_cache_path(&id);
     if !dest.exists() {
         state.viewer_downloading = true;
         state.status = "Downloading model...".to_string();
-        channels.tx.send(ApiRequest::DownloadGlb { id, url: download_url, dest }).ok();
+        channels
+            .tx
+            .send(ApiRequest::DownloadGlb {
+                id,
+                url: download_url,
+                dest,
+            })
+            .ok();
     }
 }
 
 // ── User search submit ────────────────────────────────────────────────────────
 
-pub fn handle_user_search_submit(
-    mut state: ResMut<PolyPizzaState>,
-    channels: Res<ApiChannels>,
-) {
-    if !state.user_search_requested || state.pending { return; }
+pub fn handle_user_search_submit(mut state: ResMut<PolyPizzaState>, channels: Res<ApiChannels>) {
+    if !state.user_search_requested || state.pending {
+        return;
+    }
     let username = state.username_term.trim().to_string();
-    if username.is_empty() { state.user_search_requested = false; return; }
+    if username.is_empty() {
+        state.user_search_requested = false;
+        return;
+    }
     state.user_search_requested = false;
     state.pending = true;
     state.status = format!("Loading models by {username}...");
@@ -699,8 +847,14 @@ pub fn update_search_label(
     mut labels: Query<&mut Text, With<SearchLabel>>,
 ) {
     use crate::poly_pizza::state::InputFocus;
-    if !state.is_changed() { return; }
-    let cursor = if state.input_focus == InputFocus::Keyword { "|" } else { "_" };
+    if !state.is_changed() {
+        return;
+    }
+    let cursor = if state.input_focus == InputFocus::Keyword {
+        "|"
+    } else {
+        "_"
+    };
     for mut text in labels.iter_mut() {
         **text = format!("> {}{}", state.search_term, cursor);
     }
@@ -711,8 +865,14 @@ pub fn update_username_label(
     mut labels: Query<&mut Text, With<UsernameLabel>>,
 ) {
     use crate::poly_pizza::state::InputFocus;
-    if !state.is_changed() { return; }
-    let cursor = if state.input_focus == InputFocus::Username { "|" } else { "_" };
+    if !state.is_changed() {
+        return;
+    }
+    let cursor = if state.input_focus == InputFocus::Username {
+        "|"
+    } else {
+        "_"
+    };
     for mut text in labels.iter_mut() {
         **text = format!("user: {}{}", state.username_term, cursor);
     }
@@ -722,9 +882,11 @@ pub fn update_status_label(
     state: Res<PolyPizzaState>,
     mut labels: Query<&mut Text, With<StatusLabel>>,
 ) {
-    if !state.is_changed() { return; }
+    if !state.is_changed() {
+        return;
+    }
     for mut text in labels.iter_mut() {
-        **text = state.status.clone();
+        (**text).clone_from(&state.status);
     }
 }
 
@@ -733,8 +895,12 @@ pub fn sync_viewer_viewport(
     mut cameras: Query<&mut Camera, With<crate::poly_pizza::viewer::ViewerCamera>>,
     windows: Query<&Window>,
 ) {
-    let Ok((node, transform)) = panels.single() else { return };
-    let Ok(mut camera) = cameras.single_mut() else { return };
+    let Ok((node, transform)) = panels.single() else {
+        return;
+    };
+    let Ok(mut camera) = cameras.single_mut() else {
+        return;
+    };
     let Ok(window) = windows.single() else { return };
 
     // UiGlobalTransform.translation is the physical-pixel CENTER of the node.
@@ -766,8 +932,14 @@ pub fn update_animated_filter_button(
     buttons: Query<&Children, With<AnimatedFilterButton>>,
     mut texts: Query<&mut Text>,
 ) {
-    if !state.is_changed() { return; }
-    let label = if state.animated_only { "Animated only: ON" } else { "Animated only: OFF" };
+    if !state.is_changed() {
+        return;
+    }
+    let label = if state.animated_only {
+        "Animated only: ON"
+    } else {
+        "Animated only: OFF"
+    };
     for children in buttons.iter() {
         for child in children.iter() {
             if let Ok(mut text) = texts.get_mut(child) {
@@ -781,16 +953,22 @@ pub fn update_tag_input_label(
     state: Res<PolyPizzaState>,
     mut labels: Query<&mut Text, With<TagInputLabel>>,
 ) {
-    if !state.is_changed() { return; }
+    if !state.is_changed() {
+        return;
+    }
     use crate::poly_pizza::state::InputFocus;
-    let cursor = if state.input_focus == InputFocus::Tags { "|" } else { "_" };
+    let cursor = if state.input_focus == InputFocus::Tags {
+        "|"
+    } else {
+        "_"
+    };
     let display = if state.tag_input.is_empty() {
         cursor.to_string()
     } else {
         format!("{} {cursor}", state.tag_input.trim_end())
     };
     for mut text in labels.iter_mut() {
-        **text = display.clone();
+        (**text).clone_from(&display);
     }
 }
 
@@ -800,10 +978,13 @@ pub fn update_save_button_label(
     buttons: Query<&Children, With<SaveButton>>,
     mut texts: Query<&mut Text>,
 ) {
-    if !state.is_changed() && !library.is_changed() { return; }
-    let is_saved = state.selected_model.as_ref()
-        .map(|m| library.is_saved(&m.id))
-        .unwrap_or(false);
+    if !state.is_changed() && !library.is_changed() {
+        return;
+    }
+    let is_saved = state
+        .selected_model
+        .as_ref()
+        .is_some_and(|m| library.is_saved(&m.id));
     let label = if is_saved { "[*] Update" } else { "[ ] Save" };
     for children in buttons.iter() {
         for child in children.iter() {
@@ -818,11 +999,14 @@ pub fn update_attribution_label(
     state: Res<PolyPizzaState>,
     mut labels: Query<&mut Text, With<AttributionLabel>>,
 ) {
-    if !state.is_changed() { return; }
-    let attribution = state.selected_model.as_ref()
-        .map(|m| m.attribution.clone())
-        .unwrap_or_default();
+    if !state.is_changed() {
+        return;
+    }
+    let attribution = state
+        .selected_model
+        .as_ref()
+        .map_or_default(|m| m.attribution.clone());
     for mut text in labels.iter_mut() {
-        **text = attribution.clone();
+        (**text).clone_from(&attribution);
     }
 }

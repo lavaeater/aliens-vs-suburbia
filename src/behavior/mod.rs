@@ -1,7 +1,7 @@
 // use bevy::prelude::*;
 // use bonsai_bt::Behavior::WhileAll;
 // use bonsai_bt::{Behavior::Action, Event, Failure, Running, Status, Success, UpdateArgs, BT};
-// 
+//
 // #[derive(Clone, Debug, PartialEq, Default, Reflect)]
 // #[reflect(Default)]
 // #[type_path = "avs"]
@@ -12,10 +12,10 @@
 //     AttackObstacle,
 //     FindRouteToGoal
 // }
-// 
+//
 // fn game_tick(bt: &mut BT<EnemyBehaviors, BlackBoardData>, state: &mut EnemyNPCState) -> Status {
 //     let e: Event = UpdateArgs { dt: 0.0 }.into();
-// 
+//
 //     #[rustfmt::skip]
 //     let status = bt.tick(&e, &mut |args: bonsai_bt::ActionArgs<Event, EnemyBehaviors>, blackboard| {
 //         match *args.action {
@@ -35,11 +35,11 @@
 //             }
 //             EnemyBehaviors::Shoot => {
 //                 state.perform_action("shoot");
-// 
+//
 //                 // for the sake of example we get access to blackboard and update
 //                 // one of its values here:
 //                 blackboard.times_shot += 1;
-// 
+//
 //                 (Success, 0.0)
 //             }
 //             EnemyBehaviors::Rest => {
@@ -61,17 +61,17 @@
 //             }
 //         }
 //     }).unwrap();
-// 
+//
 //     // return status:
 //     status.0
 // }
-// 
+//
 // struct EnemyNPCState {
 //     pub action_points: usize,
 //     pub max_action_points: usize,
 //     pub alive: bool,
 // }
-// 
+//
 // impl EnemyNPCState {
 //     fn consume_action_point(&mut self) {
 //         self.action_points = self.action_points.saturating_sub(1);
@@ -95,7 +95,7 @@
 //     fn fully_rested(&self) -> bool {
 //         self.action_points == self.max_action_points
 //     }
-// 
+//
 //     fn perform_action(&mut self, action: &str) {
 //         if self.action_points > 0 {
 //             self.consume_action_point();
@@ -105,7 +105,7 @@
 //         }
 //     }
 // }
-// 
+//
 // /// Demonstrates a usage of [WhileAll] behavior with
 // /// a simple NPC simulation.
 // ///
@@ -149,23 +149,23 @@
 //         Box::new(Action(EnemyBehaviors::IsDead)),
 //         vec![run_and_shoot_ai.clone(), Action(EnemyBehaviors::Rest), Action(EnemyBehaviors::Die)],
 //     );
-// 
+//
 //     let blackboard = BlackBoardData { times_shot: 0 };
-// 
+//
 //     let mut bt = BT::new(top_ai, blackboard);
-// 
+//
 //     let print_graph = false;
 //     if print_graph {
 //         println!("{}", bt.get_graphviz());
 //     }
-// 
+//
 //     let max_actions = 3;
 //     let mut npc_state = EnemyNPCState {
 //         action_points: max_actions,
 //         max_action_points: max_actions,
 //         alive: true,
 //     };
-// 
+//
 //     loop {
 //         println!("reached main loop...");
 //         match game_tick(&mut bt, &mut npc_state) {
@@ -180,15 +180,15 @@
 //         bt.blackboard_mut().times_shot
 //     );
 // }
-// 
+//
 // #[derive(Debug)]
 // struct BlackBoardData {
 //     times_shot: usize,
 // }
-// 
+//
 // /*
 // For example, if you have a state A and a state B:
-// 
+//
 // Move from state A to state B if A succeeds: Sequence([A, B])
 // Try A first and then try B if A fails: Select([A, B])
 // If condition succeedes do A, else do B : If(condition, A, B)

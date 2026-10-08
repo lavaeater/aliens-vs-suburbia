@@ -1,6 +1,6 @@
-use bevy::prelude::Message;
-use bevy::math::Vec3;
 use crate::general::components::map_components::MapFile;
+use bevy::math::Vec3;
+use bevy::prelude::Message;
 
 #[derive(Message, Clone)]
 pub struct LoadMap {
@@ -10,9 +10,15 @@ pub struct LoadMap {
 #[derive(Message, Clone)]
 pub struct SpawnPlayer {
     pub position: Vec3,
+    /// Roster slot to spawn into. `None` = next free slot (the map's spawn points).
+    pub slot: Option<usize>,
+    /// Lives to spawn with. `None` = `GameSettings::lives_per_player`.
+    pub lives: Option<u32>,
 }
 
 #[derive(Message, Clone)]
 pub struct SpawnAlien {
+    /// Enemy def to spawn (`assets/defs/<name>.ron`). `None` = the built-in alien.
+    pub enemy_def: Option<String>,
     pub position: Vec3,
 }

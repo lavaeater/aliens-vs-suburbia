@@ -82,7 +82,7 @@ mod tests {
         let dirty = facts.drain_dirty();
         assert_eq!(dirty, vec!["a".to_string(), "b".to_string()]);
         // draining clears the list
-        assert!(facts.drain_dirty().is_empty());
+        assert_eq!(facts.drain_dirty(), [] as [std::string::String; 0]);
     }
 
     #[test]
@@ -92,7 +92,7 @@ mod tests {
             f.set_bool("a", true);
             f.set_int("b", 2);
         });
-        assert!(facts.drain_dirty().is_empty());
+        assert_eq!(facts.drain_dirty(), [] as [std::string::String; 0]);
         // and reads still work
         assert!(facts.bool("a"));
         assert_eq!(facts.int("b"), 2);
@@ -193,15 +193,61 @@ mod tests {
         facts.set_bool("flag", true);
         facts.set_int("kills", 10);
 
-        assert!(Criterion::BoolIs { key: "flag".into(), expected: true }.evaluate(&facts));
-        assert!(!Criterion::BoolIs { key: "flag".into(), expected: false }.evaluate(&facts));
+        assert!(
+            Criterion::BoolIs {
+                key: "flag".into(),
+                expected: true
+            }
+            .evaluate(&facts)
+        );
+        assert!(
+            !Criterion::BoolIs {
+                key: "flag".into(),
+                expected: false
+            }
+            .evaluate(&facts)
+        );
         // missing bool reads as false
-        assert!(Criterion::BoolIs { key: "missing".into(), expected: false }.evaluate(&facts));
+        assert!(
+            Criterion::BoolIs {
+                key: "missing".into(),
+                expected: false
+            }
+            .evaluate(&facts)
+        );
 
-        assert!(Criterion::IntCmp { key: "kills".into(), op: NumOp::Gt, value: 5 }.evaluate(&facts));
-        assert!(Criterion::IntCmp { key: "kills".into(), op: NumOp::Lt, value: 20 }.evaluate(&facts));
-        assert!(Criterion::IntCmp { key: "kills".into(), op: NumOp::Eq, value: 10 }.evaluate(&facts));
-        assert!(!Criterion::IntCmp { key: "kills".into(), op: NumOp::Gt, value: 10 }.evaluate(&facts));
+        assert!(
+            Criterion::IntCmp {
+                key: "kills".into(),
+                op: NumOp::Gt,
+                value: 5
+            }
+            .evaluate(&facts)
+        );
+        assert!(
+            Criterion::IntCmp {
+                key: "kills".into(),
+                op: NumOp::Lt,
+                value: 20
+            }
+            .evaluate(&facts)
+        );
+        assert!(
+            Criterion::IntCmp {
+                key: "kills".into(),
+                op: NumOp::Eq,
+                value: 10
+            }
+            .evaluate(&facts)
+        );
+        assert!(
+            !Criterion::IntCmp {
+                key: "kills".into(),
+                op: NumOp::Gt,
+                value: 10
+            }
+            .evaluate(&facts)
+        );
     }
 
     #[test]
@@ -209,8 +255,22 @@ mod tests {
         let mut facts = Facts::default();
         facts.set_int("kills", 12);
         facts.set_int("target", 5);
-        assert!(Criterion::IntVsInt { lhs: "kills".into(), op: NumOp::Gt, rhs: "target".into() }.evaluate(&facts));
-        assert!(!Criterion::IntVsInt { lhs: "target".into(), op: NumOp::Gt, rhs: "kills".into() }.evaluate(&facts));
+        assert!(
+            Criterion::IntVsInt {
+                lhs: "kills".into(),
+                op: NumOp::Gt,
+                rhs: "target".into()
+            }
+            .evaluate(&facts)
+        );
+        assert!(
+            !Criterion::IntVsInt {
+                lhs: "target".into(),
+                op: NumOp::Gt,
+                rhs: "kills".into()
+            }
+            .evaluate(&facts)
+        );
     }
 
     #[test]
@@ -221,12 +281,50 @@ mod tests {
         facts.add_to_text_list("zones", "docks");
         facts.add_to_text_set("npcs", "bob");
 
-        assert!(Criterion::TextEq { key: "context".into(), value: "town".into() }.evaluate(&facts));
-        assert!(Criterion::TextContains { key: "context".into(), value: "ow".into() }.evaluate(&facts));
-        assert!(Criterion::ListContains { key: "zones".into(), value: "market".into() }.evaluate(&facts));
-        assert!(Criterion::ListSize { key: "zones".into(), op: NumOp::Eq, value: 2 }.evaluate(&facts));
-        assert!(Criterion::SetContains { key: "npcs".into(), value: "bob".into() }.evaluate(&facts));
-        assert!(Criterion::SetSize { key: "npcs".into(), op: NumOp::Eq, value: 1 }.evaluate(&facts));
+        assert!(
+            Criterion::TextEq {
+                key: "context".into(),
+                value: "town".into()
+            }
+            .evaluate(&facts)
+        );
+        assert!(
+            Criterion::TextContains {
+                key: "context".into(),
+                value: "ow".into()
+            }
+            .evaluate(&facts)
+        );
+        assert!(
+            Criterion::ListContains {
+                key: "zones".into(),
+                value: "market".into()
+            }
+            .evaluate(&facts)
+        );
+        assert!(
+            Criterion::ListSize {
+                key: "zones".into(),
+                op: NumOp::Eq,
+                value: 2
+            }
+            .evaluate(&facts)
+        );
+        assert!(
+            Criterion::SetContains {
+                key: "npcs".into(),
+                value: "bob".into()
+            }
+            .evaluate(&facts)
+        );
+        assert!(
+            Criterion::SetSize {
+                key: "npcs".into(),
+                op: NumOp::Eq,
+                value: 1
+            }
+            .evaluate(&facts)
+        );
     }
 
     #[test]
@@ -235,30 +333,61 @@ mod tests {
         facts.set_bool("enemy.a.dead", true);
         facts.set_bool("enemy.b.dead", false);
 
-        assert!(Criterion::AnyBool { pattern: "enemy.*.dead".into(), expected: true }.evaluate(&facts));
-        assert!(!Criterion::AllBool { pattern: "enemy.*.dead".into(), expected: true }.evaluate(&facts));
+        assert!(
+            Criterion::AnyBool {
+                pattern: "enemy.*.dead".into(),
+                expected: true
+            }
+            .evaluate(&facts)
+        );
+        assert!(
+            !Criterion::AllBool {
+                pattern: "enemy.*.dead".into(),
+                expected: true
+            }
+            .evaluate(&facts)
+        );
 
         facts.set_bool("enemy.b.dead", true);
-        assert!(Criterion::AllBool { pattern: "enemy.*.dead".into(), expected: true }.evaluate(&facts));
+        assert!(
+            Criterion::AllBool {
+                pattern: "enemy.*.dead".into(),
+                expected: true
+            }
+            .evaluate(&facts)
+        );
     }
 
     #[test]
     fn all_over_empty_query_is_false() {
         let facts = Facts::default();
         // "all matching are true" must require at least one match
-        assert!(!Criterion::AllBool { pattern: "nothing.*.here".into(), expected: true }.evaluate(&facts));
+        assert!(
+            !Criterion::AllBool {
+                pattern: "nothing.*.here".into(),
+                expected: true
+            }
+            .evaluate(&facts)
+        );
     }
 
     #[test]
     fn criterion_round_trips_through_ron() {
-        let c = Criterion::IntCmp { key: "kills".into(), op: NumOp::Gt, value: 5 };
+        let c = Criterion::IntCmp {
+            key: "kills".into(),
+            op: NumOp::Gt,
+            value: 5,
+        };
         let s = ron::to_string(&c).unwrap();
         let back: Criterion = ron::from_str(&s).unwrap();
         assert_eq!(c, back);
     }
 
     fn rule(criteria: Vec<Criterion>) -> Rule {
-        Rule { name: "r".into(), criteria }
+        Rule {
+            name: "r".into(),
+            criteria,
+        }
     }
 
     #[test]
@@ -267,8 +396,14 @@ mod tests {
         facts.set_bool("ready", true);
         let mut story = Story::new(
             "win",
-            vec![rule(vec![Criterion::BoolIs { key: "ready".into(), expected: true }])],
-            vec![Consequence::SetFact { key: "done".into(), value: FactValue::Bool(true) }],
+            vec![rule(vec![Criterion::BoolIs {
+                key: "ready".into(),
+                expected: true,
+            }])],
+            vec![Consequence::SetFact {
+                key: "done".into(),
+                value: FactValue::Bool(true),
+            }],
         );
 
         let mut effects = Vec::new();
@@ -283,8 +418,14 @@ mod tests {
         let mut facts = Facts::default();
         let mut story = Story::new(
             "win",
-            vec![rule(vec![Criterion::IntCmp { key: "kills".into(), op: NumOp::Gt, value: 3 }])],
-            vec![Consequence::Emit { effect: "victory".into() }],
+            vec![rule(vec![Criterion::IntCmp {
+                key: "kills".into(),
+                op: NumOp::Gt,
+                value: 3,
+            }])],
+            vec![Consequence::Emit {
+                effect: "victory".into(),
+            }],
         );
         let mut effects = Vec::new();
         assert!(!story.check_and_apply(&mut facts, &mut effects));
@@ -296,13 +437,29 @@ mod tests {
     #[test]
     fn store_sorts_by_specificity_desc() {
         let mut store = StoryStore::default();
-        store.add(Story::new("one", vec![rule(vec![Criterion::BoolIs { key: "a".into(), expected: true }])], vec![]));
+        store.add(Story::new(
+            "one",
+            vec![rule(vec![Criterion::BoolIs {
+                key: "a".into(),
+                expected: true,
+            }])],
+            vec![],
+        ));
         store.add(Story::new(
             "three",
             vec![rule(vec![
-                Criterion::BoolIs { key: "a".into(), expected: true },
-                Criterion::BoolIs { key: "b".into(), expected: true },
-                Criterion::BoolIs { key: "c".into(), expected: true },
+                Criterion::BoolIs {
+                    key: "a".into(),
+                    expected: true,
+                },
+                Criterion::BoolIs {
+                    key: "b".into(),
+                    expected: true,
+                },
+                Criterion::BoolIs {
+                    key: "c".into(),
+                    expected: true,
+                },
             ])],
             vec![],
         ));
@@ -313,15 +470,22 @@ mod tests {
     #[test]
     fn activate_seeds_init_facts_silently() {
         let mut facts = Facts::default();
-        let mut store = StoryStore::default();
-        let mut story = Story::new("s", vec![rule(vec![Criterion::BoolIs { key: "x".into(), expected: true }])], vec![]);
+        let mut story_store = StoryStore::default();
+        let mut story = Story::new(
+            "s",
+            vec![rule(vec![Criterion::BoolIs {
+                key: "x".into(),
+                expected: true,
+            }])],
+            vec![],
+        );
         story.init_facts = vec![("seeded".into(), FactValue::Int(7))];
-        store.add(story);
+        story_store.add(story);
 
-        store.activate(&mut facts);
+        story_store.activate(&mut facts);
         assert_eq!(facts.int("seeded"), 7);
         // seeding was silent — no dirty keys
-        assert!(facts.drain_dirty().is_empty());
+        assert_eq!(facts.drain_dirty(), [] as [std::string::String; 0]);
     }
 
     #[test]
@@ -331,30 +495,40 @@ mod tests {
             let mut store = app.world_mut().resource_mut::<StoryStore>();
             store.add(Story::new(
                 "complete",
-                vec![rule(vec![Criterion::BoolIs { key: keys::BOSS_IS_DEAD.into(), expected: true }])],
+                vec![rule(vec![Criterion::BoolIs {
+                    key: keys::BOSS_IS_DEAD.into(),
+                    expected: true,
+                }])],
                 vec![
-                    Consequence::SetFact { key: keys::LEVEL_COMPLETE.into(), value: FactValue::Bool(true) },
-                    Consequence::Emit { effect: "level_complete".into() },
+                    Consequence::SetFact {
+                        key: keys::LEVEL_COMPLETE.into(),
+                        value: FactValue::Bool(true),
+                    },
+                    Consequence::Emit {
+                        effect: "level_complete".into(),
+                    },
                 ],
             ));
             let mut facts = Facts::default();
             store.activate(&mut facts);
         }
         // trigger: boss dies
-        app.world_mut().resource_mut::<Facts>().set_bool(keys::BOSS_IS_DEAD, true);
+        app.world_mut()
+            .resource_mut::<Facts>()
+            .set_bool(keys::BOSS_IS_DEAD, true);
 
         // frame 1: emit FactChanged(boss) + arm. frame 2: check_stories fires.
         app.update();
         app.update();
 
         assert!(app.world().resource::<Facts>().bool(keys::LEVEL_COMPLETE));
-        let effects: Vec<_> = app
-            .world_mut()
-            .resource_mut::<bevy::ecs::message::Messages<StoryEffect>>()
-            .drain()
-            .map(|e| e.effect)
-            .collect();
-        assert!(effects.contains(&"level_complete".to_string()));
+        assert!(
+            app.world_mut()
+                .resource_mut::<bevy::ecs::message::Messages<StoryEffect>>()
+                .drain()
+                .map(|e| e.effect)
+                .any(|x| x == "level_complete")
+        );
     }
 
     #[test]
@@ -364,12 +538,20 @@ mod tests {
             let mut store = app.world_mut().resource_mut::<StoryStore>();
             store.add(Story::new(
                 "complete",
-                vec![rule(vec![Criterion::BoolIs { key: "ready".into(), expected: true }])],
-                vec![Consequence::SetFact { key: "done".into(), value: FactValue::Bool(true) }],
+                vec![rule(vec![Criterion::BoolIs {
+                    key: "ready".into(),
+                    expected: true,
+                }])],
+                vec![Consequence::SetFact {
+                    key: "done".into(),
+                    value: FactValue::Bool(true),
+                }],
             ));
             // deliberately not activated
         }
-        app.world_mut().resource_mut::<Facts>().set_bool("ready", true);
+        app.world_mut()
+            .resource_mut::<Facts>()
+            .set_bool("ready", true);
         app.update();
         app.update();
         assert!(!app.world().resource::<Facts>().bool("done"));
@@ -516,7 +698,7 @@ mod tests {
         assert_eq!(loaded.text("s"), "hi");
         assert_eq!(loaded.text_list("list"), &[] as &[String]);
         // loading is silent
-        assert!(loaded.drain_dirty().is_empty());
+        assert_eq!(loaded.drain_dirty(), [] as [std::string::String; 0]);
     }
 
     #[test]
@@ -555,7 +737,8 @@ mod tests {
     #[test]
     fn stories_round_trip_through_ron() {
         let original = vec![stories::enemy_kill_count_story()];
-        let ron_str = ron::ser::to_string_pretty(&original, ron::ser::PrettyConfig::default()).unwrap();
+        let ron_str =
+            ron::ser::to_string_pretty(&original, ron::ser::PrettyConfig::default()).unwrap();
         let parsed = persistence::stories_from_ron(&ron_str).unwrap();
         assert_eq!(parsed.len(), 1);
         assert_eq!(parsed[0].name, original[0].name);

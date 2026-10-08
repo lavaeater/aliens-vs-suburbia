@@ -15,65 +15,65 @@ pub enum FactValue {
 
 impl FactValue {
     /// Short type tag, used for diagnostics and the text format.
-    pub fn type_tag(&self) -> &'static str {
+    pub const fn type_tag(&self) -> &'static str {
         match self {
-            FactValue::Bool(_) => "bool",
-            FactValue::Int(_) => "int",
-            FactValue::Float(_) => "float",
-            FactValue::Text(_) => "text",
-            FactValue::TextList(_) => "list",
-            FactValue::TextSet(_) => "set",
+            Self::Bool(_) => "bool",
+            Self::Int(_) => "int",
+            Self::Float(_) => "float",
+            Self::Text(_) => "text",
+            Self::TextList(_) => "list",
+            Self::TextSet(_) => "set",
         }
     }
 
-    pub fn as_bool(&self) -> Option<bool> {
+    pub const fn as_bool(&self) -> Option<bool> {
         match self {
-            FactValue::Bool(b) => Some(*b),
+            Self::Bool(b) => Some(*b),
             _ => None,
         }
     }
 
-    pub fn as_int(&self) -> Option<i64> {
+    pub const fn as_int(&self) -> Option<i64> {
         match self {
-            FactValue::Int(i) => Some(*i),
+            Self::Int(i) => Some(*i),
             _ => None,
         }
     }
 
-    pub fn as_float(&self) -> Option<f32> {
+    pub const fn as_float(&self) -> Option<f32> {
         match self {
-            FactValue::Float(f) => Some(*f),
+            Self::Float(f) => Some(*f),
             _ => None,
         }
     }
 
     pub fn as_text(&self) -> Option<&str> {
         match self {
-            FactValue::Text(s) => Some(s),
+            Self::Text(s) => Some(s),
             _ => None,
         }
     }
 
-    pub fn as_text_list(&self) -> Option<&Vec<String>> {
+    pub const fn as_text_list(&self) -> Option<&Vec<String>> {
         match self {
-            FactValue::TextList(l) => Some(l),
+            Self::TextList(l) => Some(l),
             _ => None,
         }
     }
 
-    pub fn as_text_set(&self) -> Option<&HashSet<String>> {
+    pub const fn as_text_set(&self) -> Option<&HashSet<String>> {
         match self {
-            FactValue::TextSet(s) => Some(s),
+            Self::TextSet(s) => Some(s),
             _ => None,
         }
     }
 
     /// Whether this value can be persisted. Mirrors the Kotlin behavior where list/set
     /// facts are runtime-only and skipped by [`crate::facts::persistence`].
-    pub fn is_persistable(&self) -> bool {
+    pub const fn is_persistable(&self) -> bool {
         matches!(
             self,
-            FactValue::Bool(_) | FactValue::Int(_) | FactValue::Float(_) | FactValue::Text(_)
+            Self::Bool(_) | Self::Int(_) | Self::Float(_) | Self::Text(_)
         )
     }
 }

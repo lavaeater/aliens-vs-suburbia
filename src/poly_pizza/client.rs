@@ -1,5 +1,5 @@
-use std::path::Path;
 use crate::poly_pizza::types::{ListResponse, PizzaModel, SearchResponse, UserResponse};
+use std::path::Path;
 
 const BASE: &str = "https://api.poly.pizza/v1.1";
 
@@ -29,7 +29,11 @@ fn build_filter_params(filters: &SearchFilters) -> Vec<(&'static str, String)> {
     params
 }
 
-pub fn search_keyword(api_key: &str, keyword: &str, filters: &SearchFilters) -> Result<SearchResponse, BoxError> {
+pub fn search_keyword(
+    api_key: &str,
+    keyword: &str,
+    filters: &SearchFilters,
+) -> Result<SearchResponse, BoxError> {
     let encoded = urlencoding::encode(keyword);
     let url = format!("{BASE}/search/{encoded}");
     let mut req = ureq::get(&url).header("x-auth-token", api_key);
@@ -55,7 +59,8 @@ pub fn get_model(api_key: &str, id: &str) -> Result<PizzaModel, BoxError> {
     let resp: PizzaModel = ureq::get(&url)
         .header("x-auth-token", api_key)
         .call()?
-        .into_body().read_json()?;
+        .into_body()
+        .read_json()?;
     Ok(resp)
 }
 
@@ -64,7 +69,8 @@ pub fn get_list(api_key: &str, list_id: &str) -> Result<ListResponse, BoxError> 
     let resp: ListResponse = ureq::get(&url)
         .header("x-auth-token", api_key)
         .call()?
-        .into_body().read_json()?;
+        .into_body()
+        .read_json()?;
     Ok(resp)
 }
 
@@ -73,7 +79,8 @@ pub fn get_user(api_key: &str, username: &str) -> Result<UserResponse, BoxError>
     let resp: UserResponse = ureq::get(&url)
         .header("x-auth-token", api_key)
         .call()?
-        .into_body().read_json()?;
+        .into_body()
+        .read_json()?;
     Ok(resp)
 }
 

@@ -1,17 +1,23 @@
-use bevy::prelude::*;
-use avian3d::prelude::{Position, Rotation};
-use crate::ai::components::move_towards_goal_components::{AgentCannotFindPath, MoveTowardsGoalData};
+use crate::ai::components::destroy_the_map_components::{
+    MustDestroyTheMap, MustDestroyTheMapState,
+};
+use crate::ai::components::move_towards_goal_components::{
+    AgentCannotFindPath, MoveTowardsGoalData,
+};
 use crate::alien::components::general::Alien;
-use crate::general::components::map_components::CurrentTile;
-use crate::general::resources::map_resources::MapGraph;
-use crate::player::components::IsObstacle;
-use pathfinding::directed::astar::astar;
-use crate::ai::components::destroy_the_map_components::{MustDestroyTheMap, MustDestroyTheMapState};
-use crate::general::systems::map_systems::TileDefinitions;
-use itertools::Itertools;
 use crate::building::systems::ToWorldCoordinates;
-use crate::control::components::{ControlDirection, CharacterControl, ControlRotation};
+use crate::control::components::{CharacterControl, ControlDirection, ControlRotation};
+use crate::general::components::map_components::CurrentTile;
 use crate::general::components::{Health, Indestructible};
+use crate::general::damage::ApplyDamage;
+use crate::general::resources::map_resources::MapGraph;
+use crate::general::systems::map_systems::TileDefinitions;
+use crate::gore::components::DamageKind;
+use crate::player::components::IsObstacle;
+use avian3d::prelude::{Position, Rotation};
+use bevy::prelude::*;
+use itertools::Itertools;
+use pathfinding::directed::astar::astar;
 
 /// When a tile is re-opened (tower destroyed or removed), check if a normal path now exists.
 /// If so, clear MustDestroyTheMap from all aliens so they resume normal pathing.
@@ -20,25 +26,38 @@ pub fn recheck_path_after_tile_opened(
     mut commands: Commands,
     aliens: Query<(Entity, &CurrentTile, Option<&MustDestroyTheMap>), With<Alien>>,
 ) {
-    if !map_graph.path_reopened { return; }
+    if !map_graph.path_reopened {
+        return;
+    }
     map_graph.path_reopened = false;
 
     // Run A* from an arbitrary alien's position to confirm a path exists.
     // Use the first alien found; if the grid is passable they'll all benefit.
-    let Some((_, sample_tile, _)) = aliens.iter().next() else { return };
+    let Some((_, sample_tile, _)) = aliens.iter().next() else {
+        return;
+    };
     let has_path = astar(
         &sample_tile.tile,
-        |t| map_graph.path_finding_grid.neighbours(*t).into_iter().map(|t| (t, 1)),
+        |t| {
+            map_graph
+                .path_finding_grid
+                .neighbours(*t)
+                .into_iter()
+                .map(|t| (t, 1))
+        },
         |t| map_graph.path_finding_grid.distance(*t, map_graph.goal),
         |t| *t == map_graph.goal,
-    ).is_some();
+    )
+    .is_some();
 
     if has_path {
         for (entity, _, destroying) in aliens.iter() {
             if destroying.is_some() {
                 commands.entity(entity).remove::<MustDestroyTheMap>();
                 // Reset their movement path so they pick up A* fresh next tick.
-                commands.entity(entity).insert(MoveTowardsGoalData { path: None });
+                commands
+                    .entity(entity)
+                    .insert(MoveTowardsGoalData { path: None });
             }
         }
     }
@@ -59,48 +78,70 @@ pub fn agent_cant_find_path(
 pub fn destroy_the_map_action_system(
     mut commands: Commands,
     mut map_graph: ResMut<MapGraph>,
-    mut alien_query: Query<(Entity, &mut MustDestroyTheMap, &mut CharacterControl, &Position, &Rotation, &CurrentTile), With<Alien>>,
-    mut obstacle_query: Query<(&IsObstacle, &CurrentTile, &mut Health), Without<Indestructible>>,
+    mut alien_query: Query<
+        (
+            Entity,
+            &mut MustDestroyTheMap,
+            &mut CharacterControl,
+            &Position,
+            &Rotation,
+            &CurrentTile,
+        ),
+        With<Alien>,
+    >,
+    obstacle_query: Query<
+        (Entity, &CurrentTile, &Position),
+        (With<IsObstacle>, With<Health>, Without<Indestructible>),
+    >,
     tile_definitions: Res<TileDefinitions>,
+    mut damage_mw: MessageWriter<ApplyDamage>,
 ) {
-    for (entity,
-         mut must_destroy_data,
-         mut controller,
-         alien_position,
-         alien_rotation,
-         alien_current_tile,
-    ) in alien_query.iter_mut() {
+    for (
+        entity,
+        mut must_destroy_data,
+        mut controller,
+        alien_position,
+        alien_rotation,
+        alien_current_tile,
+    ) in alien_query.iter_mut()
+    {
         match must_destroy_data.state {
             MustDestroyTheMapState::NotStarted => {
                 must_destroy_data.state = MustDestroyTheMapState::SearchingForThingToDestroy;
             }
             MustDestroyTheMapState::SearchingForThingToDestroy => {
-                let mut potential_targets: Vec<(usize, usize)> =
-                    obstacle_query
-                        .iter()
-                        .map(|(_, current_tile, _)| current_tile.tile)
-                        .sorted_by(|a, b|
-                            map_graph.path_finding_grid.distance(*b, alien_current_tile.tile)
-                                .cmp(&map_graph.path_finding_grid.distance(*a, alien_current_tile.tile)))
-                        .collect();
+                let mut potential_targets: Vec<(usize, usize)> = obstacle_query
+                    .iter()
+                    .map(|(_, current_tile, _)| current_tile.tile)
+                    .sorted_by(|a, b| {
+                        map_graph
+                            .path_finding_grid
+                            .distance(*b, alien_current_tile.tile)
+                            .cmp(
+                                &map_graph
+                                    .path_finding_grid
+                                    .distance(*a, alien_current_tile.tile),
+                            )
+                    })
+                    .collect();
 
-                if potential_targets.is_empty() {
-                    must_destroy_data.state = MustDestroyTheMapState::Failed;
-                    continue;
-                }
-
-                let mut try_this_one = potential_targets.pop().unwrap();
-                map_graph.path_finding_grid.add_vertex(try_this_one);
-                let mut need_path = true;
-
-                while need_path {
-                    match astar(
-                        &alien_current_tile.tile,
-                        |t| map_graph.path_finding_grid.neighbours(*t).into_iter().map(|t| (t, 1)),
-                        |t| map_graph.path_finding_grid.distance(*t, try_this_one),
-                        |t| *t == try_this_one) {
-                        None => {
-                            match potential_targets.pop() {
+                if let Some(mut try_this_one) = potential_targets.pop() {
+                    map_graph.path_finding_grid.add_vertex(try_this_one);
+                    let mut need_path = true;
+                    while need_path {
+                        match astar(
+                            &alien_current_tile.tile,
+                            |t| {
+                                map_graph
+                                    .path_finding_grid
+                                    .neighbours(*t)
+                                    .into_iter()
+                                    .map(|t| (t, 1))
+                            },
+                            |t| map_graph.path_finding_grid.distance(*t, try_this_one),
+                            |t| *t == try_this_one,
+                        ) {
+                            None => match potential_targets.pop() {
                                 None => {
                                     map_graph.path_finding_grid.remove_vertex(try_this_one);
                                     must_destroy_data.state = MustDestroyTheMapState::Failed;
@@ -111,16 +152,23 @@ pub fn destroy_the_map_action_system(
                                     try_this_one = target;
                                     map_graph.path_finding_grid.add_vertex(try_this_one);
                                 }
+                            },
+                            Some(path) => {
+                                must_destroy_data.target_tile = Some(try_this_one);
+                                map_graph.path_finding_grid.remove_vertex(try_this_one);
+                                need_path = false;
+                                must_destroy_data.state =
+                                    MustDestroyTheMapState::MovingTowardsThingToDestroy;
+                                if let Some((_, rest)) = path.0.split_first() {
+                                    must_destroy_data.path_of_destruction = Some(rest.to_vec());
+                                } else {
+                                    must_destroy_data.path_of_destruction = None;
+                                }
                             }
                         }
-                        Some(path) => {
-                            must_destroy_data.target_tile = Some(try_this_one);
-                            map_graph.path_finding_grid.remove_vertex(try_this_one);
-                            must_destroy_data.path_of_destruction = Some(path.0[1..].to_vec());
-                            need_path = false;
-                            must_destroy_data.state = MustDestroyTheMapState::MovingTowardsThingToDestroy;
-                        }
                     }
+                } else {
+                    must_destroy_data.state = MustDestroyTheMapState::Failed;
                 }
             }
             MustDestroyTheMapState::MovingTowardsThingToDestroy => {
@@ -132,45 +180,62 @@ pub fn destroy_the_map_action_system(
                         if path.is_empty() {
                             must_destroy_data.path_of_destruction = None;
                             must_destroy_data.state = MustDestroyTheMapState::DestroyingThing;
-                        } else {
-                            let next_tile = path[0];
+                        } else if let Some(next_tile) = path.first() {
                             match &must_destroy_data.target_tile {
                                 None => {
                                     must_destroy_data.state = MustDestroyTheMapState::Failed;
                                     must_destroy_data.path_of_destruction = None;
                                 }
                                 Some(target_tile) => {
-                                    if *target_tile == next_tile {
+                                    if target_tile == next_tile {
                                         must_destroy_data.path_of_destruction = None;
-                                        must_destroy_data.state = MustDestroyTheMapState::DestroyingThing;
-                                    } else if map_graph.path_finding_grid.has_vertex(next_tile) {
-                                        let next_tile_position = next_tile.to_world_coords(&tile_definitions).xz();
+                                        must_destroy_data.state =
+                                            MustDestroyTheMapState::DestroyingThing;
+                                    } else if map_graph.path_finding_grid.has_vertex(*next_tile) {
+                                        let next_tile_position =
+                                            next_tile.to_world_coords(&tile_definitions).xz();
                                         let alien_position_vector2 = alien_position.0.xz();
-                                        let alien_direction_vector2 = alien_rotation.0.mul_vec3(Vec3::new(0.0, 0.0, -1.0)).xz();
-                                        let alien_to_goal_direction = next_tile_position - alien_position_vector2;
+                                        let alien_direction_vector2 = alien_rotation
+                                            .0
+                                            .mul_vec3(Vec3::new(0.0, 0.0, -1.0))
+                                            .xz();
+                                        let alien_to_goal_direction =
+                                            next_tile_position - alien_position_vector2;
                                         let distance = alien_to_goal_direction.length();
-                                        if distance < 0.25 {
-                                            must_destroy_data.path_of_destruction = Some(path[1..].to_vec());
+                                        if distance < 0.25
+                                            && let Some((_, rest)) = path.split_first()
+                                        {
+                                            must_destroy_data.path_of_destruction =
+                                                Some(rest.to_vec());
                                         } else {
-                                            let angle = alien_direction_vector2.angle_to(alien_to_goal_direction).to_degrees();
+                                            let angle = alien_direction_vector2
+                                                .angle_to(alien_to_goal_direction)
+                                                .to_degrees();
                                             controller.rotations.clear();
                                             controller.directions.clear();
                                             let angle_speed_value = 90.0;
                                             let angle_forward_value = 15.0;
                                             if angle.abs() < angle_speed_value {
-                                                controller.turn_speed = controller.max_turn_speed * (angle.abs() / angle_speed_value);
+                                                controller.turn_speed = controller.max_turn_speed
+                                                    * (angle.abs() / angle_speed_value);
                                             } else {
                                                 controller.turn_speed = controller.max_turn_speed;
                                             }
                                             if angle.abs() > 1.0 {
                                                 if angle > 0.0 {
-                                                    controller.rotations.insert(ControlRotation::Right);
+                                                    controller
+                                                        .rotations
+                                                        .insert(ControlRotation::Right);
                                                 } else {
-                                                    controller.rotations.insert(ControlRotation::Left);
+                                                    controller
+                                                        .rotations
+                                                        .insert(ControlRotation::Left);
                                                 }
                                             }
                                             if angle.abs() < angle_forward_value {
-                                                controller.directions.insert(ControlDirection::Forward);
+                                                controller
+                                                    .directions
+                                                    .insert(ControlDirection::Forward);
                                             }
                                         }
                                     } else {
@@ -192,14 +257,21 @@ pub fn destroy_the_map_action_system(
                     Some(target_tile) => {
                         let target_tile = *target_tile;
                         let mut did_not_hit = true;
-                        for (_, tower_tile, mut health) in obstacle_query.iter_mut() {
+                        for (obstacle, tower_tile, obstacle_pos) in obstacle_query.iter() {
                             if tower_tile.tile == target_tile {
                                 did_not_hit = false;
-                                health.health -= 10;
-                                if health.health <= 0 {
-                                    map_graph.path_finding_grid.add_vertex(target_tile);
-                                    map_graph.path_reopened = true;
-                                }
+                                // `destroy_damaged_terrain` re-opens the tile once this
+                                // lands and the structure's health hits zero.
+                                damage_mw.write(
+                                    ApplyDamage::at(
+                                        obstacle,
+                                        10,
+                                        DamageKind::Blunt,
+                                        obstacle_pos.0 + Vec3::Y * 0.5,
+                                    )
+                                    .from(entity)
+                                    .along(obstacle_pos.0 - alien_position.0),
+                                );
                                 must_destroy_data.target_tile = None;
                                 must_destroy_data.state = MustDestroyTheMapState::Finished;
                                 break;
@@ -212,10 +284,7 @@ pub fn destroy_the_map_action_system(
                     }
                 }
             }
-            MustDestroyTheMapState::Finished => {
-                commands.entity(entity).remove::<MustDestroyTheMap>();
-            }
-            MustDestroyTheMapState::Failed => {
+            MustDestroyTheMapState::Finished | MustDestroyTheMapState::Failed => {
                 commands.entity(entity).remove::<MustDestroyTheMap>();
             }
         }
@@ -225,14 +294,14 @@ pub fn destroy_the_map_action_system(
 #[cfg(test)]
 mod tests {
     use super::recheck_path_after_tile_opened;
-    use bevy::prelude::*;
-    use pathfinding::grid::Grid;
-    use std::collections::HashSet;
     use crate::ai::components::destroy_the_map_components::MustDestroyTheMap;
     use crate::ai::components::move_towards_goal_components::MoveTowardsGoalData;
     use crate::alien::components::general::Alien;
     use crate::general::components::map_components::CurrentTile;
     use crate::general::resources::map_resources::MapGraph;
+    use bevy::prelude::*;
+    use pathfinding::grid::Grid;
+    use std::collections::HashSet;
 
     /// Grid with the given tiles opened (present + connected to adjacent open tiles).
     fn graph(goal: (usize, usize), open: &[(usize, usize)], reopened: bool) -> MapGraph {
@@ -257,14 +326,27 @@ mod tests {
 
         let alien = app
             .world_mut()
-            .spawn((Alien, CurrentTile { tile: (2, 0) }, MustDestroyTheMap::new()))
+            .spawn((
+                Alien,
+                CurrentTile { tile: (2, 0) },
+                MustDestroyTheMap::new(),
+            ))
             .id();
 
         app.update();
 
-        assert!(app.world().get::<MustDestroyTheMap>(alien).is_none(), "destroy behavior cleared");
-        assert!(app.world().get::<MoveTowardsGoalData>(alien).is_some(), "path reset for fresh A*");
-        assert!(!app.world().resource::<MapGraph>().path_reopened, "flag consumed");
+        assert!(
+            app.world().get::<MustDestroyTheMap>(alien).is_none(),
+            "destroy behavior cleared"
+        );
+        assert!(
+            app.world().get::<MoveTowardsGoalData>(alien).is_some(),
+            "path reset for fresh A*"
+        );
+        assert!(
+            !app.world().resource::<MapGraph>().path_reopened,
+            "flag consumed"
+        );
     }
 
     #[test]
@@ -276,12 +358,19 @@ mod tests {
 
         let alien = app
             .world_mut()
-            .spawn((Alien, CurrentTile { tile: (2, 0) }, MustDestroyTheMap::new()))
+            .spawn((
+                Alien,
+                CurrentTile { tile: (2, 0) },
+                MustDestroyTheMap::new(),
+            ))
             .id();
 
         app.update();
 
-        assert!(app.world().get::<MustDestroyTheMap>(alien).is_some(), "still no route: keep destroying");
+        assert!(
+            app.world().get::<MustDestroyTheMap>(alien).is_some(),
+            "still no route: keep destroying"
+        );
     }
 
     #[test]
@@ -293,11 +382,18 @@ mod tests {
 
         let alien = app
             .world_mut()
-            .spawn((Alien, CurrentTile { tile: (2, 0) }, MustDestroyTheMap::new()))
+            .spawn((
+                Alien,
+                CurrentTile { tile: (2, 0) },
+                MustDestroyTheMap::new(),
+            ))
             .id();
 
         app.update();
 
-        assert!(app.world().get::<MustDestroyTheMap>(alien).is_some(), "no recheck requested");
+        assert!(
+            app.world().get::<MustDestroyTheMap>(alien).is_some(),
+            "no recheck requested"
+        );
     }
 }

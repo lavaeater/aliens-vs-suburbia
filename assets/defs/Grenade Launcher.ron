@@ -1,0 +1,51 @@
+(
+    model_path: "packs/guns/subs/Scifi Grenade Launcher.glb",
+    scale: 0.125,
+    model_type: Weapon((
+        hands: TwoHanded,
+        damage: 0,
+        fire_rate_per_minute: 60.0,
+        range: 30.0,
+        spread_deg: 0.5,
+        pellets: 1,
+        auto: false,
+        ammo: Grenade,
+        magazine: 1,
+        reload_secs: 2.5,
+        projectile: Some((
+            speed: 16.0,
+            gravity: true,
+            impact: Explode((radius: 2.5, damage: 90, impulse: 9.0, fire: false)),
+            fuse_secs: None,
+        )),
+    )),
+    hidden_nodes: [],
+    animation_mapping: {},
+    clip_tags: {},
+    animation_bindings: {},
+    animation_sources: [],
+    attachments: [],
+    hardpoints: {
+        "grip": (
+            anchor: None,
+            translation: (0.0, 0.0, 0.0),
+            rotation_euler_deg: (0.0, 0.0, 0.0),
+        ),
+        "foregrip": (
+            anchor: None,
+            translation: (2.0, 0.39999998, 0.0),
+            rotation_euler_deg: (0.0, 0.0, 0.0),
+        ),
+        "stock": (
+            anchor: None,
+            translation: (-1.5, 0.10, 0.0),
+            rotation_euler_deg: (0.0, 0.0, 0.0),
+        ),
+        "muzzle": (
+            anchor: None,
+            translation: (3.7499998, 0.55, 0.0),
+            rotation_euler_deg: (0.0, 0.0, 0.0),
+        ),
+    },
+    aim_bones: [],
+)

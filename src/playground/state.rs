@@ -17,7 +17,7 @@ pub struct PlaygroundSession {
 }
 
 /// True while a playground session is live.
-pub fn in_playground(session: Option<Res<PlaygroundSession>>) -> bool {
+pub const fn in_playground(session: Option<Res<PlaygroundSession>>) -> bool {
     session.is_some()
 }
 
@@ -63,7 +63,7 @@ mod tests {
     /// `in_normal_game` guards `OnEnter`-style work that must not fire in other states,
     /// so "not playground" alone is not enough — the state has to match too.
     #[test]
-    fn the_menu_is_neither(){
+    fn the_menu_is_neither() {
         let mut app = app_in(GameState::Menu, false);
         assert!(!app.world_mut().run_system_cached(in_playground).unwrap());
         assert!(!app.world_mut().run_system_cached(in_normal_game).unwrap());

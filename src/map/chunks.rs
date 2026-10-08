@@ -10,6 +10,11 @@
 //! This module is just the data model + rotation + connector logic — pure and unit
 //! tested. Chunks are authored in code here for now (a readable ASCII template);
 //! loading them from `.ron` and stamping them in the editor are later stages.
+// Grid/procgen math: coordinates and offsets here are structurally bounded by
+// loop ranges and chunk/tile dimensions checked elsewhere, so the blanket
+// arithmetic/indexing lints mostly flag noise in this module. Scoped allow;
+// genuinely risky spots are fixed individually.
+#![allow(clippy::arithmetic_side_effects, clippy::indexing_slicing)]
 
 use crate::map::MapFeatures;
 use enumflags2::BitFlags;
@@ -32,17 +37,17 @@ pub enum Side {
 impl Side {
     /// Used by the stitcher to iterate a chunk's neighbours.
     #[allow(dead_code)]
-    pub const ALL: [Side; 4] = [Side::North, Side::East, Side::South, Side::West];
+    pub const ALL: [Self; 4] = [Self::North, Self::East, Self::South, Self::West];
 
     /// The side an adjacent chunk on this side would present back to us.
     /// Part of the connector vocabulary; used by the tagging editor (later stage).
     #[allow(dead_code)]
-    pub fn opposite(self) -> Side {
+    pub const fn opposite(self) -> Self {
         match self {
-            Side::North => Side::South,
-            Side::East => Side::West,
-            Side::South => Side::North,
-            Side::West => Side::East,
+            Self::North => Self::South,
+            Self::East => Self::West,
+            Self::South => Self::North,
+            Self::West => Self::East,
         }
     }
 }
@@ -62,15 +67,15 @@ pub enum EdgeType {
 
 impl EdgeType {
     /// Two touching edges mate iff they present the same passability class.
-    pub fn mates_with(self, other: EdgeType) -> bool {
+    pub fn mates_with(self, other: Self) -> bool {
         self == other
     }
 
     /// Whether a creature can cross this edge (road or open, not wall).
     /// Part of the connector vocabulary; used by the stitcher's validation (later stage).
     #[allow(dead_code)]
-    pub fn is_passable(self) -> bool {
-        !matches!(self, EdgeType::Wall)
+    pub const fn is_passable(self) -> bool {
+        !matches!(self, Self::Wall)
     }
 }
 
@@ -99,16 +104,31 @@ impl MapChunk {
     /// Build a chunk from an ASCII template — `CHUNK_SIZE` rows of `CHUNK_SIZE` chars:
     /// `'.'` = floor, `'#'` = wall, `' '`/`'x'` = void. Panics on the wrong shape, so
     /// malformed built-in chunks fail loudly at first use (and in tests).
+    // Intentional panic, per the doc comment above: this is only ever called with
+    // built-in, compile-time-authored chunk templates, so a shape mistake here is a
+    // programmer error that should fail loudly and immediately, not propagate.
+    #[allow(clippy::panic)]
     pub fn from_ascii(name: &str, rows: &[&str], edges: [EdgeType; 4]) -> Self {
-        Self::try_from_ascii(name, rows.iter().map(|r| r.to_string()).collect(), edges)
-            .unwrap_or_else(|e| panic!("{e}"))
+        Self::try_from_ascii(
+            name,
+            rows.iter().map(std::string::ToString::to_string).collect(),
+            edges,
+        )
+        .unwrap_or_else(|e| panic!("{e}"))
     }
 
     /// Fallible ASCII build (used by the `.ron` loader, where a bad file shouldn't crash
     /// the game). Returns a human-readable error on the wrong shape or an unknown char.
-    pub fn try_from_ascii(name: &str, rows: Vec<String>, edges: [EdgeType; 4]) -> Result<Self, String> {
+    pub fn try_from_ascii(
+        name: &str,
+        rows: Vec<String>,
+        edges: [EdgeType; 4],
+    ) -> Result<Self, String> {
         if rows.len() != CHUNK_SIZE {
-            return Err(format!("chunk '{name}': needs {CHUNK_SIZE} rows, got {}", rows.len()));
+            return Err(format!(
+                "chunk '{name}': needs {CHUNK_SIZE} rows, got {}",
+                rows.len()
+            ));
         }
         let mut tiles = Vec::with_capacity(CHUNK_SIZE);
         for row in &rows {
@@ -126,17 +146,21 @@ impl MapChunk {
             }
             tiles.push(tile_row);
         }
-        Ok(Self { name: name.to_string(), tiles, edges })
+        Ok(Self {
+            name: name.to_string(),
+            tiles,
+            edges,
+        })
     }
 
     /// The connector on a given side.
-    pub fn edge(&self, side: Side) -> EdgeType {
+    pub const fn edge(&self, side: Side) -> EdgeType {
         self.edges[side as usize]
     }
 
     /// A copy rotated clockwise `quarter_turns` × 90°. Rotates both the tile grid and
     /// the connectors, so a rotated chunk still stitches correctly.
-    pub fn rotated(&self, quarter_turns: u32) -> MapChunk {
+    pub fn rotated(&self, quarter_turns: u32) -> Self {
         let mut out = self.clone();
         for _ in 0..(quarter_turns % 4) {
             out = out.rotate_cw();
@@ -145,7 +169,7 @@ impl MapChunk {
     }
 
     /// One clockwise quarter turn.
-    fn rotate_cw(&self) -> MapChunk {
+    fn rotate_cw(&self) -> Self {
         let n = CHUNK_SIZE;
         // new[r][c] = old[n-1-c][r]
         let tiles = (0..n)
@@ -159,7 +183,11 @@ impl MapChunk {
             e[Side::East as usize],  // South <- East
             e[Side::South as usize], // West  <- South
         ];
-        MapChunk { name: self.name.clone(), tiles, edges }
+        Self {
+            name: self.name.clone(),
+            tiles,
+            edges,
+        }
     }
 }
 
@@ -235,15 +263,14 @@ mod tests {
         MapChunk::from_ascii(
             "test",
             &[
-                "#......",
-                ".......",
-                ".......",
-                ".......",
-                ".......",
-                ".......",
-                ".......",
+                "#......", ".......", ".......", ".......", ".......", ".......", ".......",
             ],
-            [EdgeType::Road, EdgeType::Open, EdgeType::Wall, EdgeType::Open],
+            [
+                EdgeType::Road,
+                EdgeType::Open,
+                EdgeType::Wall,
+                EdgeType::Open,
+            ],
         )
     }
 

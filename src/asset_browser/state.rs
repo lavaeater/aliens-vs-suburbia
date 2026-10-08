@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use std::collections::{HashMap, HashSet};
 
 // Re-export from shared location so asset browser code keeps using the same name.
-pub use crate::assets::asset_definition::{Attachment, AssetDefinition, Hardpoint, ModelType};
+pub use crate::assets::asset_definition::{AssetDefinition, Attachment, Hardpoint, ModelType};
 use bevy::prelude::Entity;
 
 const WINDOW_SIZE: usize = 36;
@@ -14,10 +14,23 @@ const ROOT: &str = "assets";
 // ── Game-state animation key names (order matches display) ────────────────────
 
 pub const ANIM_KEY_NAMES: &[&str] = &[
-    "idle", "idle_shoot", "walk", "walk_shoot", "run", "run_gun",
-    "jump", "jump_idle", "jump_land",
-    "punch", "wave", "yes", "no",
-    "death", "hitreact", "throwing", "building",
+    "idle",
+    "idle_shoot",
+    "walk",
+    "walk_shoot",
+    "run",
+    "run_gun",
+    "jump",
+    "jump_idle",
+    "jump_land",
+    "punch",
+    "wave",
+    "yes",
+    "no",
+    "death",
+    "hitreact",
+    "throwing",
+    "building",
 ];
 
 /// Standard hardpoint role names, shared across characters and weapons so the snap
@@ -58,8 +71,8 @@ pub struct AssetBrowserState {
     // ── Node visibility ────────────────────────────────────────────────────────
     pub mesh_nodes: Vec<String>,
     pub hidden_nodes: HashSet<String>,
-    pub nodes_dirty: bool,     // consumed by apply_node_visibility
-    pub nodes_ui_dirty: bool,  // consumed by rebuild_node_list
+    pub nodes_dirty: bool,    // consumed by apply_node_visibility
+    pub nodes_ui_dirty: bool, // consumed by rebuild_node_list
 
     // ── Model type ────────────────────────────────────────────────────────────
     pub model_type: ModelType,
@@ -214,7 +227,7 @@ impl Default for AssetBrowserState {
 }
 
 impl AssetBrowserState {
-    pub fn reset_for_enter(&mut self) {
+    pub const fn reset_for_enter(&mut self) {
         self.viewer_entity = None;
         self.load_requested = false;
         self.list_dirty = true;
@@ -265,25 +278,29 @@ impl AssetBrowserState {
         self.hardpoints_ui_dirty = true;
     }
 
-    pub fn toggle_skeleton(&mut self) {
+    pub const fn toggle_skeleton(&mut self) {
         self.show_skeleton = !self.show_skeleton;
     }
 
     // ── Weapon attachments ──────────────────────────────────────────────────────
 
     pub fn selected_bone_name(&self) -> Option<&str> {
-        self.bone_names.get(self.selected_bone).map(|s| s.as_str())
+        self.bone_names
+            .get(self.selected_bone)
+            .map(std::string::String::as_str)
     }
 
     /// Cycle the highlighted socket bone.
-    pub fn cycle_bone(&mut self, delta: i32) {
-        if self.bone_names.is_empty() { return; }
+    pub const fn cycle_bone(&mut self, delta: i32) {
+        if self.bone_names.is_empty() {
+            return;
+        }
         let n = self.bone_names.len() as i32;
         self.selected_bone = (self.selected_bone as i32 + delta).rem_euclid(n) as usize;
         self.bones_ui_dirty = true;
     }
 
-    pub fn set_selected_bone(&mut self, idx: usize) {
+    pub const fn set_selected_bone(&mut self, idx: usize) {
         if idx < self.bone_names.len() {
             self.selected_bone = idx;
             self.bones_ui_dirty = true;
@@ -293,19 +310,26 @@ impl AssetBrowserState {
     /// Attach `model_path` to the currently highlighted bone and make it the active
     /// (nudge-editable) attachment.
     pub fn attach_selected_model(&mut self, model_path: String) {
-        let Some(bone) = self.selected_bone_name().map(|s| s.to_string()) else { return };
-        self.attachments.push(Attachment { bone, model_path, ..Default::default() });
+        let Some(bone) = self
+            .selected_bone_name()
+            .map(std::string::ToString::to_string)
+        else {
+            return;
+        };
+        self.attachments.push(Attachment {
+            bone,
+            model_path,
+            ..Default::default()
+        });
         self.active_attachment = Some(self.attachments.len() - 1);
         self.attachments_struct_dirty = true;
         self.attachment_ui_dirty = true;
     }
 
     pub fn select_attachment(&mut self, idx: usize) {
-        if idx < self.attachments.len() {
+        if let Some(attachment) = self.attachments.get(idx) {
             self.active_attachment = Some(idx);
-            if let Some(bone_idx) = self.bone_names.iter()
-                .position(|b| b == &self.attachments[idx].bone)
-            {
+            if let Some(bone_idx) = self.bone_names.iter().position(|b| b == &attachment.bone) {
                 self.selected_bone = bone_idx;
             }
             self.bones_ui_dirty = true;
@@ -325,7 +349,12 @@ impl AssetBrowserState {
 
     /// Re-parent the active attachment to the currently highlighted bone.
     pub fn set_active_attachment_bone(&mut self) {
-        let Some(bone) = self.selected_bone_name().map(|s| s.to_string()) else { return };
+        let Some(bone) = self
+            .selected_bone_name()
+            .map(std::string::ToString::to_string)
+        else {
+            return;
+        };
         if let Some(idx) = self.active_attachment
             && let Some(a) = self.attachments.get_mut(idx)
         {
@@ -339,8 +368,9 @@ impl AssetBrowserState {
     pub fn nudge_translation(&mut self, axis: usize, delta: f32) {
         if let Some(idx) = self.active_attachment
             && let Some(a) = self.attachments.get_mut(idx)
+            && let Some(v) = a.translation.get_mut(axis)
         {
-            a.translation[axis] += delta;
+            *v += delta;
             self.attachments_xform_dirty = true;
             self.attachment_ui_dirty = true;
         }
@@ -350,8 +380,9 @@ impl AssetBrowserState {
     pub fn nudge_rotation(&mut self, axis: usize, delta: f32) {
         if let Some(idx) = self.active_attachment
             && let Some(a) = self.attachments.get_mut(idx)
+            && let Some(v) = a.rotation_euler_deg.get_mut(axis)
         {
-            a.rotation_euler_deg[axis] = (a.rotation_euler_deg[axis] + delta).rem_euclid(360.0);
+            *v = (*v + delta).rem_euclid(360.0);
             self.attachments_xform_dirty = true;
             self.attachment_ui_dirty = true;
         }
@@ -375,12 +406,12 @@ impl AssetBrowserState {
 
     // ── Hardpoints ──────────────────────────────────────────────────────────────
 
-    pub fn toggle_hardpoints(&mut self) {
+    pub const fn toggle_hardpoints(&mut self) {
         self.show_hardpoints = !self.show_hardpoints;
     }
 
     /// Characters anchor hardpoints to bones; weapons anchor to the model origin.
-    pub fn is_character_model(&self) -> bool {
+    pub const fn is_character_model(&self) -> bool {
         matches!(self.model_type, ModelType::Player(_) | ModelType::Enemy(_))
     }
 
@@ -389,37 +420,54 @@ impl AssetBrowserState {
     pub fn select_hardpoint_role(&mut self, role: &str) {
         if !self.hardpoints.contains_key(role) {
             let anchor = if self.is_character_model() {
-                self.selected_bone_name().map(|s| s.to_string())
+                self.selected_bone_name()
+                    .map(std::string::ToString::to_string)
             } else {
                 None
             };
-            self.hardpoints.insert(role.to_string(), Hardpoint { anchor, ..Default::default() });
-            if role == "grip" { self.hardpoint_preview_dirty = true; }
+            self.hardpoints.insert(
+                role.to_string(),
+                Hardpoint {
+                    anchor,
+                    ..Default::default()
+                },
+            );
+            if role == "grip" {
+                self.hardpoint_preview_dirty = true;
+            }
         }
         self.active_hardpoint_role = Some(role.to_string());
         self.hardpoints_ui_dirty = true;
     }
 
     pub fn active_hardpoint(&self) -> Option<&Hardpoint> {
-        self.active_hardpoint_role.as_ref().and_then(|r| self.hardpoints.get(r))
+        self.active_hardpoint_role
+            .as_ref()
+            .and_then(|r| self.hardpoints.get(r))
     }
 
     /// Re-anchor the active hardpoint to the currently highlighted bone.
     pub fn set_active_hardpoint_bone(&mut self) {
-        let bone = self.selected_bone_name().map(|s| s.to_string());
+        let bone = self
+            .selected_bone_name()
+            .map(std::string::ToString::to_string);
         if let Some(role) = self.active_hardpoint_role.clone()
             && let Some(h) = self.hardpoints.get_mut(&role)
         {
             h.anchor = bone;
             self.hardpoints_ui_dirty = true;
-            if role == "grip" { self.hardpoint_preview_dirty = true; }
+            if role == "grip" {
+                self.hardpoint_preview_dirty = true;
+            }
         }
     }
 
     pub fn delete_active_hardpoint(&mut self) {
         if let Some(role) = self.active_hardpoint_role.take() {
             self.hardpoints.remove(&role);
-            if role == "grip" { self.hardpoint_preview_dirty = true; }
+            if role == "grip" {
+                self.hardpoint_preview_dirty = true;
+            }
         }
         self.hardpoints_ui_dirty = true;
     }
@@ -427,8 +475,9 @@ impl AssetBrowserState {
     pub fn nudge_hardpoint_translation(&mut self, axis: usize, delta: f32) {
         if let Some(role) = self.active_hardpoint_role.clone()
             && let Some(h) = self.hardpoints.get_mut(&role)
+            && let Some(v) = h.translation.get_mut(axis)
         {
-            h.translation[axis] += delta;
+            *v += delta;
             self.hardpoints_ui_dirty = true;
         }
     }
@@ -436,8 +485,9 @@ impl AssetBrowserState {
     pub fn nudge_hardpoint_rotation(&mut self, axis: usize, delta: f32) {
         if let Some(role) = self.active_hardpoint_role.clone()
             && let Some(h) = self.hardpoints.get_mut(&role)
+            && let Some(v) = h.rotation_euler_deg.get_mut(axis)
         {
-            h.rotation_euler_deg[axis] = (h.rotation_euler_deg[axis] + delta).rem_euclid(360.0);
+            *v = (*v + delta).rem_euclid(360.0);
             self.hardpoints_ui_dirty = true;
         }
     }
@@ -447,7 +497,7 @@ impl AssetBrowserState {
     pub fn set_ref_weapon(&mut self, path: String) {
         let def = AssetDefinition::load(&path);
         self.hardpoint_ref_grip = def.as_ref().and_then(|d| d.hardpoints.get("grip").cloned());
-        self.hardpoint_ref_scale = def.map(|d| d.scale).unwrap_or(1.0);
+        self.hardpoint_ref_scale = def.map_or(1.0, |d| d.scale);
         self.hardpoint_ref_weapon = Some(path);
         self.hardpoint_preview_dirty = true;
     }
@@ -476,7 +526,8 @@ impl AssetBrowserState {
     pub fn remove_animation_source(&mut self, idx: usize) {
         if idx < self.animation_sources.len() {
             self.animation_sources.remove(idx);
-            self.extra_gltf_handles.truncate(self.animation_sources.len());
+            self.extra_gltf_handles
+                .truncate(self.animation_sources.len());
             self.sources_dirty = true;
         }
     }
@@ -517,7 +568,8 @@ impl AssetBrowserState {
 
     /// Navigate up one level.
     pub fn leave_folder(&mut self) {
-        if let Some(parent) = std::path::Path::new(&self.current_folder).parent()
+        if let Some(parent) = std::path::Path::new(&self.current_folder)
+            .parent()
             .and_then(|p| p.to_str())
         {
             self.current_folder = parent.to_string();
@@ -547,7 +599,9 @@ impl AssetBrowserState {
     /// Distinct tag paths currently in use, sorted. Used for binding cycling and
     /// as the autocomplete pool while typing a tag.
     pub fn distinct_tag_paths(&self) -> Vec<String> {
-        let mut paths: Vec<String> = self.clip_tags.values()
+        let mut paths: Vec<String> = self
+            .clip_tags
+            .values()
             .filter(|p| !p.is_empty())
             .cloned()
             .collect::<HashSet<_>>()
@@ -615,8 +669,11 @@ impl AssetBrowserState {
     /// excluding an exact match. Empty while the buffer is empty.
     pub fn tag_suggestions(&self) -> Vec<String> {
         let buf = self.tag_edit_buffer.trim().to_lowercase();
-        if buf.is_empty() { return Vec::new(); }
-        self.distinct_tag_paths().into_iter()
+        if buf.is_empty() {
+            return Vec::new();
+        }
+        self.distinct_tag_paths()
+            .into_iter()
             .filter(|p| {
                 let pl = p.to_lowercase();
                 pl != buf && pl.contains(&buf)
@@ -631,9 +688,16 @@ impl AssetBrowserState {
     pub fn cycle_binding(&mut self, key: &str, delta: i32) {
         let mut options = self.distinct_tag_paths();
         options.insert(0, String::new()); // unbound
-        let current = self.animation_bindings.get(key).cloned().unwrap_or_default();
+        let current = self
+            .animation_bindings
+            .get(key)
+            .cloned()
+            .unwrap_or_default();
         let idx = options.iter().position(|o| o == &current).unwrap_or(0) as i32;
-        let next = options[(idx + delta).rem_euclid(options.len() as i32) as usize].clone();
+        // `options` always has at least the "unbound" slot inserted above, so this
+        // index is in range; `.get()` just avoids an explicit panic path for the lint.
+        let wrapped = (idx + delta).rem_euclid(options.len() as i32) as usize;
+        let next = options.get(wrapped).cloned().unwrap_or_default();
         if next.is_empty() {
             self.animation_bindings.remove(key);
         } else {
@@ -644,7 +708,9 @@ impl AssetBrowserState {
 
     /// Write the current viewer state to `assets/defs/<model>.ron`.
     pub fn export_definition(&self) {
-        let Some(path) = self.selected_path() else { return };
+        let Some(path) = self.selected_path() else {
+            return;
+        };
         let def = AssetDefinition {
             model_path: path.to_string(),
             scale: self.computed_scale(),
@@ -666,7 +732,9 @@ impl AssetBrowserState {
 
     /// Load an existing definition (if any) for the selected model.
     pub fn load_definition(&mut self) {
-        let Some(path) = self.selected_path() else { return };
+        let Some(path) = self.selected_path() else {
+            return;
+        };
         if let Some(def) = AssetDefinition::load(path) {
             self.hidden_nodes = def.hidden_nodes.into_iter().collect();
             self.clip_tags = def.clip_tags;
@@ -676,13 +744,21 @@ impl AssetBrowserState {
             // gives the user a starting point to reorganize hierarchically.
             if self.animation_bindings.is_empty() && !def.animation_mapping.is_empty() {
                 for (key, clip) in &def.animation_mapping {
-                    if clip.is_empty() { continue; }
-                    self.clip_tags.entry(clip.clone()).or_insert_with(|| key.clone());
-                    self.animation_bindings.insert(key.clone(), self.clip_tags[clip].clone());
+                    if clip.is_empty() {
+                        continue;
+                    }
+                    let tag = self
+                        .clip_tags
+                        .entry(clip.clone())
+                        .or_insert_with(|| key.clone())
+                        .clone();
+                    self.animation_bindings.insert(key.clone(), tag);
                 }
             }
             // Normalize paths: strip leading "assets/" if present (legacy wrong prefix).
-            self.animation_sources = def.animation_sources.into_iter()
+            self.animation_sources = def
+                .animation_sources
+                .into_iter()
                 .map(|p| p.strip_prefix("assets/").unwrap_or(&p).to_string())
                 .collect();
             self.sources_dirty = true;
@@ -733,21 +809,21 @@ impl AssetBrowserState {
         self.tags_dirty = true;
     }
 
-    pub fn anim_next(&mut self) {
+    pub const fn anim_next(&mut self) {
         if self.anim_count > 0 {
             self.anim_index = (self.anim_index + 1) % self.anim_count;
             self.anim_dirty = true;
         }
     }
 
-    pub fn anim_prev(&mut self) {
+    pub const fn anim_prev(&mut self) {
         if self.anim_count > 0 {
             self.anim_index = (self.anim_index + self.anim_count - 1) % self.anim_count;
             self.anim_dirty = true;
         }
     }
 
-    pub fn move_up(&mut self) {
+    pub const fn move_up(&mut self) {
         if self.selected > 0 {
             self.selected -= 1;
             if self.selected < self.scroll_offset {
@@ -757,7 +833,7 @@ impl AssetBrowserState {
         }
     }
 
-    pub fn move_down(&mut self) {
+    pub const fn move_down(&mut self) {
         if self.selected + 1 < self.files.len() {
             self.selected += 1;
             if self.selected >= self.scroll_offset + WINDOW_SIZE {
@@ -767,7 +843,7 @@ impl AssetBrowserState {
         }
     }
 
-    pub fn page_up(&mut self) {
+    pub const fn page_up(&mut self) {
         let step = WINDOW_SIZE / 2;
         self.selected = self.selected.saturating_sub(step);
         if self.selected < self.scroll_offset {
@@ -788,14 +864,18 @@ impl AssetBrowserState {
 
     pub fn visible_files(&self) -> impl Iterator<Item = (usize, &str)> {
         let end = (self.scroll_offset + WINDOW_SIZE).min(self.files.len());
-        self.files[self.scroll_offset..end]
+        self.files
+            .get(self.scroll_offset..end)
+            .unwrap_or_default()
             .iter()
             .enumerate()
             .map(move |(i, s)| (self.scroll_offset + i, s.as_str()))
     }
 
     pub fn selected_path(&self) -> Option<&str> {
-        self.files.get(self.selected).map(|s| s.as_str())
+        self.files
+            .get(self.selected)
+            .map(std::string::String::as_str)
     }
 }
 

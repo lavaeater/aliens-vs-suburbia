@@ -1,24 +1,36 @@
-use bevy::math::Vec3;
-use bevy::prelude::{Commands, Entity, MessageWriter, Query, Res, Transform, Without};
-use bevy::world_serialization::WorldAssetRoot;
-use bevy::time::Time;
-use avian3d::prelude::{Collider, CollisionEventsEnabled, CollisionLayers, LinearVelocity, Position, RigidBody};
-use bevy_wind_waker_shader::WindWakerShaderBuilder;
 use crate::animation::animation_plugin::{AnimationEvent, AnimationEventType, AnimationKey};
 use crate::assets::assets_plugin::GameAssets;
-use crate::control::components::{ControlCommand, CharacterControl};
+use crate::control::components::{CharacterControl, ControlCommand};
 use crate::game_state::score_keeper::GameTrackingEvent;
-use crate::general::components::{Ball, CollisionLayer};
 use crate::general::components::map_components::CoolDown;
+use crate::general::components::{Ball, CollisionLayer};
 use crate::player::components::{AutoAim, Player, PlayerDead};
-use crate::player::systems::equip::EquippedWeapon;
 use crate::player::systems::abilities::AbilityCooldown;
+use crate::player::systems::equip::EquippedWeapon;
+use avian3d::prelude::{
+    Collider, CollisionEventsEnabled, CollisionLayers, LinearVelocity, Position, RigidBody,
+};
+use bevy::math::Vec3;
+use bevy::prelude::{Commands, Entity, MessageWriter, Query, Res, Transform, Without};
+use bevy::time::Time;
+use bevy::world_serialization::WorldAssetRoot;
+use bevy_wind_waker_shader::WindWakerShaderBuilder;
 
 #[allow(clippy::type_complexity)]
 pub fn throwing(
     time_res: Res<Time>,
     // Players holding a gun fire it (see shoot_weapons) instead of throwing balls.
-    mut query: Query<(Entity, &Player, &Position, &AutoAim, &mut CharacterControl, &mut AbilityCooldown), (Without<PlayerDead>, Without<EquippedWeapon>)>,
+    mut query: Query<
+        (
+            Entity,
+            &Player,
+            &Position,
+            &AutoAim,
+            &mut CharacterControl,
+            &mut AbilityCooldown,
+        ),
+        (Without<PlayerDead>, Without<EquippedWeapon>),
+    >,
     mut commands: Commands,
     game_assets: Res<GameAssets>,
     mut game_mw: MessageWriter<GameTrackingEvent>,
@@ -48,15 +60,24 @@ pub fn throwing(
                             CollisionLayer::Alien,
                             CollisionLayer::Player,
                             CollisionLayer::AlienSpawnPoint,
-                            CollisionLayer::AlienGoal
-                        ]),
+                            CollisionLayer::AlienGoal,
+                        ],
+                    ),
                 ));
-                anim_ew.write(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Throwing));
+                anim_ew.write(AnimationEvent(
+                    AnimationEventType::GotoAnimState,
+                    entity,
+                    AnimationKey::Throwing,
+                ));
             }
         } else {
             if controller.has_thrown {
                 // Ball just left throw mode — clear throwing animation.
-                anim_ew.write(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Throwing));
+                anim_ew.write(AnimationEvent(
+                    AnimationEventType::LeaveAnimState,
+                    entity,
+                    AnimationKey::Throwing,
+                ));
                 controller.has_thrown = false;
             }
             controller.fire_cool_down = 0.0;

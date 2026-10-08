@@ -10,7 +10,7 @@ pub(crate) mod components;
 pub(crate) mod despair;
 pub(crate) mod fire;
 pub(crate) mod gibs;
-pub(crate) mod sfx;
 pub(crate) mod plugin;
+pub(crate) mod sfx;
 pub(crate) mod systems;
 pub(crate) mod terrain;

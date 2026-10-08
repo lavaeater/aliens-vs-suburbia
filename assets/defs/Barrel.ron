@@ -1,0 +1,20 @@
+(
+    model_path: "packs/post-apocalypse/Barrel.glb",
+    scale: 1.0,
+    model_type: Terrain((
+        blocks_enemies: true,
+        blocks_players: true,
+        health: Some(40.0),
+        resistances: { Blunt: 0.5, Explosive: 2.0 },
+        loot_table: Some("crate"),
+        explodes_on_death: Some((radius: 3.0, damage: 70, impulse: 10.0, fire: true)),
+    )),
+    hidden_nodes: [],
+    animation_mapping: {},
+    clip_tags: {},
+    animation_bindings: {},
+    animation_sources: [],
+    attachments: [],
+    hardpoints: {},
+    aim_bones: [],
+)

@@ -1,6 +1,6 @@
-use crossterm::event::{KeyCode, KeyEvent};
 use super::app::{App, Mode, Prompt, PromptKind};
 use super::commands::{CmdResult, alt_map, command_map, normal_map, paint_map, wave_map};
+use crossterm::event::{KeyCode, KeyEvent};
 
 pub enum Action {
     Quit,
@@ -13,10 +13,10 @@ pub fn handle_key(app: &mut App, key: KeyEvent, viewport: (usize, usize)) -> Act
     }
 
     let result = match app.mode {
-        Mode::Normal     => normal_map().execute(app, key, viewport),
-        Mode::Alt        => alt_map().execute(app, key, viewport),
-        Mode::Paint      => paint_map().execute(app, key, viewport),
-        Mode::Command    => command_map().execute(app, key, viewport),
+        Mode::Normal => normal_map().execute(app, key, viewport),
+        Mode::Alt => alt_map().execute(app, key, viewport),
+        Mode::Paint => paint_map().execute(app, key, viewport),
+        Mode::Command => command_map().execute(app, key, viewport),
         Mode::WaveEditor => wave_map().execute(app, key, viewport),
     };
 
@@ -24,13 +24,18 @@ pub fn handle_key(app: &mut App, key: KeyEvent, viewport: (usize, usize)) -> Act
     if result.is_none() {
         match app.mode {
             Mode::Normal => {
-                if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) {
+                if key
+                    .modifiers
+                    .contains(crossterm::event::KeyModifiers::CONTROL)
+                {
                     app.mode = Mode::Command;
                 } else if key.modifiers.contains(crossterm::event::KeyModifiers::ALT) {
                     app.mode = Mode::Alt;
                 }
             }
-            Mode::Alt => { app.mode = Mode::Normal; }
+            Mode::Alt => {
+                app.mode = Mode::Normal;
+            }
             _ => {}
         }
     }
@@ -44,9 +49,15 @@ pub fn handle_key(app: &mut App, key: KeyEvent, viewport: (usize, usize)) -> Act
 fn handle_prompt(app: &mut App, key: KeyEvent) -> Action {
     let prompt = app.prompt.as_mut().unwrap();
     match key.code {
-        KeyCode::Esc => { app.prompt = None; }
-        KeyCode::Backspace => { prompt.input.pop(); }
-        KeyCode::Char(c) => { prompt.input.push(c); }
+        KeyCode::Esc => {
+            app.prompt = None;
+        }
+        KeyCode::Backspace => {
+            prompt.input.pop();
+        }
+        KeyCode::Char(c) => {
+            prompt.input.push(c);
+        }
         KeyCode::Enter => {
             let input = prompt.input.clone();
             let kind = prompt.kind.clone();
@@ -62,17 +73,25 @@ fn handle_prompt_commit(app: &mut App, kind: PromptKind, input: String) {
     match kind {
         PromptKind::SavePath => {
             app.file_path = Some(input);
-            if let Err(e) = app.save() { app.status_msg = Some(format!("Save error: {e}")); }
+            if let Err(e) = app.save() {
+                app.status_msg = Some(format!("Save error: {e}"));
+            }
             app.mode = Mode::Normal;
         }
         PromptKind::LoadPath => {
-            if let Err(e) = app.load(&input) { app.status_msg = Some(format!("Load error: {e}")); }
+            if let Err(e) = app.load(&input) {
+                app.status_msg = Some(format!("Load error: {e}"));
+            }
             app.mode = Mode::Normal;
         }
         PromptKind::NewWidth => {
             let w = input.parse::<usize>().unwrap_or(20);
             app.new_wave_scratch.0 = w.to_string();
-            app.prompt = Some(Prompt { kind: PromptKind::NewHeight, input: String::new(), label: "New map height" });
+            app.prompt = Some(Prompt {
+                kind: PromptKind::NewHeight,
+                input: String::new(),
+                label: "New map height",
+            });
         }
         PromptKind::NewHeight => {
             let w = app.new_wave_scratch.0.parse::<usize>().unwrap_or(20);
@@ -90,11 +109,19 @@ fn handle_prompt_commit(app: &mut App, kind: PromptKind, input: String) {
         }
         PromptKind::WaveEnemyDef => {
             app.new_wave_scratch.0 = input;
-            app.prompt = Some(Prompt { kind: PromptKind::WaveCount, input: String::new(), label: "Count" });
+            app.prompt = Some(Prompt {
+                kind: PromptKind::WaveCount,
+                input: String::new(),
+                label: "Count",
+            });
         }
         PromptKind::WaveCount => {
             app.new_wave_scratch.1 = input;
-            app.prompt = Some(Prompt { kind: PromptKind::WaveSpawnRate, input: String::new(), label: "Spawn rate/min" });
+            app.prompt = Some(Prompt {
+                kind: PromptKind::WaveSpawnRate,
+                input: String::new(),
+                label: "Spawn rate/min",
+            });
         }
         PromptKind::WaveSpawnRate => {
             app.new_wave_scratch.2 = input;
@@ -104,7 +131,12 @@ fn handle_prompt_commit(app: &mut App, kind: PromptKind, input: String) {
             app.commit_wave_edit(idx, 0, &input);
             app.prompt = Some(Prompt {
                 kind: PromptKind::WaveEditCount(idx),
-                input: app.map.waves.get(idx).map(|w| w.count.to_string()).unwrap_or_default(),
+                input: app
+                    .map
+                    .waves
+                    .get(idx)
+                    .map(|w| w.count.to_string())
+                    .unwrap_or_default(),
                 label: "Edit count",
             });
         }
@@ -112,7 +144,12 @@ fn handle_prompt_commit(app: &mut App, kind: PromptKind, input: String) {
             app.commit_wave_edit(idx, 1, &input);
             app.prompt = Some(Prompt {
                 kind: PromptKind::WaveEditSpawnRate(idx),
-                input: app.map.waves.get(idx).map(|w| format!("{:.1}", w.spawn_rate_per_minute)).unwrap_or_default(),
+                input: app
+                    .map
+                    .waves
+                    .get(idx)
+                    .map(|w| format!("{:.1}", w.spawn_rate_per_minute))
+                    .unwrap_or_default(),
                 label: "Edit spawn rate/min",
             });
         }

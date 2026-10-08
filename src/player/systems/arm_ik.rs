@@ -106,10 +106,9 @@ pub fn solve_elbow(
     let max = upper_len + lower_len - 1e-4;
     let distance = to_target.length().clamp(min.min(max), max.max(min));
 
-    let cos_shoulder =
-        ((upper_len * upper_len + distance * distance - lower_len * lower_len)
-            / (2.0 * upper_len * distance))
-            .clamp(-1.0, 1.0);
+    let cos_shoulder = ((upper_len * upper_len + distance * distance - lower_len * lower_len)
+        / (2.0 * upper_len * distance))
+        .clamp(-1.0, 1.0);
     let angle = cos_shoulder.acos();
 
     // The bend plane: the component of the pole hint perpendicular to the arm's axis.
@@ -178,7 +177,9 @@ pub fn solve_weapon_arms(
         // its `Transform` moments ago and nothing has propagated yet. Compose it here
         // instead, against the same stale owner the bones hang off, so weapon and arms
         // are solved in one consistent frame.
-        let Ok(weapon_local) = transforms.get(arms.weapon).copied() else { continue };
+        let Ok(weapon_local) = transforms.get(arms.weapon).copied() else {
+            continue;
+        };
         let weapon_world = owner.mul_transform(weapon_local);
 
         for arm in &arms.arms {
@@ -206,10 +207,7 @@ impl Default for HandAlignEnabled {
     }
 }
 
-pub fn toggle_hand_align(
-    keys: Res<ButtonInput<KeyCode>>,
-    mut enabled: ResMut<HandAlignEnabled>,
-) {
+pub fn toggle_hand_align(keys: Res<ButtonInput<KeyCode>>, mut enabled: ResMut<HandAlignEnabled>) {
     if keys.just_pressed(KeyCode::F8) {
         enabled.0 = !enabled.0;
         info!("hand alignment {}", if enabled.0 { "on" } else { "off" });
@@ -252,8 +250,8 @@ fn solve_arm(
     // rotating afterwards, is what lets orientation and position both come out exact:
     // rotating the hand last would drag the hardpoint off the target it had just reached.
     let hand_rotation = hand_world.rotation();
-    let offset_in_hand = hand_rotation.inverse()
-        * (hardpoint_world.translation() - hand_world.translation());
+    let offset_in_hand =
+        hand_rotation.inverse() * (hardpoint_world.translation() - hand_world.translation());
     let hardpoint_in_hand = hand_rotation.inverse() * hardpoint_world.rotation();
 
     let wanted_hand_rotation = if align_hand {
@@ -261,8 +259,7 @@ fn solve_arm(
     } else {
         hand_rotation
     };
-    let wanted_hand =
-        target.translation() - wanted_hand_rotation * offset_in_hand;
+    let wanted_hand = target.translation() - wanted_hand_rotation * offset_in_hand;
 
     let shoulder = upper_world.translation();
     let elbow = lower_world.translation();
@@ -278,8 +275,11 @@ fn solve_arm(
     let wanted_elbow = solve_elbow(shoulder, wanted_hand, upper_len, lower_len, pole);
 
     // Upper arm: swing the shoulder so the elbow lands where the solve wants it.
-    let upper_rotation =
-        aim_bone(upper_world.rotation(), elbow - shoulder, wanted_elbow - shoulder);
+    let upper_rotation = aim_bone(
+        upper_world.rotation(),
+        elbow - shoulder,
+        wanted_elbow - shoulder,
+    );
     let swing = upper_rotation * upper_world.rotation().inverse();
 
     // Everything below the shoulder is rigid under that swing, so the forearm's new
@@ -301,8 +301,7 @@ fn solve_arm(
             wanted_hand - wanted_elbow,
         )
     } else {
-        let hardpoint_after_swing =
-            wanted_elbow + swing * (hardpoint_world.translation() - elbow);
+        let hardpoint_after_swing = wanted_elbow + swing * (hardpoint_world.translation() - elbow);
         aim_bone(
             lower_rotation_after_swing,
             hardpoint_after_swing - wanted_elbow,
@@ -312,8 +311,7 @@ fn solve_arm(
 
     transforms.get_mut(arm.upper).ok()?.rotation =
         local_from_world(base_world.rotation(), upper_rotation);
-    transforms.get_mut(arm.lower).ok()?.rotation =
-        local_from_world(upper_rotation, lower_rotation);
+    transforms.get_mut(arm.lower).ok()?.rotation = local_from_world(upper_rotation, lower_rotation);
 
     if align_hand {
         // The wrist's parent is the forearm, which has just moved; its new world rotation
@@ -375,13 +373,21 @@ pub fn align_sights(
     mut transforms: Query<&mut Transform>,
 ) {
     for (sight, owner) in characters.iter() {
-        let Ok(weapon_local) = transforms.get(sight.weapon).copied() else { continue };
+        let Ok(weapon_local) = transforms.get(sight.weapon).copied() else {
+            continue;
+        };
         let weapon_world = owner.mul_transform(weapon_local);
         let target = weapon_world.mul_transform(sight.weapon_frame).rotation();
 
-        let Ok(parent) = parents.get(sight.bone).map(|p| p.parent()) else { continue };
-        let Ok(parent_world) = globals.get(parent).copied() else { continue };
-        let Ok(bone_local) = transforms.get(sight.bone).copied() else { continue };
+        let Ok(parent) = parents.get(sight.bone).map(ChildOf::parent) else {
+            continue;
+        };
+        let Ok(parent_world) = globals.get(parent).copied() else {
+            continue;
+        };
+        let Ok(bone_local) = transforms.get(sight.bone).copied() else {
+            continue;
+        };
 
         // Same stale-globals reasoning as the arms: compose this frame's animated local
         // against the parent's world rather than reading the bone's own global, which
@@ -406,13 +412,19 @@ mod tests {
         let target = Vec3::new(1.2, 0.0, 0.0);
         let elbow = solve_elbow(shoulder, target, 1.0, 1.0, Vec3::NEG_Y);
 
-        assert!((elbow - shoulder).length() - 1.0 < 1e-3, "upper arm keeps its length");
+        assert!(
+            (elbow - shoulder).length() - 1.0 < 1e-3,
+            "upper arm keeps its length"
+        );
         assert!(
             ((target - elbow).length() - 1.0).abs() < 1e-3,
             "forearm reaches the target: {}",
             (target - elbow).length()
         );
-        assert!(elbow.y < -0.1, "the elbow bent toward the pole, got {elbow:?}");
+        assert!(
+            elbow.y < -0.1,
+            "the elbow bent toward the pole, got {elbow:?}"
+        );
     }
 
     /// Which side the elbow falls on is the only thing the pole decides, and getting it
@@ -478,14 +490,24 @@ mod tests {
     /// The grip on swat-2 is anchored to `thumb_02_r`, four bones below the shoulder.
     #[test]
     fn the_arm_is_found_above_the_wrist_however_deep_the_hardpoint_sits() {
-        let ancestors = ["thumb_01_r", "hand_r", "lowerarm_r", "upperarm_r", "clavicle_r"];
+        let ancestors = [
+            "thumb_01_r",
+            "hand_r",
+            "lowerarm_r",
+            "upperarm_r",
+            "clavicle_r",
+        ];
         assert_eq!(arm_chain(&ancestors), Some((3, 2)));
     }
 
     /// Mixamo names differ but carry the same word.
     #[test]
     fn a_mixamo_rig_resolves_the_same_way() {
-        let ancestors = ["mixamorigRightHand", "mixamorigRightForeArm", "mixamorigRightArm"];
+        let ancestors = [
+            "mixamorigRightHand",
+            "mixamorigRightForeArm",
+            "mixamorigRightArm",
+        ];
         assert_eq!(arm_chain(&ancestors), Some((2, 1)));
     }
 

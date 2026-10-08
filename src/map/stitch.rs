@@ -10,21 +10,26 @@
 //! else is Open↔Open, and the whole map stays connected while the spine guarantees the
 //! critical corridor. Variety comes from which off-spine chunk (and rotation) fills each
 //! slot.
+// Grid/procgen math: coordinates and offsets here are structurally bounded by
+// loop ranges and chunk/tile dimensions checked elsewhere, so the blanket
+// arithmetic/indexing lints mostly flag noise in this module. Scoped allow;
+// genuinely risky spots are fixed individually.
+#![allow(clippy::arithmetic_side_effects, clippy::indexing_slicing)]
 
 use crate::general::components::map_components::MapFile;
-use crate::map::chunks::{EdgeType, MapChunk, Side, CHUNK_SIZE};
-use crate::map::scatter::{scatter_decorations, ScatterOptions};
 use crate::map::MapFeatures;
+use crate::map::chunks::{CHUNK_SIZE, EdgeType, MapChunk, Side};
+use crate::map::scatter::{ScatterOptions, scatter_decorations};
 use enumflags2::BitFlags;
 
 // ── Seeded RNG (xorshift64, matching map_generator) ──────────────────────────
 
 struct Rng(u64);
 impl Rng {
-    fn new(seed: u64) -> Self {
-        Rng(seed.wrapping_add(1).wrapping_mul(0x9e3779b97f4a7c15))
+    const fn new(seed: u64) -> Self {
+        Self(seed.wrapping_add(1).wrapping_mul(0x9e37_79b9_7f4a_7c15))
     }
-    fn next(&mut self) -> u64 {
+    const fn next(&mut self) -> u64 {
         let mut x = self.0;
         x ^= x << 13;
         x ^= x >> 7;
@@ -56,29 +61,27 @@ fn spine_chunks() -> Vec<MapChunk> {
         MapChunk::from_ascii(
             "road_straight",
             &[
-                ".......",
-                ".......",
-                ".......",
-                ".......",
-                ".......",
-                ".......",
-                ".......",
+                ".......", ".......", ".......", ".......", ".......", ".......", ".......",
             ],
-            [EdgeType::Open, EdgeType::Road, EdgeType::Open, EdgeType::Road],
+            [
+                EdgeType::Open,
+                EdgeType::Road,
+                EdgeType::Open,
+                EdgeType::Road,
+            ],
         ),
         // Road flanked by cover blocks (buildings pinch the street).
         MapChunk::from_ascii(
             "road_cover",
             &[
-                ".##...#",
-                ".##...#",
-                ".......",
-                ".......",
-                ".......",
-                "#...##.",
-                "#...##.",
+                ".##...#", ".##...#", ".......", ".......", ".......", "#...##.", "#...##.",
             ],
-            [EdgeType::Open, EdgeType::Road, EdgeType::Open, EdgeType::Road],
+            [
+                EdgeType::Open,
+                EdgeType::Road,
+                EdgeType::Open,
+                EdgeType::Road,
+            ],
         ),
     ]
 }
@@ -90,13 +93,7 @@ fn filler_chunks() -> Vec<MapChunk> {
         MapChunk::from_ascii(
             "lot_open",
             &[
-                ".......",
-                ".......",
-                ".......",
-                ".......",
-                ".......",
-                ".......",
-                ".......",
+                ".......", ".......", ".......", ".......", ".......", ".......", ".......",
             ],
             [EdgeType::Open; 4],
         ),
@@ -104,13 +101,7 @@ fn filler_chunks() -> Vec<MapChunk> {
         MapChunk::from_ascii(
             "building",
             &[
-                ".......",
-                ".#####.",
-                ".#...#.",
-                ".#...#.",
-                ".#...#.",
-                ".#####.",
-                ".......",
+                ".......", ".#####.", ".#...#.", ".#...#.", ".#...#.", ".#####.", ".......",
             ],
             [EdgeType::Open; 4],
         ),
@@ -118,13 +109,7 @@ fn filler_chunks() -> Vec<MapChunk> {
         MapChunk::from_ascii(
             "rubble",
             &[
-                ".......",
-                "..#..#.",
-                ".......",
-                "...#...",
-                ".#..#..",
-                ".......",
-                "..#....",
+                ".......", "..#..#.", ".......", "...#...", ".#..#..", ".......", "..#....",
             ],
             [EdgeType::Open; 4],
         ),
@@ -152,15 +137,27 @@ fn build_layout(
     fillers: &[MapChunk],
 ) -> Layout {
     let mut rng = Rng::new(seed);
-    let spine_row = if chunks_high <= 2 { chunks_high / 2 } else { rng.range(1, chunks_high - 1) };
+    let spine_row = if chunks_high <= 2 {
+        chunks_high / 2
+    } else {
+        rng.range(1, chunks_high - 1)
+    };
 
     // Placeholder grid; filled row by row, col by col.
     let mut grid: Vec<Vec<Option<MapChunk>>> = vec![vec![None; chunks_wide]; chunks_high];
 
     for cr in 0..chunks_high {
         for cc in 0..chunks_wide {
-            let west = if cc > 0 { grid[cr][cc - 1].as_ref() } else { None };
-            let north = if cr > 0 { grid[cr - 1][cc].as_ref() } else { None };
+            let west = if cc > 0 {
+                grid[cr][cc - 1].as_ref()
+            } else {
+                None
+            };
+            let north = if cr > 0 {
+                grid[cr - 1][cc].as_ref()
+            } else {
+                None
+            };
 
             // Candidate pool: spine row uses road pieces, everything else fillers.
             let pool = if cr == spine_row { spine } else { fillers };
@@ -172,9 +169,15 @@ fn build_layout(
         }
     }
 
+    // Every cell was filled with `Some(chosen)` in the loop above; `unwrap_or_else`
+    // just avoids an explicit panic path while keeping the same fallback as above.
     let grid = grid
         .into_iter()
-        .map(|row| row.into_iter().map(|c| c.unwrap()).collect())
+        .map(|row| {
+            row.into_iter()
+                .map(|c| c.unwrap_or_else(|| fillers[0].clone()))
+                .collect()
+        })
         .collect();
     Layout { grid, spine_row }
 }
@@ -216,7 +219,13 @@ fn pick_matching(
 /// no-asset caller.
 #[allow(dead_code)]
 pub fn stitch_map(seed: u64, chunks_wide: usize, chunks_high: usize) -> MapFile {
-    stitch_map_with_library(seed, chunks_wide, chunks_high, &spine_chunks(), &filler_chunks())
+    stitch_map_with_library(
+        seed,
+        chunks_wide,
+        chunks_high,
+        &spine_chunks(),
+        &filler_chunks(),
+    )
 }
 
 /// As [`stitch_map`], but with a caller-supplied chunk library (e.g. loaded from
@@ -235,8 +244,16 @@ pub fn stitch_map_with_library(
     // Guard against empty pools so a bad/empty chunk dir can't panic the generator.
     let builtin_spine = spine_chunks();
     let builtin_fillers = filler_chunks();
-    let spine = if spine.is_empty() { &builtin_spine[..] } else { spine };
-    let fillers = if fillers.is_empty() { &builtin_fillers[..] } else { fillers };
+    let spine = if spine.is_empty() {
+        &builtin_spine[..]
+    } else {
+        spine
+    };
+    let fillers = if fillers.is_empty() {
+        &builtin_fillers[..]
+    } else {
+        fillers
+    };
 
     let layout = build_layout(seed, cw, ch, spine, fillers);
 
@@ -259,9 +276,13 @@ pub fn stitch_map_with_library(
     let border = f(MapFeatures::Floor
         | MapFeatures::ImpassableForPlayers
         | MapFeatures::ImpassableForEnemies);
-    tiles.first_mut().unwrap().fill(border);
-    tiles.last_mut().unwrap().fill(border);
-    for row in tiles.iter_mut() {
+    if let Some(top) = tiles.first_mut() {
+        top.fill(border);
+    }
+    if let Some(bottom) = tiles.last_mut() {
+        bottom.fill(border);
+    }
+    for row in &mut tiles {
         row[0] = border;
         row[w - 1] = border;
     }
@@ -276,7 +297,7 @@ pub fn stitch_map_with_library(
 
     // Dress the ruined suburb. Derive the scatter seed from the map seed so the props
     // are reproducible but distinct from the layout roll.
-    let decorations = scatter_decorations(seed ^ 0x5CA77E4, &tiles, ScatterOptions::default());
+    let decorations = scatter_decorations(seed ^ 0x05CA_77E4, &tiles, ScatterOptions::default());
 
     MapFile {
         generated: false,
@@ -352,9 +373,18 @@ mod tests {
     #[test]
     fn spawn_goal_and_player_are_all_present() {
         let map = stitch_map(7, 5, 3);
-        assert!(find(&map.tiles, MapFeatures::EnemySpawn).is_some(), "has an alien spawn");
-        assert!(find(&map.tiles, MapFeatures::EnemyExit).is_some(), "has a goal");
-        assert!(find(&map.tiles, MapFeatures::PlayerSpawn).is_some(), "has a player spawn");
+        assert!(
+            find(&map.tiles, MapFeatures::EnemySpawn).is_some(),
+            "has an alien spawn"
+        );
+        assert!(
+            find(&map.tiles, MapFeatures::EnemyExit).is_some(),
+            "has a goal"
+        );
+        assert!(
+            find(&map.tiles, MapFeatures::PlayerSpawn).is_some(),
+            "has a player spawn"
+        );
     }
 
     #[test]

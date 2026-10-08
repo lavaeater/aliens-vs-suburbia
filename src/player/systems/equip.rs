@@ -8,17 +8,17 @@
 //! Authoring happens in the asset browser; this module just replays the same math
 //! in-game, so what you see in the browser preview is what you get here.
 
-use bevy::prelude::*;
 use bevy::gltf::GltfAssetLabel;
+use bevy::prelude::*;
 use bevy::world_serialization::WorldAssetRoot;
 
 use crate::assets::asset_definition::{
     AssetDefinition, Hardpoint, ModelType, WeaponHands, WeaponProps,
 };
 use crate::assets::hardpoint::{self, snap_transform, weapon_local_scale};
+use crate::player::systems::arm_ik::{self, SightAlign, WeaponArm, WeaponArms};
 use crate::player::systems::shoot::Weapon;
 use crate::player::systems::spawn_players::PlayerModelRoot;
-use crate::player::systems::arm_ik::{self, SightAlign, WeaponArm, WeaponArms};
 use crate::player::systems::weapon_aim::{self, AimedWeapon};
 
 /// The role both sides use to attach a one-handed weapon to a hand.
@@ -46,6 +46,8 @@ pub struct PendingEquip {
     pub weapon_grip: Hardpoint,
     /// Weapon GLB path, relative to `assets/`.
     pub weapon_model_path: String,
+    /// Display name for the HUD: the weapon def's file stem (e.g. "Pistol").
+    pub weapon_name: String,
     /// Weapon def scale, applied as the weapon's local scale under the bone.
     pub weapon_scale: f32,
     /// The weapon's `muzzle` hardpoint (where bullets leave), if authored.
@@ -54,6 +56,8 @@ pub struct PendingEquip {
     pub weapon_props: WeaponProps,
     /// Set when this pairing is flown from the aim instead of parented to a hand.
     pub aimed: Option<AimedPlan>,
+    /// Magazine to restore when re-equipping a holstered gun. `None` = full.
+    pub rounds_in_mag: Option<u32>,
     tries: u32,
 }
 
@@ -104,12 +108,30 @@ impl PendingEquip {
             char_grip,
             weapon_grip,
             weapon_model_path: weapon.model_path,
+            weapon_name: std::path::Path::new(weapon_def_path)
+                .file_stem()
+                .map_or_else(
+                    || "Weapon".to_string(),
+                    |s| s.to_string_lossy().into_owned(),
+                ),
             weapon_scale: weapon.scale,
             muzzle,
             weapon_props,
             aimed,
+            rounds_in_mag: None,
             tries: 0,
         })
+    }
+}
+
+impl PendingEquip {
+    /// The combat component for the spawned gun, with a holstered magazine restored.
+    fn runtime_weapon(&self) -> Weapon {
+        let mut weapon = Weapon::from_props(&self.weapon_props, self.muzzle.clone());
+        if let Some(rounds) = self.rounds_in_mag {
+            weapon.rounds_in_mag = rounds.min(weapon.magazine);
+        }
+        weapon
     }
 }
 
@@ -150,10 +172,7 @@ fn plan_aimed(
         role: role.to_string(),
         char_anchor,
         weapon_anchor,
-        weapon_axis: weapon_aim::weapon_axis(
-            weapon_anchor,
-            weapon_aim::hardpoint_point(muzzle),
-        ),
+        weapon_axis: weapon_aim::weapon_axis(weapon_anchor, weapon_aim::hardpoint_point(muzzle)),
         arm_targets,
         sight: character
             .hardpoints
@@ -191,15 +210,23 @@ fn resolve_arms(
             let chain = ancestor_entities(effector, parents);
             // The wrist is the bone just above the forearm; when the hardpoint is anchored
             // to the hand itself that is the effector.
-            let hand = if lower_index == 0 { effector } else { *chain.get(lower_index - 1)? };
+            let hand = if lower_index == 0 {
+                effector
+            } else {
+                *chain.get(lower_index - 1)?
+            };
 
             Some(WeaponArm {
                 upper: *chain.get(upper_index)?,
                 lower: *chain.get(lower_index)?,
                 hand,
                 effector,
-                effector_frame: hardpoint::transform_from_frame(hardpoint::hardpoint_frame(char_point)),
-                weapon_frame: hardpoint::transform_from_frame(hardpoint::hardpoint_frame(weapon_point)),
+                effector_frame: hardpoint::transform_from_frame(hardpoint::hardpoint_frame(
+                    char_point,
+                )),
+                weapon_frame: hardpoint::transform_from_frame(hardpoint::hardpoint_frame(
+                    weapon_point,
+                )),
                 pole: arm_ik::DEFAULT_POLE,
             })
         })
@@ -244,7 +271,11 @@ fn ancestor_entities(entity: Entity, parents: &Query<&ChildOf>) -> Vec<Entity> {
 fn ancestor_names(entity: Entity, parents: &Query<&ChildOf>, names: &Query<&Name>) -> Vec<String> {
     ancestor_entities(entity, parents)
         .into_iter()
-        .map(|e| names.get(e).map(|n| n.to_string()).unwrap_or_default())
+        .map(|e| {
+            names
+                .get(e)
+                .map_or_default(std::string::ToString::to_string)
+        })
         .collect()
 }
 
@@ -342,24 +373,29 @@ pub fn equip_pending_weapons(
         // The aim-driven path wants a different bone (the anchor role's, which may be a
         // shoulder rather than a hand) and a different parent (the character root, so the
         // arm IK cannot move the very thing it is reaching for).
-        let aim_bone = match equip.aimed.as_ref().map(|plan| plan.char_anchor.anchor.clone()) {
+        let aim_bone = match equip
+            .aimed
+            .as_ref()
+            .map(|plan| plan.char_anchor.anchor.clone())
+        {
             None => None,
             Some(None) => Some(character),
-            Some(Some(bone)) => match find_descendant_named(character, &bone, &children, &names) {
-                Some(entity) => Some(entity),
-                None => {
+            Some(Some(bone)) => {
+                if let Some(entity) = find_descendant_named(character, &bone, &children, &names) {
+                    Some(entity)
+                } else {
                     equip.tries += 1;
                     if equip.tries >= EQUIP_MAX_TRIES {
                         warn!(
                             "anchor bone '{bone}' never appeared under the character; \
-                             not equipping {}",
+                         not equipping {}",
                             equip.weapon_model_path
                         );
                         commands.entity(character).remove::<PendingEquip>();
                     }
                     continue;
                 }
-            },
+            }
         };
 
         if let (Some(plan), Some(anchor_bone)) = (equip.aimed.clone(), aim_bone) {
@@ -382,7 +418,8 @@ pub fn equip_pending_weapons(
                         model_root: root,
                         def_scale: equip.weapon_scale,
                     },
-                    Weapon::from_props(&equip.weapon_props, equip.muzzle.clone()),
+                    Name::new(equip.weapon_name.clone()),
+                    equip.runtime_weapon(),
                 ))
                 .id();
             commands.entity(character).add_child(weapon);
@@ -408,21 +445,22 @@ pub fn equip_pending_weapons(
 
         let anchor = match equip.bone.clone() {
             None => character,
-            Some(bone) => match find_descendant_named(character, &bone, &children, &names) {
-                Some(e) => e,
-                None => {
+            Some(bone) => {
+                if let Some(e) = find_descendant_named(character, &bone, &children, &names) {
+                    e
+                } else {
                     equip.tries += 1;
                     if equip.tries >= EQUIP_MAX_TRIES {
                         warn!(
                             "bone '{bone}' never appeared under the character; \
-                             not equipping {}",
+                         not equipping {}",
                             equip.weapon_model_path
                         );
                         commands.entity(character).remove::<PendingEquip>();
                     }
                     continue;
                 }
-            },
+            }
         };
 
         // Wait for this character's own PlayerModelRoot (set by fix_scene_transform) so
@@ -433,8 +471,8 @@ pub fn equip_pending_weapons(
             continue;
         };
 
-        let scene = asset_server
-            .load(GltfAssetLabel::Scene(0).from_asset(equip.weapon_model_path.clone()));
+        let scene =
+            asset_server.load(GltfAssetLabel::Scene(0).from_asset(equip.weapon_model_path.clone()));
         // Spawn with an identity-ish transform; keep_weapons_snapped sets the real one
         // next frame from settled GlobalTransforms.
         let weapon = commands
@@ -448,7 +486,8 @@ pub fn equip_pending_weapons(
                     bone: anchor,
                     root,
                 },
-                Weapon::from_props(&equip.weapon_props, equip.muzzle.clone()),
+                Name::new(equip.weapon_name.clone()),
+                equip.runtime_weapon(),
             ))
             .id();
         commands.entity(anchor).add_child(weapon);
@@ -472,8 +511,12 @@ pub fn keep_weapons_snapped(
 ) {
     let dt = time.delta_secs();
     for (weapon, snap) in weapons.iter() {
-        let bone_scale = global_transforms.get(snap.bone).map(|gt| gt.scale().x).unwrap_or(1.0);
-        let root_scale = global_transforms.get(snap.root).map(|gt| gt.scale().x).unwrap_or(1.0);
+        let bone_scale = global_transforms
+            .get(snap.bone)
+            .map_or(1.0, |gt| gt.scale().x);
+        let root_scale = global_transforms
+            .get(snap.root)
+            .map_or(1.0, |gt| gt.scale().x);
         let effective = weapon_local_scale(snap.weapon_def_scale, root_scale, bone_scale);
 
         if let Ok(mut t) = transforms.get_mut(weapon) {

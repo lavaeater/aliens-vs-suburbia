@@ -1,10 +1,12 @@
-use bevy::app::{App, Plugin, Update};
-use bevy::prelude::{Component, Entity, Message, MessageReader, MessageWriter, Res, ResMut,
-                    Resource, in_state, IntoScheduleConfigs, Query};
-use bevy::time::Time;
 use crate::facts::StoryEffect;
 use crate::game_state::GameState;
 use crate::ui::spawn_ui::GotoState;
+use bevy::app::{App, Plugin, Update};
+use bevy::prelude::{
+    Component, Entity, IntoScheduleConfigs, Message, MessageReader, MessageWriter, Query, Res,
+    ResMut, Resource, in_state,
+};
+use bevy::time::Time;
 
 #[allow(dead_code)]
 #[derive(Debug, Component)]
@@ -18,7 +20,7 @@ pub struct Score {
 }
 
 impl Score {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             kills: 0,
             shots_fired: 0,
@@ -26,7 +28,6 @@ impl Score {
         }
     }
 }
-
 
 #[derive(Debug)]
 pub enum LevelState {
@@ -54,7 +55,7 @@ pub struct LevelTracker {
 
 impl Default for LevelTracker {
     fn default() -> Self {
-        LevelTracker {
+        Self {
             level_name: "Level 1".to_string(),
             aliens_to_spawn: 30,
             aliens_left_to_spawn: 30,
@@ -70,7 +71,12 @@ impl Default for LevelTracker {
 
 impl LevelTracker {
     #[allow(dead_code)]
-    pub fn update(level_name: String, aliens_to_spawn: i32, spawn_rate_per_minute: f32, aliens_win_cutoff: i32) -> Self {
+    pub const fn update(
+        level_name: String,
+        aliens_to_spawn: i32,
+        spawn_rate_per_minute: f32,
+        aliens_win_cutoff: i32,
+    ) -> Self {
         Self {
             level_name,
             aliens_to_spawn,
@@ -101,17 +107,17 @@ pub struct ScoreKeeperPlugin;
 
 impl Plugin for ScoreKeeperPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_message::<GameTrackingEvent>()
+        app.add_message::<GameTrackingEvent>()
             .insert_resource(LevelTracker::default())
             .add_systems(bevy::prelude::OnEnter(GameState::InGame), reset_level_state)
-            .add_systems(Update, (
-                game_tracking_event_system,
-                level_state_system.run_if(crate::playground::state::in_normal_game),
-            )
-                .run_if(in_state(GameState::InGame)),
-            )
-        ;
+            .add_systems(
+                Update,
+                (
+                    game_tracking_event_system,
+                    level_state_system.run_if(crate::playground::state::in_normal_game),
+                )
+                    .run_if(in_state(GameState::InGame)),
+            );
     }
 }
 
@@ -182,17 +188,22 @@ pub fn level_state_system(
     }
 
     // Brief delay before transitioning so the game doesn't snap away instantly.
-    if matches!(level_tracker.level_state, LevelState::Completed | LevelState::Failed) {
+    if matches!(
+        level_tracker.level_state,
+        LevelState::Completed | LevelState::Failed
+    ) {
         level_tracker.end_delay += time.delta_secs();
         if level_tracker.end_delay >= 2.0 {
-            goto_state_mw.write(GotoState { state: GameState::Menu });
+            goto_state_mw.write(GotoState {
+                state: GameState::Menu,
+            });
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{game_tracking_event_system, GameTrackingEvent, LevelTracker, Score};
+    use super::{GameTrackingEvent, LevelTracker, Score, game_tracking_event_system};
     use bevy::prelude::*;
 
     fn test_app() -> App {
@@ -204,7 +215,9 @@ mod tests {
     }
 
     fn send(app: &mut App, ev: GameTrackingEvent) {
-        app.world_mut().resource_mut::<Messages<GameTrackingEvent>>().write(ev);
+        app.world_mut()
+            .resource_mut::<Messages<GameTrackingEvent>>()
+            .write(ev);
     }
 
     #[test]
@@ -236,7 +249,11 @@ mod tests {
 
         let t = app.world().resource::<LevelTracker>();
         assert_eq!(t.aliens_killed, 1);
-        assert_eq!(t.aliens_left_to_spawn, 30 - 1, "one spawned off the default 30");
+        assert_eq!(
+            t.aliens_left_to_spawn,
+            30 - 1,
+            "one spawned off the default 30"
+        );
         assert_eq!(t.aliens_reached_goal, 1);
     }
 }

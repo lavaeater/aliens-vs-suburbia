@@ -36,7 +36,9 @@ pub fn load_chunk_library(dir: &str) -> (Vec<MapChunk>, Vec<MapChunk>) {
         if path.extension().and_then(|e| e.to_str()) != Some("ron") {
             continue;
         }
-        let Ok(text) = std::fs::read_to_string(&path) else { continue };
+        let Ok(text) = std::fs::read_to_string(&path) else {
+            continue;
+        };
         match parse_chunk_ron(&text) {
             Ok(chunk) => {
                 if is_spine(&chunk) {
@@ -54,7 +56,12 @@ pub fn load_chunk_library(dir: &str) -> (Vec<MapChunk>, Vec<MapChunk>) {
 /// Stitch a map using chunks loaded from `dir`, falling back to the built-in library for
 /// whichever pool the directory doesn't supply. This is the runtime entry the editor
 /// uses, so hand-authored chunks show up without a rebuild.
-pub fn stitch_map_from_dir(seed: u64, chunks_wide: usize, chunks_high: usize, dir: &str) -> MapFile {
+pub fn stitch_map_from_dir(
+    seed: u64,
+    chunks_wide: usize,
+    chunks_high: usize,
+    dir: &str,
+) -> MapFile {
     let (spine, filler) = load_chunk_library(dir);
     stitch_map_with_library(seed, chunks_wide, chunks_high, &spine, &filler)
 }
@@ -126,19 +133,23 @@ mod tests {
     /// Runs from the crate root (where cargo test executes), so the relative path holds.
     #[test]
     fn the_shipped_chunk_assets_parse_and_stitch() {
-        use crate::map::stitch::stitch_map_with_library;
         use crate::map::MapFeatures;
+        use crate::map::stitch::stitch_map_with_library;
         use enumflags2::BitFlags;
 
         let (spine, filler) = load_chunk_library("assets/maps/chunks");
-        assert!(!spine.is_empty(), "shipped chunks should include a road/spine piece");
+        assert!(
+            !spine.is_empty(),
+            "shipped chunks should include a road/spine piece"
+        );
         assert!(!filler.is_empty(), "shipped chunks should include fillers");
 
         let map = stitch_map_with_library(2, 5, 3, &spine, &filler);
         let has = |flag| {
-            map.tiles.iter().flatten().any(|&bits| {
-                BitFlags::<MapFeatures>::from_bits_truncate(bits).contains(flag)
-            })
+            map.tiles
+                .iter()
+                .flatten()
+                .any(|&bits| BitFlags::<MapFeatures>::from_bits_truncate(bits).contains(flag))
         };
         assert!(has(MapFeatures::EnemySpawn) && has(MapFeatures::EnemyExit));
     }

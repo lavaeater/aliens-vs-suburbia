@@ -1,10 +1,10 @@
-use bevy::prelude::*;
+use crate::map::MapFeatures;
+use crate::map_editor::state::{EditorTool, MapEditorState};
+use crate::ui::spawn_ui::StateMarker;
 use bevy::input::mouse::MouseButton;
+use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use enumflags2::BitFlags;
-use crate::map::MapFeatures;
-use crate::map_editor::state::MapEditorState;
-use crate::ui::spawn_ui::StateMarker;
 
 pub const CELL_SIZE: f32 = 24.0; // pixels per tile in the grid view
 
@@ -12,7 +12,12 @@ pub const CELL_SIZE: f32 = 24.0; // pixels per tile in the grid view
 pub struct GridCamera;
 
 #[derive(Component)]
-pub struct GridCellMarker { #[allow(dead_code)] pub x: usize, #[allow(dead_code)] pub y: usize }
+pub struct GridCellMarker {
+    #[allow(dead_code)]
+    pub x: usize,
+    #[allow(dead_code)]
+    pub y: usize,
+}
 
 #[derive(Component)]
 pub struct HoverHighlight;
@@ -20,7 +25,10 @@ pub struct HoverHighlight;
 pub fn spawn_grid_camera(mut commands: Commands) {
     commands.spawn((
         Camera2d,
-        Camera { order: 0, ..Default::default() },
+        Camera {
+            order: 0,
+            ..Default::default()
+        },
         GridCamera,
         StateMarker,
         Transform::default(),
@@ -50,10 +58,14 @@ pub fn rebuild_grid(
     cells: Query<Entity, With<GridCellMarker>>,
     windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
 ) {
-    if !state.grid_dirty { return; }
+    if !state.grid_dirty {
+        return;
+    }
     state.grid_dirty = false;
 
-    for e in cells.iter() { commands.entity(e).despawn(); }
+    for e in cells.iter() {
+        commands.entity(e).despawn();
+    }
 
     let Ok(window) = windows.single() else { return };
     let win_w = window.width();
@@ -64,20 +76,19 @@ pub fn rebuild_grid(
 
     // Top-left corner of the grid in screen space, centred on the window.
     let grid_left = (win_w * 0.5 - w as f32 * CELL_SIZE * 0.5).round();
-    let grid_top  = (win_h * 0.5 - h as f32 * CELL_SIZE * 0.5).round();
+    let grid_top = (win_h * 0.5 - h as f32 * CELL_SIZE * 0.5).round();
 
-    for row in 0..h {
-        for col in 0..w {
-            let tile = state.tiles[row][col];
-            let color = tile_color(tile);
+    for (row, cols) in state.tiles.iter().enumerate().take(h) {
+        for (col, tile) in cols.iter().enumerate().take(w) {
+            let color = tile_color(*tile);
             commands.spawn((
                 GridCellMarker { x: col, y: row },
                 StateMarker,
                 Node {
                     position_type: PositionType::Absolute,
                     left: Val::Px(grid_left + col as f32 * CELL_SIZE),
-                    top:  Val::Px(grid_top  + row as f32 * CELL_SIZE),
-                    width:  Val::Px(CELL_SIZE - 1.0),
+                    top: Val::Px(grid_top + row as f32 * CELL_SIZE),
+                    width: Val::Px(CELL_SIZE - 1.0),
                     height: Val::Px(CELL_SIZE - 1.0),
                     ..Default::default()
                 },
@@ -88,40 +99,61 @@ pub fn rebuild_grid(
 
     // Overlay: first-letter of each placement's def name.
     for p in &state.placements {
-        if p.x < 0 || p.y < 0 || p.x >= w as i32 || p.y >= h as i32 { continue; }
+        if p.x < 0 || p.y < 0 || p.x >= w as i32 || p.y >= h as i32 {
+            continue;
+        }
         let label = std::path::Path::new(&p.def_path)
-            .file_stem().and_then(|s| s.to_str()).unwrap_or("?");
-        let initial = label.chars().next().unwrap_or('?').to_uppercase().to_string();
-        commands.spawn((
-            StateMarker,
-            Node {
-                position_type: PositionType::Absolute,
-                left: Val::Px(grid_left + p.x as f32 * CELL_SIZE),
-                top:  Val::Px(grid_top  + p.y as f32 * CELL_SIZE),
-                width:  Val::Px(CELL_SIZE - 1.0),
-                height: Val::Px(CELL_SIZE - 1.0),
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
-                ..Default::default()
-            },
-            BackgroundColor(Color::NONE),
-        )).with_child((
-            Text::new(initial),
-            TextFont::default().with_font_size(10.0),
-            TextColor(Color::WHITE),
-        ));
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("?");
+        let initial = label
+            .chars()
+            .next()
+            .unwrap_or('?')
+            .to_uppercase()
+            .to_string();
+        commands
+            .spawn((
+                StateMarker,
+                Node {
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(grid_left + p.x as f32 * CELL_SIZE),
+                    top: Val::Px(grid_top + p.y as f32 * CELL_SIZE),
+                    width: Val::Px(CELL_SIZE - 1.0),
+                    height: Val::Px(CELL_SIZE - 1.0),
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    ..Default::default()
+                },
+                BackgroundColor(Color::NONE),
+            ))
+            .with_child((
+                Text::new(initial),
+                TextFont::default().with_font_size(10.0),
+                TextColor(Color::WHITE),
+            ));
     }
 }
 
 fn tile_color(raw: u64) -> Color {
-    if raw == 0 { return Color::srgb(0.08, 0.08, 0.08); }
+    if raw == 0 {
+        return Color::srgb(0.08, 0.08, 0.08);
+    }
     let flags = BitFlags::<MapFeatures>::from_bits_truncate(raw);
 
     // Functional addors take display priority over terrain.
-    if flags.contains(MapFeatures::PlayerSpawn)  { return Color::srgb(0.2, 0.5, 0.9); }
-    if flags.contains(MapFeatures::EnemySpawn)   { return Color::srgb(0.8, 0.2, 0.2); }
-    if flags.contains(MapFeatures::EnemyExit)    { return Color::srgb(0.8, 0.6, 0.1); }
-    if flags.contains(MapFeatures::ImpassableForPlayers) && flags.contains(MapFeatures::ImpassableForEnemies) {
+    if flags.contains(MapFeatures::PlayerSpawn) {
+        return Color::srgb(0.2, 0.5, 0.9);
+    }
+    if flags.contains(MapFeatures::EnemySpawn) {
+        return Color::srgb(0.8, 0.2, 0.2);
+    }
+    if flags.contains(MapFeatures::EnemyExit) {
+        return Color::srgb(0.8, 0.6, 0.1);
+    }
+    if flags.contains(MapFeatures::ImpassableForPlayers)
+        && flags.contains(MapFeatures::ImpassableForEnemies)
+    {
         return Color::srgb(0.25, 0.22, 0.18); // solid wall — dark brown
     }
     if flags.contains(MapFeatures::ImpassableForPlayers) {
@@ -132,23 +164,37 @@ fn tile_color(raw: u64) -> Color {
     }
 
     // Terrain type.
-    if flags.contains(MapFeatures::Water)  { return Color::srgb(0.15, 0.35, 0.7); }
-    if flags.contains(MapFeatures::Grass)  { return Color::srgb(0.22, 0.55, 0.22); }
-    if flags.contains(MapFeatures::Floor)  { return Color::srgb(0.28, 0.38, 0.28); }
-    if flags.contains(MapFeatures::Mud)    { return Color::srgb(0.45, 0.32, 0.18); }
-    if flags.contains(MapFeatures::Snow)   { return Color::srgb(0.82, 0.88, 0.92); }
-    if flags.contains(MapFeatures::Rock)   { return Color::srgb(0.38, 0.35, 0.30); }
+    if flags.contains(MapFeatures::Water) {
+        return Color::srgb(0.15, 0.35, 0.7);
+    }
+    if flags.contains(MapFeatures::Grass) {
+        return Color::srgb(0.22, 0.55, 0.22);
+    }
+    if flags.contains(MapFeatures::Floor) {
+        return Color::srgb(0.28, 0.38, 0.28);
+    }
+    if flags.contains(MapFeatures::Mud) {
+        return Color::srgb(0.45, 0.32, 0.18);
+    }
+    if flags.contains(MapFeatures::Snow) {
+        return Color::srgb(0.82, 0.88, 0.92);
+    }
+    if flags.contains(MapFeatures::Rock) {
+        return Color::srgb(0.38, 0.35, 0.30);
+    }
 
     Color::srgb(0.4, 0.4, 0.5)
 }
 
 fn cursor_to_tile(window: &Window, w: usize, h: usize) -> Option<(i32, i32)> {
     let cursor = window.cursor_position()?;
-    let grid_left = (window.width()  * 0.5 - w as f32 * CELL_SIZE * 0.5).round();
-    let grid_top  = (window.height() * 0.5 - h as f32 * CELL_SIZE * 0.5).round();
+    let grid_left = (window.width() * 0.5 - w as f32 * CELL_SIZE * 0.5).round();
+    let grid_top = (window.height() * 0.5 - h as f32 * CELL_SIZE * 0.5).round();
     let col = ((cursor.x - grid_left) / CELL_SIZE).floor() as i32;
-    let row = ((cursor.y - grid_top)  / CELL_SIZE).floor() as i32;
-    if col < 0 || row < 0 || col >= w as i32 || row >= h as i32 { return None; }
+    let row = ((cursor.y - grid_top) / CELL_SIZE).floor() as i32;
+    if col < 0 || row < 0 || col >= w as i32 || row >= h as i32 {
+        return None;
+    }
     Some((col, row))
 }
 
@@ -158,18 +204,22 @@ pub fn update_hover_highlight(
     windows: Query<&Window, With<PrimaryWindow>>,
     mut highlight_q: Query<(&mut Node, &mut Visibility), With<HoverHighlight>>,
 ) {
-    let Ok((mut node, mut vis)) = highlight_q.single_mut() else { return };
+    let Ok((mut node, mut vis)) = highlight_q.single_mut() else {
+        return;
+    };
     let Ok(window) = windows.single() else { return };
 
     match cursor_to_tile(window, state.width, state.height) {
         Some((col, row)) => {
-            let grid_left = (window.width()  * 0.5 - state.width  as f32 * CELL_SIZE * 0.5).round();
-            let grid_top  = (window.height() * 0.5 - state.height as f32 * CELL_SIZE * 0.5).round();
+            let grid_left = (window.width() * 0.5 - state.width as f32 * CELL_SIZE * 0.5).round();
+            let grid_top = (window.height() * 0.5 - state.height as f32 * CELL_SIZE * 0.5).round();
             node.left = Val::Px(grid_left + col as f32 * CELL_SIZE);
-            node.top  = Val::Px(grid_top  + row  as f32 * CELL_SIZE);
+            node.top = Val::Px(grid_top + row as f32 * CELL_SIZE);
             *vis = Visibility::Visible;
         }
-        None => { *vis = Visibility::Hidden; }
+        None => {
+            *vis = Visibility::Hidden;
+        }
     }
 }
 
@@ -180,16 +230,144 @@ pub fn handle_grid_click(
     mouse: Res<ButtonInput<MouseButton>>,
     windows: Query<&Window, With<PrimaryWindow>>,
 ) {
-    let (left, right) = (mouse.pressed(MouseButton::Left), mouse.pressed(MouseButton::Right));
-    if !left && !right { return; }
-
     let Ok(window) = windows.single() else { return };
-    let Some((col, row)) = cursor_to_tile(window, state.width, state.height) else { return };
+
+    if state.tool == EditorTool::House {
+        handle_house_polygon_input(&mut state, &mouse, window);
+        return;
+    }
+
+    let (left, right) = (
+        mouse.pressed(MouseButton::Left),
+        mouse.pressed(MouseButton::Right),
+    );
+    if !left && !right {
+        return;
+    }
+
+    let Some((col, row)) = cursor_to_tile(window, state.width, state.height) else {
+        return;
+    };
 
     let erasing = right || (left && state.erase_mode);
     if erasing {
         state.erase_at(col, row);
     } else if left {
         state.place_at(col, row);
+    }
+}
+
+/// Click-to-place nodes for the House tool: each click adds a (perpendicular-snapped)
+/// polygon node, clicking back on the first node closes and resolves the shape, and
+/// right-click cancels the in-progress polygon.
+fn handle_house_polygon_input(
+    state: &mut MapEditorState,
+    mouse: &ButtonInput<MouseButton>,
+    window: &Window,
+) {
+    if mouse.just_pressed(MouseButton::Right) {
+        state.cancel_house_polygon();
+        return;
+    }
+    if mouse.just_pressed(MouseButton::Left) {
+        let Some((col, row)) = cursor_to_tile(window, state.width, state.height) else {
+            return;
+        };
+        state.house_add_point(col, row);
+    }
+}
+
+#[derive(Component)]
+pub struct HousePreviewMarker;
+
+/// Draws a marker at each node of the in-progress House polygon, plus a thin bar along
+/// each edge so far, so the shape being drawn is actually legible rather than a scatter
+/// of dots. Rebuilt fresh every frame while the tool is active — editor-only UI, not a
+/// hot path.
+pub fn update_house_preview(
+    state: Res<MapEditorState>,
+    mut commands: Commands,
+    windows: Query<&Window, With<PrimaryWindow>>,
+    markers: Query<Entity, With<HousePreviewMarker>>,
+) {
+    for e in markers.iter() {
+        commands.entity(e).despawn();
+    }
+    if state.house_points.is_empty() {
+        return;
+    }
+
+    let Ok(window) = windows.single() else { return };
+    let grid_left = (window.width() * 0.5 - state.width as f32 * CELL_SIZE * 0.5).round();
+    let grid_top = (window.height() * 0.5 - state.height as f32 * CELL_SIZE * 0.5).round();
+    let cell_center = |x: i32, y: i32| {
+        (
+            grid_left + x as f32 * CELL_SIZE + CELL_SIZE * 0.5,
+            grid_top + y as f32 * CELL_SIZE + CELL_SIZE * 0.5,
+        )
+    };
+
+    const EDGE_COLOR: Color = Color::srgba(1.0, 1.0, 1.0, 0.8);
+    const NODE_SIZE: f32 = 12.0;
+    const EDGE_THICKNESS: f32 = 3.0;
+
+    // Edges between consecutive placed nodes (the closing edge is only implied once the
+    // polygon is actually resolved, so it isn't drawn here).
+    for pair in state.house_points.windows(2) {
+        let [p0, p1] = pair else { continue };
+        let (x0, y0) = cell_center(p0.0, p0.1);
+        let (x1, y1) = cell_center(p1.0, p1.1);
+        let (left, top, width, height) = if (x1 - x0).abs() >= (y1 - y0).abs() {
+            (
+                x0.min(x1),
+                y0 - EDGE_THICKNESS * 0.5,
+                (x1 - x0).abs(),
+                EDGE_THICKNESS,
+            )
+        } else {
+            (
+                x0 - EDGE_THICKNESS * 0.5,
+                y0.min(y1),
+                EDGE_THICKNESS,
+                (y1 - y0).abs(),
+            )
+        };
+        commands.spawn((
+            HousePreviewMarker,
+            StateMarker,
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(left),
+                top: Val::Px(top),
+                width: Val::Px(width),
+                height: Val::Px(height),
+                ..Default::default()
+            },
+            BackgroundColor(EDGE_COLOR),
+        ));
+    }
+
+    for (i, &(x, y)) in state.house_points.iter().enumerate() {
+        let color = if i == 0 {
+            Color::srgba(1.0, 0.9, 0.2, 1.0)
+        } else {
+            Color::srgba(1.0, 1.0, 1.0, 1.0)
+        };
+        let (cx, cy) = cell_center(x, y);
+        commands.spawn((
+            HousePreviewMarker,
+            StateMarker,
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(cx - NODE_SIZE * 0.5),
+                top: Val::Px(cy - NODE_SIZE * 0.5),
+                width: Val::Px(NODE_SIZE),
+                height: Val::Px(NODE_SIZE),
+                border: UiRect::all(Val::Px(1.5)),
+                ..Default::default()
+            },
+            BackgroundColor(color),
+            BorderColor::all(Color::BLACK),
+        ));
     }
 }

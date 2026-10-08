@@ -28,6 +28,8 @@ use crate::player::events::building_events::{
     ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode,
 };
 use crate::player::systems::abilities::AbilityInput;
+use crate::player::systems::loadout::{SwitchWeapon, WeaponSelect};
+use crate::player::systems::shoot::ReloadRequest;
 use crate::settings::resources::GameSettings;
 
 /// Marker component for entities controlled by a gamepad.
@@ -42,8 +44,11 @@ pub struct InputGamepad {
 }
 
 impl InputGamepad {
-    fn new(gamepad: Entity) -> Self {
-        InputGamepad { gamepad: Some(gamepad), aim_active: false }
+    const fn new(gamepad: Entity) -> Self {
+        Self {
+            gamepad: Some(gamepad),
+            aim_active: false,
+        }
     }
 }
 
@@ -55,9 +60,9 @@ impl Plugin for GamepadPlugin {
             .register_type::<InputGamepad>()
             .register_type::<WantsGamepad>()
             .add_systems(
-            PreUpdate,
-            assign_gamepads.run_if(in_state(GameState::InGame)),
-        );
+                PreUpdate,
+                assign_gamepads.run_if(in_state(GameState::InGame)),
+            );
         // `gamepad_game_input` itself is part of `StatefulControlPlugin`'s chain, so it is
         // ordered against the movement systems that consume what it writes.
     }
@@ -148,29 +153,46 @@ pub fn gamepad_game_input(
     mut execute_build_ew: MessageWriter<ExecuteBuild>,
     mut change_build_indicator_ew: MessageWriter<ChangeBuildIndicator>,
     mut ability_input: Option<ResMut<AbilityInput>>,
+    mut reload_mw: MessageWriter<ReloadRequest>,
+    mut switch_mw: MessageWriter<SwitchWeapon>,
 ) {
     let yaw = settings.yaw_degrees;
     let dead_zone = bindings.stick_dead_zone;
 
-    for (entity, mut controller, mut input_gamepad, mut aim) in player_query.iter_mut()
-    {
-        let Some(pad_entity) = input_gamepad.gamepad else { continue };
-        let Ok(gamepad) = gamepads.get(pad_entity) else { continue };
+    for (entity, mut controller, mut input_gamepad, mut aim) in player_query.iter_mut() {
+        let Some(pad_entity) = input_gamepad.gamepad else {
+            continue;
+        };
+        let Ok(gamepad) = gamepads.get(pad_entity) else {
+            continue;
+        };
 
         // ── Movement: world-space, camera relative ──────────────────────────
         let left = gamepad.left_stick();
         let moving = left.length() > dead_zone;
         let was_moving = controller.walk_direction.length_squared() > 0.01;
 
-        let move_dir = if moving { stick_to_world(left, yaw) } else { Vec3::ZERO };
+        let move_dir = if moving {
+            stick_to_world(left, yaw)
+        } else {
+            Vec3::ZERO
+        };
         controller.walk_direction = move_dir;
         // The body is steered separately (see face_movement_direction), so no torque.
         controller.torque = Vec3::ZERO;
 
         if moving && !was_moving {
-            anim_ew.write(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Walk));
+            anim_ew.write(AnimationEvent(
+                AnimationEventType::GotoAnimState,
+                entity,
+                AnimationKey::Walk,
+            ));
         } else if !moving && was_moving {
-            anim_ew.write(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Walk));
+            anim_ew.write(AnimationEvent(
+                AnimationEventType::LeaveAnimState,
+                entity,
+                AnimationKey::Walk,
+            ));
         }
 
         // ── Aim: right stick if deflected, else follow the walk direction ───
@@ -193,16 +215,28 @@ pub fn gamepad_game_input(
 
         if gamepad.just_pressed(bindings.build_mode) {
             if in_build_mode {
-                anim_ew.write(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Building));
+                anim_ew.write(AnimationEvent(
+                    AnimationEventType::LeaveAnimState,
+                    entity,
+                    AnimationKey::Building,
+                ));
                 exit_build_ew.write(ExitBuildMode(entity));
             } else {
                 controller.triggers.insert(ControlCommand::Build);
-                anim_ew.write(AnimationEvent(AnimationEventType::GotoAnimState, entity, AnimationKey::Building));
+                anim_ew.write(AnimationEvent(
+                    AnimationEventType::GotoAnimState,
+                    entity,
+                    AnimationKey::Building,
+                ));
                 enter_build_ew.write(EnterBuildMode(entity));
             }
         } else if in_build_mode {
             if gamepad.just_pressed(bindings.exit_build) {
-                anim_ew.write(AnimationEvent(AnimationEventType::LeaveAnimState, entity, AnimationKey::Building));
+                anim_ew.write(AnimationEvent(
+                    AnimationEventType::LeaveAnimState,
+                    entity,
+                    AnimationKey::Building,
+                ));
                 exit_build_ew.write(ExitBuildMode(entity));
             } else if gamepad.just_pressed(bindings.execute_build) {
                 execute_build_ew.write(ExecuteBuild(entity));
@@ -214,6 +248,34 @@ pub fn gamepad_game_input(
             if gamepad.just_pressed(bindings.prev_build_item) {
                 change_build_indicator_ew.write(ChangeBuildIndicator(entity, -1));
             }
+        }
+
+        // ── Interact (revive) ───────────────────────────────────────────────
+        if gamepad.pressed(bindings.interact) {
+            controller.triggers.insert(ControlCommand::Interact);
+        } else {
+            controller.triggers.remove(&ControlCommand::Interact);
+        }
+
+        if gamepad.just_pressed(bindings.throw_special) {
+            controller.triggers.insert(ControlCommand::ThrowSpecial);
+        }
+
+        // ── Weapons ─────────────────────────────────────────────────────────
+        if gamepad.just_pressed(bindings.reload) {
+            reload_mw.write(ReloadRequest(entity));
+        }
+        if gamepad.just_pressed(bindings.next_weapon) {
+            switch_mw.write(SwitchWeapon {
+                player: entity,
+                select: WeaponSelect::Next,
+            });
+        }
+        if gamepad.just_pressed(bindings.prev_weapon) {
+            switch_mw.write(SwitchWeapon {
+                player: entity,
+                select: WeaponSelect::Prev,
+            });
         }
 
         // ── Ability ─────────────────────────────────────────────────────────
@@ -244,7 +306,10 @@ mod tests {
     fn stick_up_walks_away_from_the_camera() {
         // Default yaw 0: the camera sits on +Z looking toward -Z, so up the screen is -Z.
         let dir = stick_to_world(Vec2::new(0.0, 1.0), 0.0);
-        assert!((dir - Vec3::NEG_Z).length() < 1e-5, "expected -Z, got {dir:?}");
+        assert!(
+            (dir - Vec3::NEG_Z).length() < 1e-5,
+            "expected -Z, got {dir:?}"
+        );
     }
 
     #[test]
@@ -257,12 +322,18 @@ mod tests {
     fn yaw_rotates_the_movement_basis_with_the_camera() {
         // Camera swung 90 deg around: screen-up now points down -X.
         let dir = stick_to_world(Vec2::new(0.0, 1.0), 90.0);
-        assert!((dir - Vec3::NEG_X).length() < 1e-4, "expected -X, got {dir:?}");
+        assert!(
+            (dir - Vec3::NEG_X).length() < 1e-4,
+            "expected -X, got {dir:?}"
+        );
     }
 
     #[test]
     fn stick_magnitude_is_preserved_for_analog_speed() {
         let dir = stick_to_world(Vec2::new(0.0, 0.5), 0.0);
-        assert!((dir.length() - 0.5).abs() < 1e-5, "half deflection stays half speed");
+        assert!(
+            (dir.length() - 0.5).abs() < 1e-5,
+            "half deflection stays half speed"
+        );
     }
 }

@@ -1,9 +1,9 @@
-use bevy::math::Vec3;
-use bevy::prelude::*;
-use std::collections::HashSet;
-use bevy_inspector_egui::InspectorOptions;
 use crate::animation::animation_plugin::AnimationKey;
 use crate::general::components::map_components::CoolDown;
+use bevy::math::Vec3;
+use bevy::prelude::*;
+use bevy_inspector_egui::InspectorOptions;
+use std::collections::HashSet;
 
 #[derive(Component, Reflect)]
 pub struct InputKeyboard;
@@ -12,9 +12,12 @@ pub struct InputKeyboard;
 pub enum ControlCommand {
     Throw,
     Jump,
-    Build
+    Build,
+    /// Held: revive a downed teammate (E / Circle).
+    Interact,
+    /// One-shot: lob the current throwable (G / L1). Consumed by `throw_special`.
+    ThrowSpecial,
 }
-
 
 #[derive(Hash, PartialEq, Eq, Copy, Clone, Debug, Reflect, Default)]
 #[reflect(Default)]
@@ -22,7 +25,7 @@ pub enum ControlCommand {
 pub enum ControlRotation {
     #[default]
     Left,
-    Right
+    Right,
 }
 
 #[derive(Hash, PartialEq, Eq, Copy, Clone, Debug, Reflect, Default)]
@@ -33,7 +36,7 @@ pub enum ControlDirection {
     Forward,
     Backward,
     Left,
-    Right
+    Right,
 }
 
 pub trait Opposite {
@@ -43,10 +46,10 @@ pub trait Opposite {
 impl Opposite for ControlDirection {
     fn opposite(&self) -> Self {
         match self {
-            ControlDirection::Forward => ControlDirection::Backward,
-            ControlDirection::Backward => ControlDirection::Forward,
-            ControlDirection::Left => ControlDirection::Right,
-            ControlDirection::Right => ControlDirection::Left,
+            Self::Forward => Self::Backward,
+            Self::Backward => Self::Forward,
+            Self::Left => Self::Right,
+            Self::Right => Self::Left,
         }
     }
 }
@@ -54,21 +57,21 @@ impl Opposite for ControlDirection {
 impl Opposite for ControlRotation {
     fn opposite(&self) -> Self {
         match self {
-            ControlRotation::Left => ControlRotation::Right,
-            ControlRotation::Right => ControlRotation::Left,
+            Self::Left => Self::Right,
+            Self::Right => Self::Left,
         }
     }
 }
 
 #[derive(Component, Default, Reflect, InspectorOptions)]
- #[type_path = "avs"]
+#[type_path = "avs"]
 pub struct CharacterControl {
     pub triggers: HashSet<ControlCommand>,
     pub rotations: HashSet<ControlRotation>,
     pub directions: HashSet<ControlDirection>,
     pub walk_direction: Vec3,
     pub torque: Vec3,
-    pub has_thrown:bool,
+    pub has_thrown: bool,
     pub speed: f32,
     pub max_speed: f32,
     pub turn_speed: f32,
@@ -78,7 +81,7 @@ pub struct CharacterControl {
 }
 
 impl CharacterControl {
-    pub fn new(speed: f32, turn_speed: f32, rate_of_fire_per_minute: f32, ) -> Self {
+    pub fn new(speed: f32, turn_speed: f32, rate_of_fire_per_minute: f32) -> Self {
         Self {
             triggers: HashSet::default(),
             rotations: HashSet::default(),
@@ -107,21 +110,19 @@ impl CoolDown for CharacterControl {
     }
 }
 
-
 #[derive(Component, Default, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "avs"]
+#[type_path = "avs"]
 pub struct DynamicMovement;
 
-
 #[derive(Component, Default, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "avs"]
+#[type_path = "avs"]
 pub struct KinematicMovement;
 
 #[derive(Component, Reflect)]
 #[reflect(Component, Default)]
- #[type_path = "avs"]
+#[type_path = "avs"]
 pub struct CharacterState {
     pub state: Vec<AnimationKey>,
 }
@@ -132,13 +133,21 @@ impl CharacterState {
     /// WalkShoot) so callers only need to push/pop simple intent keys.
     pub fn resolve(&self) -> AnimationKey {
         let has = |k: AnimationKey| self.state.contains(&k);
-        if has(AnimationKey::Death)    { return AnimationKey::Death; }
-        if has(AnimationKey::Building) { return AnimationKey::Building; }
-        if has(AnimationKey::Duck)     { return AnimationKey::Duck; }
+        if has(AnimationKey::Death) {
+            return AnimationKey::Death;
+        }
+        if has(AnimationKey::Building) {
+            return AnimationKey::Building;
+        }
+        if has(AnimationKey::Reload) {
+            return AnimationKey::Reload;
+        }
+        if has(AnimationKey::Duck) {
+            return AnimationKey::Duck;
+        }
         match (has(AnimationKey::Walk), has(AnimationKey::Throwing)) {
-            (true,  true)  => AnimationKey::Throwing,
-            (true,  false) => AnimationKey::Walk,
-            (false, true)  => AnimationKey::Throwing,
+            (_, true) => AnimationKey::Throwing,
+            (true, false) => AnimationKey::Walk,
             (false, false) => AnimationKey::Idle,
         }
     }
@@ -151,7 +160,7 @@ impl CharacterState {
             self.state.push(state);
         }
         let next = self.resolve();
-        if next != prev { Some(next) } else { None }
+        if next == prev { None } else { Some(next) }
     }
 
     /// Remove an intent state.  Returns the resolved clip key if the visible
@@ -163,7 +172,7 @@ impl CharacterState {
             self.state.push(AnimationKey::Idle);
         }
         let next = self.resolve();
-        if next != prev { Some(next) } else { None }
+        if next == prev { None } else { Some(next) }
     }
 }
 
