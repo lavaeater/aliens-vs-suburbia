@@ -7,31 +7,37 @@ pub struct RightHand {
 }
 
 #[derive(Component, Debug, Reflect)]
-#[reflect(Component)]pub struct LeftHand {
+#[reflect(Component)]
+pub struct LeftHand {
     pub offset: Vec3,
 }
 
 #[derive(Component, Debug, Reflect)]
-#[reflect(Component)]pub struct LeftShoulder {
+#[reflect(Component)]
+pub struct LeftShoulder {
     pub offset: Vec3,
 }
 
 #[derive(Component, Debug, Reflect)]
-#[reflect(Component)]pub struct RightShoulder {
+#[reflect(Component)]
+pub struct RightShoulder {
     pub offset: Vec3,
 }
 
 #[derive(Component, Debug, Reflect)]
-#[reflect(Component)]pub struct GunBarrel {
+#[reflect(Component)]
+pub struct GunBarrel {
     pub offset: Vec3,
 }
 
 #[derive(Component, Debug, Reflect)]
-#[reflect(Component)]pub struct GunGrip {
+#[reflect(Component)]
+pub struct GunGrip {
     pub offset: Vec3,
 }
 
 #[derive(Component, Debug, Reflect)]
-#[reflect(Component)]pub struct GunHandGuard {
+#[reflect(Component)]
+pub struct GunHandGuard {
     pub offset: Vec3,
 }

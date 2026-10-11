@@ -45,6 +45,7 @@ pub(crate) mod poly_pizza;
 pub(crate) mod settings;
 pub(crate) mod towers;
 pub(crate) mod ui;
+pub mod skein;
 
 fn create_map(
     seed: Option<u64>,
