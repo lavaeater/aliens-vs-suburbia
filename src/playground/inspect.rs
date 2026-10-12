@@ -51,7 +51,7 @@ const MAX_PITCH: f32 = 1.55;
 const DOLLY_STEP: f32 = 1.15;
 /// Wheel notches per unit of Ctrl+drag motion.
 const DRAG_DOLLY_SPEED: f32 = 0.02;
-const MIN_DISTANCE: f32 = 0.05;
+const MIN_DISTANCE: f32 = 0.02;
 const MAX_DISTANCE: f32 = 60.0;
 /// Share of the pane's height the character fills when framed: head to toe, a margin.
 const FRAME_CHARACTER_FILL: f32 = 0.8;
@@ -65,6 +65,9 @@ const FALLBACK_RADIUS: f32 = 1.0;
 /// Pixel-unit wheels (touchpads) report far larger numbers than line-unit ones.
 const PIXELS_PER_NOTCH: f32 = 40.0;
 const FOV_DEGREES: f32 = 40.0;
+/// Close enough to put the lens against a fingertip without clipping it.
+const NEAR_PLANE: f32 = 0.005;
+const FAR_PLANE: f32 = 500.0;
 /// Looking a little down on the character when the camera is switched on.
 const START_PITCH: f32 = 0.35;
 
@@ -249,14 +252,16 @@ pub fn drive_orbit_camera(
         return;
     };
 
-    // Only perspective is useful for judging depth. Re-asserted every frame because the
-    // F1 camera panel and the zoom keys rewrite the projection whenever they touch
-    // `GameSettings`.
-    if !matches!(*projection, Projection::Perspective(_)) {
+    // Our own lens, not merely *a* perspective one: the game may already run in
+    // perspective with a far-off near plane and a telephoto FOV (`game-settings.ron` has
+    // 2 m and 10 degrees), which clips a close-up and throws off the pan and framing
+    // maths. Re-asserted every frame because the F1 camera panel and the zoom keys
+    // rewrite the projection whenever they touch `GameSettings`.
+    if !is_inspect_lens(&projection) {
         *projection = Projection::Perspective(PerspectiveProjection {
             fov: FOV_DEGREES.to_radians(),
-            near: 0.01,
-            far: 500.0,
+            near: NEAR_PLANE,
+            far: FAR_PLANE,
             ..default()
         });
     }
@@ -314,6 +319,15 @@ pub fn drive_orbit_camera(
     }
 
     *transform = orbit.transform();
+}
+
+/// Already showing the inspect lens. Checked rather than written blindly, so the camera's
+/// projection is not marked changed every frame.
+fn is_inspect_lens(projection: &Projection) -> bool {
+    matches!(projection, Projection::Perspective(p)
+        if (p.fov - FOV_DEGREES.to_radians()).abs() < 1e-4
+            && (p.near - NEAR_PLANE).abs() < 1e-6
+            && (p.far - FAR_PLANE).abs() < 1e-3)
 }
 
 /// What "frame selected" can aim at: the hardpoint open in the editor, or the character.
@@ -537,6 +551,28 @@ mod tests {
         assert!((large / small - 4.0).abs() < 1e-4);
         let visible_half_height = small * (FOV_DEGREES.to_radians() * 0.5).tan();
         assert!((0.2 / visible_half_height - FRAME_CHARACTER_FILL).abs() < 1e-4);
+    }
+
+    /// The game's own perspective (2 m near plane, 10 degree FOV) is not good enough: it
+    /// clips every close-up. Only the exact inspect lens passes.
+    #[test]
+    fn only_the_inspect_lens_counts_as_the_inspect_lens() {
+        let game = Projection::Perspective(PerspectiveProjection {
+            fov: 10.0_f32.to_radians(),
+            near: 2.0,
+            ..default()
+        });
+        assert!(!is_inspect_lens(&game));
+        assert!(!is_inspect_lens(&Projection::Orthographic(
+            OrthographicProjection::default_3d()
+        )));
+        let ours = Projection::Perspective(PerspectiveProjection {
+            fov: FOV_DEGREES.to_radians(),
+            near: NEAR_PLANE,
+            far: FAR_PLANE,
+            ..default()
+        });
+        assert!(is_inspect_lens(&ours));
     }
 
     #[test]
