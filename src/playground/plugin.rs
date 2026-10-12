@@ -6,6 +6,7 @@
 
 use bevy::app::{App, Plugin, Update};
 use bevy::prelude::*;
+use bevy::transform::TransformSystems;
 
 use crate::alien::wave_manager::WaveManager;
 use crate::game_state::GameState;
@@ -20,6 +21,10 @@ use crate::playground::dummies::{respawn_dummies, spawn_dummy_posts};
 use crate::playground::hardpoints::{
     HardpointEditor, PlaygroundWeaponDef, apply_grip_to_equipped_weapon,
     apply_weapon_def_to_equipped_weapon, sync_weapon_def,
+};
+use crate::playground::inspect::{
+    drive_orbit_camera, hold_player_still, hold_rest_pose, inspect_keys, inspecting,
+    orbit_camera_active, rest_pose_held, switch_orbit_camera,
 };
 use crate::playground::models::{PlaygroundModels, swap_player_model};
 use crate::playground::state::in_playground;
@@ -84,6 +89,36 @@ impl Plugin for PlaygroundPlugin {
                     refresh_animation_panel_on_def_change,
                     rebuild_animation_panel,
                 )
+                    .run_if(in_state(GameState::InGame))
+                    .run_if(in_playground),
+            )
+            // Inspect mode -- see `inspect.rs` for why each lands where it does.
+            .add_systems(
+                Update,
+                (inspect_keys, switch_orbit_camera)
+                    .chain()
+                    .run_if(in_state(GameState::InGame))
+                    .run_if(in_playground),
+            )
+            .add_systems(
+                PreUpdate,
+                hold_player_still
+                    .after(crate::control::mouse_aim::mouse_aim)
+                    .before(crate::general::systems::dynamic_movement_system::dynamic_movement)
+                    .run_if(in_state(GameState::InGame))
+                    .run_if(in_playground)
+                    .run_if(inspecting),
+            )
+            .add_systems(
+                PostUpdate,
+                (
+                    drive_orbit_camera.run_if(orbit_camera_active),
+                    // Last word on the bones: after the twist and the arm and leg IK.
+                    hold_rest_pose
+                        .after(crate::player::systems::leg_ik::apply_leg_ik)
+                        .run_if(rest_pose_held),
+                )
+                    .before(TransformSystems::Propagate)
                     .run_if(in_state(GameState::InGame))
                     .run_if(in_playground),
             );

@@ -14,6 +14,7 @@ pub mod debug;
 pub mod dummies;
 pub mod gltf_info;
 pub mod hardpoints;
+pub mod inspect;
 pub mod models;
 pub mod plugin;
 pub mod prefs;

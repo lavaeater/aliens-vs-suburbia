@@ -133,6 +133,13 @@ pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
                 &hint,
             ));
         });
+        left.with_child(|c| {
+            c.insert_bundle(lava_ui_builder::label(
+                "Orbit camera: MMB orbit, Shift+MMB pan, Ctrl+MMB / wheel zoom, \
+                 F frame hardpoint, Home frame character",
+                &hint,
+            ));
+        });
 
         // ── Debug overlays ───────────────────────────────────────────────
         section_header(left, "DEBUG VIEW", &section);
@@ -419,6 +426,8 @@ pub fn rebuild_debug_toggles(
         (debug.skeleton, "skeleton"),
         (debug.hardpoints, "hardpoint frames"),
         (debug.gait, "gait targets"),
+        (debug.orbit_camera, "orbit camera  [F11]"),
+        (debug.rest_pose, "rest pose (T-pose)  [F12]"),
     ];
     commands.entity(container).with_children(|parent| {
         for (index, (on, label)) in rows.into_iter().enumerate() {
@@ -435,7 +444,9 @@ pub fn rebuild_debug_toggles(
                         }
                         1 => debug.toggle_skeleton(),
                         2 => debug.toggle_hardpoints(),
-                        _ => debug.toggle_gait(),
+                        3 => debug.toggle_gait(),
+                        4 => debug.toggle_orbit_camera(),
+                        _ => debug.toggle_rest_pose(),
                     }
                 },
             );

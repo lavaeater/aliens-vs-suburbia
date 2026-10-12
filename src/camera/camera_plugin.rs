@@ -4,7 +4,7 @@ use crate::game_state::GameState;
 use crate::settings::resources::GameSettings;
 use bevy::app::{App, Plugin, PostUpdate, Update};
 use bevy::ecs::schedule::SystemCondition;
-use bevy::prelude::{IntoScheduleConfigs, OnEnter, ResMut, in_state, resource_changed};
+use bevy::prelude::{IntoScheduleConfigs, OnEnter, ResMut, in_state, not, resource_changed};
 use bevy::transform::TransformSystems;
 
 pub struct StatefulCameraPlugin;
@@ -25,9 +25,11 @@ impl Plugin for StatefulCameraPlugin {
                 PostUpdate,
                 // Physics runs in `FixedPostUpdate`, so the only ordering that matters here
                 // is landing before propagation; later and the camera renders a frame stale.
+                // The playground's orbit camera takes the camera over while it is on.
                 camera_follow
                     .before(TransformSystems::Propagate)
-                    .run_if(in_state(GameState::InGame)),
+                    .run_if(in_state(GameState::InGame))
+                    .run_if(not(crate::playground::inspect::orbit_camera_active)),
             )
             .add_systems(
                 Update,

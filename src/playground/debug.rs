@@ -32,6 +32,10 @@ pub struct PlaygroundDebug {
     /// The walk's footfalls: where each foot is going, where it is nailed, and how far the
     /// legs can reach.
     pub gait: bool,
+    /// Blender-style orbit camera in place of the follow camera. See `inspect`.
+    pub orbit_camera: bool,
+    /// Hold the character in its rest pose (the T-pose on most rigs). See `inspect`.
+    pub rest_pose: bool,
     pub ui_dirty: bool,
 }
 
@@ -49,6 +53,21 @@ impl PlaygroundDebug {
     pub const fn toggle_gait(&mut self) {
         self.gait = !self.gait;
         self.ui_dirty = true;
+    }
+
+    pub const fn toggle_orbit_camera(&mut self) {
+        self.orbit_camera = !self.orbit_camera;
+        self.ui_dirty = true;
+    }
+
+    pub const fn toggle_rest_pose(&mut self) {
+        self.rest_pose = !self.rest_pose;
+        self.ui_dirty = true;
+    }
+
+    /// Either inspect tool is on, so the character should hold still for it.
+    pub const fn inspecting(&self) -> bool {
+        self.orbit_camera || self.rest_pose
     }
 }
 
