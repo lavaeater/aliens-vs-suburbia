@@ -1,3 +1,8 @@
+// Proving `Sync` for bevy_render's `ViewTarget` walks deep into wgpu's types and passes
+// the default limit of 128; newer nightlies flag that as `recursion_depth_exceeding_limit`
+// (rust-lang/rust#159228), due to become a hard error. Compile-time only.
+#![recursion_limit = "256"]
+
 use crate::ai::components::approach_and_attack_player_components::ApproachAndAttackPlayerData;
 use crate::ai::components::avoid_wall_components::AvoidWallsData;
 use crate::game_state::game_state_plugin::GamePlugin;
