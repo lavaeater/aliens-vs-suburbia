@@ -38,6 +38,9 @@ pub struct PlaygroundModels {
     /// The def the player is currently wearing.
     pub selected: Option<String>,
     pub list_dirty: bool,
+    /// Separate from `list_dirty`: the two lists rebuild in different systems, and with a
+    /// shared flag whichever ran first cleared it and the other list stayed empty.
+    pub weapon_list_dirty: bool,
 
     /// Def paths of every weapon, sorted. Any of them can be handed to any character —
     /// that is the whole promise of hardpoints, and this is where it gets tried.
@@ -90,6 +93,7 @@ impl PlaygroundModels {
             .cloned()
             .collect();
         self.list_dirty = true;
+        self.weapon_list_dirty = true;
     }
 
     pub fn refresh_browser(&mut self) {

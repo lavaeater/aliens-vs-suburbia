@@ -79,6 +79,10 @@ pub struct AnimationContainer;
 ///
 /// Generous on purpose: the left pane scrolls as a whole, so a long list costs nothing but
 /// a scroll, and the old 220px cut the model list to about four rows.
+///
+/// Every list also gets `flex_shrink = 0`. A scroll container's automatic minimum height
+/// is zero, so once the pane overflows, flexbox shrinks the lists instead of letting the
+/// pane scroll - and the model list squashes down to nothing you can click.
 const LIST_MAX_HEIGHT: f32 = 420.0;
 
 pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
@@ -164,6 +168,7 @@ pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
                 .modify_node(|mut n| {
                     n.align_self = AlignSelf::Stretch;
                     n.max_height = Val::Px(LIST_MAX_HEIGHT);
+                    n.flex_shrink = 0.0;
                     n.overflow = Overflow::scroll_y();
                 });
         });
@@ -180,6 +185,7 @@ pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
                 .modify_node(|mut n| {
                     n.align_self = AlignSelf::Stretch;
                     n.max_height = Val::Px(LIST_MAX_HEIGHT);
+                    n.flex_shrink = 0.0;
                     n.overflow = Overflow::scroll_y();
                 });
         });
@@ -209,6 +215,7 @@ pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
                 .modify_node(|mut n| {
                     n.align_self = AlignSelf::Stretch;
                     n.max_height = Val::Px(LIST_MAX_HEIGHT);
+                    n.flex_shrink = 0.0;
                     n.min_height = Val::Px(120.0);
                     n.overflow = Overflow::scroll_y();
                 });
@@ -231,6 +238,7 @@ pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
                 .modify_node(|mut n| {
                     n.align_self = AlignSelf::Stretch;
                     n.max_height = Val::Px(LIST_MAX_HEIGHT);
+                    n.flex_shrink = 0.0;
                     n.overflow = Overflow::scroll_y();
                 });
         });
@@ -254,6 +262,7 @@ pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
                 .modify_node(|mut n| {
                     n.align_self = AlignSelf::Stretch;
                     n.max_height = Val::Px(LIST_MAX_HEIGHT);
+                    n.flex_shrink = 0.0;
                     n.overflow = Overflow::scroll_y();
                 });
         });
@@ -1068,11 +1077,12 @@ pub fn rebuild_model_list(
     if !models.list_dirty {
         return;
     }
-    models.list_dirty = false;
-
+    // Cleared only once there is somewhere to draw, so a frame without the container
+    // retries instead of leaving the list empty for the session.
     let Ok(container) = container_q.single() else {
         return;
     };
+    models.list_dirty = false;
     commands.entity(container).despawn_related::<Children>();
 
     let defs = models.defs.clone();
@@ -1168,7 +1178,7 @@ pub fn rebuild_weapon_list(
     });
     // Follows both a model swap (which changes what is equipped) and the list itself.
     let changed = *last != equipped;
-    if !models.list_dirty && !changed {
+    if !models.weapon_list_dirty && !changed {
         return;
     }
     last.clone_from(&equipped);
@@ -1185,7 +1195,7 @@ pub fn rebuild_weapon_list(
             crate::assets::asset_definition::ModelType::Player(_)
         )
     });
-    models.list_dirty = false;
+    models.weapon_list_dirty = false;
 
     commands.entity(container).with_children(|parent| {
         if !is_character {
@@ -1248,7 +1258,7 @@ fn equip_weapon(
         Some(path) => format!("equipped {}", def_stem(path)),
         None => "unequipped".to_string(),
     };
-    models.list_dirty = true;
+    models.weapon_list_dirty = true;
     if let Some(worn) = models.selected.clone() {
         models.select(&worn);
     }
