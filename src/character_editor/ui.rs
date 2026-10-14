@@ -1,7 +1,7 @@
-//! The character editor's two-pane shell: a tweaking panel on the left, the live game on the
-//! right.
+//! The character editor's panels: what fills the containers `shell.rs` lays out, plus the
+//! viewport clipping.
 //!
-//! The right pane is not a separate render — it is the ordinary game camera with its
+//! The game pane is not a separate render — it is the ordinary game camera with its
 //! `viewport` clipped to the pane's rectangle, the same trick the asset browser uses in
 //! `asset_browser::viewer::sync_viewer_viewport`. That keeps every gameplay system,
 //! including the camera follow, working exactly as it does full-screen.
@@ -9,22 +9,19 @@
 use bevy::gizmos::config::GizmoConfigStore;
 use bevy::prelude::*;
 use bevy::ui_widgets::Activate;
-use lava_ui_builder::{LavaTheme, TextTheme, UIBuilder};
 
 use crate::camera::components::GameCamera;
-use crate::game_state::GameState;
 use bevy::ecs::relationship::RelatedSpawnerCommands;
 use bevy::ecs::system::EntityCommands;
 use lava_ui_builder::InteractionPalette;
 
 use crate::animation::animation_plugin::{AnimationEvent, AnimationEventType, AnimationKey};
-use crate::player::components::Player;
 use crate::character_editor::animation::{
     AnimationEditor, PLAYABLE_KEYS, bind, resolution_label, tag_paths, unbind,
 };
 use crate::character_editor::debug::{EditorOverlays, toggle_physics_gizmos};
 use crate::character_editor::doc::{
-    ConfirmAction, DocBar, EditorDoc, WeaponDoc, perform, request, save_all,
+    ConfirmAction, DocBar, Docs, EditorDoc, EditorFocus, PropDoc, SideDocs, Subject, WeaponDoc,
 };
 use crate::character_editor::hardpoints::{
     COARSE_ROTATION, COARSE_TRANSLATION, FINE_ROTATION, FINE_TRANSLATION, HardpointEditor,
@@ -33,18 +30,13 @@ use crate::character_editor::hardpoints::{
 use crate::character_editor::models::{
     EditorLibrary, ImportKind, add_animation_source, classify, def_stem,
 };
+use crate::character_editor::prop::EditorProp;
 use crate::character_editor::state::EditorSession;
-use crate::ui::collapse::{SectionBody, section_header};
-use crate::ui::spawn_ui::StateMarker;
+use crate::player::components::Player;
 
 /// The right-hand pane. Its computed rectangle drives the game camera's viewport.
 #[derive(Component)]
 pub struct EditorViewportPane;
-
-/// Container for the tweak controls, so later stages can refill it without rebuilding
-/// the whole screen.
-#[derive(Component)]
-pub struct EditorPanel;
 
 /// Holds one clickable row per imported player def.
 #[derive(Component)]
@@ -79,233 +71,6 @@ pub struct HardpointContainer;
 /// Holds the animation key list and tag-binding picker.
 #[derive(Component)]
 pub struct AnimationContainer;
-
-/// How tall a list is allowed to grow before it scrolls inside itself.
-///
-/// Generous on purpose: the left pane scrolls as a whole, so a long list costs nothing but
-/// a scroll, and the old 220px cut the model list to about four rows.
-///
-/// Every list also gets `flex_shrink = 0`. A scroll container's automatic minimum height
-/// is zero, so once the pane overflows, flexbox shrinks the lists instead of letting the
-/// pane scroll - and the model list squashes down to nothing you can click.
-const LIST_MAX_HEIGHT: f32 = 420.0;
-
-pub fn spawn_editor_ui(commands: Commands, theme: Res<LavaTheme>) {
-    let mut ui = UIBuilder::new(commands, Some(theme.clone()));
-
-    ui.component::<StateMarker>()
-        .size_percent(100.0, 100.0)
-        .display_flex()
-        .flex_row();
-
-    let t = theme.text.clone();
-    let hint = TextTheme {
-        label_size: 11.0,
-        label_color: Color::srgb(0.45, 0.6, 0.5),
-        ..t.clone()
-    };
-    let section = TextTheme {
-        label_size: 12.0,
-        label_color: Color::srgb(0.55, 0.8, 0.65),
-        ..t.clone()
-    };
-
-    ui.with_child(|left| {
-        left.modify_node(|mut n| {
-            n.width = Val::Percent(26.0);
-            n.min_width = Val::Px(260.0);
-            n.max_width = Val::Px(520.0);
-            n.height = Val::Percent(100.0);
-            // The pane scrolls as a whole, so an expanded section can be taller than the
-            // window without pushing the sections below it off the bottom for good.
-            n.overflow = Overflow::scroll_y();
-        })
-        .insert(ScrollPosition::default())
-        .display_flex()
-        .flex_column()
-        .gap_px(6.0)
-        .padding_all_px(10.0)
-        .bg_color(Color::srgba(0.04, 0.07, 0.10, 0.97));
-
-        left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::header("Character Editor", &t));
-        });
-        // First under the title, so the unsaved-changes question can never be scrolled
-        // out of sight.
-        left.with_child(|c| {
-            c.display_flex()
-                .flex_column()
-                .gap_px(2.0)
-                .insert(DocBarContainer)
-                .modify_node(|mut n| {
-                    n.align_self = AlignSelf::Stretch;
-                    n.flex_shrink = 0.0;
-                });
-        });
-        left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label(
-                "WASD / left stick to move, mouse / right stick to aim",
-                &hint,
-            ));
-        });
-        left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label(
-                "[F3] physics debug   [F7] torso twist",
-                &hint,
-            ));
-        });
-        left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label(
-                "Orbit camera: MMB orbit, Shift+MMB pan, Ctrl+MMB / wheel zoom, \
-                 F frame hardpoint, Home frame character",
-                &hint,
-            ));
-        });
-
-        // ── Debug overlays ───────────────────────────────────────────────
-        section_header(left, "DEBUG VIEW", &section);
-        left.with_child(|c| {
-            c.display_flex()
-                .flex_column()
-                .gap_px(2.0)
-                .insert(DebugTogglesContainer)
-                .insert(SectionBody("DEBUG VIEW"))
-                .modify_node(|mut n| n.align_self = AlignSelf::Stretch);
-        });
-
-        // ── Imported models ──────────────────────────────────────────────
-        section_header(left, "MODEL", &section);
-        left.with_child(|c| {
-            c.display_flex()
-                .flex_column()
-                .gap_px(2.0)
-                .insert(ModelListContainer)
-                .insert(ScrollPosition::default())
-                .insert(SectionBody("MODEL"))
-                .modify_node(|mut n| {
-                    n.align_self = AlignSelf::Stretch;
-                    n.max_height = Val::Px(LIST_MAX_HEIGHT);
-                    n.flex_shrink = 0.0;
-                    n.overflow = Overflow::scroll_y();
-                });
-        });
-
-        // ── Weapon ───────────────────────────────────────────────────────
-        section_header(left, "WEAPON", &section);
-        left.with_child(|c| {
-            c.display_flex()
-                .flex_column()
-                .gap_px(2.0)
-                .insert(WeaponListContainer)
-                .insert(ScrollPosition::default())
-                .insert(SectionBody("WEAPON"))
-                .modify_node(|mut n| {
-                    n.align_self = AlignSelf::Stretch;
-                    n.max_height = Val::Px(LIST_MAX_HEIGHT);
-                    n.flex_shrink = 0.0;
-                    n.overflow = Overflow::scroll_y();
-                });
-        });
-
-        // ── Import browser ───────────────────────────────────────────────
-        section_header(left, "IMPORT", &section);
-        left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label(
-                "",
-                &TextTheme {
-                    label_size: 10.0,
-                    label_color: Color::srgb(0.5, 0.7, 0.9),
-                    ..t.clone()
-                },
-            ))
-            .insert(ImportPathLabel)
-            .insert(SectionBody("IMPORT"))
-            .modify_node(|mut n| n.overflow = Overflow::clip());
-        });
-        left.with_child(|c| {
-            c.display_flex()
-                .flex_column()
-                .gap_px(2.0)
-                .insert(ImportBrowserContainer)
-                .insert(ScrollPosition::default())
-                .insert(SectionBody("IMPORT"))
-                .modify_node(|mut n| {
-                    n.align_self = AlignSelf::Stretch;
-                    n.max_height = Val::Px(LIST_MAX_HEIGHT);
-                    n.flex_shrink = 0.0;
-                    n.min_height = Val::Px(120.0);
-                    n.overflow = Overflow::scroll_y();
-                });
-        });
-        left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label("", &hint))
-                .insert(ImportStatusLabel)
-                .insert(SectionBody("IMPORT"));
-        });
-
-        // ── Hardpoints ───────────────────────────────────────────────────
-        section_header(left, "HARDPOINTS", &section);
-        left.with_child(|c| {
-            c.display_flex()
-                .flex_column()
-                .gap_px(2.0)
-                .insert(HardpointContainer)
-                .insert(ScrollPosition::default())
-                .insert(SectionBody("HARDPOINTS"))
-                .modify_node(|mut n| {
-                    n.align_self = AlignSelf::Stretch;
-                    n.max_height = Val::Px(LIST_MAX_HEIGHT);
-                    n.flex_shrink = 0.0;
-                    n.overflow = Overflow::scroll_y();
-                });
-        });
-
-        // ── Animation ────────────────────────────────────────────────────
-        section_header(left, "ANIMATION", &section);
-        left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::label(
-                "click a key to play it   [F1] camera  [F2] model",
-                &hint,
-            ))
-            .insert(SectionBody("ANIMATION"));
-        });
-        left.with_child(|c| {
-            c.display_flex()
-                .flex_column()
-                .gap_px(2.0)
-                .insert(AnimationContainer)
-                .insert(ScrollPosition::default())
-                .insert(SectionBody("ANIMATION"))
-                .modify_node(|mut n| {
-                    n.align_self = AlignSelf::Stretch;
-                    n.max_height = Val::Px(LIST_MAX_HEIGHT);
-                    n.flex_shrink = 0.0;
-                    n.overflow = Overflow::scroll_y();
-                });
-        });
-
-        // Spare room for whatever comes next.
-        left.with_child(|c| {
-            c.display_flex()
-                .flex_column()
-                .gap_px(6.0)
-                .insert(EditorPanel)
-                .modify_node(|mut n| n.align_self = AlignSelf::Stretch);
-        });
-    });
-
-    // Right pane: empty node, exists only to give the game camera a rectangle.
-    ui.with_child(|right| {
-        right
-            .modify_node(|mut n| {
-                n.flex_grow = 1.0;
-                n.height = Val::Percent(100.0);
-            })
-            .insert(EditorViewportPane);
-    });
-
-    ui.build();
-}
 
 /// Clip the game camera to the right-hand pane. Runs every frame so the viewport tracks
 /// window resizes and any future resizing of the panel.
@@ -375,6 +140,8 @@ pub fn clear_editor_viewport(mut cameras: Query<&mut Camera, With<GameCamera>>) 
 /// real match and quietly suppress the HUD and the map.
 pub fn end_editor_session(mut commands: Commands) {
     commands.remove_resource::<EditorSession>();
+    // The block only exists while the editor does; a real match never sees it.
+    commands.remove_resource::<crate::control::components::GameInputBlock>();
 }
 
 // ── List rebuilding ───────────────────────────────────────────────────────────
@@ -383,7 +150,7 @@ pub fn end_editor_session(mut commands: Commands) {
 // the character around, so binding Up/Down/Enter here would fight the game.
 
 /// One clickable row. `selected` gives it the highlight colour.
-fn row<'a>(
+pub fn row<'a>(
     parent: &'a mut RelatedSpawnerCommands<ChildOf>,
     text: String,
     selected: bool,
@@ -420,10 +187,14 @@ fn row<'a>(
 /// What the doc bar shows, compared frame to frame so it only rebuilds on a change.
 #[derive(PartialEq, Eq, Default)]
 pub struct DocBarView {
+    subject: Subject,
+    studio: bool,
     character: Option<String>,
     character_dirty: bool,
     weapon: Option<String>,
     weapon_dirty: bool,
+    prop: Option<String>,
+    prop_dirty: bool,
     confirm: Option<ConfirmAction>,
     status: String,
 }
@@ -434,45 +205,71 @@ fn button_strip<'a>(parent: &'a mut RelatedSpawnerCommands<ChildOf>) -> EntityCo
         display: Display::Flex,
         flex_direction: FlexDirection::Row,
         flex_wrap: FlexWrap::Wrap,
+        align_items: AlignItems::Center,
         column_gap: Val::Px(4.0),
         row_gap: Val::Px(2.0),
         ..Default::default()
     })
 }
 
-fn doc_line(name: Option<&str>, kind: &str, dirty: bool) -> (String, Color) {
+fn doc_line(name: Option<&str>, kind: &str, dirty: bool, lead: bool) -> (String, Color) {
+    let marker = if lead { ">" } else { " " };
     match name {
-        None => (format!("{kind}: (none)"), Color::srgb(0.55, 0.6, 0.65)),
+        None => (
+            format!("{marker}{kind}: (none)"),
+            Color::srgb(0.55, 0.6, 0.65),
+        ),
         Some(name) if dirty => (
-            format!("{kind}: {name} *  (unsaved)"),
+            format!("{marker}{kind}: {name} *  (unsaved)"),
             Color::srgb(1.0, 0.8, 0.45),
         ),
-        Some(name) => (format!("{kind}: {name}"), Color::srgb(0.75, 0.9, 0.8)),
+        Some(name) if lead => (
+            format!("{marker}{kind}: {name}"),
+            Color::srgb(0.85, 1.0, 0.9),
+        ),
+        Some(name) => (
+            format!("{marker}{kind}: {name}"),
+            Color::srgb(0.6, 0.75, 0.7),
+        ),
     }
 }
 
-/// The doc bar: what is open, whether it has unsaved edits, Save / Revert / Menu, and the
-/// question asked before anything would throw edits away.
-#[allow(clippy::too_many_lines)]
+/// The doc bar: what is open (the subject marked `>`), whether it has unsaved edits, the
+/// Studio / Live switch, Save / Revert / Menu, and the question asked before anything
+/// would throw edits away.
+#[allow(clippy::too_many_lines, clippy::too_many_arguments)]
 pub fn rebuild_doc_bar(
     doc: Res<EditorDoc>,
     weapon_doc: Res<WeaponDoc>,
+    prop_doc: Res<PropDoc>,
+    focus: Res<EditorFocus>,
+    overlays: Res<EditorOverlays>,
     bar: Res<DocBar>,
     mut commands: Commands,
     container_q: Query<Entity, With<DocBarContainer>>,
     mut last: Local<Option<DocBarView>>,
 ) {
-    if last.is_some() && !doc.is_changed() && !weapon_doc.is_changed() && !bar.is_changed() {
+    let changed = doc.is_changed()
+        || weapon_doc.is_changed()
+        || prop_doc.is_changed()
+        || focus.is_changed()
+        || overlays.is_changed()
+        || bar.is_changed();
+    if last.is_some() && !changed {
         return;
     }
     let Ok(container) = container_q.single() else {
         return;
     };
     let view = DocBarView {
+        subject: focus.subject,
+        studio: overlays.orbit_camera,
         character: doc.name().map(str::to_string),
         character_dirty: doc.is_dirty(),
         weapon: weapon_doc.name().map(str::to_string),
         weapon_dirty: weapon_doc.is_dirty(),
+        prop: prop_doc.name().map(str::to_string),
+        prop_dirty: prop_doc.is_dirty(),
         confirm: bar.confirm.clone(),
         status: bar.status.clone(),
     };
@@ -481,83 +278,107 @@ pub fn rebuild_doc_bar(
     }
 
     commands.entity(container).despawn_related::<Children>();
-    let any_dirty = view.character_dirty || view.weapon_dirty;
+    let any_dirty = view.character_dirty || view.weapon_dirty || view.prop_dirty;
     commands.entity(container).with_children(|parent| {
-        for (name, kind, dirty) in [
-            (view.character.as_deref(), "character", view.character_dirty),
-            (view.weapon.as_deref(), "weapon", view.weapon_dirty),
-        ] {
-            let (text, color) = doc_line(name, kind, dirty);
-            parent.spawn((
-                Text::new(text),
-                TextFont::default().with_font_size(12.0),
-                TextColor(color),
-            ));
-        }
-
         button_strip(parent).with_children(|strip| {
+            let mut lines = vec![
+                (
+                    view.character.as_deref(),
+                    "character",
+                    view.character_dirty,
+                    view.subject == Subject::Character,
+                ),
+                (
+                    view.weapon.as_deref(),
+                    "weapon",
+                    view.weapon_dirty,
+                    view.subject == Subject::Weapon,
+                ),
+            ];
+            if view.subject == Subject::Prop || view.prop_dirty {
+                lines.push((
+                    view.prop.as_deref(),
+                    "model",
+                    view.prop_dirty,
+                    view.subject == Subject::Prop,
+                ));
+            }
+            for (name, kind, dirty, lead) in lines {
+                let (text, color) = doc_line(name, kind, dirty, lead);
+                strip.spawn((
+                    Text::new(text),
+                    TextFont::default().with_font_size(13.0),
+                    TextColor(color),
+                    Node {
+                        margin: UiRect::right(Val::Px(12.0)),
+                        ..Default::default()
+                    },
+                ));
+            }
+
+            // Studio / Live. A prop has no Live: there is nothing to drive.
+            for (studio, label) in [(true, "Studio"), (false, "Live")] {
+                let is_on = view.studio == studio;
+                let available = studio || view.subject.has_live();
+                let color = if available {
+                    Color::srgb(0.85, 0.92, 0.95)
+                } else {
+                    Color::srgb(0.4, 0.45, 0.5)
+                };
+                row(strip, label.to_string(), is_on, color).observe(
+                    move |_: On<Activate>,
+                          mut overlays: ResMut<EditorOverlays>,
+                          focus: Res<EditorFocus>| {
+                        if !studio && !focus.subject.has_live() {
+                            return;
+                        }
+                        if overlays.orbit_camera != studio {
+                            overlays.toggle_orbit_camera();
+                        }
+                    },
+                );
+            }
+
             row(
                 strip,
                 "Save".to_string(),
                 any_dirty,
                 Color::srgb(0.7, 0.95, 0.75),
             )
-            .observe(
-                |_: On<Activate>,
-                 mut doc: ResMut<EditorDoc>,
-                 mut weapon_doc: ResMut<WeaponDoc>,
-                 mut bar: ResMut<DocBar>| {
-                    bar.status = save_all(&mut doc, &mut weapon_doc);
-                },
-            );
+            .observe(|_: On<Activate>, mut docs: Docs| {
+                docs.bar.status = docs.save_all();
+            });
             row(
                 strip,
                 "Revert".to_string(),
                 false,
                 Color::srgb(0.95, 0.8, 0.6),
             )
-            .observe(
-                |_: On<Activate>,
-                 mut doc: ResMut<EditorDoc>,
-                 mut weapon_doc: ResMut<WeaponDoc>,
-                 mut bar: ResMut<DocBar>| {
-                    if !doc.is_dirty() && !weapon_doc.is_dirty() {
-                        bar.status = "nothing to revert".to_string();
-                        return;
-                    }
-                    doc.revert();
-                    weapon_doc.revert();
-                    bar.status = "reverted to the saved files".to_string();
-                },
-            );
+            .observe(|_: On<Activate>, mut docs: Docs| {
+                if !docs.any_dirty() {
+                    docs.bar.status = "nothing to revert".to_string();
+                    return;
+                }
+                docs.revert_all();
+                docs.bar.status = "reverted to the saved files".to_string();
+            });
             row(
                 strip,
                 "Menu".to_string(),
                 false,
                 Color::srgb(0.75, 0.85, 0.95),
             )
-            .observe(
-                |_: On<Activate>,
-                 mut models: ResMut<EditorLibrary>,
-                 mut bar: ResMut<DocBar>,
-                 mut doc: ResMut<EditorDoc>,
-                 weapon_doc: Res<WeaponDoc>,
-                 mut next_state: ResMut<NextState<GameState>>| {
-                    request(
-                        ConfirmAction::Exit,
-                        &mut bar,
-                        &mut doc,
-                        &weapon_doc,
-                        &mut models,
-                        &mut next_state,
-                    );
-                },
-            );
+            .observe(|_: On<Activate>, mut docs: Docs| {
+                docs.request(ConfirmAction::Exit);
+            });
         });
 
         if let Some(action) = view.confirm.clone() {
             parent.spawn((
-                Text::new(format!("Unsaved changes. Save them before you {}?", action.describe())),
+                Text::new(format!(
+                    "Unsaved changes. Save them before you {}?",
+                    action.describe()
+                )),
                 TextFont::default().with_font_size(12.0),
                 TextColor(Color::srgb(1.0, 0.75, 0.4)),
             ));
@@ -568,51 +389,32 @@ pub fn rebuild_doc_bar(
                     true,
                     Color::srgb(0.7, 0.95, 0.75),
                 )
-                .observe(
-                    |_: On<Activate>,
-                     mut models: ResMut<EditorLibrary>,
-                     mut bar: ResMut<DocBar>,
-                     mut doc: ResMut<EditorDoc>,
-                     mut weapon_doc: ResMut<WeaponDoc>,
-                     mut next_state: ResMut<NextState<GameState>>| {
-                        let Some(action) = bar.confirm.take() else {
-                            return;
-                        };
-                        bar.status = save_all(&mut doc, &mut weapon_doc);
-                        // A save that failed leaves the edits in place; do not walk away
-                        // from them.
-                        if action.would_lose_edits(&doc, &weapon_doc) {
-                            return;
-                        }
-                        perform(action, &mut bar, &mut doc, &mut models, &mut next_state);
-                    },
-                );
+                .observe(|_: On<Activate>, mut docs: Docs| {
+                    let Some(action) = docs.bar.confirm.take() else {
+                        return;
+                    };
+                    docs.bar.status = docs.save_all();
+                    // A save that failed leaves the edits in place; do not walk away
+                    // from them.
+                    if docs.would_lose_edits(&action) {
+                        return;
+                    }
+                    docs.perform(action);
+                });
                 row(
                     strip,
                     "Discard".to_string(),
                     false,
                     Color::srgb(0.95, 0.65, 0.55),
                 )
-                .observe(
-                    |_: On<Activate>,
-                     mut models: ResMut<EditorLibrary>,
-                     mut bar: ResMut<DocBar>,
-                     mut doc: ResMut<EditorDoc>,
-                     mut weapon_doc: ResMut<WeaponDoc>,
-                     mut next_state: ResMut<NextState<GameState>>| {
-                        let Some(action) = bar.confirm.take() else {
-                            return;
-                        };
-                        // Only what the action would have lost: equipping replaces the
-                        // weapon doc, but the character's edits carry on.
-                        weapon_doc.revert();
-                        if !matches!(action, ConfirmAction::EquipWeapon(_)) {
-                            doc.revert();
-                        }
-                        bar.status = "discarded unsaved changes".to_string();
-                        perform(action, &mut bar, &mut doc, &mut models, &mut next_state);
-                    },
-                );
+                .observe(|_: On<Activate>, mut docs: Docs| {
+                    let Some(action) = docs.bar.confirm.take() else {
+                        return;
+                    };
+                    docs.discard_for(&action);
+                    docs.bar.status = "discarded unsaved changes".to_string();
+                    docs.perform(action);
+                });
                 row(
                     strip,
                     "Cancel".to_string(),
@@ -661,7 +463,7 @@ pub fn rebuild_debug_toggles(
         (debug.skeleton, "skeleton"),
         (debug.hardpoints, "hardpoint frames"),
         (debug.gait, "gait targets"),
-        (debug.orbit_camera, "orbit camera  [F11]"),
+        (debug.orbit_camera, "studio: orbit camera  [F11]"),
         (debug.rest_pose, "rest pose (T-pose)  [F12]"),
     ];
     commands.entity(container).with_children(|parent| {
@@ -743,20 +545,13 @@ fn nudge_row(
                     .observe(
                         move |_: On<Activate>,
                               mut editor: ResMut<HardpointEditor>,
-                              mut doc: ResMut<EditorDoc>,
-                              mut weapon_doc: ResMut<WeaponDoc>| {
+                              mut docs: SideDocs| {
                             let Some(role) = editor.active_role.clone() else {
                                 return;
                             };
-                            let side = editor.side;
-                            // Only reach for the side being edited: `as_mut()` on the other
-                            // would mark it changed and re-push an unedited def at the live
-                            // weapon every click.
-                            let def = match side {
-                                HardpointSide::Character => doc.def.as_mut(),
-                                HardpointSide::Weapon => weapon_doc.def.as_mut(),
+                            let Some(def) = docs.def_mut(editor.side) else {
+                                return;
                             };
-                            let Some(def) = def else { return };
                             let hardpoint = ensure_role(def, &role);
                             if rotation {
                                 nudge_rotation(hardpoint, axis, delta);
@@ -777,20 +572,16 @@ fn nudge_row(
 fn side_chips(
     parent: &mut RelatedSpawnerCommands<ChildOf>,
     side: HardpointSide,
+    subject: Subject,
     weapon_name: Option<&str>,
 ) {
-    let weapon_label = format!(
-        "{}: {}",
-        HardpointSide::Weapon.label(),
-        weapon_name.unwrap_or("(none)")
-    );
-    for (which, label) in [
-        (
-            HardpointSide::Character,
-            HardpointSide::Character.label().to_string(),
-        ),
-        (HardpointSide::Weapon, weapon_label),
-    ] {
+    for which in HardpointSide::for_subject(subject).iter().copied() {
+        let label = match which {
+            HardpointSide::Weapon => {
+                format!("{}: {}", which.label(), weapon_name.unwrap_or("(none)"))
+            }
+            _ => which.label().to_string(),
+        };
         let is_active = which == side;
         let marker = if is_active { "*" } else { " " };
         row(
@@ -814,24 +605,36 @@ pub fn rebuild_hardpoint_panel(
     mut editor: ResMut<HardpointEditor>,
     doc: Res<EditorDoc>,
     weapon_doc: Res<WeaponDoc>,
+    prop_doc: Res<PropDoc>,
+    focus: Res<EditorFocus>,
     mut commands: Commands,
     container_q: Query<Entity, With<HardpointContainer>>,
     players: Query<Entity, With<Player>>,
+    props: Query<Entity, With<EditorProp>>,
     children_q: Query<&Children>,
     skinned_q: Query<&bevy::mesh::skinning::SkinnedMesh>,
     names: Query<&Name>,
-    mut last_def: Local<Option<String>>,
+    new_skins: Query<(), Added<bevy::mesh::skinning::SkinnedMesh>>,
+    mut last_subject: Local<Option<(Subject, Option<String>)>>,
 ) {
-    // Opening another model replaces the doc, so the panel has to follow it. The weapon
-    // doc is reopened by `sync_weapon_doc` in the same breath, so both sides reset together.
-    // Edits to the open doc redraw too: Revert and Save change what the rows should show.
-    if *last_def != doc.def_path {
-        last_def.clone_from(&doc.def_path);
+    // Opening another model replaces a doc, so the panel has to follow it, opening on the
+    // side that fits what was opened: a weapon opens on the weapon's frames. Edits to the
+    // open docs redraw too: Revert and Save change what the rows should show.
+    let subject_path = match focus.subject {
+        Subject::Character => doc.def_path.clone(),
+        Subject::Weapon => weapon_doc.def_path.clone(),
+        Subject::Prop => prop_doc.def_path.clone(),
+    };
+    let subject = Some((focus.subject, subject_path));
+    if *last_subject != subject {
+        *last_subject = subject;
         editor.active_role = None;
-        editor.side = HardpointSide::Character;
+        editor.side = HardpointSide::default_for(focus.subject);
         editor.ui_dirty = true;
     }
-    if doc.is_changed() || weapon_doc.is_changed() {
+    // A rig spawns a few frames after its model is opened; the bone list follows it.
+    if doc.is_changed() || weapon_doc.is_changed() || prop_doc.is_changed() || !new_skins.is_empty()
+    {
         editor.ui_dirty = true;
     }
     if !editor.ui_dirty {
@@ -849,15 +652,17 @@ pub fn rebuild_hardpoint_panel(
     let def = match side {
         HardpointSide::Character => doc.def.as_ref(),
         HardpointSide::Weapon => weapon_doc.def.as_ref(),
+        HardpointSide::Prop => prop_doc.def.as_ref(),
     };
 
     let Some(def) = def else {
         let message = match side {
             HardpointSide::Character => "no character open",
-            HardpointSide::Weapon => "no weapon equipped (set PlayerProps.weapon)",
+            HardpointSide::Weapon => "no weapon - equip one above, or open one in the Library",
+            HardpointSide::Prop => "no model open",
         };
         commands.entity(container).with_children(|parent| {
-            side_chips(parent, side, weapon_name.as_deref());
+            side_chips(parent, side, focus.subject, weapon_name.as_deref());
             parent.spawn((
                 Text::new(message),
                 TextFont::default().with_font_size(11.0),
@@ -874,23 +679,24 @@ pub fn rebuild_hardpoint_panel(
         .and_then(|role| def.hardpoints.get(role))
         .cloned();
 
-    // Bone names of the live rig, so the anchor picker offers what actually exists.
-    // Weapon frames are model-origin relative, so the picker is character-side only.
-    let bones: Vec<String> = players
-        .iter()
-        .next()
-        .filter(|_| side == HardpointSide::Character)
-        .map_or_default(|player| {
-            let joints = crate::assets::gizmos::joints_under(player, &children_q, &skinned_q);
-            let mut names: Vec<String> = crate::assets::gizmos::bone_map(&joints, &names)
-                .into_keys()
-                .collect();
-            names.sort();
-            names
-        });
+    // Bone names of the rig on screen, so the anchor picker offers what actually exists.
+    // Weapon frames are model-origin relative, so the weapon side has no picker.
+    let rig = match side {
+        HardpointSide::Character => players.iter().next(),
+        HardpointSide::Prop => props.iter().next(),
+        HardpointSide::Weapon => None,
+    };
+    let bones: Vec<String> = rig.map_or_default(|root| {
+        let joints = crate::assets::gizmos::joints_under(root, &children_q, &skinned_q);
+        let mut names: Vec<String> = crate::assets::gizmos::bone_map(&joints, &names)
+            .into_keys()
+            .collect();
+        names.sort();
+        names
+    });
 
     commands.entity(container).with_children(|parent| {
-        side_chips(parent, side, weapon_name.as_deref());
+        side_chips(parent, side, focus.subject, weapon_name.as_deref());
 
         // Role chips. A role the def lacks is offered as "+ add"; clicking it creates the
         // hardpoint and selects it, which brings up the nudge rows and anchor picker.
@@ -906,17 +712,12 @@ pub fn rebuild_hardpoint_panel(
             let clicked = role.to_string();
             let fallback = hand_guess.clone();
             row(parent, label, is_active, color).observe(
-                move |_: On<Activate>,
-                      mut editor: ResMut<HardpointEditor>,
-                      mut doc: ResMut<EditorDoc>,
-                      mut weapon_doc: ResMut<WeaponDoc>| {
+                move |_: On<Activate>, mut editor: ResMut<HardpointEditor>, mut docs: SideDocs| {
                     if !exists {
                         // Weapon frames are model-origin relative: no bone to guess.
-                        let (def, fallback) = match editor.side {
-                            HardpointSide::Character => (doc.def.as_mut(), fallback.clone()),
-                            HardpointSide::Weapon => (weapon_doc.def.as_mut(), None),
-                        };
-                        if let Some(def) = def {
+                        let side = editor.side;
+                        let fallback = fallback.clone().filter(|_| side.has_bones());
+                        if let Some(def) = docs.def_mut(side) {
                             add_role(def, &clicked, fallback);
                         }
                     }
@@ -980,15 +781,8 @@ pub fn rebuild_hardpoint_panel(
             Color::srgb(0.95, 0.7, 0.6),
         )
         .observe(
-            move |_: On<Activate>,
-                  mut editor: ResMut<HardpointEditor>,
-                  mut doc: ResMut<EditorDoc>,
-                  mut weapon_doc: ResMut<WeaponDoc>| {
-                let def = match editor.side {
-                    HardpointSide::Character => doc.def.as_mut(),
-                    HardpointSide::Weapon => weapon_doc.def.as_mut(),
-                };
-                if let Some(def) = def {
+            move |_: On<Activate>, mut editor: ResMut<HardpointEditor>, mut docs: SideDocs| {
+                if let Some(def) = docs.def_mut(editor.side) {
                     def.hardpoints.remove(&removed);
                 }
                 editor.active_role = None;
@@ -1038,10 +832,8 @@ pub fn rebuild_hardpoint_panel(
             let chosen = bone.clone();
             let for_role = role.clone();
             row(parent, bone, is_anchor, Color::srgb(0.8, 0.8, 0.9)).observe(
-                move |_: On<Activate>,
-                      mut editor: ResMut<HardpointEditor>,
-                      mut doc: ResMut<EditorDoc>| {
-                    if let Some(def) = doc.def.as_mut() {
+                move |_: On<Activate>, mut editor: ResMut<HardpointEditor>, mut docs: SideDocs| {
+                    if let Some(def) = docs.def_mut(editor.side) {
                         ensure_role(def, &for_role).anchor = Some(chosen.clone());
                     }
                     editor.touch();
@@ -1056,13 +848,16 @@ pub fn rebuild_hardpoint_panel(
 pub fn rebuild_animation_panel(
     mut editor: ResMut<AnimationEditor>,
     doc: Res<EditorDoc>,
+    focus: Res<EditorFocus>,
     mut commands: Commands,
     container_q: Query<Entity, With<AnimationContainer>>,
-    mut last_def: Local<Option<String>>,
+    mut last_def: Local<Option<(String, bool)>>,
 ) {
     // Follow model swaps, and redraw when a binding edit changes what keys resolve to.
-    if *last_def != doc.def_path {
-        last_def.clone_from(&doc.def_path);
+    let is_prop = focus.subject == Subject::Prop;
+    let key = doc.def_path.clone().map(|path| (path, is_prop));
+    if *last_def != key {
+        *last_def = key;
         editor.selected_key = None;
         editor.ui_dirty = true;
     }
@@ -1075,6 +870,23 @@ pub fn rebuild_animation_panel(
         return;
     };
     commands.entity(container).despawn_related::<Children>();
+
+    if is_prop {
+        // The keys below play through the character's state machine; a model on its own
+        // has none. Its clip tags and bindings come with the Animation tab's port from
+        // the asset browser (step 7 of docs/character-editor.md).
+        commands.entity(container).with_children(|parent| {
+            parent.spawn((
+                Text::new(
+                    "animation for a model on its own is not here yet - \
+                     use the asset browser for its clip tags and bindings for now",
+                ),
+                TextFont::default().with_font_size(11.0),
+                TextColor(Color::srgb(0.7, 0.65, 0.5)),
+            ));
+        });
+        return;
+    }
 
     let Some(def) = doc.def.as_ref() else {
         commands.entity(container).with_children(|parent| {
@@ -1200,7 +1012,6 @@ pub fn rebuild_animation_panel(
                 editor.touch();
             },
         );
-
     });
 }
 
@@ -1214,11 +1025,27 @@ pub fn refresh_animation_panel_on_def_change(
     }
 }
 
+/// Rebuild the library list: every def, grouped by type. `*` marks what is open, `-` the
+/// character worn and the weapon held when something else is the subject.
 pub fn rebuild_model_list(
     mut models: ResMut<EditorLibrary>,
+    doc: Res<EditorDoc>,
+    weapon_doc: Res<WeaponDoc>,
+    prop_doc: Res<PropDoc>,
+    focus: Res<EditorFocus>,
     mut commands: Commands,
     container_q: Query<Entity, With<ModelListContainer>>,
+    mut last_open: Local<[Option<String>; 3]>,
 ) {
+    let open = [
+        doc.def_path.clone(),
+        weapon_doc.def_path.clone(),
+        prop_doc.def_path.clone(),
+    ];
+    if *last_open != open {
+        last_open.clone_from(&open);
+        models.list_dirty = true;
+    }
     if !models.list_dirty {
         return;
     }
@@ -1230,22 +1057,46 @@ pub fn rebuild_model_list(
     models.list_dirty = false;
     commands.entity(container).despawn_related::<Children>();
 
+    let subject_path = match focus.subject {
+        Subject::Character => open[0].clone(),
+        Subject::Weapon => open[1].clone(),
+        Subject::Prop => open[2].clone(),
+    };
     let defs = models.defs.clone();
     let mesh_less = models.mesh_less.clone();
-    let selected = models.selected.clone();
     commands.entity(container).with_children(|parent| {
         if defs.is_empty() {
             parent.spawn((
-                Text::new("no player defs in assets/defs"),
+                Text::new("no defs in assets/defs"),
                 TextFont::default().with_font_size(11.0),
                 TextColor(Color::srgb(0.6, 0.5, 0.4)),
             ));
             return;
         }
-        for def_path in defs {
-            let is_selected = selected.as_deref() == Some(def_path.as_str());
+        let mut group = None;
+        for (def_path, kind) in defs {
+            if group != Some(kind) {
+                group = Some(kind);
+                parent.spawn((
+                    Text::new(kind.heading()),
+                    TextFont::default().with_font_size(10.0),
+                    TextColor(Color::srgb(0.5, 0.7, 0.6)),
+                    Node {
+                        margin: UiRect::top(Val::Px(4.0)),
+                        ..Default::default()
+                    },
+                ));
+            }
+            let is_subject = subject_path.as_deref() == Some(def_path.as_str());
+            let is_in_use = open.iter().flatten().any(|p| *p == def_path);
             let has_no_mesh = mesh_less.contains(&def_path);
-            let mark = if is_selected { "*" } else { " " };
+            let mark = if is_subject {
+                "*"
+            } else if is_in_use {
+                "-"
+            } else {
+                " "
+            };
             let label = if has_no_mesh {
                 format!("{mark} {} (no mesh)", def_stem(&def_path))
             } else {
@@ -1257,31 +1108,19 @@ pub fn rebuild_model_list(
                 Color::srgb(0.85, 0.92, 0.85)
             };
             let clicked = def_path.clone();
-            row(parent, label, is_selected, color).observe(
-                move |_: On<Activate>,
-                      mut m: ResMut<EditorLibrary>,
-                      mut bar: ResMut<DocBar>,
-                      mut doc: ResMut<EditorDoc>,
-                      weapon_doc: Res<WeaponDoc>,
-                      mut next_state: ResMut<NextState<GameState>>| {
-                    // Refused rather than swapped to: the swap would succeed and leave you
-                    // walking around as nothing, with no clue why.
-                    if m.mesh_less.contains(&clicked) {
-                        m.status = format!(
+            row(parent, label, is_subject, color).observe(
+                move |_: On<Activate>, mut docs: Docs| {
+                    // Refused rather than opened: a character would spawn as nothing, and
+                    // a prop would stand invisible, with no clue why.
+                    if docs.library.mesh_less.contains(&clicked) {
+                        docs.library.status = format!(
                             "{} has no geometry - it is an animation library, not a model",
                             def_stem(&clicked)
                         );
-                        m.browser_dirty = true;
+                        docs.library.browser_dirty = true;
                         return;
                     }
-                    request(
-                        ConfirmAction::OpenModel(clicked.clone()),
-                        &mut bar,
-                        &mut doc,
-                        &weapon_doc,
-                        &mut m,
-                        &mut next_state,
-                    );
+                    docs.request(ConfirmAction::OpenModel(clicked.clone()));
                 },
             );
         }
@@ -1322,27 +1161,30 @@ fn attach_animation_source(
 pub fn rebuild_weapon_list(
     mut models: ResMut<EditorLibrary>,
     doc: Res<EditorDoc>,
+    focus: Res<EditorFocus>,
     mut commands: Commands,
     container_q: Query<Entity, With<WeaponListContainer>>,
-    mut last: Local<Option<String>>,
+    mut last: Local<Option<(Option<String>, Option<String>, Subject)>>,
 ) {
     let equipped = doc
         .def
         .as_ref()
         .and_then(crate::character_editor::doc::weapon_def_path);
-    // Follows both a model swap (which changes what is equipped) and the list itself.
-    let changed = *last != equipped;
+    // Follows a model swap (which changes what is equipped), a weapon opened from the
+    // library (held without being equipped), and the list itself.
+    let key = Some((equipped.clone(), focus.held_weapon.clone(), focus.subject));
+    let changed = *last != key;
     if !models.weapon_list_dirty && !changed {
         return;
     }
-    last.clone_from(&equipped);
-
     let Ok(container) = container_q.single() else {
         return;
     };
+    *last = key;
     commands.entity(container).despawn_related::<Children>();
 
     let weapons = models.weapon_defs.clone();
+    let held = focus.held_weapon.clone();
     let is_character = doc.def.as_ref().is_some_and(|def| {
         matches!(
             def.model_type,
@@ -1352,9 +1194,16 @@ pub fn rebuild_weapon_list(
     models.weapon_list_dirty = false;
 
     commands.entity(container).with_children(|parent| {
-        if !is_character {
+        let note = if focus.subject == Subject::Prop {
+            Some("a model on its own holds no weapon")
+        } else if !is_character {
+            Some("no character open")
+        } else {
+            None
+        };
+        if let Some(note) = note {
             parent.spawn((
-                Text::new("no character open"),
+                Text::new(note),
                 TextFont::default().with_font_size(11.0),
                 TextColor(Color::srgb(0.6, 0.5, 0.4)),
             ));
@@ -1368,47 +1217,25 @@ pub fn rebuild_weapon_list(
             none_selected,
             Color::srgb(0.8, 0.8, 0.85),
         )
-        .observe(
-            |_: On<Activate>,
-             mut models: ResMut<EditorLibrary>,
-             mut bar: ResMut<DocBar>,
-             mut doc: ResMut<EditorDoc>,
-             weapon_doc: Res<WeaponDoc>,
-             mut next_state: ResMut<NextState<GameState>>| {
-                request(
-                    ConfirmAction::EquipWeapon(None),
-                    &mut bar,
-                    &mut doc,
-                    &weapon_doc,
-                    &mut models,
-                    &mut next_state,
-                );
-            },
-        );
+        .observe(|_: On<Activate>, mut docs: Docs| {
+            docs.request(ConfirmAction::EquipWeapon(None));
+        });
 
         for weapon_path in weapons {
             let is_equipped = equipped.as_deref() == Some(weapon_path.as_str());
+            let is_held = held.as_deref() == Some(weapon_path.as_str());
+            // `*` is what the character carries in its def; "(held)" is a weapon opened
+            // from the library and only borrowed — equipping it makes it the character's.
             let label = format!(
-                "{} {}",
+                "{} {}{}",
                 if is_equipped { "*" } else { " " },
-                def_stem(&weapon_path)
+                def_stem(&weapon_path),
+                if is_held { "  (held)" } else { "" }
             );
             let chosen = weapon_path.clone();
             row(parent, label, is_equipped, Color::srgb(0.9, 0.88, 0.75)).observe(
-                move |_: On<Activate>,
-                      mut models: ResMut<EditorLibrary>,
-                      mut bar: ResMut<DocBar>,
-                      mut doc: ResMut<EditorDoc>,
-                      weapon_doc: Res<WeaponDoc>,
-                      mut next_state: ResMut<NextState<GameState>>| {
-                    request(
-                        ConfirmAction::EquipWeapon(Some(chosen.clone())),
-                        &mut bar,
-                        &mut doc,
-                        &weapon_doc,
-                        &mut models,
-                        &mut next_state,
-                    );
+                move |_: On<Activate>, mut docs: Docs| {
+                    docs.request(ConfirmAction::EquipWeapon(Some(chosen.clone())));
                 },
             );
         }
@@ -1484,12 +1311,7 @@ pub fn rebuild_import_browser(
                     match classify(&imported) {
                         ImportKind::Model => m.import(&imported),
                         ImportKind::AnimationLibrary => {
-                            attach_animation_source(
-                                &imported,
-                                &mut m,
-                                &mut doc,
-                                &mut animation,
-                            );
+                            attach_animation_source(&imported, &mut m, &mut doc, &mut animation);
                         }
                     }
                     m.browser_dirty = true;

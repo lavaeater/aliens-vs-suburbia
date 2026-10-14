@@ -20,7 +20,7 @@
 use bevy::prelude::*;
 
 use crate::assets::asset_definition::{AssetDefinition, Hardpoint};
-use crate::character_editor::doc::WeaponDoc;
+use crate::character_editor::doc::{Subject, WeaponDoc};
 use crate::model_settings::plugin::PlayerAssetDef;
 use crate::player::components::Player;
 use crate::player::systems::equip::{EquippedWeapon, GRIP_ROLE, MUZZLE_ROLE, WeaponModel};
@@ -45,13 +45,16 @@ pub enum HardpointSide {
     #[default]
     Character,
     Weapon,
+    /// A model opened on its own (an enemy, a tower): its hardpoints, anchored to its own
+    /// bones. Every role is offered — an enemy with a gun has a grip and a muzzle.
+    Prop,
 }
 
 impl HardpointSide {
     pub const fn roles(self) -> &'static [&'static str] {
         match self {
             Self::Character => &ROLES,
-            Self::Weapon => &WEAPON_ROLES,
+            Self::Weapon | Self::Prop => &WEAPON_ROLES,
         }
     }
 
@@ -59,6 +62,31 @@ impl HardpointSide {
         match self {
             Self::Character => "character",
             Self::Weapon => "weapon",
+            Self::Prop => "model",
+        }
+    }
+
+    /// Frames anchored to bones (and so offered the bone picker), as opposed to the
+    /// weapon's, which are relative to its model origin.
+    pub const fn has_bones(self) -> bool {
+        !matches!(self, Self::Weapon)
+    }
+
+    /// The sides worth offering for what is open. A prop has only itself; a character
+    /// or a weapon in its hand have both ends of the grip.
+    pub const fn for_subject(subject: Subject) -> &'static [Self] {
+        match subject {
+            Subject::Character | Subject::Weapon => &[Self::Character, Self::Weapon],
+            Subject::Prop => &[Self::Prop],
+        }
+    }
+
+    /// The side the panel opens on for what is open.
+    pub const fn default_for(subject: Subject) -> Self {
+        match subject {
+            Subject::Character => Self::Character,
+            Subject::Weapon => Self::Weapon,
+            Subject::Prop => Self::Prop,
         }
     }
 }
@@ -309,7 +337,10 @@ mod tests {
         ]
         .map(str::to_string)
         .to_vec();
-        assert_eq!(guess_hand_bone(&bones).as_deref(), Some("mixamorigRightHand"));
+        assert_eq!(
+            guess_hand_bone(&bones).as_deref(),
+            Some("mixamorigRightHand")
+        );
 
         let blender: Vec<String> = ["Hand.L", "Hand.R", "Thumb.R"].map(str::to_string).to_vec();
         assert_eq!(guess_hand_bone(&blender).as_deref(), Some("Hand.R"));

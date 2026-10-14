@@ -15,12 +15,13 @@ use bevy::mesh::skinning::SkinnedMesh;
 use bevy::prelude::*;
 
 use crate::assets::gizmos::{bone_map, draw_hardpoints, draw_skeleton, joints_under};
+use crate::character_editor::doc::{PropDoc, WeaponDoc};
+use crate::character_editor::prop::EditorProp;
 use crate::model_settings::plugin::PlayerAssetDef;
 use crate::player::components::Player;
 use crate::player::systems::equip::EquippedWeapon;
 use crate::player::systems::gait::Foot;
 use crate::player::systems::leg_ik::Legs;
-use crate::character_editor::doc::WeaponDoc;
 
 #[derive(Resource, Default)]
 pub struct EditorOverlays {
@@ -197,8 +198,34 @@ pub fn draw_player_overlays(
     transforms: Query<&GlobalTransform>,
     names: Query<&Name>,
     parents: Query<&ChildOf>,
+    prop_def: Res<PropDoc>,
+    props: Query<Entity, With<EditorProp>>,
 ) {
     if !debug.skeleton && !debug.hardpoints {
+        return;
+    }
+
+    // A prop stands in for the hidden character: draw it, and only it.
+    if let Some(prop) = props.iter().next() {
+        let joints = joints_under(prop, &children_q, &skinned_q);
+        if debug.skeleton && !joints.is_empty() {
+            draw_skeleton(&mut gizmos, &joints, None, &transforms, &names, &parents);
+        }
+        if debug.hardpoints
+            && let Some(def) = prop_def.def.as_ref()
+        {
+            let bones = bone_map(&joints, &names);
+            draw_hardpoints(
+                &mut gizmos,
+                &def.hardpoints,
+                None,
+                &transforms,
+                |anchor| match anchor {
+                    Some(bone) => bones.get(bone).copied(),
+                    None => Some(prop),
+                },
+            );
+        }
         return;
     }
 

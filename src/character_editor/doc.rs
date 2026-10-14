@@ -6,9 +6,10 @@
 //! the other, and the edits were gone. Here there is one [`DefDoc`] per file, the panels
 //! edit `doc.def` directly, and Save writes that whole def back to the file it came from.
 //!
-//! Two docs are open at once: [`EditorDoc`] for the character and [`WeaponDoc`] for the
-//! weapon it holds. They are separate files, so they are separate docs — but one Save
-//! writes whichever of them has changes.
+//! Up to three docs are open at once: [`EditorDoc`] for the character, [`WeaponDoc`] for
+//! the weapon it holds and [`PropDoc`] for anything else opened on its own (an enemy, a
+//! tower). They are separate files, so they are separate docs — but one Save writes
+//! whichever of them has changes. [`EditorFocus`] says which one you are working on.
 //!
 //! "Unsaved" is computed (`def != saved`), never a flag, so it cannot drift out of step
 //! with what is actually on disk.
@@ -16,10 +17,13 @@
 //! The live character follows the doc through `PlayerAssetDef`, which every gameplay
 //! system already reads: see [`sync_doc_to_live`].
 
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 use crate::assets::asset_definition::{AssetDefinition, ModelType};
-use crate::character_editor::models::{EditorLibrary, set_weapon};
+use crate::character_editor::debug::EditorOverlays;
+use crate::character_editor::hardpoints::HardpointSide;
+use crate::character_editor::models::{EditorLibrary, def_stem, set_weapon};
 use crate::game_state::GameState;
 use crate::model_settings::plugin::PlayerAssetDef;
 
@@ -96,9 +100,74 @@ impl DefDoc {
 #[derive(Resource, Debug, Default, Deref, DerefMut)]
 pub struct EditorDoc(pub DefDoc);
 
-/// The weapon the character holds, loaded from its `PlayerProps::weapon`.
+/// The weapon the character holds: the one its `PlayerProps::weapon` names, or the one
+/// opened directly from the library (see [`EditorFocus::held_weapon`]).
 #[derive(Resource, Debug, Default, Deref, DerefMut)]
 pub struct WeaponDoc(pub DefDoc);
+
+/// A model that is neither the character nor its gun: an enemy, a tower, a piece of
+/// terrain, an item. Shown on its own in Studio (see `prop.rs`).
+#[derive(Resource, Debug, Default, Deref, DerefMut)]
+pub struct PropDoc(pub DefDoc);
+
+/// What the editor is working on, which decides what the top bar leads with, which
+/// hardpoint side the panel opens on, and what the camera frames.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Subject {
+    /// A player character, walking around in the arena.
+    #[default]
+    Character,
+    /// A weapon, held by the character so it can be checked in the hand.
+    Weapon,
+    /// Anything else, standing alone in Studio.
+    Prop,
+}
+
+impl Subject {
+    pub const fn of(def: &AssetDefinition) -> Self {
+        match def.model_type {
+            ModelType::Player(_) => Self::Character,
+            ModelType::Weapon(_) => Self::Weapon,
+            _ => Self::Prop,
+        }
+    }
+
+    /// Only a character can be walked around as. A prop has no Live: there is nothing to
+    /// drive, so it always shows in Studio.
+    pub const fn has_live(self) -> bool {
+        !matches!(self, Self::Prop)
+    }
+}
+
+#[derive(Resource, Debug, Default)]
+pub struct EditorFocus {
+    pub subject: Subject,
+    /// A weapon opened from the library, put in the character's hand *without* editing
+    /// the character: its `PlayerProps::weapon` stays what it was, so opening a gun to
+    /// fix its muzzle does not leave the character with unsaved changes. Cleared by
+    /// opening a character or equipping from the weapon list.
+    pub held_weapon: Option<String>,
+}
+
+/// The three docs, reached by hardpoint side. Only the side asked for is borrowed
+/// mutably: reaching for the others would mark them changed, and a changed weapon doc is
+/// pushed at the live weapon again.
+#[derive(SystemParam)]
+pub struct SideDocs<'w> {
+    pub character: ResMut<'w, EditorDoc>,
+    pub weapon: ResMut<'w, WeaponDoc>,
+    pub prop: ResMut<'w, PropDoc>,
+}
+
+impl SideDocs<'_> {
+    pub fn def_mut(&mut self, side: HardpointSide) -> Option<&mut AssetDefinition> {
+        match side {
+            HardpointSide::Character => self.character.def.as_mut(),
+            HardpointSide::Weapon => self.weapon.def.as_mut(),
+            HardpointSide::Prop => self.prop.def.as_mut(),
+        }
+    }
+}
 
 /// The weapon def path a character def asks for, if any.
 pub fn weapon_def_path(character: &AssetDefinition) -> Option<String> {
@@ -106,6 +175,16 @@ pub fn weapon_def_path(character: &AssetDefinition) -> Option<String> {
         ModelType::Player(props) => props.weapon.clone(),
         _ => None,
     }
+}
+
+/// The def the live character should be spawned from: the doc, holding the opened weapon
+/// in place of its own if one is open.
+pub fn expected_live(character: &AssetDefinition, held_weapon: Option<&str>) -> AssetDefinition {
+    let mut live = character.clone();
+    if let Some(weapon) = held_weapon {
+        set_weapon(&mut live, Some(weapon));
+    }
+    live
 }
 
 /// Fields that only take effect when the character is spawned: the model itself, its
@@ -125,7 +204,7 @@ pub fn needs_respawn(live: &AssetDefinition, edited: &AssetDefinition) -> bool {
 /// to do with them.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ConfirmAction {
-    /// Switch to another model (def path).
+    /// Open a def (path) of any type: a character to wear, a weapon to hold, or a prop.
     OpenModel(String),
     /// Hand the character a different weapon (weapon def path, `None` = empty-handed).
     /// Only guarded by the *weapon* doc: the character doc just gains an edit.
@@ -137,19 +216,19 @@ pub enum ConfirmAction {
 impl ConfirmAction {
     pub fn describe(&self) -> String {
         match self {
-            Self::OpenModel(path) => format!("open {}", crate::character_editor::models::def_stem(path)),
-            Self::EquipWeapon(Some(path)) => {
-                format!("equip {}", crate::character_editor::models::def_stem(path))
-            }
+            Self::OpenModel(path) => format!("open {}", def_stem(path)),
+            Self::EquipWeapon(Some(path)) => format!("equip {}", def_stem(path)),
             Self::EquipWeapon(None) => "unequip the weapon".to_string(),
             Self::Exit => "leave the editor".to_string(),
         }
     }
 
-    /// Whether doing this now would lose edits.
-    pub fn would_lose_edits(&self, character: &DefDoc, weapon: &DefDoc) -> bool {
+    /// Whether doing this now would lose edits in any of the open docs.
+    pub fn would_lose_edits(&self, character: &DefDoc, weapon: &DefDoc, prop: &DefDoc) -> bool {
         match self {
-            Self::OpenModel(_) | Self::Exit => character.is_dirty() || weapon.is_dirty(),
+            Self::OpenModel(_) | Self::Exit => {
+                character.is_dirty() || weapon.is_dirty() || prop.is_dirty()
+            }
             Self::EquipWeapon(_) => weapon.is_dirty(),
         }
     }
@@ -162,65 +241,133 @@ pub struct DocBar {
     pub status: String,
 }
 
-/// Ask for `action`: do it now if nothing would be lost, otherwise ask first.
-pub fn request(
-    action: ConfirmAction,
-    bar: &mut DocBar,
-    doc: &mut EditorDoc,
-    weapon: &WeaponDoc,
-    library: &mut EditorLibrary,
-    next_state: &mut NextState<GameState>,
-) {
-    if action.would_lose_edits(doc, weapon) {
-        bar.confirm = Some(action);
-    } else {
-        bar.confirm = None;
-        perform(action, bar, doc, library, next_state);
-    }
+/// Everything an action on the docs touches, in one parameter, so a button's observer
+/// does not need eight.
+#[derive(SystemParam)]
+pub struct Docs<'w> {
+    pub character: ResMut<'w, EditorDoc>,
+    pub weapon: ResMut<'w, WeaponDoc>,
+    pub prop: ResMut<'w, PropDoc>,
+    pub focus: ResMut<'w, EditorFocus>,
+    pub bar: ResMut<'w, DocBar>,
+    pub library: ResMut<'w, EditorLibrary>,
+    pub overlays: ResMut<'w, EditorOverlays>,
+    pub next_state: ResMut<'w, NextState<GameState>>,
 }
 
-/// Carry out an action. The caller has already dealt with unsaved edits.
-pub fn perform(
-    action: ConfirmAction,
-    bar: &mut DocBar,
-    doc: &mut EditorDoc,
-    library: &mut EditorLibrary,
-    next_state: &mut NextState<GameState>,
-) {
-    match action {
-        ConfirmAction::OpenModel(path) => library.select(&path),
-        ConfirmAction::EquipWeapon(weapon) => {
-            // Just an edit to the character doc. `sync_doc_to_live` sees `PlayerProps`
-            // differ from the live character and respawns it holding the new weapon.
-            let Some(def) = doc.def.as_mut() else {
-                bar.status = "no character open".to_string();
-                return;
-            };
-            if !set_weapon(def, weapon.as_deref()) {
-                bar.status = "the open def is not a character".to_string();
-                return;
+impl Docs<'_> {
+    pub fn would_lose_edits(&self, action: &ConfirmAction) -> bool {
+        action.would_lose_edits(&self.character, &self.weapon, &self.prop)
+    }
+
+    /// Ask for `action`: do it now if nothing would be lost, otherwise ask first.
+    pub fn request(&mut self, action: ConfirmAction) {
+        if self.would_lose_edits(&action) {
+            self.bar.confirm = Some(action);
+        } else {
+            self.bar.confirm = None;
+            self.perform(action);
+        }
+    }
+
+    /// Carry out an action. The caller has already dealt with unsaved edits.
+    pub fn perform(&mut self, action: ConfirmAction) {
+        match action {
+            ConfirmAction::OpenModel(path) => self.open(&path),
+            ConfirmAction::EquipWeapon(weapon) => self.equip(weapon),
+            ConfirmAction::Exit => self.next_state.set(GameState::Menu),
+        }
+    }
+
+    /// Open a def of any type, as whatever kind of subject it is.
+    fn open(&mut self, path: &str) {
+        let Some(def) = AssetDefinition::load_from_def_path(path) else {
+            self.bar.status = format!("cannot read {path}");
+            return;
+        };
+        let subject = Subject::of(&def);
+        self.focus.subject = subject;
+        self.library.list_dirty = true;
+        match subject {
+            Subject::Character => {
+                self.prop.0 = DefDoc::default();
+                self.focus.held_weapon = None;
+                self.library.select(path);
             }
-            bar.status = match weapon {
-                Some(path) => format!("equipped {}", crate::character_editor::models::def_stem(&path)),
-                None => "unequipped".to_string(),
-            };
+            Subject::Weapon => {
+                // Into the hand of whoever is worn. `sync_weapon_doc` keeps this doc
+                // while `held_weapon` names it; `sync_doc_to_live` respawns the character
+                // holding it.
+                self.prop.0 = DefDoc::default();
+                self.focus.held_weapon = Some(path.to_string());
+                self.weapon.0 = DefDoc::open(path);
+            }
+            Subject::Prop => {
+                self.prop.0 = DefDoc::open(path);
+                // There is nothing to walk around as: a prop is always in Studio.
+                if !self.overlays.orbit_camera {
+                    self.overlays.toggle_orbit_camera();
+                }
+            }
         }
-        ConfirmAction::Exit => next_state.set(GameState::Menu),
     }
-}
 
-/// Save every doc with changes. Returns the status line.
-pub fn save_all(doc: &mut EditorDoc, weapon: &mut WeaponDoc) -> String {
-    let mut lines = Vec::new();
-    for side in [&mut doc.0, &mut weapon.0] {
-        if side.is_dirty() {
-            lines.push(side.save().unwrap_or_else(|error| error));
+    /// Just an edit to the character doc. `sync_doc_to_live` sees `PlayerProps` differ
+    /// from the live character and respawns it holding the new weapon.
+    fn equip(&mut self, weapon: Option<String>) {
+        let Some(def) = self.character.def.as_mut() else {
+            self.bar.status = "no character open".to_string();
+            return;
+        };
+        if !set_weapon(def, weapon.as_deref()) {
+            self.bar.status = "the open def is not a character".to_string();
+            return;
+        }
+        // The character's own choice now, not a borrowed gun.
+        self.focus.held_weapon = None;
+        if self.focus.subject == Subject::Weapon {
+            self.focus.subject = Subject::Character;
+        }
+        self.library.list_dirty = true;
+        self.bar.status = match weapon {
+            Some(path) => format!("equipped {}", def_stem(&path)),
+            None => "unequipped".to_string(),
+        };
+    }
+
+    /// Save every doc with changes. Returns the status line.
+    pub fn save_all(&mut self) -> String {
+        let mut lines = Vec::new();
+        for doc in [&mut self.character.0, &mut self.weapon.0, &mut self.prop.0] {
+            if doc.is_dirty() {
+                lines.push(doc.save().unwrap_or_else(|error| error));
+            }
+        }
+        if lines.is_empty() {
+            "nothing to save".to_string()
+        } else {
+            lines.join("\n")
         }
     }
-    if lines.is_empty() {
-        "nothing to save".to_string()
-    } else {
-        lines.join("\n")
+
+    pub fn any_dirty(&self) -> bool {
+        self.character.is_dirty() || self.weapon.is_dirty() || self.prop.is_dirty()
+    }
+
+    /// Throw away the edits `action` would have lost: equipping replaces only the weapon
+    /// doc, so the character's edits carry on.
+    pub fn discard_for(&mut self, action: &ConfirmAction) {
+        self.weapon.revert();
+        if !matches!(action, ConfirmAction::EquipWeapon(_)) {
+            self.character.revert();
+            self.prop.revert();
+        }
+    }
+
+    pub fn revert_all(&mut self) {
+        self.character.revert();
+        self.weapon.revert();
+        self.prop.revert();
     }
 }
 
@@ -249,13 +396,21 @@ pub fn adopt_worn_def(
     library.list_dirty = true;
 }
 
-/// Keep the weapon doc on the weapon the character doc asks for.
+/// Keep the weapon doc on the weapon in the character's hand: the one opened from the
+/// library if any, otherwise the one the character doc asks for.
 ///
 /// Keyed on the *path*: the weapon doc is only replaced when the character asks for a
 /// different gun, never because something else about the character changed — that would
 /// throw away weapon edits made since the last save.
-pub fn sync_weapon_doc(doc: Res<EditorDoc>, mut weapon: ResMut<WeaponDoc>) {
-    let wanted = doc.def.as_ref().and_then(weapon_def_path);
+pub fn sync_weapon_doc(
+    doc: Res<EditorDoc>,
+    focus: Res<EditorFocus>,
+    mut weapon: ResMut<WeaponDoc>,
+) {
+    let wanted = focus
+        .held_weapon
+        .clone()
+        .or_else(|| doc.def.as_ref().and_then(weapon_def_path));
     if wanted == weapon.def_path {
         return;
     }
@@ -273,6 +428,7 @@ pub fn sync_weapon_doc(doc: Res<EditorDoc>, mut weapon: ResMut<WeaponDoc>) {
 /// it with the new doc would read as a change to respawn for.
 pub fn sync_doc_to_live(
     doc: Res<EditorDoc>,
+    focus: Res<EditorFocus>,
     mut player_def: ResMut<PlayerAssetDef>,
     mut library: ResMut<EditorLibrary>,
 ) {
@@ -282,6 +438,7 @@ pub fn sync_doc_to_live(
     let (Some(edited), Some(path)) = (doc.def.as_ref(), doc.def_path.as_deref()) else {
         return;
     };
+    let edited = &expected_live(edited, focus.held_weapon.as_deref());
     let Some(live) = player_def.0.as_ref() else {
         return;
     };
@@ -351,7 +508,10 @@ mod tests {
             def_path: Some("assets/defs/broken.ron".to_string()),
             ..Default::default()
         };
-        assert!(!doc.is_dirty(), "a file that failed to load has nothing to save");
+        assert!(
+            !doc.is_dirty(),
+            "a file that failed to load has nothing to save"
+        );
     }
 
     #[test]
@@ -398,10 +558,11 @@ mod tests {
         let clean = doc_with(character(None));
         let mut dirty = doc_with(character(None));
         dirty.def.as_mut().unwrap().scale = 2.0;
-        assert!(ConfirmAction::Exit.would_lose_edits(&clean, &dirty));
-        assert!(ConfirmAction::Exit.would_lose_edits(&dirty, &clean));
-        assert!(!ConfirmAction::Exit.would_lose_edits(&clean, &clean));
-        assert!(ConfirmAction::OpenModel("x".into()).would_lose_edits(&dirty, &clean));
+        assert!(ConfirmAction::Exit.would_lose_edits(&clean, &dirty, &clean));
+        assert!(ConfirmAction::Exit.would_lose_edits(&dirty, &clean, &clean));
+        assert!(ConfirmAction::Exit.would_lose_edits(&clean, &clean, &dirty));
+        assert!(!ConfirmAction::Exit.would_lose_edits(&clean, &clean, &clean));
+        assert!(ConfirmAction::OpenModel("x".into()).would_lose_edits(&dirty, &clean, &clean));
     }
 
     /// Equipping replaces the weapon doc but only edits the character doc, so only
@@ -412,7 +573,41 @@ mod tests {
         let mut dirty = doc_with(character(None));
         dirty.def.as_mut().unwrap().scale = 2.0;
         let equip = ConfirmAction::EquipWeapon(Some("assets/defs/SMG.ron".into()));
-        assert!(!equip.would_lose_edits(&dirty, &clean));
-        assert!(equip.would_lose_edits(&clean, &dirty));
+        assert!(!equip.would_lose_edits(&dirty, &clean, &dirty));
+        assert!(equip.would_lose_edits(&clean, &dirty, &clean));
+    }
+
+    /// Opening a gun to fix its muzzle must not leave the character with unsaved edits:
+    /// the borrowed gun goes into the *live* def only.
+    #[test]
+    fn a_held_weapon_changes_the_live_def_not_the_doc() {
+        let doc = character(Some("assets/defs/Pistol.ron"));
+        let live = expected_live(&doc, Some("assets/defs/SMG.ron"));
+        assert_eq!(
+            weapon_def_path(&live).as_deref(),
+            Some("assets/defs/SMG.ron")
+        );
+        assert_eq!(
+            weapon_def_path(&doc).as_deref(),
+            Some("assets/defs/Pistol.ron")
+        );
+        assert_eq!(expected_live(&doc, None), doc);
+    }
+
+    #[test]
+    fn the_subject_follows_the_model_type() {
+        use crate::assets::asset_definition::{EnemyProps, WeaponProps};
+        assert_eq!(Subject::of(&character(None)), Subject::Character);
+        let weapon = AssetDefinition {
+            model_type: ModelType::Weapon(WeaponProps::default()),
+            ..Default::default()
+        };
+        assert_eq!(Subject::of(&weapon), Subject::Weapon);
+        let enemy = AssetDefinition {
+            model_type: ModelType::Enemy(EnemyProps::default()),
+            ..Default::default()
+        };
+        assert_eq!(Subject::of(&enemy), Subject::Prop);
+        assert!(!Subject::Prop.has_live());
     }
 }

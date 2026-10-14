@@ -1,6 +1,6 @@
 use crate::animation::animation_plugin::{AnimationEvent, AnimationEventType, AnimationKey};
 use crate::control::components::{
-    CharacterControl, ControlCommand, ControlDirection, InputKeyboard,
+    CharacterControl, ControlCommand, ControlDirection, GameInputBlock, InputKeyboard,
 };
 use crate::control::gamepad_input::stick_to_world;
 use crate::player::components::PlayerDead;
@@ -18,6 +18,12 @@ use bevy::prelude::{
     Entity, KeyCode, MessageReader, MessageWriter, Query, Res, ResMut, With, Without,
 };
 
+/// Whether a keyboard event should reach the character. With the keyboard blocked only
+/// releases get through, so nothing held before the block can stay stuck down after it.
+pub fn key_event_passes(state: ButtonState, block: Option<&GameInputBlock>) -> bool {
+    state == ButtonState::Released || !block.is_some_and(|b| b.keyboard)
+}
+
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn keyboard_input(
     mut key_evr: MessageReader<KeyboardInput>,
@@ -31,9 +37,13 @@ pub fn keyboard_input(
     mut ability_input: Option<ResMut<AbilityInput>>,
     mut reload_mw: MessageWriter<ReloadRequest>,
     mut switch_mw: MessageWriter<SwitchWeapon>,
+    block: Option<Res<GameInputBlock>>,
 ) {
     if let Ok((entity, mut controller)) = query.single_mut() {
         for ev in key_evr.read() {
+            if !key_event_passes(ev.state, block.as_deref()) {
+                continue;
+            }
             match ev.state {
                 ButtonState::Pressed => match ev.key_code {
                     KeyCode::KeyB => {
@@ -192,5 +202,31 @@ pub fn keyboard_input(
                 stick_to_world(stick.normalize_or_zero(), settings.yaw_degrees);
             controller.torque = Vec3::ZERO;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn with_no_block_every_key_gets_through() {
+        assert!(key_event_passes(ButtonState::Pressed, None));
+        assert!(key_event_passes(
+            ButtonState::Pressed,
+            Some(&GameInputBlock::default())
+        ));
+    }
+
+    /// The release is the half that matters: dropping it would leave W held forever and
+    /// the character walking off once the block lifts.
+    #[test]
+    fn a_blocked_keyboard_still_lets_releases_through() {
+        let block = GameInputBlock {
+            keyboard: true,
+            ..Default::default()
+        };
+        assert!(!key_event_passes(ButtonState::Pressed, Some(&block)));
+        assert!(key_event_passes(ButtonState::Released, Some(&block)));
     }
 }

@@ -13,10 +13,13 @@
 pub mod animation;
 pub mod debug;
 pub mod doc;
+pub mod focus;
 pub mod hardpoints;
 pub mod inspect;
 pub mod models;
 pub mod plugin;
 pub mod prefs;
+pub mod prop;
+pub mod shell;
 pub mod state;
 pub mod ui;

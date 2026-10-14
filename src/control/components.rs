@@ -8,6 +8,21 @@ use std::collections::HashSet;
 #[derive(Component, Reflect)]
 pub struct InputKeyboard;
 
+/// Tells the keyboard and mouse players' input to stand down, because something else on
+/// screen wants the keys or the pointer — a tool screen's panel, a text field.
+///
+/// Absent in a normal match, so the game never pays for it. Only the keyboard/mouse
+/// scheme is gated: a gamepad cannot click a panel or type into a field, so it never
+/// conflicts and keeps driving the character.
+#[derive(Resource, Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct GameInputBlock {
+    /// Ignore key *presses*. Releases still land, so a key held when the block starts
+    /// does not stay stuck down after it ends.
+    pub keyboard: bool,
+    /// Leave `AutoAim` where it is instead of following the cursor.
+    pub mouse_aim: bool,
+}
+
 #[derive(Hash, PartialEq, Eq, Clone, Reflect, Copy)]
 pub enum ControlCommand {
     Throw,

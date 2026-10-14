@@ -324,8 +324,19 @@ Generalise inspect mode into the Studio stage: orbit camera, hold still, optiona
 pose. Spawn non-player models as a static prop in Studio. Make Live the
 default for players and Studio for everything else.
 
-*Done when:* `Tab` (or the top-bar switch) flips between the two instantly on a player,
-and a tower def opens in Studio standing in the arena.
+**Weapons and enemies are first-class docs, not just things reachable through a
+character.** Opening a Weapon def makes *it* the `EditorDoc`: it stands alone on the
+turntable in Studio, and its hardpoints (grip, muzzle, ...) are edited directly. Live with
+a weapon open hands it to the last-worn character, so the same edits can be checked in a
+hand. Opening an Enemy def puts the enemy in Studio, where its sizing, clip tags and
+bindings are edited like a player's. The model list in the Library therefore lists every
+def type, not only players.
+
+The switch needs its own key. The spec's original `Tab` is taken (weapon switching), and
+F1 to F12 are all in use, so it lives on the top bar as a button.
+
+*Done when:* the top-bar switch flips between the two instantly on a player, a weapon def
+opens standing alone with its hardpoints editable, and an enemy def opens in Studio.
 
 ### 6. Library
 
@@ -448,4 +459,99 @@ instead of the ones being edited.
 The doc systems run as one chained pipeline (swap -> adopt -> weapon doc -> live ->
 weapon frames), so each sees the previous step's result in the same frame.
 
-**Not verified in-window yet:** this rests on the type checker and unit tests.
+Verified in-window by hand: model switching, saving, the unsaved-changes question and
+equipping all work. One bug turned up and is fixed: a role the def did not have yet could
+not be added, because the nudge rows only appear for a hardpoint that exists. Missing
+roles now read `+ add <role>`; clicking one creates it, anchored on a guess at the right
+hand (`guess_hand_bone`) when the character has no hardpoints to inherit an anchor from.
+
+### Steps 4 and 3 — built (2026-10-14)
+
+**Step 4: input focus.** `control::components::GameInputBlock` is a resource the
+keyboard and mouse input read. It exists only while the editor runs, so a real match
+never sees it. `character_editor::focus` sets it each frame from the hover map:
+
+- **Pointer over a panel** (anything under a screen root other than the viewport pane,
+  including the floating F1/F2/F10 panels and the viewport toolbar): the aim holds still,
+  so clicking a button no longer swings the character and its gun at it.
+- **Inspecting** (orbit camera or bind pose): the keyboard is blocked as well.
+- **A text field has focus** (`EditorInputFocus::text_capture`): the keyboard is blocked.
+  Nothing sets this yet; the Library search and the tag editor will.
+
+Two departures from the spec, on purpose:
+
+- **WASD is not blocked over the panel.** The panels have no keyboard shortcuts, and
+  losing movement because the cursor happens to rest on the pane would be a surprise.
+  Revisit if a tab gains shortcuts.
+- **There is no reusable text-field widget yet.** It would have nothing to use it. It
+  comes with its first user.
+
+A blocked keyboard still lets key *releases* through (`key_event_passes`), so a key held
+when the block starts is not stuck down when it lifts. The mouse never fired anything, so
+there was no fire path to gate. Gamepads are never blocked.
+
+**Step 3: the shell** (`character_editor::shell`). The layout is now:
+
+- **Top bar:** the title and the doc bar (names, `*`, Save / Revert / Menu, and the
+  unsaved-changes question).
+- **Left pane:** a tab strip and one scrolling body per tab:
+  - **Library:** the model list and the import browser. Interim, until step 6 turns it
+    into a drawer.
+  - **Hardpoints:** the weapon picker, then the hardpoint editor.
+  - **Animation:** the key list.
+- **Viewport:** the debug toggles moved onto a toolbar floating over the game.
+- **Status bar:** the open doc, the selected hardpoint and its anchor bone, an
+  INSPECTING marker, and the key hints that used to be scattered through the pane.
+
+The folding sections and the per-list height caps are gone from the editor. Each tab is
+one scroll container (`min_height: 0`, `overflow: scroll_y`) holding plain columns, so
+nothing scrolls inside something else that scrolls.
+
+The tab strip is local to the editor rather than a `lava_ui_builder` widget, for now.
+The Model, Attach and Props tabs arrive with their panels in step 7.
+
+**Not verified in-window yet.**
+
+### Step 5 — built (2026-10-14)
+
+**Studio / Live.** Studio is the orbit camera with the character held still. It was
+already the playground's inspect mode, so the switch is a pair of buttons on the top bar
+(and F11 still works); there is no separate stage state to drift from it. Bind pose (F12)
+stays its own toggle.
+
+**Every def type opens.** The Library lists every def in `assets/defs/`, grouped
+(CHARACTERS, WEAPONS, ENEMIES, TOWERS, TERRAIN, ITEMS). `*` marks what is open; `-` marks
+the character worn and the weapon held when something else is the subject.
+`EditorFocus::subject` says which kind is open:
+
+- **A character** opens as before: worn and walked around as.
+- **A weapon** opens into the worn character's hand *without editing the character*.
+  `EditorFocus::held_weapon` overrides the character's `PlayerProps::weapon` in the live
+  def only (`doc::expected_live`), so fixing a gun's muzzle does not leave the character
+  with unsaved changes. The Hardpoints tab opens on the weapon side. Equipping from the
+  weapon list makes a gun the character's own again and clears the borrowed one.
+- **Anything else** (enemy, tower, terrain, item) opens as a **prop**
+  (`character_editor::prop`): a bare scene spawned where the character's feet were, with
+  the character hidden and held still. Studio is forced on, because there is nothing to
+  drive (`Subject::has_live`, `keep_studio_for_props`). The orbit camera frames the prop
+  by its mesh bounds (`prop::mesh_bounds`), so a skeleton-less barrel frames as well as a
+  rigged alien. The Hardpoints tab edits the prop's own frames (`HardpointSide::Prop`,
+  every role including `muzzle`, bones from the prop's rig). The skeleton and hardpoint
+  overlays draw the prop instead of the character.
+
+A third doc, `PropDoc`, holds the prop. One Save writes all three; opening another
+model or leaving asks first if any of them has edits. The doc actions moved onto one
+`Docs` system param (`request`, `perform`, `save_all`, `discard_for`, `revert_all`), and
+`SideDocs` reaches the doc for a hardpoint side without touching the others.
+
+Departures from the spec, on purpose:
+
+- **A weapon opens in the hand, not alone on the turntable.** Grip placement only makes
+  sense against a hand, and the muzzle check needs the gun to fire. A weapon alone, for
+  when no character is worn, can come later as a prop.
+- **A prop is static.** No animation graph: the Animation tab says so for a prop. Its clip
+  tags and bindings come with the Animation tab port in step 7. Hidden nodes and scale
+  editing are step 7's Model tab. The prop respawns on a scale change, ready for it.
+
+**Not verified in-window yet.**
+

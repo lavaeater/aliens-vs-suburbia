@@ -15,23 +15,25 @@ use bevy::platform::collections::HashSet;
 use bevy::prelude::*;
 
 use crate::assets::asset_definition::{AssetDefinition, ModelType, PlayerProps};
+use crate::assets::gltf_info;
 use crate::building::systems::ToWorldCoordinates;
+use crate::character_editor::doc::{DefDoc, EditorDoc, EditorFocus, expected_live};
+use crate::character_editor::prefs::EditorPrefs;
 use crate::general::events::map_events::SpawnPlayer;
 use crate::general::systems::map_systems::TileDefinitions;
 use crate::player::components::Player;
 use crate::player_setup::state::{InputDevice, PlayerRoster};
-use crate::assets::gltf_info;
-use crate::character_editor::doc::{DefDoc, EditorDoc};
-use crate::character_editor::prefs::EditorPrefs;
 
 /// Tile the arena's `PlayerSpawn` sits on, in padded map space — where a swapped-in model
 /// appears if there is no live player to inherit a position from.
-const SPAWN_TILE: (usize, usize) = (9, 9);
+pub const SPAWN_TILE: (usize, usize) = (9, 9);
 
 #[derive(Resource, Default)]
 pub struct EditorLibrary {
-    /// Def paths of every imported player model, sorted.
-    pub defs: Vec<String>,
+    /// Def paths of every imported model, of every type, sorted by type then name. The
+    /// library lists them all: a character opens to be worn, a weapon to be held, anything
+    /// else to stand on its own in Studio.
+    pub defs: Vec<(String, DefKind)>,
     /// Of those, the ones whose model file contains no geometry. Wearing one spawns an
     /// invisible character, which reads as "the model failed to load" — so they are
     /// labelled in the list and refused on click.
@@ -85,11 +87,12 @@ impl EditorLibrary {
     }
 
     pub fn refresh_defs(&mut self) {
-        self.defs = crate::player_setup::state::scan_player_defs();
+        self.defs = scan_all_defs();
         self.weapon_defs = scan_weapon_defs();
         self.mesh_less = self
             .defs
             .iter()
+            .map(|(def_path, _)| def_path)
             .filter(|def_path| {
                 AssetDefinition::load_from_def_path(def_path)
                     .and_then(|def| gltf_info::inspect(&def.model_path))
@@ -174,6 +177,68 @@ impl EditorLibrary {
         };
         self.refresh_defs();
     }
+}
+
+/// The library's grouping of defs, in display order.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum DefKind {
+    Player,
+    Weapon,
+    Enemy,
+    Tower,
+    Terrain,
+    Item,
+}
+
+impl DefKind {
+    pub const fn of(model_type: &ModelType) -> Self {
+        match model_type {
+            ModelType::Player(_) => Self::Player,
+            ModelType::Weapon(_) => Self::Weapon,
+            ModelType::Enemy(_) => Self::Enemy,
+            ModelType::Tower(_) => Self::Tower,
+            ModelType::Terrain(_) => Self::Terrain,
+            ModelType::Item(_) => Self::Item,
+        }
+    }
+
+    /// Heading over the group. ASCII only, like all UI text.
+    pub const fn heading(self) -> &'static str {
+        match self {
+            Self::Player => "CHARACTERS",
+            Self::Weapon => "WEAPONS",
+            Self::Enemy => "ENEMIES",
+            Self::Tower => "TOWERS",
+            Self::Terrain => "TERRAIN",
+            Self::Item => "ITEMS",
+        }
+    }
+}
+
+/// Every parseable `assets/defs/*.ron`, with its kind, sorted by kind then path.
+pub fn scan_all_defs() -> Vec<(String, DefKind)> {
+    let Ok(entries) = std::fs::read_dir("assets/defs") else {
+        return vec![];
+    };
+    let mut defs: Vec<(String, DefKind)> = entries
+        .flatten()
+        .filter_map(|entry| {
+            let path = entry.path();
+            if path.extension()?.to_str()? != "ron" {
+                return None;
+            }
+            let def = AssetDefinition::load_from_def_path(path.to_str()?)?;
+            Some((
+                path.to_string_lossy().replace('\\', "/"),
+                DefKind::of(&def.model_type),
+            ))
+        })
+        .collect();
+    defs.sort_by(|a, b| {
+        a.1.cmp(&b.1)
+            .then_with(|| a.0.to_lowercase().cmp(&b.0.to_lowercase()))
+    });
+    defs
 }
 
 /// Every `assets/defs/*.ron` whose `model_type` is `Weapon`, sorted.
@@ -335,9 +400,11 @@ pub const fn decide_swap(player_position: Option<Vec3>, frames_waited: u32) -> S
 /// The two halves cannot run in one frame — `spawn_players` skips the event while a player
 /// still exists, and the despawn only lands when commands are applied. So this parks the
 /// position in `pending_position` and finishes on a later frame.
+#[allow(clippy::too_many_arguments)]
 pub fn swap_player_model(
     mut models: ResMut<EditorLibrary>,
     mut doc: ResMut<EditorDoc>,
+    focus: Res<EditorFocus>,
     mut commands: Commands,
     players: Query<(Entity, &Position), With<Player>>,
     tile_defs: Res<TileDefinitions>,
@@ -381,7 +448,11 @@ pub fn swap_player_model(
         commands.insert_resource(PlayerRoster {
             def_paths: vec![def_path.clone()],
             devices: vec![InputDevice::Keyboard],
-            def_overrides: vec![doc.def.clone()],
+            def_overrides: vec![
+                doc.def
+                    .as_ref()
+                    .map(|def| expected_live(def, focus.held_weapon.as_deref())),
+            ],
         });
         EditorLibrary::remember(&def_path);
         models.selected = Some(def_path);

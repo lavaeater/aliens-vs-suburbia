@@ -9,10 +9,10 @@ use crate::game_state::game_state_plugin::GamePlugin;
 use crate::general::components::Health;
 use crate::general::components::map_components::CurrentTile;
 use avian3d::prelude::{PhysicsDebugPlugin, PhysicsGizmos, PhysicsPlugins};
-use bevy::prelude::*;
 use bevy::gizmos::AppGizmoBuilder;
 use bevy::gizmos::config::GizmoConfig;
 use bevy::log::LogPlugin;
+use bevy::prelude::*;
 use bevy::{DefaultPlugins, log};
 use bevy_skein::SkeinPlugin;
 use bevy_wind_waker_shader::flat::FlatShaderPlugin;
@@ -27,6 +27,7 @@ mod assets;
 pub mod behavior;
 mod building;
 pub(crate) mod camera;
+pub(crate) mod character_editor;
 mod constants;
 mod control;
 pub(crate) mod facts;
@@ -44,12 +45,11 @@ pub(crate) mod model_settings;
 pub(crate) mod music;
 pub(crate) mod player;
 pub(crate) mod player_setup;
-pub(crate) mod character_editor;
 pub(crate) mod poly_pizza;
 pub(crate) mod settings;
+pub mod skein;
 pub(crate) mod towers;
 pub(crate) mod ui;
-pub mod skein;
 
 fn create_map(
     seed: Option<u64>,
@@ -133,7 +133,9 @@ fn print_help() {
     println!("Aliens vs Suburbia\n");
     println!("USAGE:");
     println!("  cargo run                                  Launch the game");
-    println!("  cargo run -- --editor                      Launch straight into the character editor");
+    println!(
+        "  cargo run -- --editor                      Launch straight into the character editor"
+    );
     println!("                                             (--playground still works as an alias)");
     println!("  cargo run -- --asset-browser               Launch straight into the asset browser");
     println!("  cargo run --features map-editor -- --map-editor [--file <path>]");

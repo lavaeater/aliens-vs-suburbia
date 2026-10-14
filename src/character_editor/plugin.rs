@@ -9,17 +9,16 @@ use bevy::prelude::*;
 use bevy::transform::TransformSystems;
 
 use crate::alien::wave_manager::WaveManager;
-use crate::game_state::GameState;
-use crate::general::components::map_components::MapFile;
-use crate::general::events::map_events::LoadMap;
 use crate::character_editor::animation::AnimationEditor;
 use crate::character_editor::debug::{
     EditorOverlays, bias_gizmos_over_mesh, draw_gait_gizmos, draw_player_overlays,
     reset_gizmo_bias, sync_physics_toggle,
 };
 use crate::character_editor::doc::{
-    DocBar, EditorDoc, WeaponDoc, adopt_worn_def, sync_doc_to_live, sync_weapon_doc,
+    DocBar, EditorDoc, EditorFocus, PropDoc, WeaponDoc, adopt_worn_def, sync_doc_to_live,
+    sync_weapon_doc,
 };
+use crate::character_editor::focus::{EditorInputFocus, update_game_input_block};
 use crate::character_editor::hardpoints::{
     HardpointEditor, apply_grip_to_equipped_weapon, apply_weapon_def_to_equipped_weapon,
 };
@@ -28,14 +27,19 @@ use crate::character_editor::inspect::{
     orbit_camera_active, rest_pose_held, switch_orbit_camera,
 };
 use crate::character_editor::models::{EditorLibrary, swap_player_model};
+use crate::character_editor::prop::{
+    despawn_prop, hide_player_for_prop, keep_studio_for_props, sync_prop,
+};
+use crate::character_editor::shell::{ActiveTab, spawn_editor_ui, sync_tabs, update_status_bar};
 use crate::character_editor::state::in_editor;
 use crate::character_editor::ui::{
-    clear_editor_viewport, end_editor_session, rebuild_animation_panel,
-    rebuild_debug_toggles, rebuild_doc_bar, rebuild_hardpoint_panel, rebuild_import_browser, rebuild_model_list,
-    rebuild_weapon_list, refresh_animation_panel_on_def_change, spawn_editor_ui,
-    sync_editor_viewport,
+    clear_editor_viewport, end_editor_session, rebuild_animation_panel, rebuild_debug_toggles,
+    rebuild_doc_bar, rebuild_hardpoint_panel, rebuild_import_browser, rebuild_model_list,
+    rebuild_weapon_list, refresh_animation_panel_on_def_change, sync_editor_viewport,
 };
-use crate::ui::collapse::{CollapsedSections, sync_section_collapse};
+use crate::game_state::GameState;
+use crate::general::components::map_components::MapFile;
+use crate::general::events::map_events::LoadMap;
 
 /// The arena: a small walled room with nothing in it, for trying out the controls.
 const ARENA_MAP: &str = "assets/maps/playground.ron";
@@ -45,9 +49,11 @@ pub struct CharacterEditorPlugin;
 impl Plugin for CharacterEditorPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<EditorDoc>()
+            .init_resource::<ActiveTab>()
+            .init_resource::<PropDoc>()
+            .init_resource::<EditorFocus>()
             .init_resource::<WeaponDoc>()
             .init_resource::<DocBar>()
-            .init_resource::<CollapsedSections>()
             .add_systems(
                 OnEnter(GameState::InGame),
                 (
@@ -66,6 +72,7 @@ impl Plugin for CharacterEditorPlugin {
                     clear_editor_viewport,
                     end_editor_session,
                     reset_gizmo_bias,
+                    despawn_prop,
                 )
                     .run_if(in_editor),
             )
@@ -73,7 +80,9 @@ impl Plugin for CharacterEditorPlugin {
                 Update,
                 (
                     sync_editor_viewport,
-                    sync_section_collapse,
+                    sync_tabs,
+                    update_status_bar,
+                    update_game_input_block,
                     rebuild_doc_bar,
                     rebuild_model_list,
                     rebuild_weapon_list,
@@ -102,6 +111,9 @@ impl Plugin for CharacterEditorPlugin {
                     sync_doc_to_live,
                     apply_grip_to_equipped_weapon,
                     apply_weapon_def_to_equipped_weapon,
+                    keep_studio_for_props,
+                    sync_prop,
+                    hide_player_for_prop,
                 )
                     .chain()
                     .run_if(in_state(GameState::InGame))
@@ -180,9 +192,11 @@ fn init_model_list(mut commands: Commands) {
     commands.insert_resource(EditorDoc::default());
     commands.insert_resource(WeaponDoc::default());
     commands.insert_resource(DocBar::default());
-    // Every section open on entry: the fold state is a working preference, not something
-    // to inherit from whatever you were doing last session.
-    commands.insert_resource(CollapsedSections::default());
+    commands.insert_resource(PropDoc::default());
+    commands.insert_resource(EditorFocus::default());
+    commands.insert_resource(EditorInputFocus::default());
+    commands.insert_resource(crate::control::components::GameInputBlock::default());
+    commands.insert_resource(ActiveTab::default());
     commands.insert_resource(AnimationEditor {
         ui_dirty: true,
         ..Default::default()

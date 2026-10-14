@@ -25,6 +25,7 @@
 
 use std::collections::HashMap;
 
+use bevy::camera::primitives::Aabb;
 use bevy::input::mouse::{AccumulatedMouseMotion, AccumulatedMouseScroll, MouseScrollUnit};
 use bevy::mesh::skinning::SkinnedMesh;
 use bevy::prelude::*;
@@ -32,16 +33,17 @@ use bevy::window::PrimaryWindow;
 
 use crate::assets::asset_definition::Hardpoint;
 use crate::assets::gizmos::{bone_map, joints_under};
+use crate::assets::gltf_info;
 use crate::camera::components::GameCamera;
+use crate::character_editor::debug::EditorOverlays;
+use crate::character_editor::doc::{PropDoc, WeaponDoc};
+use crate::character_editor::hardpoints::{HardpointEditor, HardpointSide};
+use crate::character_editor::prop::{EditorProp, mesh_bounds};
+use crate::character_editor::state::EditorSession;
 use crate::control::components::CharacterControl;
 use crate::model_settings::plugin::PlayerAssetDef;
 use crate::player::components::{AutoAim, Player};
 use crate::player::systems::equip::EquippedWeapon;
-use crate::character_editor::debug::EditorOverlays;
-use crate::assets::gltf_info;
-use crate::character_editor::doc::WeaponDoc;
-use crate::character_editor::hardpoints::{HardpointEditor, HardpointSide};
-use crate::character_editor::state::EditorSession;
 use crate::settings::resources::GameSettings;
 
 /// Radians per unit of mouse motion when orbiting.
@@ -92,6 +94,9 @@ pub struct OrbitCamera {
     /// A middle-drag that began over the viewport pane. Kept so a drag carries on when the
     /// cursor leaves the pane mid-gesture, and one begun over the UI never moves the camera.
     pub dragging: bool,
+    /// What the camera is following: the character, or a prop opened in its place. When
+    /// it changes the camera re-frames rather than sliding by the distance between them.
+    pub subject: Option<Entity>,
 }
 
 impl OrbitCamera {
@@ -109,6 +114,7 @@ impl OrbitCamera {
             tracking: pivot,
             reframe: 0,
             dragging: false,
+            subject: None,
         }
     }
 
@@ -196,15 +202,21 @@ pub fn switch_orbit_camera(
     mut was_on: Local<bool>,
     mut settings: ResMut<GameSettings>,
     players: Query<&Transform, With<Player>>,
+    props: Query<&Transform, With<EditorProp>>,
 ) {
     if debug.orbit_camera == *was_on {
         return;
     }
 
     if debug.orbit_camera {
-        // Wait for a character to orbit: switched on before one has spawned (or mid model
-        // swap), the camera would settle on the world origin instead.
-        let Some(pivot) = players.iter().next().map(|t| t.translation) else {
+        // Wait for something to orbit: switched on before a character has spawned (or mid
+        // model swap), the camera would settle on the world origin instead.
+        let Some(pivot) = props
+            .iter()
+            .next()
+            .or_else(|| players.iter().next())
+            .map(|t| t.translation)
+        else {
             return;
         };
         *was_on = true;
@@ -239,6 +251,16 @@ pub fn drive_orbit_camera(
     let Some(mut orbit) = orbit else {
         return;
     };
+    let subject = focus.subject_root();
+    if subject != orbit.subject {
+        // A prop opened, or closed again: frame the new subject from where it stands
+        // rather than sliding the camera by however far apart the two are.
+        orbit.subject = subject;
+        if let Some(at) = focus.origin() {
+            orbit.tracking = at;
+        }
+        orbit.reframe = SETTLE_FRAMES;
+    }
     if let Some(at) = focus.origin() {
         orbit.follow(at);
     }
@@ -337,7 +359,10 @@ pub struct FocusTargets<'w, 's> {
     editor: Option<Res<'w, HardpointEditor>>,
     player_def: Res<'w, PlayerAssetDef>,
     weapon_def: Res<'w, WeaponDoc>,
+    prop_def: Res<'w, PropDoc>,
     players: Query<'w, 's, (Entity, Option<&'static EquippedWeapon>), With<Player>>,
+    props: Query<'w, 's, Entity, With<EditorProp>>,
+    aabbs: Query<'w, 's, (&'static Aabb, &'static GlobalTransform)>,
     children_q: Query<'w, 's, &'static Children>,
     skinned_q: Query<'w, 's, &'static SkinnedMesh>,
     names: Query<'w, 's, &'static Name>,
@@ -351,19 +376,32 @@ fn character_distance(radius: f32) -> f32 {
 }
 
 impl FocusTargets<'_, '_> {
-    /// The player entity's position: steady, unlike the animated skeleton, so it is what
+    /// What is being looked at: a prop opened on its own if there is one, otherwise the
+    /// character.
+    fn subject_root(&self) -> Option<Entity> {
+        self.props
+            .iter()
+            .next()
+            .or_else(|| self.players.iter().next().map(|(player, _)| player))
+    }
+
+    /// The subject's root position: steady, unlike the animated skeleton, so it is what
     /// the pivot follows.
     fn origin(&self) -> Option<Vec3> {
-        let (player, _) = self.players.iter().next()?;
+        let root = self.subject_root()?;
         self.globals
-            .get(player)
+            .get(root)
             .ok()
             .map(GlobalTransform::translation)
     }
 
-    /// Centre and radius of the box round the character's joints. `None` until the
-    /// skeleton has spawned.
+    /// Centre and radius of the subject. A prop is measured by its meshes, since a barrel
+    /// or a tower has no skeleton; the character by its joints, which are steadier than
+    /// a skinned mesh's bounds. `None` until it has spawned.
     fn character_bounds(&self) -> Option<(Vec3, f32)> {
+        if let Some(prop) = self.props.iter().next() {
+            return mesh_bounds(prop, &self.children_q, &self.aabbs);
+        }
         let (player, _) = self.players.iter().next()?;
         let joints = joints_under(player, &self.children_q, &self.skinned_q);
         let mut points = joints
@@ -405,6 +443,18 @@ impl FocusTargets<'_, '_> {
                 self.weapon_def.def.as_ref()?.hardpoints.get(role)?,
                 equipped?.0,
             ),
+            HardpointSide::Prop => {
+                let prop = self.props.iter().next()?;
+                let hardpoint = self.prop_def.def.as_ref()?.hardpoints.get(role)?;
+                let anchor = match &hardpoint.anchor {
+                    None => prop,
+                    Some(bone) => {
+                        let joints = joints_under(prop, &self.children_q, &self.skinned_q);
+                        *bone_map(&joints, &self.names).get(bone)?
+                    }
+                };
+                (hardpoint, anchor)
+            }
         };
         let at = self.globals.get(anchor).ok()?;
         Some(at.transform_point(Vec3::from(hardpoint.translation)))
