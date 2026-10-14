@@ -5,8 +5,14 @@
         ability: Bombardment,
         throw_rate_per_minute: 60.0,
         weapon: Some("assets/defs/Pistol.ron"),
-        extra_weapons: ["assets/defs/Shotgun.ron"],
-        starting_ammo: [(Pistol, 36), (Shells, 12), (Molotov, 2)],
+        extra_weapons: [
+            "assets/defs/Shotgun.ron",
+        ],
+        starting_ammo: [
+            (Pistol, 36),
+            (Shells, 12),
+            (Molotov, 2),
+        ],
     )),
     hidden_nodes: [],
     animation_mapping: {},
@@ -14,6 +20,12 @@
     animation_bindings: {},
     animation_sources: [],
     attachments: [],
-    hardpoints: {},
+    hardpoints: {
+        "grip": (
+            anchor: Some("hand_r"),
+            translation: (-0.02, 0.06, 0.0),
+            rotation_euler_deg: (0.0, 0.0, 0.0),
+        ),
+    },
     aim_bones: [],
 )
