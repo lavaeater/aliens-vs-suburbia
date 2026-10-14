@@ -28,7 +28,7 @@ use crate::character_editor::hardpoints::{
     HardpointSide, add_role, ensure_role, guess_hand_bone, nudge_rotation, nudge_translation,
 };
 use crate::character_editor::models::{
-    EditorLibrary, ImportKind, add_animation_source, classify, def_stem,
+    EditorLibrary, def_stem,
 };
 use crate::character_editor::prop::EditorProp;
 use crate::character_editor::state::EditorSession;
@@ -38,23 +38,9 @@ use crate::player::components::Player;
 #[derive(Component)]
 pub struct EditorViewportPane;
 
-/// Holds one clickable row per imported player def.
-#[derive(Component)]
-pub struct ModelListContainer;
-
 /// Holds one clickable row per weapon def.
 #[derive(Component)]
 pub struct WeaponListContainer;
-
-/// Holds the import browser's folder and file rows.
-#[derive(Component)]
-pub struct ImportBrowserContainer;
-
-#[derive(Component)]
-pub struct ImportPathLabel;
-
-#[derive(Component)]
-pub struct ImportStatusLabel;
 
 /// Holds the debug-overlay toggle rows.
 #[derive(Component)]
@@ -1025,133 +1011,6 @@ pub fn refresh_animation_panel_on_def_change(
     }
 }
 
-/// Rebuild the library list: every def, grouped by type. `*` marks what is open, `-` the
-/// character worn and the weapon held when something else is the subject.
-pub fn rebuild_model_list(
-    mut models: ResMut<EditorLibrary>,
-    doc: Res<EditorDoc>,
-    weapon_doc: Res<WeaponDoc>,
-    prop_doc: Res<PropDoc>,
-    focus: Res<EditorFocus>,
-    mut commands: Commands,
-    container_q: Query<Entity, With<ModelListContainer>>,
-    mut last_open: Local<[Option<String>; 3]>,
-) {
-    let open = [
-        doc.def_path.clone(),
-        weapon_doc.def_path.clone(),
-        prop_doc.def_path.clone(),
-    ];
-    if *last_open != open {
-        last_open.clone_from(&open);
-        models.list_dirty = true;
-    }
-    if !models.list_dirty {
-        return;
-    }
-    // Cleared only once there is somewhere to draw, so a frame without the container
-    // retries instead of leaving the list empty for the session.
-    let Ok(container) = container_q.single() else {
-        return;
-    };
-    models.list_dirty = false;
-    commands.entity(container).despawn_related::<Children>();
-
-    let subject_path = match focus.subject {
-        Subject::Character => open[0].clone(),
-        Subject::Weapon => open[1].clone(),
-        Subject::Prop => open[2].clone(),
-    };
-    let defs = models.defs.clone();
-    let mesh_less = models.mesh_less.clone();
-    commands.entity(container).with_children(|parent| {
-        if defs.is_empty() {
-            parent.spawn((
-                Text::new("no defs in assets/defs"),
-                TextFont::default().with_font_size(11.0),
-                TextColor(Color::srgb(0.6, 0.5, 0.4)),
-            ));
-            return;
-        }
-        let mut group = None;
-        for (def_path, kind) in defs {
-            if group != Some(kind) {
-                group = Some(kind);
-                parent.spawn((
-                    Text::new(kind.heading()),
-                    TextFont::default().with_font_size(10.0),
-                    TextColor(Color::srgb(0.5, 0.7, 0.6)),
-                    Node {
-                        margin: UiRect::top(Val::Px(4.0)),
-                        ..Default::default()
-                    },
-                ));
-            }
-            let is_subject = subject_path.as_deref() == Some(def_path.as_str());
-            let is_in_use = open.iter().flatten().any(|p| *p == def_path);
-            let has_no_mesh = mesh_less.contains(&def_path);
-            let mark = if is_subject {
-                "*"
-            } else if is_in_use {
-                "-"
-            } else {
-                " "
-            };
-            let label = if has_no_mesh {
-                format!("{mark} {} (no mesh)", def_stem(&def_path))
-            } else {
-                format!("{mark} {}", def_stem(&def_path))
-            };
-            let color = if has_no_mesh {
-                Color::srgb(0.75, 0.6, 0.5)
-            } else {
-                Color::srgb(0.85, 0.92, 0.85)
-            };
-            let clicked = def_path.clone();
-            row(parent, label, is_subject, color).observe(
-                move |_: On<Activate>, mut docs: Docs| {
-                    // Refused rather than opened: a character would spawn as nothing, and
-                    // a prop would stand invisible, with no clue why.
-                    if docs.library.mesh_less.contains(&clicked) {
-                        docs.library.status = format!(
-                            "{} has no geometry - it is an animation library, not a model",
-                            def_stem(&clicked)
-                        );
-                        docs.library.browser_dirty = true;
-                        return;
-                    }
-                    docs.request(ConfirmAction::OpenModel(clicked.clone()));
-                },
-            );
-        }
-    });
-}
-
-/// Add a clip library to the open character.
-///
-/// No respawn needed: `build_player_anim_graph` folds `animation_sources` into the
-/// signature it watches and waits for the extra GLTFs to load before committing, so the
-/// new clips reach the live character on their own once the file is in. Like any other
-/// edit it stays in the doc until you Save — switching models asks first, so the clips
-/// cannot quietly vanish.
-fn attach_animation_source(
-    source_path: &str,
-    models: &mut EditorLibrary,
-    doc: &mut EditorDoc,
-    animation: &mut AnimationEditor,
-) {
-    let Some(def) = doc.def.as_mut() else {
-        models.status = "no character open to add the source to".to_string();
-        return;
-    };
-
-    let (changed, status) = add_animation_source(def, source_path);
-    models.status = status;
-    if changed {
-        animation.ui_dirty = true;
-    }
-}
-
 /// Rebuild the weapon list: every weapon def, with the one the worn character carries
 /// marked.
 ///
@@ -1236,85 +1095,6 @@ pub fn rebuild_weapon_list(
             row(parent, label, is_equipped, Color::srgb(0.9, 0.88, 0.75)).observe(
                 move |_: On<Activate>, mut docs: Docs| {
                     docs.request(ConfirmAction::EquipWeapon(Some(chosen.clone())));
-                },
-            );
-        }
-    });
-}
-
-pub fn rebuild_import_browser(
-    mut models: ResMut<EditorLibrary>,
-    mut commands: Commands,
-    container_q: Query<Entity, With<ImportBrowserContainer>>,
-    mut path_label_q: Query<&mut Text, (With<ImportPathLabel>, Without<ImportStatusLabel>)>,
-    mut status_label_q: Query<&mut Text, With<ImportStatusLabel>>,
-) {
-    if !models.browser_dirty {
-        return;
-    }
-    models.browser_dirty = false;
-
-    if let Ok(mut text) = path_label_q.single_mut() {
-        **text = format!("assets/{}", models.browse_folder);
-    }
-    if let Ok(mut text) = status_label_q.single_mut() {
-        (**text).clone_from(&models.status);
-    }
-
-    let Ok(container) = container_q.single() else {
-        return;
-    };
-    commands.entity(container).despawn_related::<Children>();
-
-    let at_root = models.browse_folder.is_empty();
-    let folders = models.folders.clone();
-    let files = models.files.clone();
-    commands.entity(container).with_children(|parent| {
-        if !at_root {
-            row(
-                parent,
-                "[..]".to_string(),
-                false,
-                Color::srgb(0.75, 0.88, 1.0),
-            )
-            .observe(|_: On<Activate>, mut m: ResMut<EditorLibrary>| m.leave_folder());
-        }
-        for name in folders {
-            let entered = name.clone();
-            row(
-                parent,
-                format!("[dir] {name}"),
-                false,
-                Color::srgb(0.75, 0.88, 1.0),
-            )
-            .observe(move |_: On<Activate>, mut m: ResMut<EditorLibrary>| {
-                m.enter_folder(&entered);
-            });
-        }
-        for file in files {
-            let imported = file.clone();
-            let name = file.rsplit('/').next().unwrap_or(&file).to_string();
-            // Say up front which files have no geometry, so the click that follows is an
-            // informed one rather than a model that spawns invisible.
-            let (label, color) = match classify(&file) {
-                ImportKind::Model => (format!("+ {name}"), Color::srgb(0.9, 0.85, 0.7)),
-                ImportKind::AnimationLibrary => (
-                    format!("~ {name}  (anims only -> add as source)"),
-                    Color::srgb(0.7, 0.8, 0.95),
-                ),
-            };
-            row(parent, label, false, color).observe(
-                move |_: On<Activate>,
-                      mut m: ResMut<EditorLibrary>,
-                      mut doc: ResMut<EditorDoc>,
-                      mut animation: ResMut<AnimationEditor>| {
-                    match classify(&imported) {
-                        ImportKind::Model => m.import(&imported),
-                        ImportKind::AnimationLibrary => {
-                            attach_animation_source(&imported, &mut m, &mut doc, &mut animation);
-                        }
-                    }
-                    m.browser_dirty = true;
                 },
             );
         }

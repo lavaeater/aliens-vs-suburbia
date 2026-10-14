@@ -49,11 +49,22 @@ pub struct EditorLibrary {
     /// that is the whole promise of hardpoints, and this is where it gets tried.
     pub weapon_defs: Vec<String>,
 
-    /// Folder the import browser is showing, relative to `assets/`.
+    /// Folder the library is browsing, relative to `assets/`.
     pub browse_folder: String,
     pub folders: Vec<String>,
     pub files: Vec<String>,
-    pub browser_dirty: bool,
+    /// Every model file under `assets/`, for searching across folders.
+    pub all_files: Vec<String>,
+    /// Whether a file has geometry, by model path. Finding out reads the file.
+    pub file_kinds: bevy::platform::collections::HashMap<String, ImportKind>,
+    /// The search box's text.
+    pub query: String,
+    /// The type chip picked, `None` = all.
+    pub kind_filter: Option<DefKind>,
+    /// The list as last drawn, for the keyboard to step through.
+    pub rows: Vec<crate::character_editor::library::LibraryRow>,
+    /// The row the keyboard is on, an index into `rows`.
+    pub highlight: Option<usize>,
 
     /// A def picked but not yet applied — see `swap_player_model`.
     pub pending_def: Option<String>,
@@ -76,6 +87,7 @@ impl EditorLibrary {
         };
         models.refresh_defs();
         models.refresh_browser();
+        models.all_files = crate::character_editor::library::scan_all_files();
         // Come back wearing whatever you last wore, so the session starts on a rig you
         // were actually working on rather than on whatever `ModelSettings` points at.
         if let Some(def_path) =
@@ -108,7 +120,8 @@ impl EditorLibrary {
         let (folders, files) = crate::asset_browser::state::scan_folder(&self.browse_folder);
         self.folders = folders;
         self.files = files;
-        self.browser_dirty = true;
+        self.highlight = None;
+        self.list_dirty = true;
     }
 
     pub fn enter_folder(&mut self, name: &str) {
@@ -148,35 +161,6 @@ impl EditorLibrary {
         }
         .save();
     }
-
-    /// Write a minimal def for `model_path` so the model becomes selectable.
-    ///
-    /// Refuses to clobber an existing def: re-importing a model you have already tuned
-    /// would silently reset its scale, hardpoints and animation bindings.
-    ///
-    /// Refuses geometry-less files outright — see [`classify`].
-    pub fn import(&mut self, model_path: &str) {
-        if classify(model_path) == ImportKind::AnimationLibrary {
-            self.status = format!(
-                "{} has no meshes - add it as an animation source",
-                def_stem(model_path)
-            );
-            return;
-        }
-        let path = AssetDefinition::def_path(model_path);
-        if path.exists() {
-            self.status = format!("{} already imported", def_stem(&path.to_string_lossy()));
-            self.refresh_defs();
-            return;
-        }
-        new_player_def(model_path).save();
-        self.status = if path.exists() {
-            format!("imported {}", def_stem(&path.to_string_lossy()))
-        } else {
-            format!("FAILED to write {}", path.display())
-        };
-        self.refresh_defs();
-    }
 }
 
 /// The library's grouping of defs, in display order.
@@ -191,6 +175,42 @@ pub enum DefKind {
 }
 
 impl DefKind {
+    pub const ALL: [Self; 6] = [
+        Self::Player,
+        Self::Weapon,
+        Self::Enemy,
+        Self::Tower,
+        Self::Terrain,
+        Self::Item,
+    ];
+
+    /// Short name, for chips and "imported as" labels.
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Player => "Character",
+            Self::Weapon => "Weapon",
+            Self::Enemy => "Enemy",
+            Self::Tower => "Tower",
+            Self::Terrain => "Terrain",
+            Self::Item => "Item",
+        }
+    }
+
+    /// A new def's `model_type` for this kind, every prop at its default.
+    pub fn model_type(self) -> ModelType {
+        use crate::assets::asset_definition::{
+            EnemyProps, ItemProps, TerrainProps, TowerProps, WeaponProps,
+        };
+        match self {
+            Self::Player => ModelType::Player(PlayerProps::default()),
+            Self::Weapon => ModelType::Weapon(WeaponProps::default()),
+            Self::Enemy => ModelType::Enemy(EnemyProps::default()),
+            Self::Tower => ModelType::Tower(TowerProps::default()),
+            Self::Terrain => ModelType::Terrain(TerrainProps::default()),
+            Self::Item => ModelType::Item(ItemProps::default()),
+        }
+    }
+
     pub const fn of(model_type: &ModelType) -> Self {
         match model_type {
             ModelType::Player(_) => Self::Player,
@@ -325,18 +345,6 @@ pub fn add_animation_source(def: &mut AssetDefinition, source_path: &str) -> (bo
     )
 }
 
-/// A brand-new def for an imported model: playable, and nothing else assumed.
-///
-/// Scale stays at the default — working it out needs the mesh AABB, which needs the model
-/// loaded. The asset browser computes it from a target height; this is deliberately the
-/// bare minimum that makes the model appear in the list.
-pub fn new_player_def(model_path: &str) -> AssetDefinition {
-    AssetDefinition {
-        model_path: model_path.to_string(),
-        model_type: ModelType::Player(PlayerProps::default()),
-        ..Default::default()
-    }
-}
 
 /// Append `name` to a browser folder path, treating an empty path as the `assets/` root.
 pub fn join_folder(current: &str, name: &str) -> String {
@@ -537,23 +545,16 @@ mod tests {
         );
     }
 
+    /// Import writes a def of the chosen kind; the chips and the import bar both walk
+    /// `DefKind::ALL`, so every kind must be reachable and map back to itself.
     #[test]
-    fn an_imported_model_is_playable_and_assumes_nothing_else() {
-        let def = new_player_def("packs/foo/Bar.glb");
-        assert_eq!(def.model_path, "packs/foo/Bar.glb");
-        assert!(matches!(def.model_type, ModelType::Player(_)));
-        assert!(
-            def.hardpoints.is_empty(),
-            "hardpoints are authored, not guessed"
-        );
-        assert!(
-            def.aim_bones.is_empty(),
-            "the twist falls back to the default chain"
-        );
+    fn every_kind_round_trips_through_its_model_type() {
+        for kind in DefKind::ALL {
+            assert_eq!(DefKind::of(&kind.model_type()), kind);
+            assert!(kind.label().is_ascii() && kind.heading().is_ascii());
+        }
     }
 
-    /// The def path is what makes an import show up in the list, and what the
-    /// clobber-guard checks.
     #[test]
     fn a_model_maps_to_a_def_named_after_its_file_stem() {
         assert_eq!(

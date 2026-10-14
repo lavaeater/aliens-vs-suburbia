@@ -26,7 +26,12 @@ use crate::character_editor::inspect::{
     drive_orbit_camera, hold_player_still, hold_rest_pose, inspect_keys, inspecting,
     orbit_camera_active, rest_pose_held, switch_orbit_camera,
 };
+use crate::character_editor::library::{navigate_library, rebuild_library, sync_search_query};
 use crate::character_editor::models::{EditorLibrary, swap_player_model};
+use crate::character_editor::text_field::{
+    FieldKey, FocusedField, blur_on_click_elsewhere, draw_fields, focus_on_click, sync_text_capture,
+    type_into_field,
+};
 use crate::character_editor::prop::{
     despawn_prop, hide_player_for_prop, keep_studio_for_props, sync_prop,
 };
@@ -34,7 +39,7 @@ use crate::character_editor::shell::{ActiveTab, spawn_editor_ui, sync_tabs, upda
 use crate::character_editor::state::in_editor;
 use crate::character_editor::ui::{
     clear_editor_viewport, end_editor_session, rebuild_animation_panel, rebuild_debug_toggles,
-    rebuild_doc_bar, rebuild_hardpoint_panel, rebuild_import_browser, rebuild_model_list,
+    rebuild_doc_bar, rebuild_hardpoint_panel,
     rebuild_weapon_list, refresh_animation_panel_on_def_change, sync_editor_viewport,
 };
 use crate::game_state::GameState;
@@ -48,7 +53,10 @@ pub struct CharacterEditorPlugin;
 
 impl Plugin for CharacterEditorPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<EditorDoc>()
+        app.add_message::<FieldKey>()
+            .init_resource::<FocusedField>()
+            .add_observer(focus_on_click)
+            .init_resource::<EditorDoc>()
             .init_resource::<ActiveTab>()
             .init_resource::<PropDoc>()
             .init_resource::<EditorFocus>()
@@ -84,9 +92,7 @@ impl Plugin for CharacterEditorPlugin {
                     update_status_bar,
                     update_game_input_block,
                     rebuild_doc_bar,
-                    rebuild_model_list,
                     rebuild_weapon_list,
-                    rebuild_import_browser,
                     sync_physics_toggle,
                     rebuild_debug_toggles,
                     draw_player_overlays,
@@ -114,6 +120,23 @@ impl Plugin for CharacterEditorPlugin {
                     keep_studio_for_props,
                     sync_prop,
                     hide_player_for_prop,
+                )
+                    .chain()
+                    .run_if(in_state(GameState::InGame))
+                    .run_if(in_editor),
+            )
+            // The Library and its search box. Typing runs before the query is read, and the
+            // query before the list is drawn, so a keystroke shows in the same frame.
+            .add_systems(
+                Update,
+                (
+                    blur_on_click_elsewhere,
+                    type_into_field,
+                    sync_text_capture,
+                    draw_fields,
+                    sync_search_query,
+                    navigate_library,
+                    rebuild_library,
                 )
                     .chain()
                     .run_if(in_state(GameState::InGame))
@@ -192,6 +215,7 @@ fn init_model_list(mut commands: Commands) {
     commands.insert_resource(EditorDoc::default());
     commands.insert_resource(WeaponDoc::default());
     commands.insert_resource(DocBar::default());
+    commands.insert_resource(FocusedField::default());
     commands.insert_resource(PropDoc::default());
     commands.insert_resource(EditorFocus::default());
     commands.insert_resource(EditorInputFocus::default());

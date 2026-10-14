@@ -23,7 +23,7 @@ use bevy::prelude::*;
 use crate::assets::asset_definition::{AssetDefinition, ModelType};
 use crate::character_editor::debug::EditorOverlays;
 use crate::character_editor::hardpoints::HardpointSide;
-use crate::character_editor::models::{EditorLibrary, def_stem, set_weapon};
+use crate::character_editor::models::{DefKind, EditorLibrary, def_stem, set_weapon};
 use crate::game_state::GameState;
 use crate::model_settings::plugin::PlayerAssetDef;
 
@@ -61,8 +61,19 @@ impl DefDoc {
         }
     }
 
+    /// Edits not yet written. A preview (no file yet) is never dirty: there is nowhere to
+    /// save it, and leaving it should not ask — importing is what makes it a file.
     pub fn is_dirty(&self) -> bool {
-        self.def.is_some() && self.def != self.saved
+        self.def_path.is_some() && self.def.is_some() && self.def != self.saved
+    }
+
+    /// A model looked at before importing: a def in memory, no file behind it.
+    pub fn preview(def: AssetDefinition) -> Self {
+        Self {
+            def_path: None,
+            def: Some(def),
+            saved: None,
+        }
     }
 
     /// File stem of the def, for labels: `"assets/defs/amy.ron"` -> `"amy"`.
@@ -206,6 +217,8 @@ pub fn needs_respawn(live: &AssetDefinition, edited: &AssetDefinition) -> bool {
 pub enum ConfirmAction {
     /// Open a def (path) of any type: a character to wear, a weapon to hold, or a prop.
     OpenModel(String),
+    /// Look at a model file that has no def yet (model path), before importing it.
+    Preview(String),
     /// Hand the character a different weapon (weapon def path, `None` = empty-handed).
     /// Only guarded by the *weapon* doc: the character doc just gains an edit.
     EquipWeapon(Option<String>),
@@ -217,6 +230,7 @@ impl ConfirmAction {
     pub fn describe(&self) -> String {
         match self {
             Self::OpenModel(path) => format!("open {}", def_stem(path)),
+            Self::Preview(path) => format!("preview {}", def_stem(path)),
             Self::EquipWeapon(Some(path)) => format!("equip {}", def_stem(path)),
             Self::EquipWeapon(None) => "unequip the weapon".to_string(),
             Self::Exit => "leave the editor".to_string(),
@@ -226,7 +240,7 @@ impl ConfirmAction {
     /// Whether doing this now would lose edits in any of the open docs.
     pub fn would_lose_edits(&self, character: &DefDoc, weapon: &DefDoc, prop: &DefDoc) -> bool {
         match self {
-            Self::OpenModel(_) | Self::Exit => {
+            Self::OpenModel(_) | Self::Preview(_) | Self::Exit => {
                 character.is_dirty() || weapon.is_dirty() || prop.is_dirty()
             }
             Self::EquipWeapon(_) => weapon.is_dirty(),
@@ -274,6 +288,7 @@ impl Docs<'_> {
     pub fn perform(&mut self, action: ConfirmAction) {
         match action {
             ConfirmAction::OpenModel(path) => self.open(&path),
+            ConfirmAction::Preview(model_path) => self.preview(&model_path),
             ConfirmAction::EquipWeapon(weapon) => self.equip(weapon),
             ConfirmAction::Exit => self.next_state.set(GameState::Menu),
         }
@@ -309,6 +324,60 @@ impl Docs<'_> {
                     self.overlays.toggle_orbit_camera();
                 }
             }
+        }
+    }
+
+    /// Show a model file that has no def yet, on its own in Studio. Nothing is written:
+    /// the Library offers "import as" while it is showing.
+    fn preview(&mut self, model_path: &str) {
+        self.prop.0 = DefDoc::preview(AssetDefinition {
+            model_path: model_path.to_string(),
+            model_type: ModelType::Terrain(Default::default()),
+            ..Default::default()
+        });
+        self.focus.subject = Subject::Prop;
+        if !self.overlays.orbit_camera {
+            self.overlays.toggle_orbit_camera();
+        }
+        self.library.list_dirty = true;
+        self.bar.status = format!("previewing {}", def_stem(model_path));
+    }
+
+    /// Write a def for `model_path` as `kind`, then open it. Refuses to overwrite a def
+    /// that exists: re-importing a model you have tuned would reset its scale, hardpoints
+    /// and bindings. Anything set while previewing (the scale, once the Model tab can set
+    /// it) carries into the new def.
+    pub fn import_as(&mut self, model_path: &str, kind: DefKind) {
+        let def_path = AssetDefinition::def_path(model_path)
+            .to_string_lossy()
+            .replace('\\', "/");
+        if std::path::Path::new(&def_path).exists() {
+            self.bar.status = format!("{} is already imported - opening it", def_stem(&def_path));
+            self.open(&def_path);
+            return;
+        }
+        let mut def = self
+            .prop
+            .def
+            .clone()
+            .filter(|d| d.model_path == model_path)
+            .unwrap_or_else(|| AssetDefinition {
+                model_path: model_path.to_string(),
+                ..Default::default()
+            });
+        def.model_type = kind.model_type();
+        let mut doc = DefDoc {
+            def_path: Some(def_path.clone()),
+            def: Some(def),
+            saved: None,
+        };
+        match doc.save() {
+            Ok(_) => {
+                self.library.refresh_defs();
+                self.bar.status = format!("imported {} as {}", def_stem(&def_path), kind.label());
+                self.open(&def_path);
+            }
+            Err(error) => self.bar.status = error,
         }
     }
 

@@ -555,3 +555,38 @@ Departures from the spec, on purpose:
 
 **Not verified in-window yet.**
 
+### Step 6 — built (2026-10-14)
+
+The Library tab is now one list (`character_editor::library`), built by the pure
+`library_rows` from the imported defs and the files on disk:
+
+- **A search box** (`text_field.rs`, the first text field; it sets
+  `EditorInputFocus::text_capture` while it has focus, so typing never walks the
+  character). An empty query browses the current folder. A query matches def names and
+  every model file under `assets/` (indexed once on entry, `scan_all_files`), capped at
+  `SEARCH_LIMIT`. Matching ignores case.
+- **Type chips** (All, Character, Weapon, Enemy, Tower, Terrain, Item) filter the
+  imported defs.
+- **Every file says what it is** (`FileState`): imported (and as what), `+ new`, or
+  `~ anims`. The geometry check reads the file, so the answers are cached per path.
+- **Preview before import.** Clicking a new file shows it in Studio as a prop with no
+  file behind it (`DefDoc::preview`, `ConfirmAction::Preview`). A preview is never
+  dirty, so leaving it never asks. While it shows, the bar under the search box offers
+  **import as** one of the six kinds (`Docs::import_as`). Importing writes the def,
+  refuses to overwrite an existing one (it opens it instead), carries over anything set
+  on the preview, and opens the new def as what it now is.
+- **Animation libraries** add themselves to the open character's `animation_sources`, as
+  in the playground.
+- **Keyboard:** with the search box focused, Up / Down move a `>` highlight over the rows
+  (headings skipped, wrapping), Enter opens it (or the first match), and Escape or a
+  click elsewhere gives the keyboard back.
+
+The old MODEL list and IMPORT browser are gone, and with them `EditorLibrary::import`
+and `new_player_def`.
+
+Departure from the spec: **the Library stays a tab**, not a drawer over the pane. It
+works as a tab, and a drawer can come with the polish pass if it is missed.
+
+Smoke-tested: the editor ran for 40 s with no panic or error in the log. **The new UI
+itself has not been clicked through.**
+

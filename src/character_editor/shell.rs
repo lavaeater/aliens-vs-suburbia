@@ -31,9 +31,12 @@ use crate::character_editor::doc::{EditorDoc, EditorFocus, PropDoc, Subject, Wea
 use crate::character_editor::hardpoints::{HardpointEditor, HardpointSide};
 use crate::character_editor::ui::{
     AnimationContainer, DebugTogglesContainer, DocBarContainer, EditorViewportPane,
-    HardpointContainer, ImportBrowserContainer, ImportPathLabel, ImportStatusLabel,
-    ModelListContainer, WeaponListContainer, row,
+    HardpointContainer, WeaponListContainer, row,
 };
+use crate::character_editor::library::{
+    LibraryChips, LibraryImportBar, LibraryList, LibrarySearch, LibraryStatus,
+};
+use crate::character_editor::text_field::text_field;
 use crate::ui::spawn_ui::StateMarker;
 
 /// The tabs, in strip order.
@@ -262,12 +265,22 @@ pub fn spawn_editor_ui(mut commands: Commands) {
 fn spawn_library_tab(left: &mut ChildSpawnerCommands) {
     left.spawn(tab_body(EditorTab::Library))
         .with_children(|tab| {
-            tab.spawn(heading("MODELS"));
-            tab.spawn((ModelListContainer, list_column()));
-            tab.spawn(heading("IMPORT"));
-            tab.spawn((ImportPathLabel, text("", 10.0, Color::srgb(0.5, 0.7, 0.9))));
-            tab.spawn((ImportBrowserContainer, list_column()));
-            tab.spawn((ImportStatusLabel, text("", 11.0, HINT)));
+            tab.spawn((LibrarySearch, text_field("search models and files...")));
+            tab.spawn((
+                LibraryChips,
+                Node {
+                    display: Display::Flex,
+                    flex_direction: FlexDirection::Row,
+                    flex_wrap: FlexWrap::Wrap,
+                    column_gap: Val::Px(4.0),
+                    row_gap: Val::Px(4.0),
+                    flex_shrink: 0.0,
+                    ..Default::default()
+                },
+            ));
+            tab.spawn((LibraryImportBar, list_column()));
+            tab.spawn((LibraryStatus, text("", 10.0, Color::srgb(0.5, 0.7, 0.9))));
+            tab.spawn((LibraryList, list_column()));
         });
 }
 
