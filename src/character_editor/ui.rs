@@ -28,7 +28,7 @@ use crate::character_editor::doc::{
 };
 use crate::character_editor::hardpoints::{
     COARSE_ROTATION, COARSE_TRANSLATION, FINE_ROTATION, FINE_TRANSLATION, HardpointEditor,
-    HardpointSide, ensure_role, nudge_rotation, nudge_translation,
+    HardpointSide, add_role, ensure_role, guess_hand_bone, nudge_rotation, nudge_translation,
 };
 use crate::character_editor::models::{
     EditorLibrary, ImportKind, add_animation_source, classify, def_stem,
@@ -892,29 +892,45 @@ pub fn rebuild_hardpoint_panel(
     commands.entity(container).with_children(|parent| {
         side_chips(parent, side, weapon_name.as_deref());
 
-        // Role chips.
+        // Role chips. A role the def lacks is offered as "+ add"; clicking it creates the
+        // hardpoint and selects it, which brings up the nudge rows and anchor picker.
+        let hand_guess = guess_hand_bone(&bones);
         for role in side.roles().iter().copied() {
             let exists = present.iter().any(|r| r == role);
             let is_active = active.as_deref() == Some(role);
-            let marker = if is_active {
-                "*"
-            } else if exists {
-                "-"
-            } else {
-                "+"
+            let (label, color) = match (is_active, exists) {
+                (true, _) => (format!("* {role}"), Color::srgb(0.85, 0.92, 0.85)),
+                (false, true) => (format!("  {role}"), Color::srgb(0.85, 0.92, 0.85)),
+                (false, false) => (format!("+ add {role}"), Color::srgb(0.6, 0.75, 0.7)),
             };
             let clicked = role.to_string();
-            row(
-                parent,
-                format!("{marker} {role}"),
-                is_active,
-                Color::srgb(0.85, 0.92, 0.85),
-            )
-            .observe(
-                move |_: On<Activate>, mut editor: ResMut<HardpointEditor>| {
+            let fallback = hand_guess.clone();
+            row(parent, label, is_active, color).observe(
+                move |_: On<Activate>,
+                      mut editor: ResMut<HardpointEditor>,
+                      mut doc: ResMut<EditorDoc>,
+                      mut weapon_doc: ResMut<WeaponDoc>| {
+                    if !exists {
+                        // Weapon frames are model-origin relative: no bone to guess.
+                        let (def, fallback) = match editor.side {
+                            HardpointSide::Character => (doc.def.as_mut(), fallback.clone()),
+                            HardpointSide::Weapon => (weapon_doc.def.as_mut(), None),
+                        };
+                        if let Some(def) = def {
+                            add_role(def, &clicked, fallback);
+                        }
+                    }
                     editor.select_role(&clicked);
                 },
             );
+        }
+
+        if present.is_empty() {
+            parent.spawn((
+                Text::new("no hardpoints yet - click '+ add grip' to place one"),
+                TextFont::default().with_font_size(10.0),
+                TextColor(Color::srgb(0.7, 0.75, 0.6)),
+            ));
         }
 
         let Some(hardpoint) = hardpoint else { return };

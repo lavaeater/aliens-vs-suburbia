@@ -117,6 +117,57 @@ pub fn ensure_role<'a>(def: &'a mut AssetDefinition, role: &str) -> &'a mut Hard
         })
 }
 
+/// Add `role` if the def does not have it yet; a role it already has is left alone.
+///
+/// The anchor comes from an existing hardpoint when there is one (see [`ensure_role`]),
+/// otherwise from `fallback_anchor` — on a character with no hardpoints yet, the caller's
+/// best guess at the hand, so the new frame appears in the palm rather than at the feet.
+pub fn add_role(def: &mut AssetDefinition, role: &str, fallback_anchor: Option<String>) {
+    if def.hardpoints.contains_key(role) {
+        return;
+    }
+    let anchor = def
+        .hardpoints
+        .values()
+        .find_map(|hp| hp.anchor.clone())
+        .or(fallback_anchor);
+    def.hardpoints.insert(
+        role.to_string(),
+        Hardpoint {
+            anchor,
+            ..Default::default()
+        },
+    );
+}
+
+/// The bone a weapon grip most likely belongs on: a right hand, not a finger.
+///
+/// Rigs name it every which way (`mixamorigRightHand`, `Hand.R`, `hand_r`,
+/// `RightHand`), so this looks for "hand" plus a right-side marker and skips the finger
+/// bones that also contain "hand". Only a starting point — the anchor picker is right
+/// there to correct it.
+pub fn guess_hand_bone(bones: &[String]) -> Option<String> {
+    const FINGERS: [&str; 5] = ["thumb", "index", "middle", "ring", "pinky"];
+    let is_hand = |name: &str| {
+        let lower = name.to_lowercase();
+        lower.contains("hand") && !FINGERS.iter().any(|f| lower.contains(f))
+    };
+    let is_right = |name: &str| {
+        let lower = name.to_lowercase();
+        lower.contains("right")
+            || lower.ends_with(".r")
+            || lower.ends_with("_r")
+            || lower.ends_with(" r")
+            || lower.starts_with("r_")
+    };
+    bones
+        .iter()
+        .filter(|bone| is_hand(bone))
+        // Shortest wins: `RightHand` over `RightHandEnd` and similar leaf helpers.
+        .min_by_key(|bone| (!is_right(bone), bone.len()))
+        .cloned()
+}
+
 /// Nudge one translation axis. `axis` is 0/1/2 for x/y/z.
 pub fn nudge_translation(hardpoint: &mut Hardpoint, axis: usize, delta: f32) {
     if let Some(value) = hardpoint.translation.get_mut(axis) {
@@ -227,6 +278,44 @@ mod tests {
         let mut def = def_with_grip_on("mixamorigRightHand");
         let created = ensure_role(&mut def, "sight");
         assert_eq!(created.anchor.as_deref(), Some("mixamorigRightHand"));
+    }
+
+    #[test]
+    fn adding_a_role_to_a_bare_character_uses_the_guessed_hand() {
+        let mut def = AssetDefinition::default();
+        add_role(&mut def, "grip", Some("mixamorigRightHand".to_string()));
+        assert_eq!(
+            def.hardpoints["grip"].anchor.as_deref(),
+            Some("mixamorigRightHand")
+        );
+    }
+
+    #[test]
+    fn adding_a_role_that_exists_keeps_its_values() {
+        let mut def = def_with_grip_on("Hand");
+        def.hardpoints.get_mut("grip").unwrap().translation = [1.0, 2.0, 3.0];
+        add_role(&mut def, "grip", Some("Elsewhere".to_string()));
+        assert_eq!(def.hardpoints["grip"].translation, [1.0, 2.0, 3.0]);
+        assert_eq!(def.hardpoints["grip"].anchor.as_deref(), Some("Hand"));
+    }
+
+    #[test]
+    fn the_hand_guess_prefers_the_right_hand_over_fingers_and_the_left() {
+        let bones: Vec<String> = [
+            "mixamorigLeftHand",
+            "mixamorigRightHandIndex1",
+            "mixamorigRightHand",
+            "mixamorigSpine",
+        ]
+        .map(str::to_string)
+        .to_vec();
+        assert_eq!(guess_hand_bone(&bones).as_deref(), Some("mixamorigRightHand"));
+
+        let blender: Vec<String> = ["Hand.L", "Hand.R", "Thumb.R"].map(str::to_string).to_vec();
+        assert_eq!(guess_hand_bone(&blender).as_deref(), Some("Hand.R"));
+
+        let none: Vec<String> = ["Spine", "Head"].map(str::to_string).to_vec();
+        assert_eq!(guess_hand_bone(&none), None);
     }
 
     #[test]
