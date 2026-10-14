@@ -10,17 +10,21 @@
 //! Only the handful of things that genuinely differ between a real match and a sandbox are
 //! gated, via [`state::in_editor`] / [`state::in_normal_game`].
 
+pub mod aim_bones;
 pub mod animation;
+pub mod animation_tab;
 pub mod debug;
 pub mod doc;
 pub mod focus;
 pub mod hardpoints;
 pub mod inspect;
 pub mod library;
+pub mod model_tab;
 pub mod models;
 pub mod plugin;
 pub mod prefs;
 pub mod prop;
+pub mod props_tab;
 pub mod shell;
 pub mod state;
 pub mod text_field;

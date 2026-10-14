@@ -26,6 +26,11 @@ use crate::character_editor::inspect::{
     drive_orbit_camera, hold_player_still, hold_rest_pose, inspect_keys, inspecting,
     orbit_camera_active, rest_pose_held, switch_orbit_camera,
 };
+use crate::character_editor::animation_tab::{commit_clip_tag, rebuild_animation_tab};
+use crate::character_editor::model_tab::{
+    ModelMeasure, apply_prop_hidden_nodes, measure_subject, rebuild_model_tab,
+};
+use crate::character_editor::props_tab::{PropsTab, rebuild_props_tab};
 use crate::character_editor::library::{navigate_library, rebuild_library, sync_search_query};
 use crate::character_editor::models::{EditorLibrary, swap_player_model};
 use crate::character_editor::text_field::{
@@ -35,12 +40,14 @@ use crate::character_editor::text_field::{
 use crate::character_editor::prop::{
     despawn_prop, hide_player_for_prop, keep_studio_for_props, sync_prop,
 };
-use crate::character_editor::shell::{ActiveTab, spawn_editor_ui, sync_tabs, update_status_bar};
+use crate::character_editor::shell::{
+    ActiveTab, EditorTab, remember_tab_and_stage, spawn_editor_ui, sync_tabs, update_status_bar,
+};
 use crate::character_editor::state::in_editor;
 use crate::character_editor::ui::{
-    clear_editor_viewport, end_editor_session, rebuild_animation_panel, rebuild_debug_toggles,
+    clear_editor_viewport, end_editor_session, rebuild_debug_toggles,
     rebuild_doc_bar, rebuild_hardpoint_panel,
-    rebuild_weapon_list, refresh_animation_panel_on_def_change, sync_editor_viewport,
+    rebuild_weapon_list, sync_editor_viewport,
 };
 use crate::game_state::GameState;
 use crate::general::components::map_components::MapFile;
@@ -56,6 +63,8 @@ impl Plugin for CharacterEditorPlugin {
         app.add_message::<FieldKey>()
             .init_resource::<FocusedField>()
             .add_observer(focus_on_click)
+            .init_resource::<ModelMeasure>()
+            .init_resource::<PropsTab>()
             .init_resource::<EditorDoc>()
             .init_resource::<ActiveTab>()
             .init_resource::<PropDoc>()
@@ -98,8 +107,6 @@ impl Plugin for CharacterEditorPlugin {
                     draw_player_overlays,
                     draw_gait_gizmos,
                     rebuild_hardpoint_panel,
-                    refresh_animation_panel_on_def_change,
-                    rebuild_animation_panel,
                 )
                     .run_if(in_state(GameState::InGame))
                     .run_if(in_editor),
@@ -137,6 +144,22 @@ impl Plugin for CharacterEditorPlugin {
                     sync_search_query,
                     navigate_library,
                     rebuild_library,
+                )
+                    .chain()
+                    .run_if(in_state(GameState::InGame))
+                    .run_if(in_editor),
+            )
+            // The Model, Animation and Props tabs.
+            .add_systems(
+                Update,
+                (
+                    measure_subject,
+                    apply_prop_hidden_nodes,
+                    rebuild_model_tab,
+                    commit_clip_tag,
+                    rebuild_animation_tab,
+                    rebuild_props_tab,
+                    remember_tab_and_stage,
                 )
                     .chain()
                     .run_if(in_state(GameState::InGame))
@@ -205,7 +228,12 @@ fn spawn_settings_panels(mut commands: Commands, theme: Res<lava_ui_builder::Lav
 /// asset browser in between sessions shows up without a restart.
 fn init_model_list(mut commands: Commands) {
     commands.insert_resource(EditorLibrary::fresh());
-    commands.insert_resource(EditorOverlays::default());
+    // Back on the tab and in the Studio/Live you left in.
+    let prefs = crate::character_editor::prefs::EditorPrefs::load();
+    commands.insert_resource(EditorOverlays {
+        orbit_camera: prefs.studio,
+        ..Default::default()
+    });
     commands.insert_resource(HardpointEditor {
         ui_dirty: true,
         ..Default::default()
@@ -216,11 +244,19 @@ fn init_model_list(mut commands: Commands) {
     commands.insert_resource(WeaponDoc::default());
     commands.insert_resource(DocBar::default());
     commands.insert_resource(FocusedField::default());
+    commands.insert_resource(ModelMeasure::default());
+    commands.insert_resource(PropsTab::default());
     commands.insert_resource(PropDoc::default());
     commands.insert_resource(EditorFocus::default());
     commands.insert_resource(EditorInputFocus::default());
     commands.insert_resource(crate::control::components::GameInputBlock::default());
-    commands.insert_resource(ActiveTab::default());
+    commands.insert_resource(ActiveTab(
+        prefs
+            .last_tab
+            .as_deref()
+            .and_then(EditorTab::from_label)
+            .unwrap_or_default(),
+    ));
     commands.insert_resource(AnimationEditor {
         ui_dirty: true,
         ..Default::default()

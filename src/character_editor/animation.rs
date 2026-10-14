@@ -17,6 +17,7 @@ use bevy::prelude::*;
 
 use crate::animation::animation_plugin::AnimationKey;
 use crate::assets::asset_definition::AssetDefinition;
+use crate::assets::gltf_info;
 
 /// Keys offered in the panel. The composite intent keys (`Throwing`, `Building`) are
 /// included because they are bindable, even though the state machine usually drives them.
@@ -45,6 +46,9 @@ pub const PLAYABLE_KEYS: [AnimationKey; 18] = [
 pub struct AnimationEditor {
     /// Key whose binding is being edited.
     pub selected_key: Option<AnimationKey>,
+    /// Clip whose tag is being edited (a key of `clip_tags`: the model's own clip name, or
+    /// `"<source stem>|<clip>"`).
+    pub selected_clip: Option<String>,
     pub ui_dirty: bool,
 }
 
@@ -58,6 +62,81 @@ impl AnimationEditor {
     pub const fn touch(&mut self) {
         self.ui_dirty = true;
     }
+}
+
+/// Every clip the def can bind to, as `clip_tags` keys: the model's own clips by name,
+/// then each animation source's as `"<stem>|<clip>"` — the form `resolved_clip` expects.
+///
+/// Read off the files (`gltf_info`), so it lists clips that have no tag yet, which is the
+/// point: tagging is how a clip becomes bindable.
+pub fn all_clips(def: &AssetDefinition) -> Vec<String> {
+    let mut clips: Vec<String> = gltf_info::inspect(&def.model_path)
+        .map_or_default(|info| info.animations);
+    for source in &def.animation_sources {
+        let stem = crate::character_editor::models::def_stem(source);
+        if let Some(info) = gltf_info::inspect(source) {
+            clips.extend(info.animations.iter().map(|clip| format!("{stem}|{clip}")));
+        }
+    }
+    // A tag on a clip the files no longer have is still shown, so it can be cleared.
+    let mut stale: Vec<String> = def
+        .clip_tags
+        .keys()
+        .filter(|clip| !clips.contains(clip))
+        .cloned()
+        .collect();
+    stale.sort();
+    clips.extend(stale);
+    clips
+}
+
+/// Tidy a typed tag path: trim each `/`-separated segment and drop empty ones.
+/// `"  Combat // Ranged /Shoot "` becomes `"Combat/Ranged/Shoot"`.
+pub fn normalize_tag_path(raw: &str) -> String {
+    raw.split('/')
+        .map(str::trim)
+        .filter(|segment| !segment.is_empty())
+        .collect::<Vec<_>>()
+        .join("/")
+}
+
+/// Tag `clip` with `raw` (normalized); an empty path clears the tag. A path is unique to
+/// one clip — a binding resolves a path to exactly one clip — so tagging a clip with a
+/// path another clip holds takes it from that clip, as the asset browser always did.
+pub fn set_clip_tag(def: &mut AssetDefinition, clip: &str, raw: &str) {
+    let path = normalize_tag_path(raw);
+    if path.is_empty() {
+        def.clip_tags.remove(clip);
+        return;
+    }
+    def.clip_tags.retain(|other, tag| other == clip || *tag != path);
+    def.clip_tags.insert(clip.to_string(), path);
+}
+
+/// Carry a def written before tags existed onto them: each `animation_mapping` key ->
+/// clip becomes a tag on that clip (named after the key, unless it already has one) and a
+/// binding to it. Lossless, and only when there are no bindings yet, exactly as the asset
+/// browser migrates. Returns whether anything changed.
+pub fn migrate_legacy_mapping(def: &mut AssetDefinition) -> bool {
+    if !def.animation_bindings.is_empty() || def.animation_mapping.is_empty() {
+        return false;
+    }
+    let mut mapping: Vec<(String, String)> = def
+        .animation_mapping
+        .iter()
+        .filter(|(_, clip)| !clip.is_empty())
+        .map(|(key, clip)| (key.clone(), clip.clone()))
+        .collect();
+    mapping.sort();
+    for (key, clip) in mapping {
+        let tag = def
+            .clip_tags
+            .entry(clip)
+            .or_insert_with(|| key.clone())
+            .clone();
+        def.animation_bindings.insert(key, tag);
+    }
+    true
 }
 
 /// Every distinct tag path the def assigns to a clip, sorted.
@@ -110,6 +189,39 @@ mod tests {
             def.clip_tags.insert(clip.to_string(), tag.to_string());
         }
         def
+    }
+
+    #[test]
+    fn a_typed_tag_path_is_tidied() {
+        assert_eq!(normalize_tag_path("  Combat // Ranged /Shoot "), "Combat/Ranged/Shoot");
+        assert_eq!(normalize_tag_path(" / "), "");
+    }
+
+    /// A path names one clip; tagging a second clip with it moves it.
+    #[test]
+    fn a_tag_path_moves_to_the_clip_tagged_last() {
+        let mut def = def_with_tags(&[("Run", "Locomotion/Run")]);
+        set_clip_tag(&mut def, "Sprint", "Locomotion / Run");
+        assert_eq!(def.clip_tags.get("Sprint").map(String::as_str), Some("Locomotion/Run"));
+        assert!(!def.clip_tags.contains_key("Run"));
+    }
+
+    #[test]
+    fn an_empty_tag_clears_it() {
+        let mut def = def_with_tags(&[("Run", "Locomotion/Run")]);
+        set_clip_tag(&mut def, "Run", "  ");
+        assert!(def.clip_tags.is_empty());
+    }
+
+    #[test]
+    fn a_legacy_mapping_becomes_tags_and_bindings() {
+        let mut def = AssetDefinition::default();
+        def.animation_mapping
+            .insert("walk".to_string(), "Armature|Walk".to_string());
+        assert!(migrate_legacy_mapping(&mut def));
+        assert_eq!(def.clip_tags.get("Armature|Walk").map(String::as_str), Some("walk"));
+        assert_eq!(def.resolved_clip("walk").as_deref(), Some("Armature|Walk"));
+        assert!(!migrate_legacy_mapping(&mut def), "only once: bindings exist now");
     }
 
     #[test]

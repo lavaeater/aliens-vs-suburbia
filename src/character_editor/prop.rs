@@ -110,6 +110,16 @@ pub fn mesh_bounds(
     children: &Query<&Children>,
     aabbs: &Query<(&Aabb, &GlobalTransform)>,
 ) -> Option<(Vec3, f32)> {
+    let (min, max) = mesh_extents(root, children, aabbs)?;
+    Some(((min + max) * 0.5, ((max - min).length() * 0.5).max(0.01)))
+}
+
+/// World-space box round everything drawn under `root`: (min corner, max corner).
+pub fn mesh_extents(
+    root: Entity,
+    children: &Query<&Children>,
+    aabbs: &Query<(&Aabb, &GlobalTransform)>,
+) -> Option<(Vec3, Vec3)> {
     let mut min = Vec3::splat(f32::INFINITY);
     let mut max = Vec3::splat(f32::NEG_INFINITY);
     let mut found = false;
@@ -119,19 +129,14 @@ pub fn mesh_bounds(
             let matrix = transform.to_matrix();
             let center = Vec3::from(aabb.center);
             let half = Vec3::from(aabb.half_extents);
-            for corner in [
-                Vec3::new(-1.0, -1.0, -1.0),
-                Vec3::new(-1.0, -1.0, 1.0),
-                Vec3::new(-1.0, 1.0, -1.0),
-                Vec3::new(-1.0, 1.0, 1.0),
-                Vec3::new(1.0, -1.0, -1.0),
-                Vec3::new(1.0, -1.0, 1.0),
-                Vec3::new(1.0, 1.0, -1.0),
-                Vec3::new(1.0, 1.0, 1.0),
-            ] {
-                let point = matrix.transform_point3(center + half * corner);
-                min = min.min(point);
-                max = max.max(point);
+            for x in [-1.0, 1.0] {
+                for y in [-1.0, 1.0] {
+                    for z in [-1.0, 1.0] {
+                        let point = matrix.transform_point3(center + half * Vec3::new(x, y, z));
+                        min = min.min(point);
+                        max = max.max(point);
+                    }
+                }
             }
             found = true;
         }
@@ -139,7 +144,7 @@ pub fn mesh_bounds(
             stack.extend(kids.iter());
         }
     }
-    found.then(|| ((min + max) * 0.5, ((max - min).length() * 0.5).max(0.01)))
+    found.then_some((min, max))
 }
 
 #[cfg(test)]

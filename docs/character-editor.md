@@ -590,3 +590,86 @@ works as a tab, and a drawer can come with the polish pass if it is missed.
 Smoke-tested: the editor ran for 40 s with no panic or error in the log. **The new UI
 itself has not been clicked through.**
 
+### Step 7 — mostly built (2026-10-14)
+
+Three new tabs; the strip is now Library, Model, Animation, Hardpoints, Props. Every tab
+edits whatever is open (`doc::SideDocs::subject_mut`), so the same tab works on a
+character, a weapon or an enemy.
+
+**Model** (`model_tab.rs`):
+- What the file holds: meshes, bones and clips. `gltf_info` now also reports mesh node
+  names and the joint count.
+- The scale, with factor buttons.
+- The height measured off the model on screen (`measure_subject`, mesh bounds rounded
+  to a millimetre), with **set height** buttons that work out the scale from it. This is
+  the asset browser's target height, against the model in the arena.
+- Hidden nodes as toggles: a prop updates in place (`apply_prop_hidden_nodes`), a
+  character respawns.
+
+**Animation** (`animation_tab.rs`):
+- The key bindings as before, now on any subject; keys only play on a character in the
+  arena.
+- A **CLIPS** list underneath: every clip of the model and its sources (`all_clips`),
+  each with its tag. Pick one, type a path into the field and press Enter (`set_clip_tag`
+  tidies the path and moves it off any clip that had it), or reuse an existing path.
+- Legacy `animation_mapping` defs are migrated as they open (`migrate_legacy_mapping`).
+  That shows as an unsaved edit until saved.
+
+**Props** (`props_tab.rs`):
+- The type, which asks before resetting the stats.
+- Every plain stat of the type, editable: numbers with coarse/fine nudges (never below
+  zero; whole numbers round), switches, and pick-one choices. Switching an enemy to
+  Ranged, or a tower to Slow, starts the new variant at usable values.
+- Nested data (resistances, explosions, projectiles, ammo lists) is shown and left to the
+  `.ron`.
+- The asset browser could only display these.
+- A changed type takes effect once saved and reopened. A character doc whose type
+  changed stops being worn rather than respawn-looping (guard in `sync_doc_to_live`).
+
+Things the code revealed:
+
+- **A character's def scale is never read in game.** `spawn_players` sizes the player
+  from `ModelSettings` (the F2 panel). Enemies, towers, terrain, items and weapons do use
+  theirs. So the Model tab offers scale and set-height for everything but a character,
+  and says why for a character. Making players honour their def scale is a separate
+  decision.
+- **Weapon hidden nodes and scale show on the next equip**, not live. The tab says so.
+
+Not ported, on purpose:
+
+- **Raw clip playback** (the browser's `[` `]`). A clip only plays through the
+  character's animation graph, which holds bound clips only. Binding a clip to a key and
+  clicking the key does the same job.
+- **Attachments (bone sockets).** Nothing in the game reads `attachments`; it was
+  superseded by hardpoints. Port it if it is still wanted, otherwise drop the field.
+- **Reference-weapon preview** is covered by step 5: open a weapon and it is in the hand.
+
+Smoke-tested: 40 s with no panic or error. **The new tabs have not been clicked through.**
+
+### Step 8 — built, ahead of step 9 (2026-10-14)
+
+Done before retiring the old screens, because it is additive and risk-free, and step 9
+deletes code you may still want to compare against.
+
+**Torso twist chain** (`aim_bones.rs`, a TORSO TWIST section at the bottom of the Props
+tab for a character):
+
+- With no chain of its own, the section says whether the rig actually has the mixamo
+  spine the default needs. `male-simple` does not (`spine_01`..`spine_03`), which is why
+  its torso never twisted.
+- **Suggest from this rig** (`suggest_chain`) takes its spine bones in order, at most
+  four, with weights rising up the back like the default chain.
+- Bones can be added from the rig's torso bones (spine, chest, neck...) or removed,
+  weights nudged, or the chain cleared back to the default.
+- Edits respawn the character, which is where the chain is resolved.
+
+**Prefs:** `editor-prefs.ron` now also remembers the last tab and Studio/Live. Studio
+is only remembered while a character or weapon is open, so leaving on an enemy does not
+start the next session in Studio. Every write goes through `EditorPrefs::update`, which
+keeps the other fields; the old `remember` overwrote them.
+
+Not done: the opt-in **practice targets**. It is optional, and the dummy code is in git
+history when it is wanted.
+
+Smoke-tested: 40 s with no panic or error.
+

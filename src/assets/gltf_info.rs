@@ -24,6 +24,10 @@ pub struct GltfInfo {
     pub mesh_count: usize,
     /// Clip names, in file order — the order `GltfAssetLabel::Animation(i)` uses.
     pub animations: Vec<String>,
+    /// Names of the nodes that draw a mesh, sorted: what `hidden_nodes` can hide.
+    pub mesh_nodes: Vec<String>,
+    /// How many nodes are joints of a skin.
+    pub joint_count: usize,
 }
 
 impl GltfInfo {
@@ -147,9 +151,32 @@ fn parse_info(json: &str) -> Option<GltfInfo> {
                 })
                 .collect()
         });
+    let nodes = value.get("nodes").and_then(|n| n.as_array());
+    let mut mesh_nodes: Vec<String> = nodes.map_or_default(|nodes| {
+        nodes
+            .iter()
+            .filter(|node| node.get("mesh").is_some())
+            .filter_map(|node| node.get("name").and_then(|n| n.as_str()))
+            .map(str::to_string)
+            .collect()
+    });
+    mesh_nodes.sort();
+    mesh_nodes.dedup();
+    let joint_count = value
+        .get("skins")
+        .and_then(|s| s.as_array())
+        .map_or(0, |skins| {
+            skins
+                .iter()
+                .filter_map(|skin| skin.get("joints").and_then(|j| j.as_array()))
+                .map(Vec::len)
+                .sum()
+        });
     Some(GltfInfo {
         mesh_count,
         animations,
+        mesh_nodes,
+        joint_count,
     })
 }
 
@@ -358,6 +385,19 @@ mod tests {
         let info = parse_info("{}").unwrap();
         assert!(!info.is_animation_only());
         assert_eq!(info.mesh_count, 0);
+    }
+
+    /// What `hidden_nodes` can hide: named nodes carrying a mesh, not bones or empties.
+    #[test]
+    fn mesh_nodes_are_the_named_nodes_with_a_mesh() {
+        let info = parse_info(
+            r#"{"meshes":[{},{}],
+                "nodes":[{"name":"Pistol","mesh":0},{"name":"Hips"},{"name":"Body","mesh":1},{"mesh":0}],
+                "skins":[{"joints":[1]}]}"#,
+        )
+        .unwrap();
+        assert_eq!(info.mesh_nodes, vec!["Body", "Pistol"]);
+        assert_eq!(info.joint_count, 1);
     }
 
     /// Unnamed clips still have to be listable; glTF does not require `name`.

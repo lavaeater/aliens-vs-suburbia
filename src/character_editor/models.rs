@@ -156,10 +156,7 @@ impl EditorLibrary {
     /// Remember this model for next time. Called once the swap is actually applied, so a
     /// def that fails to load is not the one you come back to.
     fn remember(def_path: &str) {
-        EditorPrefs {
-            last_model_def: Some(def_path.to_string()),
-        }
-        .save();
+        EditorPrefs::update(|prefs| prefs.last_model_def = Some(def_path.to_string()));
     }
 }
 

@@ -43,11 +43,18 @@ pub struct DefDoc {
 impl DefDoc {
     /// Open the def at `def_path`. A file that fails to load gives a doc with a path but
     /// no def, so the panels can say which file is broken.
+    ///
+    /// A def from before clip tags existed is migrated onto them as it opens, which shows
+    /// as an unsaved edit until it is saved.
     pub fn open(def_path: &str) -> Self {
-        let def = AssetDefinition::load_from_def_path(def_path);
+        let saved = AssetDefinition::load_from_def_path(def_path);
+        let mut def = saved.clone();
+        if let Some(def) = def.as_mut() {
+            crate::character_editor::animation::migrate_legacy_mapping(def);
+        }
         Self {
             def_path: Some(def_path.to_string()),
-            saved: def.clone(),
+            saved,
             def,
         }
     }
@@ -177,6 +184,25 @@ impl SideDocs<'_> {
             HardpointSide::Weapon => self.weapon.def.as_mut(),
             HardpointSide::Prop => self.prop.def.as_mut(),
         }
+    }
+
+    /// The def of what is open: the doc the Model, Animation and Props tabs edit.
+    pub fn subject_mut(&mut self, subject: Subject) -> Option<&mut AssetDefinition> {
+        self.def_mut(HardpointSide::default_for(subject))
+    }
+}
+
+/// The doc of what is open, read-only.
+pub fn subject_doc<'a>(
+    subject: Subject,
+    character: &'a EditorDoc,
+    weapon: &'a WeaponDoc,
+    prop: &'a PropDoc,
+) -> &'a DefDoc {
+    match subject {
+        Subject::Character => character,
+        Subject::Weapon => weapon,
+        Subject::Prop => prop,
     }
 }
 
@@ -415,6 +441,8 @@ impl Docs<'_> {
         if lines.is_empty() {
             "nothing to save".to_string()
         } else {
+            // A save can change a def's type; the Library groups by it.
+            self.library.refresh_defs();
             lines.join("\n")
         }
     }
@@ -507,6 +535,12 @@ pub fn sync_doc_to_live(
     let (Some(edited), Some(path)) = (doc.def.as_ref(), doc.def_path.as_deref()) else {
         return;
     };
+    // A character doc whose type was just changed to something else cannot be worn:
+    // respawning from it would spawn a player that never reports its def back, and the
+    // comparison below would ask for another respawn every frame.
+    if !matches!(edited.model_type, ModelType::Player(_)) {
+        return;
+    }
     let edited = &expected_live(edited, focus.held_weapon.as_deref());
     let Some(live) = player_def.0.as_ref() else {
         return;

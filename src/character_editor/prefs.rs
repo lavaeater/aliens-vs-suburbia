@@ -21,6 +21,12 @@ pub struct EditorPrefs {
     /// Def path of the model last worn in the character editor, e.g. `"assets/defs/amy.ron"`.
     #[serde(default)]
     pub last_model_def: Option<String>,
+    /// Label of the tab last open, e.g. `"Hardpoints"`.
+    #[serde(default)]
+    pub last_tab: Option<String>,
+    /// Studio (the orbit camera) was on when last left.
+    #[serde(default)]
+    pub studio: bool,
 }
 
 impl EditorPrefs {
@@ -32,6 +38,13 @@ impl EditorPrefs {
                 ron::from_str::<Self>(&text).ok()
             })
             .unwrap_or_default()
+    }
+
+    /// Change one thing and write it back, keeping whatever else was remembered.
+    pub fn update(change: impl FnOnce(&mut Self)) {
+        let mut prefs = Self::load();
+        change(&mut prefs);
+        prefs.save();
     }
 
     pub fn save(&self) {
@@ -63,6 +76,7 @@ mod tests {
     fn prefs_round_trip_through_ron() {
         let prefs = EditorPrefs {
             last_model_def: Some("assets/defs/amy.ron".into()),
+            ..Default::default()
         };
         let text = ron::ser::to_string_pretty(&prefs, ron::ser::PrettyConfig::default())
             .expect("serializes");
@@ -82,6 +96,7 @@ mod tests {
     fn a_remembered_def_that_no_longer_exists_is_dropped() {
         let prefs = EditorPrefs {
             last_model_def: Some("assets/defs/gone.ron".into()),
+            ..Default::default()
         };
         assert_eq!(prefs.resolve_last_model(|_| false), None);
         assert_eq!(

@@ -46,11 +46,18 @@ const FOCUSED_BG: Color = Color::srgba(0.10, 0.18, 0.24, 1.0);
 
 /// A field ready to spawn. Add a marker of your own to find it again.
 pub fn text_field(placeholder: &'static str) -> impl Bundle {
+    text_field_with(String::new(), placeholder)
+}
+
+/// A field that starts with `value` in it.
+pub fn text_field_with(value: String, placeholder: &'static str) -> impl Bundle {
+    let shown = if value.is_empty() {
+        placeholder.to_string()
+    } else {
+        value.clone()
+    };
     (
-        TextField {
-            value: String::new(),
-            placeholder,
-        },
+        TextField { value, placeholder },
         Node {
             padding: UiRect::axes(Val::Px(6.0), Val::Px(4.0)),
             align_self: AlignSelf::Stretch,
@@ -63,7 +70,7 @@ pub fn text_field(placeholder: &'static str) -> impl Bundle {
         bevy::ui_widgets::Button,
         children![(
             TextFieldLabel,
-            Text::new(placeholder),
+            Text::new(shown),
             TextFont::default().with_font_size(12.0),
             TextColor(Color::srgb(0.5, 0.55, 0.6)),
         )],

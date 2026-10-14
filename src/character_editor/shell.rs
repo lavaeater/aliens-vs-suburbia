@@ -36,6 +36,8 @@ use crate::character_editor::ui::{
 use crate::character_editor::library::{
     LibraryChips, LibraryImportBar, LibraryList, LibrarySearch, LibraryStatus,
 };
+use crate::character_editor::model_tab::ModelContainer;
+use crate::character_editor::props_tab::PropsContainer;
 use crate::character_editor::text_field::text_field;
 use crate::ui::spawn_ui::StateMarker;
 
@@ -47,18 +49,33 @@ use crate::ui::spawn_ui::StateMarker;
 pub enum EditorTab {
     #[default]
     Library,
-    Hardpoints,
+    Model,
     Animation,
+    Hardpoints,
+    Props,
 }
 
 impl EditorTab {
-    pub const ALL: [Self; 3] = [Self::Library, Self::Hardpoints, Self::Animation];
+    pub const ALL: [Self; 5] = [
+        Self::Library,
+        Self::Model,
+        Self::Animation,
+        Self::Hardpoints,
+        Self::Props,
+    ];
+
+    /// The tab a label names, for reading it back out of the prefs.
+    pub fn from_label(label: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|tab| tab.label() == label)
+    }
 
     pub const fn label(self) -> &'static str {
         match self {
             Self::Library => "Library",
-            Self::Hardpoints => "Hardpoints",
+            Self::Model => "Model",
             Self::Animation => "Animation",
+            Self::Hardpoints => "Hardpoints",
+            Self::Props => "Props",
         }
     }
 }
@@ -216,8 +233,10 @@ pub fn spawn_editor_ui(mut commands: Commands) {
                             },
                         ));
                         spawn_library_tab(left);
-                        spawn_hardpoints_tab(left);
+                        spawn_single_tab(left, EditorTab::Model, ModelContainer);
                         spawn_animation_tab(left);
+                        spawn_hardpoints_tab(left);
+                        spawn_single_tab(left, EditorTab::Props, PropsContainer);
                     });
 
                 // The game shows through this pane; its rectangle becomes the camera's
@@ -284,6 +303,13 @@ fn spawn_library_tab(left: &mut ChildSpawnerCommands) {
         });
 }
 
+/// A tab whose whole contents are one rebuilt column.
+fn spawn_single_tab(left: &mut ChildSpawnerCommands, tab: EditorTab, marker: impl Component) {
+    left.spawn(tab_body(tab)).with_children(|body| {
+        body.spawn((marker, list_column()));
+    });
+}
+
 fn spawn_hardpoints_tab(left: &mut ChildSpawnerCommands) {
     left.spawn(tab_body(EditorTab::Hardpoints))
         .with_children(|tab| {
@@ -297,7 +323,6 @@ fn spawn_hardpoints_tab(left: &mut ChildSpawnerCommands) {
 fn spawn_animation_tab(left: &mut ChildSpawnerCommands) {
     left.spawn(tab_body(EditorTab::Animation))
         .with_children(|tab| {
-            tab.spawn(text("click a key to play it", 11.0, HINT));
             tab.spawn((AnimationContainer, list_column()));
         });
 }
@@ -348,6 +373,35 @@ pub fn sync_tabs(
             });
         }
     });
+}
+
+/// Remember the tab and Studio/Live for next session. A prop forces Studio, so Studio is
+/// only remembered while something with a Live is open — opening an enemy should not
+/// make the next session start in Studio.
+pub fn remember_tab_and_stage(
+    active: Res<ActiveTab>,
+    overlays: Res<EditorOverlays>,
+    focus: Res<EditorFocus>,
+    mut last: Local<Option<(EditorTab, bool)>>,
+) {
+    let studio = if focus.subject.has_live() {
+        overlays.orbit_camera
+    } else {
+        last.is_some_and(|(_, studio)| studio)
+    };
+    let now = Some((active.0, studio));
+    if last.is_none() {
+        // The first frame is what was just loaded; nothing to write.
+        *last = now;
+        return;
+    }
+    if *last != now {
+        *last = now;
+        crate::character_editor::prefs::EditorPrefs::update(|prefs| {
+            prefs.last_tab = Some(active.0.label().to_string());
+            prefs.studio = studio;
+        });
+    }
 }
 
 /// What the status bar says: what is selected, then the keys.
@@ -425,6 +479,14 @@ pub fn update_status_bar(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_tab_round_trips_through_its_label() {
+        for tab in EditorTab::ALL {
+            assert_eq!(EditorTab::from_label(tab.label()), Some(tab));
+        }
+        assert_eq!(EditorTab::from_label("Gone"), None);
+    }
 
     #[test]
     fn every_tab_is_in_the_strip_once() {
