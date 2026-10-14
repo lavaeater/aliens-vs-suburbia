@@ -229,7 +229,7 @@ pub fn save_all(doc: &mut EditorDoc, weapon: &mut WeaponDoc) -> String {
 /// `swap_player_model` instead.
 pub fn adopt_worn_def(
     mut doc: ResMut<EditorDoc>,
-    library: Res<EditorLibrary>,
+    mut library: ResMut<EditorLibrary>,
     player_def: Res<PlayerAssetDef>,
 ) {
     if doc.def_path.is_some() || library.swap_in_progress() {
@@ -242,7 +242,11 @@ pub fn adopt_worn_def(
     if !path.exists() {
         return;
     }
-    doc.0 = DefDoc::adopt(&path.to_string_lossy().replace('\\', "/"), def.clone());
+    let def_path = path.to_string_lossy().replace('\\', "/");
+    doc.0 = DefDoc::adopt(&def_path, def.clone());
+    // Mark it in the model list too, so the list agrees with what is on screen.
+    library.selected = Some(def_path);
+    library.list_dirty = true;
 }
 
 /// Keep the weapon doc on the weapon the character doc asks for.
@@ -377,6 +381,15 @@ mod tests {
         let live = character(Some("assets/defs/Pistol.ron"));
         let edited = character(Some("assets/defs/SMG.ron"));
         assert!(needs_respawn(&live, &edited));
+    }
+
+    #[test]
+    fn a_character_def_reports_the_weapon_it_wants() {
+        assert_eq!(
+            weapon_def_path(&character(Some("assets/defs/Pistol.ron"))).as_deref(),
+            Some("assets/defs/Pistol.ron")
+        );
+        assert_eq!(weapon_def_path(&character(None)), None);
     }
 
     /// Switching models or leaving drops both docs, so either one's edits count.
