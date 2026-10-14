@@ -6,7 +6,8 @@
 //!
 //! Re-binding takes effect immediately with no respawn: `build_player_anim_graph` folds
 //! `animation_bindings` and `clip_tags` into the signature it compares against
-//! `last_sig`, so mutating `PlayerAssetDef` makes it rebuild the graph on the next frame.
+//! `last_sig`, so an edit to the doc (copied into `PlayerAssetDef` by
+//! `doc::sync_doc_to_live`) makes it rebuild the graph on the next frame.
 //!
 //! The key strings are `AnimationKey::default_search()`, which is what
 //! `AssetDefinition::resolved_clip` is called with at runtime — so what you bind here is
@@ -44,9 +45,7 @@ pub const PLAYABLE_KEYS: [AnimationKey; 18] = [
 pub struct AnimationEditor {
     /// Key whose binding is being edited.
     pub selected_key: Option<AnimationKey>,
-    pub dirty: bool,
     pub ui_dirty: bool,
-    pub status: String,
 }
 
 impl AnimationEditor {
@@ -55,8 +54,8 @@ impl AnimationEditor {
         self.ui_dirty = true;
     }
 
+    /// Redraw the panel after an edit.
     pub const fn touch(&mut self) {
-        self.dirty = true;
         self.ui_dirty = true;
     }
 }

@@ -125,7 +125,7 @@ pub fn spawn_player_bar(mut commands: Commands, theme: Res<LavaTheme>) {
 }
 
 /// Character name for a slot: the def's file stem, or a generic label when there is no
-/// roster (e.g. the playground or a skipped setup screen).
+/// roster (e.g. the character editor or a skipped setup screen).
 pub fn slot_name(roster: Option<&PlayerRoster>, slot: usize) -> String {
     roster
         .and_then(|r| r.def_paths.get(slot))
@@ -394,6 +394,7 @@ mod tests {
         let roster = PlayerRoster {
             def_paths: vec!["assets/defs/amy.ron".into()],
             devices: vec![],
+            ..Default::default()
         };
         assert_eq!(slot_name(Some(&roster), 0), "amy");
     }
@@ -403,6 +404,7 @@ mod tests {
         let roster = PlayerRoster {
             def_paths: vec![],
             devices: vec![],
+            ..Default::default()
         };
         assert_eq!(slot_name(Some(&roster), 1), "Player 2");
         assert_eq!(slot_name(None, 0), "Player 1");

@@ -2,8 +2,8 @@
 //!
 //! The skeleton and hardpoint drawing is shared with the asset browser (see
 //! `assets::gizmos`); what differs here is *which* joints to draw. The browser has one
-//! model in an empty scene and can take every skinned mesh in the world. The playground has
-//! the player plus three skinned dummies, so the overlay is scoped to the player's subtree.
+//! model in an empty scene and can take every skinned mesh in the world. The character editor has
+//! the player plus whatever else is skinned in the arena, so the overlay is scoped to the player's subtree.
 //!
 //! Physics debug is avian's own `PhysicsGizmos` config, the same one `F3` toggles globally.
 //! The panel button and the key stay in sync because the button reads and writes that
@@ -20,10 +20,10 @@ use crate::player::components::Player;
 use crate::player::systems::equip::EquippedWeapon;
 use crate::player::systems::gait::Foot;
 use crate::player::systems::leg_ik::Legs;
-use crate::playground::hardpoints::PlaygroundWeaponDef;
+use crate::character_editor::doc::WeaponDoc;
 
 #[derive(Resource, Default)]
-pub struct PlaygroundDebug {
+pub struct EditorOverlays {
     pub skeleton: bool,
     pub hardpoints: bool,
     /// Mirror of avian's `PhysicsGizmos::enabled`, so the panel can show its state. Kept
@@ -39,7 +39,7 @@ pub struct PlaygroundDebug {
     pub ui_dirty: bool,
 }
 
-impl PlaygroundDebug {
+impl EditorOverlays {
     pub const fn toggle_skeleton(&mut self) {
         self.skeleton = !self.skeleton;
         self.ui_dirty = true;
@@ -91,7 +91,7 @@ const fn foot_color(foot: Foot) -> Color {
 // Indexed only by `Foot::index()` (0/1 over a two-variant enum) into `[T; 2]`
 // arrays -- structurally in bounds, not a real panic risk.
 #[allow(clippy::indexing_slicing)]
-pub fn draw_gait_gizmos(debug: Res<PlaygroundDebug>, mut gizmos: Gizmos, players: Query<&Legs>) {
+pub fn draw_gait_gizmos(debug: Res<EditorOverlays>, mut gizmos: Gizmos, players: Query<&Legs>) {
     if !debug.gait {
         return;
     }
@@ -163,7 +163,7 @@ pub fn physics_gizmos_enabled(store: &GizmoConfigStore) -> bool {
 
 /// Pick up `F3` presses (or anything else touching the config) so the panel label matches
 /// what is actually on screen.
-pub fn sync_physics_toggle(mut debug: ResMut<PlaygroundDebug>, store: Res<GizmoConfigStore>) {
+pub fn sync_physics_toggle(mut debug: ResMut<EditorOverlays>, store: Res<GizmoConfigStore>) {
     let enabled = physics_gizmos_enabled(&store);
     if debug.physics != enabled {
         debug.physics = enabled;
@@ -187,9 +187,9 @@ pub fn reset_gizmo_bias(mut store: ResMut<GizmoConfigStore>) {
 /// Skeleton and hardpoint overlays for every player in the arena.
 #[allow(clippy::too_many_arguments)]
 pub fn draw_player_overlays(
-    debug: Res<PlaygroundDebug>,
+    debug: Res<EditorOverlays>,
     player_def: Res<PlayerAssetDef>,
-    weapon_def: Res<PlaygroundWeaponDef>,
+    weapon_def: Res<WeaponDoc>,
     mut gizmos: Gizmos,
     players: Query<(Entity, Option<&EquippedWeapon>), With<Player>>,
     children_q: Query<&Children>,

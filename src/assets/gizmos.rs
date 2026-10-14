@@ -1,8 +1,8 @@
-//! Skeleton and hardpoint overlays, shared by the asset browser and the playground.
+//! Skeleton and hardpoint overlays, shared by the asset browser and the character editor.
 //!
 //! The browser shows one model in an empty scene, so it can collect every skinned mesh in
-//! the world and be right. The playground cannot: the player, the target dummies and any
-//! aliens are all skinned, so it has to scope the overlay to one character's subtree. That
+//! the world and be right. The character editor cannot: the player and anything
+//! else standing in the arena are all skinned, so it has to scope the overlay to one character's subtree. That
 //! difference is the reason these take their joints as an argument instead of querying for
 //! them — the *drawing* is identical, the *selection* is not.
 
@@ -62,7 +62,7 @@ pub fn bone_map(joints: &HashSet<Entity>, names: &Query<&Name>) -> HashMap<Strin
 
 /// Draw the skeleton: a small cross at each joint and a segment to its parent joint.
 /// `highlight` names a bone to draw larger and in a different colour (the browser's
-/// attachment socket, the playground's selected hardpoint anchor).
+/// attachment socket, the character editor's selected hardpoint anchor).
 pub fn draw_skeleton(
     gizmos: &mut Gizmos,
     joints: &HashSet<Entity>,
@@ -122,7 +122,7 @@ pub fn draw_skeleton(
 ///
 /// `resolve_anchor` turns a hardpoint's anchor (a bone name, or `None` for the model
 /// origin) into the entity its frame is relative to. Callers differ in what "the model
-/// origin" means — the browser's viewer entity, the playground's player root — so they
+/// origin" means — the browser's viewer entity, the character editor's player root — so they
 /// supply it.
 pub fn draw_hardpoints(
     gizmos: &mut Gizmos,
@@ -183,7 +183,7 @@ mod tests {
         (root, joints)
     }
 
-    /// The whole reason this takes a root: the playground has several skinned characters
+    /// The whole reason this takes a root: the character editor has several skinned characters
     /// in the scene at once, and an overlay drawn over all of them is unreadable.
     #[test]
     fn only_the_asked_for_characters_joints_come_back() {

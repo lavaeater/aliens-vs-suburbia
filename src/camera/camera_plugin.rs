@@ -25,11 +25,11 @@ impl Plugin for StatefulCameraPlugin {
                 PostUpdate,
                 // Physics runs in `FixedPostUpdate`, so the only ordering that matters here
                 // is landing before propagation; later and the camera renders a frame stale.
-                // The playground's orbit camera takes the camera over while it is on.
+                // The character editor's orbit camera takes the camera over while it is on.
                 camera_follow
                     .before(TransformSystems::Propagate)
                     .run_if(in_state(GameState::InGame))
-                    .run_if(not(crate::playground::inspect::orbit_camera_active)),
+                    .run_if(not(crate::character_editor::inspect::orbit_camera_active)),
             )
             .add_systems(
                 Update,

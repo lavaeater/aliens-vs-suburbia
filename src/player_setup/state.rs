@@ -186,6 +186,10 @@ pub struct PlayerRoster {
     pub def_paths: Vec<String>,
     /// Input device for each active player slot, parallel to `def_paths`.
     pub devices: Vec<InputDevice>,
+    /// A def to spawn *instead of* reading `def_paths[slot]` from disk, parallel to
+    /// `def_paths` (missing or `None` = read the file). The character editor puts its
+    /// unsaved working copy here, so a respawn shows the edits rather than the file.
+    pub def_overrides: Vec<Option<AssetDefinition>>,
 }
 
 #[cfg(test)]

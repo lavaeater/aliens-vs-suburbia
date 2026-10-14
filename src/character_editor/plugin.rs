@@ -1,7 +1,7 @@
-//! Wires the playground into the app.
+//! Wires the character editor into the app.
 //!
-//! Everything here is gated on [`in_playground`], and the four pieces of normal-match
-//! behaviour the playground replaces are gated on `in_normal_game` at their own
+//! Everything here is gated on [`in_editor`], and the four pieces of normal-match
+//! behaviour the character editor replaces are gated on `in_normal_game` at their own
 //! definition sites (map loading, the HUD, wave spawning, the win/lose transition).
 
 use bevy::app::{App, Plugin, Update};
@@ -12,67 +12,69 @@ use crate::alien::wave_manager::WaveManager;
 use crate::game_state::GameState;
 use crate::general::components::map_components::MapFile;
 use crate::general::events::map_events::LoadMap;
-use crate::playground::animation::AnimationEditor;
-use crate::playground::debug::{
-    PlaygroundDebug, bias_gizmos_over_mesh, draw_gait_gizmos, draw_player_overlays,
+use crate::character_editor::animation::AnimationEditor;
+use crate::character_editor::debug::{
+    EditorOverlays, bias_gizmos_over_mesh, draw_gait_gizmos, draw_player_overlays,
     reset_gizmo_bias, sync_physics_toggle,
 };
-use crate::playground::dummies::{respawn_dummies, spawn_dummy_posts};
-use crate::playground::hardpoints::{
-    HardpointEditor, PlaygroundWeaponDef, apply_grip_to_equipped_weapon,
-    apply_weapon_def_to_equipped_weapon, sync_weapon_def,
+use crate::character_editor::doc::{
+    DocBar, EditorDoc, WeaponDoc, adopt_worn_def, sync_doc_to_live, sync_weapon_doc,
 };
-use crate::playground::inspect::{
+use crate::character_editor::hardpoints::{
+    HardpointEditor, apply_grip_to_equipped_weapon, apply_weapon_def_to_equipped_weapon,
+};
+use crate::character_editor::inspect::{
     drive_orbit_camera, hold_player_still, hold_rest_pose, inspect_keys, inspecting,
     orbit_camera_active, rest_pose_held, switch_orbit_camera,
 };
-use crate::playground::models::{PlaygroundModels, swap_player_model};
-use crate::playground::state::in_playground;
-use crate::playground::ui::{
-    clear_playground_viewport, end_playground_session, rebuild_animation_panel,
-    rebuild_debug_toggles, rebuild_hardpoint_panel, rebuild_import_browser, rebuild_model_list,
-    rebuild_weapon_list, refresh_animation_panel_on_def_change, spawn_playground_ui,
-    sync_playground_viewport,
+use crate::character_editor::models::{EditorLibrary, swap_player_model};
+use crate::character_editor::state::in_editor;
+use crate::character_editor::ui::{
+    clear_editor_viewport, end_editor_session, rebuild_animation_panel,
+    rebuild_debug_toggles, rebuild_doc_bar, rebuild_hardpoint_panel, rebuild_import_browser, rebuild_model_list,
+    rebuild_weapon_list, refresh_animation_panel_on_def_change, spawn_editor_ui,
+    sync_editor_viewport,
 };
 use crate::ui::collapse::{CollapsedSections, sync_section_collapse};
 
-const PLAYGROUND_MAP: &str = "assets/maps/playground.ron";
+/// The arena: a small walled room with nothing in it, for trying out the controls.
+const ARENA_MAP: &str = "assets/maps/playground.ron";
 
-pub struct PlaygroundPlugin;
+pub struct CharacterEditorPlugin;
 
-impl Plugin for PlaygroundPlugin {
+impl Plugin for CharacterEditorPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<PlaygroundWeaponDef>()
+        app.init_resource::<EditorDoc>()
+            .init_resource::<WeaponDoc>()
+            .init_resource::<DocBar>()
             .init_resource::<CollapsedSections>()
             .add_systems(
                 OnEnter(GameState::InGame),
                 (
-                    load_playground_map,
+                    load_arena_map,
                     silence_waves,
-                    spawn_playground_ui,
+                    spawn_editor_ui,
                     spawn_settings_panels,
-                    spawn_dummy_posts,
                     init_model_list,
                     bias_gizmos_over_mesh,
                 )
-                    .run_if(in_playground),
+                    .run_if(in_editor),
             )
             .add_systems(
                 OnExit(GameState::InGame),
                 (
-                    clear_playground_viewport,
-                    end_playground_session,
+                    clear_editor_viewport,
+                    end_editor_session,
                     reset_gizmo_bias,
                 )
-                    .run_if(in_playground),
+                    .run_if(in_editor),
             )
             .add_systems(
                 Update,
                 (
-                    sync_playground_viewport,
+                    sync_editor_viewport,
                     sync_section_collapse,
-                    respawn_dummies,
-                    swap_player_model,
+                    rebuild_doc_bar,
                     rebuild_model_list,
                     rebuild_weapon_list,
                     rebuild_import_browser,
@@ -80,17 +82,30 @@ impl Plugin for PlaygroundPlugin {
                     rebuild_debug_toggles,
                     draw_player_overlays,
                     draw_gait_gizmos,
-                    // Ordered: load the weapon def before the panel that draws it and the
-                    // system that pushes it at the live weapon.
-                    sync_weapon_def,
                     rebuild_hardpoint_panel,
-                    apply_grip_to_equipped_weapon,
-                    apply_weapon_def_to_equipped_weapon,
                     refresh_animation_panel_on_def_change,
                     rebuild_animation_panel,
                 )
                     .run_if(in_state(GameState::InGame))
-                    .run_if(in_playground),
+                    .run_if(in_editor),
+            )
+            // The doc pipeline, in order: a swap opens the new doc, the weapon doc follows the
+            // character's `PlayerProps::weapon`, the live character follows the doc, and the
+            // live weapon follows both. Chained so each step sees the one before it this
+            // frame rather than next.
+            .add_systems(
+                Update,
+                (
+                    swap_player_model,
+                    adopt_worn_def,
+                    sync_weapon_doc,
+                    sync_doc_to_live,
+                    apply_grip_to_equipped_weapon,
+                    apply_weapon_def_to_equipped_weapon,
+                )
+                    .chain()
+                    .run_if(in_state(GameState::InGame))
+                    .run_if(in_editor),
             )
             // Inspect mode -- see `inspect.rs` for why each lands where it does.
             .add_systems(
@@ -98,7 +113,7 @@ impl Plugin for PlaygroundPlugin {
                 (inspect_keys, switch_orbit_camera)
                     .chain()
                     .run_if(in_state(GameState::InGame))
-                    .run_if(in_playground),
+                    .run_if(in_editor),
             )
             .add_systems(
                 PreUpdate,
@@ -106,7 +121,7 @@ impl Plugin for PlaygroundPlugin {
                     .after(crate::control::mouse_aim::mouse_aim)
                     .before(crate::general::systems::dynamic_movement_system::dynamic_movement)
                     .run_if(in_state(GameState::InGame))
-                    .run_if(in_playground)
+                    .run_if(in_editor)
                     .run_if(inspecting),
             )
             .add_systems(
@@ -120,17 +135,17 @@ impl Plugin for PlaygroundPlugin {
                 )
                     .before(TransformSystems::Propagate)
                     .run_if(in_state(GameState::InGame))
-                    .run_if(in_playground),
+                    .run_if(in_editor),
             );
     }
 }
 
 /// Load the sandbox arena instead of `level_01`.
-fn load_playground_map(mut load_map_mw: MessageWriter<LoadMap>) {
-    let text = match std::fs::read_to_string(PLAYGROUND_MAP) {
+fn load_arena_map(mut load_map_mw: MessageWriter<LoadMap>) {
+    let text = match std::fs::read_to_string(ARENA_MAP) {
         Ok(text) => text,
         Err(err) => {
-            error!("playground: cannot read {PLAYGROUND_MAP}: {err}");
+            error!("character editor: cannot read {ARENA_MAP}: {err}");
             return;
         }
     };
@@ -138,13 +153,13 @@ fn load_playground_map(mut load_map_mw: MessageWriter<LoadMap>) {
         Ok(map) => {
             load_map_mw.write(LoadMap { map });
         }
-        Err(err) => error!("playground: cannot parse {PLAYGROUND_MAP}: {err}"),
+        Err(err) => error!("character editor: cannot parse {ARENA_MAP}: {err}"),
     }
 }
 
 /// The camera and model tweak panels the normal HUD carries (F1 / F2), plus the gait panel
 /// (F10). They are self-contained and their update systems already run for the whole of
-/// `InGame`, so the playground just needs to spawn them — no duplicate sliders.
+/// `InGame`, so the character editor just needs to spawn them — no duplicate sliders.
 fn spawn_settings_panels(mut commands: Commands, theme: Res<lava_ui_builder::LavaTheme>) {
     crate::ui::spawn_ui::spawn_camera_panel(commands.reborrow(), &theme);
     crate::ui::spawn_ui::spawn_model_panel(commands.reborrow(), &theme);
@@ -154,15 +169,17 @@ fn spawn_settings_panels(mut commands: Commands, theme: Res<lava_ui_builder::Lav
 /// Scan `assets/defs` and the model folders fresh on every entry, so a def written by the
 /// asset browser in between sessions shows up without a restart.
 fn init_model_list(mut commands: Commands) {
-    commands.insert_resource(PlaygroundModels::fresh());
-    commands.insert_resource(PlaygroundDebug::default());
+    commands.insert_resource(EditorLibrary::fresh());
+    commands.insert_resource(EditorOverlays::default());
     commands.insert_resource(HardpointEditor {
         ui_dirty: true,
         ..Default::default()
     });
-    // Cleared rather than left over: `sync_weapon_def` compares paths, so a stale one from
-    // a previous session would suppress the reload of an edited-then-abandoned def.
-    commands.insert_resource(PlaygroundWeaponDef::default());
+    // Fresh docs every session: `sync_weapon_doc` compares paths, so a stale one from a
+    // previous session would suppress the reload of an edited-then-abandoned def.
+    commands.insert_resource(EditorDoc::default());
+    commands.insert_resource(WeaponDoc::default());
+    commands.insert_resource(DocBar::default());
     // Every section open on entry: the fold state is a working preference, not something
     // to inherit from whatever you were doing last session.
     commands.insert_resource(CollapsedSections::default());

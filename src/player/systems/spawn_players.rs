@@ -75,10 +75,13 @@ pub fn spawn_players(
         let lives = Lives(spawn_player.lives.unwrap_or(settings.lives_per_player));
 
         // The roster def for this slot drives ability, throw rate, model and weapon.
-        let roster_def = roster
-            .as_ref()
-            .and_then(|r| r.def_paths.get(slot))
-            .and_then(|def_path| AssetDefinition::load_from_def_path(def_path));
+        let roster_def = roster.as_ref().and_then(|r| {
+            r.def_overrides.get(slot).cloned().flatten().or_else(|| {
+                r.def_paths
+                    .get(slot)
+                    .and_then(|def_path| AssetDefinition::load_from_def_path(def_path))
+            })
+        });
         let player_props = roster_def.as_ref().and_then(|def| match &def.model_type {
             ModelType::Player(props) => Some(props.clone()),
             _ => None,
@@ -289,7 +292,7 @@ pub fn fix_scene_transform(
                 transform.rotation = fix_scene_transform.rotation;
                 transform.scale = fix_scene_transform.scale;
                 // `try_insert`/`try_remove`: the player and its scene can be despawned
-                // between this queueing and the buffers applying -- the playground's model
+                // between this queueing and the buffers applying -- the character editor's model
                 // swap does exactly that -- and a plain `insert` on a despawned entity is
                 // a hard error that takes the app down.
                 commands.entity(child).try_insert(PlayerModelRoot);

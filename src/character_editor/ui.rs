@@ -1,4 +1,4 @@
-//! The playground's two-pane shell: a tweaking panel on the left, the live game on the
+//! The character editor's two-pane shell: a tweaking panel on the left, the live game on the
 //! right.
 //!
 //! The right pane is not a separate render — it is the ordinary game camera with its
@@ -18,32 +18,33 @@ use bevy::ecs::system::EntityCommands;
 use lava_ui_builder::InteractionPalette;
 
 use crate::animation::animation_plugin::{AnimationEvent, AnimationEventType, AnimationKey};
-use crate::model_settings::plugin::PlayerAssetDef;
 use crate::player::components::Player;
-use crate::playground::animation::{
+use crate::character_editor::animation::{
     AnimationEditor, PLAYABLE_KEYS, bind, resolution_label, tag_paths, unbind,
 };
-use crate::playground::debug::{PlaygroundDebug, toggle_physics_gizmos};
-use crate::playground::hardpoints::{
+use crate::character_editor::debug::{EditorOverlays, toggle_physics_gizmos};
+use crate::character_editor::doc::{
+    ConfirmAction, DocBar, EditorDoc, WeaponDoc, perform, request, save_all,
+};
+use crate::character_editor::hardpoints::{
     COARSE_ROTATION, COARSE_TRANSLATION, FINE_ROTATION, FINE_TRANSLATION, HardpointEditor,
-    HardpointSide, PlaygroundWeaponDef, ensure_role, nudge_rotation, nudge_translation,
-    save_player_def, save_weapon_def,
+    HardpointSide, ensure_role, nudge_rotation, nudge_translation,
 };
-use crate::playground::models::{
-    ImportKind, PlaygroundModels, add_animation_source, classify, def_stem, set_weapon,
+use crate::character_editor::models::{
+    EditorLibrary, ImportKind, add_animation_source, classify, def_stem,
 };
-use crate::playground::state::PlaygroundSession;
+use crate::character_editor::state::EditorSession;
 use crate::ui::collapse::{SectionBody, section_header};
 use crate::ui::spawn_ui::StateMarker;
 
 /// The right-hand pane. Its computed rectangle drives the game camera's viewport.
 #[derive(Component)]
-pub struct PlaygroundViewportPane;
+pub struct EditorViewportPane;
 
 /// Container for the tweak controls, so later stages can refill it without rebuilding
 /// the whole screen.
 #[derive(Component)]
-pub struct PlaygroundPanel;
+pub struct EditorPanel;
 
 /// Holds one clickable row per imported player def.
 #[derive(Component)]
@@ -67,6 +68,10 @@ pub struct ImportStatusLabel;
 #[derive(Component)]
 pub struct DebugTogglesContainer;
 
+/// The open docs, Save / Revert / Menu, and the unsaved-changes question when there is one.
+#[derive(Component)]
+pub struct DocBarContainer;
+
 /// Holds the hardpoint role chips, nudge rows and bone picker.
 #[derive(Component)]
 pub struct HardpointContainer;
@@ -85,7 +90,7 @@ pub struct AnimationContainer;
 /// pane scroll - and the model list squashes down to nothing you can click.
 const LIST_MAX_HEIGHT: f32 = 420.0;
 
-pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
+pub fn spawn_editor_ui(commands: Commands, theme: Res<LavaTheme>) {
     let mut ui = UIBuilder::new(commands, Some(theme.clone()));
 
     ui.component::<StateMarker>()
@@ -123,7 +128,19 @@ pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
         .bg_color(Color::srgba(0.04, 0.07, 0.10, 0.97));
 
         left.with_child(|c| {
-            c.insert_bundle(lava_ui_builder::header("Playground", &t));
+            c.insert_bundle(lava_ui_builder::header("Character Editor", &t));
+        });
+        // First under the title, so the unsaved-changes question can never be scrolled
+        // out of sight.
+        left.with_child(|c| {
+            c.display_flex()
+                .flex_column()
+                .gap_px(2.0)
+                .insert(DocBarContainer)
+                .modify_node(|mut n| {
+                    n.align_self = AlignSelf::Stretch;
+                    n.flex_shrink = 0.0;
+                });
         });
         left.with_child(|c| {
             c.insert_bundle(lava_ui_builder::label(
@@ -272,19 +289,9 @@ pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
             c.display_flex()
                 .flex_column()
                 .gap_px(6.0)
-                .insert(PlaygroundPanel)
+                .insert(EditorPanel)
                 .modify_node(|mut n| n.align_self = AlignSelf::Stretch);
         });
-
-        left.add_button_observe(
-            "Back to Menu",
-            |b| {
-                b.size_px(160.0, 40.0).font_size(16.0);
-            },
-            |_: On<Activate>, mut next_state: ResMut<NextState<GameState>>| {
-                next_state.set(GameState::Menu);
-            },
-        );
     });
 
     // Right pane: empty node, exists only to give the game camera a rectangle.
@@ -294,7 +301,7 @@ pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
                 n.flex_grow = 1.0;
                 n.height = Val::Percent(100.0);
             })
-            .insert(PlaygroundViewportPane);
+            .insert(EditorViewportPane);
     });
 
     ui.build();
@@ -302,8 +309,8 @@ pub fn spawn_playground_ui(commands: Commands, theme: Res<LavaTheme>) {
 
 /// Clip the game camera to the right-hand pane. Runs every frame so the viewport tracks
 /// window resizes and any future resizing of the panel.
-pub fn sync_playground_viewport(
-    panes: Query<(&ComputedNode, &UiGlobalTransform), With<PlaygroundViewportPane>>,
+pub fn sync_editor_viewport(
+    panes: Query<(&ComputedNode, &UiGlobalTransform), With<EditorViewportPane>>,
     mut cameras: Query<&mut Camera, With<GameCamera>>,
     windows: Query<&Window>,
 ) {
@@ -358,7 +365,7 @@ fn pane_viewport(
 
 /// Hand the camera back when the session ends, so a following real match is not stuck
 /// rendering into the right-hand quarter of the window.
-pub fn clear_playground_viewport(mut cameras: Query<&mut Camera, With<GameCamera>>) {
+pub fn clear_editor_viewport(mut cameras: Query<&mut Camera, With<GameCamera>>) {
     for mut camera in cameras.iter_mut() {
         camera.viewport = None;
     }
@@ -366,8 +373,8 @@ pub fn clear_playground_viewport(mut cameras: Query<&mut Camera, With<GameCamera
 
 /// Leaving `InGame` ends the session; without this the resource would leak into the next
 /// real match and quietly suppress the HUD and the map.
-pub fn end_playground_session(mut commands: Commands) {
-    commands.remove_resource::<PlaygroundSession>();
+pub fn end_editor_session(mut commands: Commands) {
+    commands.remove_resource::<EditorSession>();
 }
 
 // ── List rebuilding ───────────────────────────────────────────────────────────
@@ -410,9 +417,228 @@ fn row<'a>(
     cmds
 }
 
+/// What the doc bar shows, compared frame to frame so it only rebuilds on a change.
+#[derive(PartialEq, Eq, Default)]
+pub struct DocBarView {
+    character: Option<String>,
+    character_dirty: bool,
+    weapon: Option<String>,
+    weapon_dirty: bool,
+    confirm: Option<ConfirmAction>,
+    status: String,
+}
+
+/// A row of buttons side by side.
+fn button_strip<'a>(parent: &'a mut RelatedSpawnerCommands<ChildOf>) -> EntityCommands<'a> {
+    parent.spawn(Node {
+        display: Display::Flex,
+        flex_direction: FlexDirection::Row,
+        flex_wrap: FlexWrap::Wrap,
+        column_gap: Val::Px(4.0),
+        row_gap: Val::Px(2.0),
+        ..Default::default()
+    })
+}
+
+fn doc_line(name: Option<&str>, kind: &str, dirty: bool) -> (String, Color) {
+    match name {
+        None => (format!("{kind}: (none)"), Color::srgb(0.55, 0.6, 0.65)),
+        Some(name) if dirty => (
+            format!("{kind}: {name} *  (unsaved)"),
+            Color::srgb(1.0, 0.8, 0.45),
+        ),
+        Some(name) => (format!("{kind}: {name}"), Color::srgb(0.75, 0.9, 0.8)),
+    }
+}
+
+/// The doc bar: what is open, whether it has unsaved edits, Save / Revert / Menu, and the
+/// question asked before anything would throw edits away.
+#[allow(clippy::too_many_lines)]
+pub fn rebuild_doc_bar(
+    doc: Res<EditorDoc>,
+    weapon_doc: Res<WeaponDoc>,
+    bar: Res<DocBar>,
+    mut commands: Commands,
+    container_q: Query<Entity, With<DocBarContainer>>,
+    mut last: Local<Option<DocBarView>>,
+) {
+    if last.is_some() && !doc.is_changed() && !weapon_doc.is_changed() && !bar.is_changed() {
+        return;
+    }
+    let Ok(container) = container_q.single() else {
+        return;
+    };
+    let view = DocBarView {
+        character: doc.name().map(str::to_string),
+        character_dirty: doc.is_dirty(),
+        weapon: weapon_doc.name().map(str::to_string),
+        weapon_dirty: weapon_doc.is_dirty(),
+        confirm: bar.confirm.clone(),
+        status: bar.status.clone(),
+    };
+    if last.as_ref() == Some(&view) {
+        return;
+    }
+
+    commands.entity(container).despawn_related::<Children>();
+    let any_dirty = view.character_dirty || view.weapon_dirty;
+    commands.entity(container).with_children(|parent| {
+        for (name, kind, dirty) in [
+            (view.character.as_deref(), "character", view.character_dirty),
+            (view.weapon.as_deref(), "weapon", view.weapon_dirty),
+        ] {
+            let (text, color) = doc_line(name, kind, dirty);
+            parent.spawn((
+                Text::new(text),
+                TextFont::default().with_font_size(12.0),
+                TextColor(color),
+            ));
+        }
+
+        button_strip(parent).with_children(|strip| {
+            row(
+                strip,
+                "Save".to_string(),
+                any_dirty,
+                Color::srgb(0.7, 0.95, 0.75),
+            )
+            .observe(
+                |_: On<Activate>,
+                 mut doc: ResMut<EditorDoc>,
+                 mut weapon_doc: ResMut<WeaponDoc>,
+                 mut bar: ResMut<DocBar>| {
+                    bar.status = save_all(&mut doc, &mut weapon_doc);
+                },
+            );
+            row(
+                strip,
+                "Revert".to_string(),
+                false,
+                Color::srgb(0.95, 0.8, 0.6),
+            )
+            .observe(
+                |_: On<Activate>,
+                 mut doc: ResMut<EditorDoc>,
+                 mut weapon_doc: ResMut<WeaponDoc>,
+                 mut bar: ResMut<DocBar>| {
+                    if !doc.is_dirty() && !weapon_doc.is_dirty() {
+                        bar.status = "nothing to revert".to_string();
+                        return;
+                    }
+                    doc.revert();
+                    weapon_doc.revert();
+                    bar.status = "reverted to the saved files".to_string();
+                },
+            );
+            row(
+                strip,
+                "Menu".to_string(),
+                false,
+                Color::srgb(0.75, 0.85, 0.95),
+            )
+            .observe(
+                |_: On<Activate>,
+                 mut models: ResMut<EditorLibrary>,
+                 mut bar: ResMut<DocBar>,
+                 mut doc: ResMut<EditorDoc>,
+                 weapon_doc: Res<WeaponDoc>,
+                 mut next_state: ResMut<NextState<GameState>>| {
+                    request(
+                        ConfirmAction::Exit,
+                        &mut bar,
+                        &mut doc,
+                        &weapon_doc,
+                        &mut models,
+                        &mut next_state,
+                    );
+                },
+            );
+        });
+
+        if let Some(action) = view.confirm.clone() {
+            parent.spawn((
+                Text::new(format!("Unsaved changes. Save them before you {}?", action.describe())),
+                TextFont::default().with_font_size(12.0),
+                TextColor(Color::srgb(1.0, 0.75, 0.4)),
+            ));
+            button_strip(parent).with_children(|strip| {
+                row(
+                    strip,
+                    "Save, then continue".to_string(),
+                    true,
+                    Color::srgb(0.7, 0.95, 0.75),
+                )
+                .observe(
+                    |_: On<Activate>,
+                     mut models: ResMut<EditorLibrary>,
+                     mut bar: ResMut<DocBar>,
+                     mut doc: ResMut<EditorDoc>,
+                     mut weapon_doc: ResMut<WeaponDoc>,
+                     mut next_state: ResMut<NextState<GameState>>| {
+                        let Some(action) = bar.confirm.take() else {
+                            return;
+                        };
+                        bar.status = save_all(&mut doc, &mut weapon_doc);
+                        // A save that failed leaves the edits in place; do not walk away
+                        // from them.
+                        if action.would_lose_edits(&doc, &weapon_doc) {
+                            return;
+                        }
+                        perform(action, &mut bar, &mut doc, &mut models, &mut next_state);
+                    },
+                );
+                row(
+                    strip,
+                    "Discard".to_string(),
+                    false,
+                    Color::srgb(0.95, 0.65, 0.55),
+                )
+                .observe(
+                    |_: On<Activate>,
+                     mut models: ResMut<EditorLibrary>,
+                     mut bar: ResMut<DocBar>,
+                     mut doc: ResMut<EditorDoc>,
+                     mut weapon_doc: ResMut<WeaponDoc>,
+                     mut next_state: ResMut<NextState<GameState>>| {
+                        let Some(action) = bar.confirm.take() else {
+                            return;
+                        };
+                        // Only what the action would have lost: equipping replaces the
+                        // weapon doc, but the character's edits carry on.
+                        weapon_doc.revert();
+                        if !matches!(action, ConfirmAction::EquipWeapon(_)) {
+                            doc.revert();
+                        }
+                        bar.status = "discarded unsaved changes".to_string();
+                        perform(action, &mut bar, &mut doc, &mut models, &mut next_state);
+                    },
+                );
+                row(
+                    strip,
+                    "Cancel".to_string(),
+                    false,
+                    Color::srgb(0.75, 0.85, 0.95),
+                )
+                .observe(|_: On<Activate>, mut bar: ResMut<DocBar>| {
+                    bar.confirm = None;
+                });
+            });
+        }
+
+        if !view.status.is_empty() {
+            parent.spawn((
+                Text::new(view.status.clone()),
+                TextFont::default().with_font_size(10.0),
+                TextColor(Color::srgb(0.6, 0.85, 0.6)),
+            ));
+        }
+    });
+    *last = Some(view);
+}
+
 /// Rebuild the debug toggle rows. Cheap: three rows, only on change.
 pub fn rebuild_debug_toggles(
-    mut debug: ResMut<PlaygroundDebug>,
+    mut debug: ResMut<EditorOverlays>,
     mut commands: Commands,
     container_q: Query<Entity, With<DebugTogglesContainer>>,
     mut spawned: Local<bool>,
@@ -443,7 +669,7 @@ pub fn rebuild_debug_toggles(
             let text = format!("[{}] {label}", if on { "x" } else { " " });
             row(parent, text, on, Color::srgb(0.85, 0.9, 0.95)).observe(
                 move |_: On<Activate>,
-                      mut debug: ResMut<PlaygroundDebug>,
+                      mut debug: ResMut<EditorOverlays>,
                       mut store: ResMut<GizmoConfigStore>| {
                     match index {
                         0 => {
@@ -517,8 +743,8 @@ fn nudge_row(
                     .observe(
                         move |_: On<Activate>,
                               mut editor: ResMut<HardpointEditor>,
-                              mut player_def: ResMut<PlayerAssetDef>,
-                              mut weapon_def: ResMut<PlaygroundWeaponDef>| {
+                              mut doc: ResMut<EditorDoc>,
+                              mut weapon_doc: ResMut<WeaponDoc>| {
                             let Some(role) = editor.active_role.clone() else {
                                 return;
                             };
@@ -527,8 +753,8 @@ fn nudge_row(
                             // would mark it changed and re-push an unedited def at the live
                             // weapon every click.
                             let def = match side {
-                                HardpointSide::Character => player_def.0.as_mut(),
-                                HardpointSide::Weapon => weapon_def.def.as_mut(),
+                                HardpointSide::Character => doc.def.as_mut(),
+                                HardpointSide::Weapon => weapon_doc.def.as_mut(),
                             };
                             let Some(def) = def else { return };
                             let hardpoint = ensure_role(def, &role);
@@ -586,8 +812,8 @@ fn side_chips(
 #[allow(clippy::too_many_arguments)]
 pub fn rebuild_hardpoint_panel(
     mut editor: ResMut<HardpointEditor>,
-    player_def: Res<PlayerAssetDef>,
-    weapon_def: Res<PlaygroundWeaponDef>,
+    doc: Res<EditorDoc>,
+    weapon_doc: Res<WeaponDoc>,
     mut commands: Commands,
     container_q: Query<Entity, With<HardpointContainer>>,
     players: Query<Entity, With<Player>>,
@@ -596,16 +822,16 @@ pub fn rebuild_hardpoint_panel(
     names: Query<&Name>,
     mut last_def: Local<Option<String>>,
 ) {
-    // A model swap replaces the def, so the panel has to follow it. The weapon def is
-    // reloaded by `sync_weapon_def` in the same breath, so both sides reset together.
-    let current = player_def.0.as_ref().map(|d| d.model_path.clone());
-    if *last_def != current {
-        *last_def = current;
+    // Opening another model replaces the doc, so the panel has to follow it. The weapon
+    // doc is reopened by `sync_weapon_doc` in the same breath, so both sides reset together.
+    // Edits to the open doc redraw too: Revert and Save change what the rows should show.
+    if *last_def != doc.def_path {
+        last_def.clone_from(&doc.def_path);
         editor.active_role = None;
         editor.side = HardpointSide::Character;
-        editor.character_dirty = false;
-        editor.weapon_dirty = false;
-        editor.status.clear();
+        editor.ui_dirty = true;
+    }
+    if doc.is_changed() || weapon_doc.is_changed() {
         editor.ui_dirty = true;
     }
     if !editor.ui_dirty {
@@ -619,15 +845,15 @@ pub fn rebuild_hardpoint_panel(
     commands.entity(container).despawn_related::<Children>();
 
     let side = editor.side;
-    let weapon_name = weapon_def.name().map(str::to_string);
+    let weapon_name = weapon_doc.name().map(str::to_string);
     let def = match side {
-        HardpointSide::Character => player_def.0.as_ref(),
-        HardpointSide::Weapon => weapon_def.def.as_ref(),
+        HardpointSide::Character => doc.def.as_ref(),
+        HardpointSide::Weapon => weapon_doc.def.as_ref(),
     };
 
     let Some(def) = def else {
         let message = match side {
-            HardpointSide::Character => "no player def loaded",
+            HardpointSide::Character => "no character open",
             HardpointSide::Weapon => "no weapon equipped (set PlayerProps.weapon)",
         };
         commands.entity(container).with_children(|parent| {
@@ -647,18 +873,6 @@ pub fn rebuild_hardpoint_panel(
         .as_ref()
         .and_then(|role| def.hardpoints.get(role))
         .cloned();
-    let status = editor.status.clone();
-    let dirty = editor.dirty(side);
-    // Which file the Save button writes. Worth spelling out: the two sides write different
-    // files, and the weapon's is reached by an explicit path rather than its model stem.
-    let save_target = match side {
-        HardpointSide::Character => {
-            crate::assets::asset_definition::AssetDefinition::def_path(&def.model_path)
-                .display()
-                .to_string()
-        }
-        HardpointSide::Weapon => weapon_def.def_path.clone().unwrap_or_default(),
-    };
 
     // Bone names of the live rig, so the anchor picker offers what actually exists.
     // Weapon frames are model-origin relative, so the picker is character-side only.
@@ -752,11 +966,11 @@ pub fn rebuild_hardpoint_panel(
         .observe(
             move |_: On<Activate>,
                   mut editor: ResMut<HardpointEditor>,
-                  mut player_def: ResMut<PlayerAssetDef>,
-                  mut weapon_def: ResMut<PlaygroundWeaponDef>| {
+                  mut doc: ResMut<EditorDoc>,
+                  mut weapon_doc: ResMut<WeaponDoc>| {
                 let def = match editor.side {
-                    HardpointSide::Character => player_def.0.as_mut(),
-                    HardpointSide::Weapon => weapon_def.def.as_mut(),
+                    HardpointSide::Character => doc.def.as_mut(),
+                    HardpointSide::Weapon => weapon_doc.def.as_mut(),
                 };
                 if let Some(def) = def {
                     def.hardpoints.remove(&removed);
@@ -765,56 +979,6 @@ pub fn rebuild_hardpoint_panel(
                 editor.touch();
             },
         );
-
-        let save_label = match (side, dirty) {
-            (HardpointSide::Character, true) => "SAVE character def (unsaved edits)",
-            (HardpointSide::Character, false) => "SAVE character def",
-            (HardpointSide::Weapon, true) => "SAVE weapon def (unsaved edits)",
-            (HardpointSide::Weapon, false) => "SAVE weapon def",
-        };
-        row(
-            parent,
-            save_label.to_string(),
-            dirty,
-            Color::srgb(0.7, 0.95, 0.75),
-        )
-        .observe(
-            move |_: On<Activate>,
-                  mut editor: ResMut<HardpointEditor>,
-                  player_def: Res<PlayerAssetDef>,
-                  weapon_def: Res<PlaygroundWeaponDef>| {
-                let side = editor.side;
-                let saved = match side {
-                    HardpointSide::Character => player_def.0.as_ref().map(save_player_def),
-                    HardpointSide::Weapon => weapon_def
-                        .def
-                        .as_ref()
-                        .zip(weapon_def.def_path.as_deref())
-                        .map(|(def, path)| save_weapon_def(def, path)),
-                };
-                if let Some(status) = saved {
-                    editor.status = status;
-                    editor.set_dirty(side, false);
-                    editor.ui_dirty = true;
-                }
-            },
-        );
-
-        if !save_target.is_empty() {
-            parent.spawn((
-                Text::new(format!("-> {save_target}")),
-                TextFont::default().with_font_size(9.0),
-                TextColor(Color::srgb(0.45, 0.55, 0.6)),
-            ));
-        }
-
-        if !status.is_empty() {
-            parent.spawn((
-                Text::new(status),
-                TextFont::default().with_font_size(10.0),
-                TextColor(Color::srgb(0.6, 0.85, 0.6)),
-            ));
-        }
 
         if side == HardpointSide::Weapon {
             parent.spawn((
@@ -836,8 +1000,8 @@ pub fn rebuild_hardpoint_panel(
                 .observe(
                     move |_: On<Activate>,
                           mut editor: ResMut<HardpointEditor>,
-                          mut weapon_def: ResMut<PlaygroundWeaponDef>| {
-                        if let Some(def) = weapon_def.def.as_mut() {
+                          mut weapon_doc: ResMut<WeaponDoc>| {
+                        if let Some(def) = weapon_doc.def.as_mut() {
                             ensure_role(def, &for_role).anchor = None;
                         }
                         editor.touch();
@@ -860,8 +1024,8 @@ pub fn rebuild_hardpoint_panel(
             row(parent, bone, is_anchor, Color::srgb(0.8, 0.8, 0.9)).observe(
                 move |_: On<Activate>,
                       mut editor: ResMut<HardpointEditor>,
-                      mut player_def: ResMut<PlayerAssetDef>| {
-                    if let Some(def) = player_def.0.as_mut() {
+                      mut doc: ResMut<EditorDoc>| {
+                    if let Some(def) = doc.def.as_mut() {
                         ensure_role(def, &for_role).anchor = Some(chosen.clone());
                     }
                     editor.touch();
@@ -875,17 +1039,15 @@ pub fn rebuild_hardpoint_panel(
 /// picked — the tag paths it can be bound to.
 pub fn rebuild_animation_panel(
     mut editor: ResMut<AnimationEditor>,
-    player_def: Res<PlayerAssetDef>,
+    doc: Res<EditorDoc>,
     mut commands: Commands,
     container_q: Query<Entity, With<AnimationContainer>>,
     mut last_def: Local<Option<String>>,
 ) {
     // Follow model swaps, and redraw when a binding edit changes what keys resolve to.
-    let current = player_def.0.as_ref().map(|d| d.model_path.clone());
-    if *last_def != current {
-        *last_def = current;
+    if *last_def != doc.def_path {
+        last_def.clone_from(&doc.def_path);
         editor.selected_key = None;
-        editor.status.clear();
         editor.ui_dirty = true;
     }
     if !editor.ui_dirty {
@@ -898,10 +1060,10 @@ pub fn rebuild_animation_panel(
     };
     commands.entity(container).despawn_related::<Children>();
 
-    let Some(def) = player_def.0.as_ref() else {
+    let Some(def) = doc.def.as_ref() else {
         commands.entity(container).with_children(|parent| {
             parent.spawn((
-                Text::new("no player def loaded"),
+                Text::new("no character open"),
                 TextFont::default().with_font_size(11.0),
                 TextColor(Color::srgb(0.6, 0.5, 0.4)),
             ));
@@ -923,9 +1085,6 @@ pub fn rebuild_animation_panel(
     let tags = tag_paths(def);
     let bound_tag =
         selected.and_then(|key| def.animation_bindings.get(key.default_search()).cloned());
-    let status = editor.status.clone();
-    let dirty = editor.dirty;
-
     commands.entity(container).with_children(|parent| {
         for (key, name, resolves_to) in labels {
             let is_selected = selected == Some(key);
@@ -988,7 +1147,7 @@ pub fn rebuild_animation_panel(
 
         if tags.is_empty() {
             parent.spawn((
-                Text::new("this def tags no clips - tag them in the asset browser"),
+                Text::new("this def tags no clips - tag them in the asset browser for now"),
                 TextFont::default().with_font_size(10.0),
                 TextColor(Color::srgb(0.7, 0.6, 0.45)),
             ));
@@ -1000,8 +1159,8 @@ pub fn rebuild_animation_panel(
             row(parent, tag, is_bound, Color::srgb(0.8, 0.85, 0.95)).observe(
                 move |_: On<Activate>,
                       mut editor: ResMut<AnimationEditor>,
-                      mut player_def: ResMut<PlayerAssetDef>| {
-                    if let Some(def) = player_def.0.as_mut() {
+                      mut doc: ResMut<EditorDoc>| {
+                    if let Some(def) = doc.def.as_mut() {
                         bind(def, key, &chosen);
                     }
                     editor.touch();
@@ -1018,59 +1177,29 @@ pub fn rebuild_animation_panel(
         .observe(
             move |_: On<Activate>,
                   mut editor: ResMut<AnimationEditor>,
-                  mut player_def: ResMut<PlayerAssetDef>| {
-                if let Some(def) = player_def.0.as_mut() {
+                  mut doc: ResMut<EditorDoc>| {
+                if let Some(def) = doc.def.as_mut() {
                     unbind(def, key);
                 }
                 editor.touch();
             },
         );
 
-        let save_label = if dirty {
-            "SAVE def (unsaved edits)"
-        } else {
-            "SAVE def"
-        };
-        row(
-            parent,
-            save_label.to_string(),
-            dirty,
-            Color::srgb(0.7, 0.95, 0.75),
-        )
-        .observe(
-            |_: On<Activate>,
-             mut editor: ResMut<AnimationEditor>,
-             player_def: Res<PlayerAssetDef>| {
-                if let Some(def) = player_def.0.as_ref() {
-                    editor.status = save_player_def(def);
-                    editor.dirty = false;
-                    editor.ui_dirty = true;
-                }
-            },
-        );
-
-        if !status.is_empty() {
-            parent.spawn((
-                Text::new(status),
-                TextFont::default().with_font_size(10.0),
-                TextColor(Color::srgb(0.6, 0.85, 0.6)),
-            ));
-        }
     });
 }
 
 /// A binding edit changes what every key resolves to, so the list has to be redrawn.
 pub fn refresh_animation_panel_on_def_change(
-    player_def: Res<PlayerAssetDef>,
+    doc: Res<EditorDoc>,
     mut editor: ResMut<AnimationEditor>,
 ) {
-    if player_def.is_changed() {
+    if doc.is_changed() {
         editor.ui_dirty = true;
     }
 }
 
 pub fn rebuild_model_list(
-    mut models: ResMut<PlaygroundModels>,
+    mut models: ResMut<EditorLibrary>,
     mut commands: Commands,
     container_q: Query<Entity, With<ModelListContainer>>,
 ) {
@@ -1113,7 +1242,12 @@ pub fn rebuild_model_list(
             };
             let clicked = def_path.clone();
             row(parent, label, is_selected, color).observe(
-                move |_: On<Activate>, mut m: ResMut<PlaygroundModels>| {
+                move |_: On<Activate>,
+                      mut m: ResMut<EditorLibrary>,
+                      mut bar: ResMut<DocBar>,
+                      mut doc: ResMut<EditorDoc>,
+                      weapon_doc: Res<WeaponDoc>,
+                      mut next_state: ResMut<NextState<GameState>>| {
                     // Refused rather than swapped to: the swap would succeed and leave you
                     // walking around as nothing, with no clue why.
                     if m.mesh_less.contains(&clicked) {
@@ -1124,58 +1258,62 @@ pub fn rebuild_model_list(
                         m.browser_dirty = true;
                         return;
                     }
-                    m.select(&clicked);
+                    request(
+                        ConfirmAction::OpenModel(clicked.clone()),
+                        &mut bar,
+                        &mut doc,
+                        &weapon_doc,
+                        &mut m,
+                        &mut next_state,
+                    );
                 },
             );
         }
     });
 }
 
-/// Add a clip library to the model currently worn.
+/// Add a clip library to the open character.
 ///
 /// No respawn needed: `build_player_anim_graph` folds `animation_sources` into the
 /// signature it watches and waits for the extra GLTFs to load before committing, so the
-/// new clips reach the live character on their own once the file is in. It is saved
-/// straight away all the same — an unsaved source is a list of clips that vanish on the
-/// next model swap.
+/// new clips reach the live character on their own once the file is in. Like any other
+/// edit it stays in the doc until you Save — switching models asks first, so the clips
+/// cannot quietly vanish.
 fn attach_animation_source(
     source_path: &str,
-    models: &mut PlaygroundModels,
-    player_def: &mut PlayerAssetDef,
+    models: &mut EditorLibrary,
+    doc: &mut EditorDoc,
     animation: &mut AnimationEditor,
 ) {
-    let Some(def) = player_def.0.as_mut() else {
-        models.status = "no model worn to add the source to".to_string();
+    let Some(def) = doc.def.as_mut() else {
+        models.status = "no character open to add the source to".to_string();
         return;
     };
 
     let (changed, status) = add_animation_source(def, source_path);
     models.status = status;
-    if !changed {
-        return;
+    if changed {
+        animation.ui_dirty = true;
     }
-
-    def.save();
-    animation.ui_dirty = true;
 }
 
 /// Rebuild the weapon list: every weapon def, with the one the worn character carries
 /// marked.
 ///
-/// Picking one writes `PlayerProps.weapon`, saves, and re-selects the model — the weapon
-/// is resolved by `PendingEquip` at spawn time, so it takes a respawn to change, and the
-/// respawn reads the def from disk, which is why the save has to come first.
+/// Picking one writes `PlayerProps.weapon` into the doc. That is an edit like any other:
+/// `sync_doc_to_live` sees the live character carrying something else and respawns it from
+/// the doc, holding the new gun. Nothing is saved until you Save.
 pub fn rebuild_weapon_list(
-    mut models: ResMut<PlaygroundModels>,
-    player_def: Res<PlayerAssetDef>,
+    mut models: ResMut<EditorLibrary>,
+    doc: Res<EditorDoc>,
     mut commands: Commands,
     container_q: Query<Entity, With<WeaponListContainer>>,
     mut last: Local<Option<String>>,
 ) {
-    let equipped = player_def.0.as_ref().and_then(|def| match &def.model_type {
-        crate::assets::asset_definition::ModelType::Player(props) => props.weapon.clone(),
-        _ => None,
-    });
+    let equipped = doc
+        .def
+        .as_ref()
+        .and_then(crate::character_editor::doc::weapon_def_path);
     // Follows both a model swap (which changes what is equipped) and the list itself.
     let changed = *last != equipped;
     if !models.weapon_list_dirty && !changed {
@@ -1189,7 +1327,7 @@ pub fn rebuild_weapon_list(
     commands.entity(container).despawn_related::<Children>();
 
     let weapons = models.weapon_defs.clone();
-    let is_character = player_def.0.as_ref().is_some_and(|def| {
+    let is_character = doc.def.as_ref().is_some_and(|def| {
         matches!(
             def.model_type,
             crate::assets::asset_definition::ModelType::Player(_)
@@ -1200,7 +1338,7 @@ pub fn rebuild_weapon_list(
     commands.entity(container).with_children(|parent| {
         if !is_character {
             parent.spawn((
-                Text::new("no character worn"),
+                Text::new("no character open"),
                 TextFont::default().with_font_size(11.0),
                 TextColor(Color::srgb(0.6, 0.5, 0.4)),
             ));
@@ -1216,9 +1354,19 @@ pub fn rebuild_weapon_list(
         )
         .observe(
             |_: On<Activate>,
-             mut models: ResMut<PlaygroundModels>,
-             mut player_def: ResMut<PlayerAssetDef>| {
-                equip_weapon(None, &mut models, &mut player_def);
+             mut models: ResMut<EditorLibrary>,
+             mut bar: ResMut<DocBar>,
+             mut doc: ResMut<EditorDoc>,
+             weapon_doc: Res<WeaponDoc>,
+             mut next_state: ResMut<NextState<GameState>>| {
+                request(
+                    ConfirmAction::EquipWeapon(None),
+                    &mut bar,
+                    &mut doc,
+                    &weapon_doc,
+                    &mut models,
+                    &mut next_state,
+                );
             },
         );
 
@@ -1232,40 +1380,27 @@ pub fn rebuild_weapon_list(
             let chosen = weapon_path.clone();
             row(parent, label, is_equipped, Color::srgb(0.9, 0.88, 0.75)).observe(
                 move |_: On<Activate>,
-                      mut models: ResMut<PlaygroundModels>,
-                      mut player_def: ResMut<PlayerAssetDef>| {
-                    equip_weapon(Some(&chosen), &mut models, &mut player_def);
+                      mut models: ResMut<EditorLibrary>,
+                      mut bar: ResMut<DocBar>,
+                      mut doc: ResMut<EditorDoc>,
+                      weapon_doc: Res<WeaponDoc>,
+                      mut next_state: ResMut<NextState<GameState>>| {
+                    request(
+                        ConfirmAction::EquipWeapon(Some(chosen.clone())),
+                        &mut bar,
+                        &mut doc,
+                        &weapon_doc,
+                        &mut models,
+                        &mut next_state,
+                    );
                 },
             );
         }
     });
 }
 
-fn equip_weapon(
-    weapon_def_path: Option<&str>,
-    models: &mut PlaygroundModels,
-    player_def: &mut PlayerAssetDef,
-) {
-    let Some(def) = player_def.0.as_mut() else {
-        return;
-    };
-    if !set_weapon(def, weapon_def_path) {
-        models.status = "the worn def is not a character".to_string();
-        return;
-    }
-    def.save();
-    models.status = match weapon_def_path {
-        Some(path) => format!("equipped {}", def_stem(path)),
-        None => "unequipped".to_string(),
-    };
-    models.weapon_list_dirty = true;
-    if let Some(worn) = models.selected.clone() {
-        models.select(&worn);
-    }
-}
-
 pub fn rebuild_import_browser(
-    mut models: ResMut<PlaygroundModels>,
+    mut models: ResMut<EditorLibrary>,
     mut commands: Commands,
     container_q: Query<Entity, With<ImportBrowserContainer>>,
     mut path_label_q: Query<&mut Text, (With<ImportPathLabel>, Without<ImportStatusLabel>)>,
@@ -1299,7 +1434,7 @@ pub fn rebuild_import_browser(
                 false,
                 Color::srgb(0.75, 0.88, 1.0),
             )
-            .observe(|_: On<Activate>, mut m: ResMut<PlaygroundModels>| m.leave_folder());
+            .observe(|_: On<Activate>, mut m: ResMut<EditorLibrary>| m.leave_folder());
         }
         for name in folders {
             let entered = name.clone();
@@ -1309,7 +1444,7 @@ pub fn rebuild_import_browser(
                 false,
                 Color::srgb(0.75, 0.88, 1.0),
             )
-            .observe(move |_: On<Activate>, mut m: ResMut<PlaygroundModels>| {
+            .observe(move |_: On<Activate>, mut m: ResMut<EditorLibrary>| {
                 m.enter_folder(&entered);
             });
         }
@@ -1327,8 +1462,8 @@ pub fn rebuild_import_browser(
             };
             row(parent, label, false, color).observe(
                 move |_: On<Activate>,
-                      mut m: ResMut<PlaygroundModels>,
-                      mut player_def: ResMut<PlayerAssetDef>,
+                      mut m: ResMut<EditorLibrary>,
+                      mut doc: ResMut<EditorDoc>,
                       mut animation: ResMut<AnimationEditor>| {
                     match classify(&imported) {
                         ImportKind::Model => m.import(&imported),
@@ -1336,7 +1471,7 @@ pub fn rebuild_import_browser(
                             attach_animation_source(
                                 &imported,
                                 &mut m,
-                                &mut player_def,
+                                &mut doc,
                                 &mut animation,
                             );
                         }

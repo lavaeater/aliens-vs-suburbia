@@ -28,6 +28,10 @@ them, and we will again. The fix is one editor, one working copy of the def, and
 - **Two stages, one model.** **Studio** shows the model held still on a turntable, for
   precise work. **Live** is the running game with the model walking and shooting, to check
   how it feels. Toggle with one key, without reloading.
+- **An arena to drive in.** Both stages happen in a small walled arena
+  (`assets/maps/playground.ron`). In Live you control the character exactly as in a match,
+  with **keyboard and mouse or a gamepad**, so movement, aim and firing can be tried with
+  both control schemes. No enemies are spawned. The arena is for handling, not combat.
 - **Any model type.** Players, enemies, weapons, towers, terrain and items all open here.
   Live is only offered where it means something (see *Stages*).
 - **A working copy that cannot be silently lost.** A dirty marker, one Save, and a prompt
@@ -61,9 +65,12 @@ So Studio and Live are flags on one session, which is why switching between them
 instant.
 
 For non-player models, Studio spawns the def's scene as a plain prop at the arena centre,
-the way the browser's `spawn_viewer_model` does. The arena stays, but the dummies are
-hidden and the player is despawned. The arena floor gives scale and lighting that the
-browser's void never had.
+the way the browser's `spawn_viewer_model` does, and the player is despawned. The arena
+floor gives scale and lighting that the browser's void never had.
+
+**No enemies.** The playground's target dummies (`dummies.rs`) are not carried over, and
+waves stay silenced. Practice targets come back later as an opt-in toggle (plan step 8),
+not as something always standing in the arena.
 
 ### One document: `EditorDoc`
 
@@ -112,6 +119,11 @@ library) and the mouse (buttons). The browser and playground each solved half of
 - **Studio** means the game never gets input. The keys go to the orbit camera and editor
   shortcuts.
 - **Live with the pointer over the viewport** means the game gets input, as now.
+- **A gamepad always drives the character in Live**, wherever the pointer is. It has no
+  way to click the panel, so it never conflicts, and you can hold the pad in one hand while
+  nudging a hardpoint with the mouse in the other. Pads are bound the same way as in a match
+  (`assign_gamepads`, `GamepadBindings`), including the fallback that hands a connected pad
+  to the lone keyboard player. In Studio the pad is ignored, like the keyboard.
 
 This needs one gate (an `EditorInputFocus` resource) read by `keyboard_input`, `mouse_aim`
 and the fire path in `in_editor` sessions, instead of each screen guessing.
@@ -121,13 +133,13 @@ and the fire path in `in_editor` sessions, instead of each screen guessing.
 | `ModelType` | Studio | Live |
 |---|---|---|
 | `Player` | yes | walk as it (today's playground) |
-| `Enemy` | yes | spawn it as a dummy you can shoot; later, let it walk |
+| `Enemy` | yes (rig, clips, sizing) | no, enemies are out of scope for now |
 | `Weapon` | yes, alone on the turntable | held by the last-worn character |
-| `Tower` | yes | placed in the arena, shooting the dummies |
-| `Terrain`, `Item` | yes | placed in the arena (barrels explode, pickups pick up) |
+| `Tower` | yes | later: placed in the arena |
+| `Terrain`, `Item` | yes | later: placed in the arena (barrels explode, pickups pick up) |
 
-Player and Weapon Live come almost for free from the playground. The rest are stretch goals
-after parity.
+Player and Weapon Live come almost for free from the playground, and they are the scope.
+Everything marked *later* is optional, after parity.
 
 ## Layout
 
@@ -253,7 +265,8 @@ row is ticked.
 | Bind pose hold (F12) | Playground | toolbar, Studio |
 | Frame hardpoint / character | Playground | toolbar, `F` / `Home` |
 | Camera / model / gait sliders | Playground (HUD panels) | View tab |
-| Target dummies | Playground | Live |
+| Target dummies | Playground | **Dropped**, comes back as opt-in practice targets (step 8) |
+| Keyboard + gamepad control in the arena | Playground | Live |
 | Remember last model | Playground (`playground-prefs.ron`) | `editor-prefs.ron`, plus the last tab |
 | Export def (`I`) | Browser | Save (`Ctrl+S`) |
 | Foldable sections | Both | Replaced by tabs |
@@ -269,7 +282,8 @@ Playground keep working until step 9, so nothing is lost mid-migration.
 `git mv src/playground src/character_editor`. Rename the types: `PlaygroundSession` ->
 `EditorSession`, `PlaygroundModels` -> `EditorLibrary`, `PlaygroundDebug` ->
 `EditorOverlays`. Add a menu button **Character Editor** and an `--editor` flag, keeping
-`--playground` as an alias. The old Playground menu entry points here too. Move
+`--playground` as an alias. The old Playground menu entry points here too. Stop spawning
+the target dummies (`spawn_dummy_posts`, `respawn_dummies`), leaving an empty arena. Move
 `gltf_info` to `src/assets/`, since the Library and the browser both need it.
 
 *Done when:* the same screen as today's playground opens as "Character Editor".
@@ -307,7 +321,7 @@ character.
 ### 5. Studio / Live
 
 Generalise inspect mode into the Studio stage: orbit camera, hold still, optional bind
-pose, dummies hidden. Spawn non-player models as a static prop in Studio. Make Live the
+pose. Spawn non-player models as a static prop in Studio. Make Live the
 default for players and Studio for everything else.
 
 *Done when:* `Tab` (or the top-bar switch) flips between the two instantly on a player,
@@ -338,8 +352,10 @@ Each one is ported to edit `EditorDoc`, not copied with its own state.
 
 ### 8. New
 
-Aim-bone editor (Props tab). Live for enemies (as dummies), towers and terrain. Last tab
-and Studio/Live mode remembered in `editor-prefs.ron`.
+Aim-bone editor (Props tab). Last tab and Studio/Live mode remembered in
+`editor-prefs.ron`. Optional after that: a **Practice targets** toggle in the View tab
+that brings back the playground's respawning dummies (the code is in git history), and
+Live for towers and terrain.
 
 ### 9. Retire the old screens
 
@@ -378,11 +394,58 @@ re-plumbing state that `EditorDoc` makes unnecessary.
 
 ## Open questions
 
-- **Tabs or folding?** This spec picks tabs. If lava_ui_builder makes tabs awkward, the
-  fallback is folding sections with only one open at a time (an accordion), which gives
-  most of the benefit.
-- **Studio for non-players: arena or void?** This spec picks the arena, for its scale
-  reference and lighting. Some models (tiny items, huge terrain) may want the camera to
-  auto-frame on open, which `Home` already does.
-- **Enemy Live:** a dummy that stands still, or a real alien walking toward a goal? A dummy
-  first, since that matches what the playground does.
+- **Auto-frame on open?** Studio always uses the arena. Some models (tiny items, huge
+  terrain) may want the camera to frame them on open, which `Home` already does by hand.
+
+Decided: the arena stays for every model, Live supports keyboard and gamepad, enemies
+are out of scope (practice targets are an opt-in later), and the left pane uses **tabs**,
+not folding sections.
+
+## Progress
+
+### Steps 1 and 2 — built (2026-10-14)
+
+**Step 1.** `src/playground/` is now `src/character_editor/`, with `EditorSession`,
+`in_editor`, `EditorLibrary`, `EditorOverlays`, `EditorPrefs` and
+`CharacterEditorPlugin`. The menu button reads **Character Editor**; `--editor` boots
+straight in and `--playground` still works. The target dummies are gone, so the arena is
+empty. `gltf_info` moved to `src/assets/`. Prefs are written to `editor-prefs.ron`, and
+an old `playground-prefs.ron` is still read if the new file does not exist yet.
+
+**Step 2.** `src/character_editor/doc.rs`: `DefDoc` (`def_path`, `def`, `saved`) and two
+resources, `EditorDoc` for the character and `WeaponDoc` for the gun it holds.
+`AssetDefinition` derives `PartialEq` so dirty can be computed. What changed for the
+panels:
+
+- The hardpoint, animation, weapon and import panels edit the docs. None of them writes
+  `PlayerAssetDef` or saves any more, and the per-panel Save buttons and dirty flags are
+  gone. Adding an animation source no longer saves straight away; it is an edit like any
+  other.
+- A **doc bar** sits under the title (it is not in the scroll path of anything, so the
+  question below can't be scrolled away): the character and weapon names with `*
+  (unsaved)`, then **Save** (every dirty doc), **Revert** and **Menu**. Back to Menu moved
+  up here from the bottom of the pane.
+- **Asking first:** opening another model or leaving checks both docs. Equipping a
+  different gun only checks the weapon doc, because the character doc just gains an
+  edit. Either way the bar asks *Save, then continue* / *Discard* / *Cancel*.
+- **Equipping is an edit, not a save.** It writes `PlayerProps::weapon` into the doc.
+  `sync_doc_to_live` sees that the live character carries something else and respawns
+  it from the doc.
+
+The live character follows the doc through `sync_doc_to_live`. Fields the game reads
+while running are copied into `PlayerAssetDef`. Fields it only reads at spawn
+(`needs_respawn`) trigger a respawn, and the doc rides along in the new
+`PlayerRoster::def_overrides`, so `spawn_players` spawns the unsaved working copy rather
+than the file. The respawn uses the existing swap, which now tracks `awaiting_spawn`.
+Until the new character exists, `PlayerAssetDef` still holds the old def, and comparing
+against it would ask for another respawn.
+
+Equipping resolves the gun's frames from the files on disk (`PendingEquip::resolve`), so
+`apply_grip_to_equipped_weapon` and `apply_weapon_def_to_equipped_weapon` now also run
+on `Added<EquippedWeapon>`. Without that, a respawn would show the saved grip and muzzle
+instead of the ones being edited.
+
+The doc systems run as one chained pipeline (swap -> adopt -> weapon doc -> live ->
+weapon frames), so each sees the previous step's result in the same frame.
+
+**Not verified in-window yet:** this rests on the type checker and unit tests.

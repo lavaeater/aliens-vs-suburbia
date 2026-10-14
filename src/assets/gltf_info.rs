@@ -1,6 +1,6 @@
 //! What is actually inside a `.glb` / `.gltf`, read straight off the file.
 //!
-//! The playground needs one answer before it can do anything sensible with a file the user
+//! The character editor needs one answer before it can do anything sensible with a file the user
 //! clicks: does it contain geometry, or is it an animation library? A GLB with no meshes
 //! can be imported as a player model, spawned, and walked around as — and nothing appears
 //! on screen, because there is nothing to draw. That is not a bug you can see; it looks

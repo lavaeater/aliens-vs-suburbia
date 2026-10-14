@@ -95,16 +95,16 @@ pub fn spawn_menu(commands: Commands, theme: Res<LavaTheme>) {
     //     },
     // );
 
-    // The playground is a normal `InGame` session with a marker resource — see
-    // `crate::playground`. Inserting it before the transition is what makes
+    // The character editor is a normal `InGame` session with a marker resource — see
+    // `crate::character_editor`. Inserting it before the transition is what makes
     // `OnEnter(InGame)` take the sandbox path instead of loading level 1.
     ui.add_button_observe(
-        "Playground",
+        "Character Editor",
         |btn| {
             btn.size_px(220.0, 52.0).font_size(20.0);
         },
         |_: On<Activate>, mut commands: Commands, mut next_state: ResMut<NextState<GameState>>| {
-            commands.init_resource::<crate::playground::state::PlaygroundSession>();
+            commands.init_resource::<crate::character_editor::state::EditorSession>();
             next_state.set(GameState::InGame);
         },
     );

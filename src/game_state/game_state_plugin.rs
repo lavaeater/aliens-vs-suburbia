@@ -38,7 +38,7 @@ use crate::model_settings::plugin::ModelSettingsPlugin;
 use crate::music::game_music_plugin::GameMusicPlugin;
 use crate::player::player_plugin::PlayerPlugin;
 use crate::player_setup::plugin::PlayerSetupPlugin;
-use crate::playground::plugin::PlaygroundPlugin;
+use crate::character_editor::plugin::CharacterEditorPlugin;
 use crate::poly_pizza::plugin::PolyPizzaPlugin;
 use crate::settings::plugin::SettingsPlugin;
 use crate::towers::systems::{area_damage_system, shoot_alien_system, slow_alien_system};
@@ -88,7 +88,7 @@ impl Plugin for GamePlugin {
                 PlayerSetupPlugin,
                 MapEditorPlugin,
                 HouseEditorPlugin,
-                PlaygroundPlugin,
+                CharacterEditorPlugin,
                 FactsPlugin,
                 FactsGameIntegrationPlugin,
                 GameMusicPlugin,

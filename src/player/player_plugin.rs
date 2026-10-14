@@ -94,7 +94,7 @@ impl Plugin for PlayerPlugin {
                     tick_bleed_out,
                     choose_respawn_anchor,
                     tick_respawns,
-                    check_team_wipe.run_if(crate::playground::state::in_normal_game),
+                    check_team_wipe.run_if(crate::character_editor::state::in_normal_game),
                 )
                     .run_if(in_state(GameState::InGame)),
             )
@@ -135,7 +135,7 @@ fn auto_outline_scenes(
 ) {
     for entity in query.iter() {
         // `try_insert`, not `insert`: a scene root can be despawned between this system
-        // queueing the command and the buffers being applied — the playground's model swap
+        // queueing the command and the buffers being applied — the character editor's model swap
         // does exactly that on the frame it changes character — and a plain `insert` on a
         // despawned entity is a hard error that takes the app down.
         commands.entity(entity).try_insert((

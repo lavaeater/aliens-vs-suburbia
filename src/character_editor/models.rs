@@ -20,15 +20,16 @@ use crate::general::events::map_events::SpawnPlayer;
 use crate::general::systems::map_systems::TileDefinitions;
 use crate::player::components::Player;
 use crate::player_setup::state::{InputDevice, PlayerRoster};
-use crate::playground::gltf_info;
-use crate::playground::prefs::PlaygroundPrefs;
+use crate::assets::gltf_info;
+use crate::character_editor::doc::{DefDoc, EditorDoc};
+use crate::character_editor::prefs::EditorPrefs;
 
 /// Tile the arena's `PlayerSpawn` sits on, in padded map space — where a swapped-in model
 /// appears if there is no live player to inherit a position from.
 const SPAWN_TILE: (usize, usize) = (9, 9);
 
 #[derive(Resource, Default)]
-pub struct PlaygroundModels {
+pub struct EditorLibrary {
     /// Def paths of every imported player model, sorted.
     pub defs: Vec<String>,
     /// Of those, the ones whose model file contains no geometry. Wearing one spawns an
@@ -56,12 +57,16 @@ pub struct PlaygroundModels {
     pub pending_def: Option<String>,
     /// Where to put the replacement once the old player is gone.
     pub pending_position: Option<Vec3>,
+    /// `SpawnPlayer` sent, replacement not in the world yet. Until it is, `PlayerAssetDef`
+    /// still holds the old def, and comparing the doc against it would ask for another
+    /// respawn.
+    pub awaiting_spawn: bool,
 
     /// One-line feedback under the import browser.
     pub status: String,
 }
 
-impl PlaygroundModels {
+impl EditorLibrary {
     pub fn fresh() -> Self {
         let mut models = Self {
             browse_folder: "packs".to_string(),
@@ -72,7 +77,7 @@ impl PlaygroundModels {
         // Come back wearing whatever you last wore, so the session starts on a rig you
         // were actually working on rather than on whatever `ModelSettings` points at.
         if let Some(def_path) =
-            PlaygroundPrefs::load().resolve_last_model(|path| std::path::Path::new(path).exists())
+            EditorPrefs::load().resolve_last_model(|path| std::path::Path::new(path).exists())
         {
             models.select(&def_path);
         }
@@ -114,15 +119,28 @@ impl PlaygroundModels {
     }
 
     /// Queue a model swap. Applied by [`swap_player_model`] over the next couple of frames.
+    ///
+    /// Opens the def fresh from disk unless it is the doc already open. Callers deal with
+    /// unsaved edits first — see `doc::request`.
     pub fn select(&mut self, def_path: &str) {
         self.pending_def = Some(def_path.to_string());
         self.list_dirty = true;
     }
 
+    /// Respawn the character from the open doc, keeping its edits. Same path as a swap.
+    pub fn respawn(&mut self, def_path: &str) {
+        self.pending_def = Some(def_path.to_string());
+    }
+
+    /// A swap or respawn is somewhere between queued and the new character standing there.
+    pub const fn swap_in_progress(&self) -> bool {
+        self.pending_def.is_some() || self.pending_position.is_some() || self.awaiting_spawn
+    }
+
     /// Remember this model for next time. Called once the swap is actually applied, so a
     /// def that fails to load is not the one you come back to.
     fn remember(def_path: &str) {
-        PlaygroundPrefs {
+        EditorPrefs {
             last_model_def: Some(def_path.to_string()),
         }
         .save();
@@ -161,7 +179,7 @@ impl PlaygroundModels {
 /// Every `assets/defs/*.ron` whose `model_type` is `Weapon`, sorted.
 ///
 /// The counterpart of `scan_player_defs`, kept here rather than beside it because the
-/// player-setup screen has no use for weapons — only the playground hands them out.
+/// player-setup screen has no use for weapons — only the character editor hands them out.
 pub fn scan_weapon_defs() -> Vec<String> {
     let Ok(entries) = std::fs::read_dir("assets/defs") else {
         return vec![];
@@ -318,13 +336,18 @@ pub const fn decide_swap(player_position: Option<Vec3>, frames_waited: u32) -> S
 /// still exists, and the despawn only lands when commands are applied. So this parks the
 /// position in `pending_position` and finishes on a later frame.
 pub fn swap_player_model(
-    mut models: ResMut<PlaygroundModels>,
+    mut models: ResMut<EditorLibrary>,
+    mut doc: ResMut<EditorDoc>,
     mut commands: Commands,
     players: Query<(Entity, &Position), With<Player>>,
     tile_defs: Res<TileDefinitions>,
     mut spawn_player_mw: MessageWriter<SpawnPlayer>,
     mut frames_waited: Local<u32>,
 ) {
+    if models.awaiting_spawn && !players.is_empty() {
+        models.awaiting_spawn = false;
+    }
+
     if let Some(def_path) = models.pending_def.clone() {
         let existing = players.iter().next();
         let position = match decide_swap(existing.map(|(_, p)| p.0), *frames_waited) {
@@ -346,13 +369,21 @@ pub fn swap_player_model(
         models.pending_def = None;
         *frames_waited = 0;
 
+        // A different model opens fresh from disk; the same one is a respawn and keeps
+        // its edits.
+        if doc.def_path.as_deref() != Some(def_path.as_str()) {
+            doc.0 = DefDoc::open(&def_path);
+        }
+
         // `spawn_players` reads the roster for slot 0, which is how the def reaches the
-        // scene, the animation graph and the equipped weapon.
+        // scene, the animation graph and the equipped weapon. The doc rides along as an
+        // override so the spawn shows its unsaved edits.
         commands.insert_resource(PlayerRoster {
             def_paths: vec![def_path.clone()],
             devices: vec![InputDevice::Keyboard],
+            def_overrides: vec![doc.def.clone()],
         });
-        PlaygroundModels::remember(&def_path);
+        EditorLibrary::remember(&def_path);
         models.selected = Some(def_path);
         models.pending_position = Some(position);
         return;
@@ -367,6 +398,7 @@ pub fn swap_player_model(
             lives: None,
         });
         models.pending_position = None;
+        models.awaiting_spawn = true;
     }
 }
 

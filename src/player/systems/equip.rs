@@ -302,7 +302,7 @@ pub struct WeaponModel {
 }
 
 impl WeaponModel {
-    /// Replace the character-side grip frame. The playground's hardpoint editor calls this
+    /// Replace the character-side grip frame. The character editor's hardpoint editor calls this
     /// so a nudge shows up on the held weapon immediately — `keep_weapons_snapped` rebuilds
     /// the transform from this field every frame, so nothing else has to be touched.
     pub fn set_char_grip(&mut self, grip: Hardpoint) {
@@ -310,7 +310,7 @@ impl WeaponModel {
     }
 
     /// Replace the weapon-side grip frame — the counterpart of [`Self::set_char_grip`],
-    /// used when the playground edits the *weapon's* def rather than the character's.
+    /// used when the character editor edits the *weapon's* def rather than the character's.
     /// Moving this frame slides the gun through the hand; moving the character grip moves
     /// the hand's attachment point. Either can get a gun sitting right, and which one you
     /// want depends on whether the fault is the rig or the model.

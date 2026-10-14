@@ -18,7 +18,7 @@
 //!
 //! ## Why the rest pose is written last, not the animation paused
 //!
-//! The playground is the live game. Pausing the clip still leaves the torso twist, the arm
+//! The character editor is the live game. Pausing the clip still leaves the torso twist, the arm
 //! and leg IK and the animation state machine all writing bones, and each would need its
 //! own gate. Instead [`hold_rest_pose`] runs after all of them, just before propagation,
 //! and overwrites every joint. Whatever they did this frame never reaches the screen.
@@ -37,10 +37,11 @@ use crate::control::components::CharacterControl;
 use crate::model_settings::plugin::PlayerAssetDef;
 use crate::player::components::{AutoAim, Player};
 use crate::player::systems::equip::EquippedWeapon;
-use crate::playground::debug::PlaygroundDebug;
-use crate::playground::gltf_info;
-use crate::playground::hardpoints::{HardpointEditor, HardpointSide, PlaygroundWeaponDef};
-use crate::playground::state::PlaygroundSession;
+use crate::character_editor::debug::EditorOverlays;
+use crate::assets::gltf_info;
+use crate::character_editor::doc::WeaponDoc;
+use crate::character_editor::hardpoints::{HardpointEditor, HardpointSide};
+use crate::character_editor::state::EditorSession;
 use crate::settings::resources::GameSettings;
 
 /// Radians per unit of mouse motion when orbiting.
@@ -157,25 +158,25 @@ impl OrbitCamera {
 
 /// The orbit camera is driving the game camera, so `camera_follow` must not.
 ///
-/// Checks the session too: `PlaygroundDebug` outlives a playground session, and a flag
+/// Checks the session too: `EditorOverlays` outlives an editor session, and a flag
 /// left on must not freeze the camera of the next real match.
 pub fn orbit_camera_active(
-    session: Option<Res<PlaygroundSession>>,
-    debug: Option<Res<PlaygroundDebug>>,
+    session: Option<Res<EditorSession>>,
+    debug: Option<Res<EditorOverlays>>,
 ) -> bool {
     session.is_some() && debug.is_some_and(|d| d.orbit_camera)
 }
 
-pub fn rest_pose_held(debug: Option<Res<PlaygroundDebug>>) -> bool {
+pub fn rest_pose_held(debug: Option<Res<EditorOverlays>>) -> bool {
     debug.is_some_and(|d| d.rest_pose)
 }
 
-pub fn inspecting(debug: Option<Res<PlaygroundDebug>>) -> bool {
+pub fn inspecting(debug: Option<Res<EditorOverlays>>) -> bool {
     debug.is_some_and(|d| d.inspecting())
 }
 
 /// `F11` / `F12` toggle the two tools. Every other F-key up to F10 is taken.
-pub fn inspect_keys(keys: Res<ButtonInput<KeyCode>>, mut debug: ResMut<PlaygroundDebug>) {
+pub fn inspect_keys(keys: Res<ButtonInput<KeyCode>>, mut debug: ResMut<EditorOverlays>) {
     if keys.just_pressed(KeyCode::F11) {
         debug.toggle_orbit_camera();
     }
@@ -191,7 +192,7 @@ pub fn inspect_keys(keys: Res<ButtonInput<KeyCode>>, mut debug: ResMut<Playgroun
 /// back, and `camera_follow` (no longer gated) eases back to the players.
 pub fn switch_orbit_camera(
     mut commands: Commands,
-    debug: Res<PlaygroundDebug>,
+    debug: Res<EditorOverlays>,
     mut was_on: Local<bool>,
     mut settings: ResMut<GameSettings>,
     players: Query<&Transform, With<Player>>,
@@ -335,7 +336,7 @@ fn is_inspect_lens(projection: &Projection) -> bool {
 pub struct FocusTargets<'w, 's> {
     editor: Option<Res<'w, HardpointEditor>>,
     player_def: Res<'w, PlayerAssetDef>,
-    weapon_def: Res<'w, PlaygroundWeaponDef>,
+    weapon_def: Res<'w, WeaponDoc>,
     players: Query<'w, 's, (Entity, Option<&'static EquippedWeapon>), With<Player>>,
     children_q: Query<'w, 's, &'static Children>,
     skinned_q: Query<'w, 's, &'static SkinnedMesh>,
@@ -451,7 +452,7 @@ pub fn hold_rest_pose(
     if cache.model_path.as_deref() != Some(def.model_path.as_str()) {
         cache.bones = gltf_info::rest_pose(&def.model_path).unwrap_or_else(|| {
             warn!(
-                "playground: cannot read a rest pose from {}",
+                "character editor: cannot read a rest pose from {}",
                 def.model_path
             );
             HashMap::new()
@@ -589,7 +590,7 @@ mod tests {
     #[test]
     fn the_orbit_camera_is_only_active_inside_a_session() {
         let mut app = App::new();
-        app.insert_resource(PlaygroundDebug {
+        app.insert_resource(EditorOverlays {
             orbit_camera: true,
             ..Default::default()
         });
@@ -598,7 +599,7 @@ mod tests {
                 .run_system_cached(orbit_camera_active)
                 .unwrap()
         );
-        app.init_resource::<PlaygroundSession>();
+        app.init_resource::<EditorSession>();
         assert!(
             app.world_mut()
                 .run_system_cached(orbit_camera_active)

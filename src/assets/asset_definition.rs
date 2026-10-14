@@ -143,7 +143,7 @@ impl Default for TerrainProps {
 }
 
 /// What a gun consumes. Each kind is a separate pool in the player's `AmmoPouch`;
-/// `Infinite` weapons never reload (the playground's default).
+/// `Infinite` weapons never reload (the character editor's default).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum AmmoKind {
     #[default]
@@ -471,7 +471,7 @@ impl Default for Attachment {
 /// Persisted definition for one imported asset. Written to `assets/defs/*.ron`
 /// by the asset browser and read at runtime to drive hidden-node lists and
 /// animation mappings without hard-coding them in source.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AssetDefinition {
     pub model_path: String,
     /// Uniform scale factor applied to the model so it has a meaningful real-world size.
