@@ -26,7 +26,7 @@ use crate::character_editor::inspect::{
     drive_orbit_camera, hold_player_still, hold_rest_pose, inspect_keys, inspecting,
     orbit_camera_active, rest_pose_held, switch_orbit_camera,
 };
-use crate::character_editor::animation_tab::{commit_clip_tag, rebuild_animation_tab};
+use crate::character_editor::animation_tab::rebuild_animation_tab;
 use crate::character_editor::model_tab::{
     ModelMeasure, apply_prop_hidden_nodes, measure_subject, rebuild_model_tab,
 };
@@ -156,7 +156,6 @@ impl Plugin for CharacterEditorPlugin {
                     measure_subject,
                     apply_prop_hidden_nodes,
                     rebuild_model_tab,
-                    commit_clip_tag,
                     rebuild_animation_tab,
                     rebuild_props_tab,
                     remember_tab_and_stage,

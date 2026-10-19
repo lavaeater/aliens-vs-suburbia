@@ -20,9 +20,7 @@
         )),
     )),
     hidden_nodes: [],
-    animation_mapping: {},
-    clip_tags: {},
-    animation_bindings: {},
+    animations: {},
     animation_sources: [],
     attachments: [],
     hardpoints: {

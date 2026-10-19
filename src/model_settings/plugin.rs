@@ -1,6 +1,7 @@
 use crate::animation::animation_plugin::{
-    ANIM_KEYS, AnimationKey, AnimationStore, clip_matches, get_child_with_component_recursive,
+    ANIM_KEYS, AnimationKey, AnimationStore, get_child_with_component_recursive,
 };
+use crate::animation::clips::ClipSet;
 use crate::assets::asset_definition::AssetDefinition;
 use crate::assets::assets_plugin::GameAssets;
 use crate::game_state::GameState;
@@ -203,7 +204,8 @@ fn sync_player_anim_clips(
 // ── Player animation graph builder ───────────────────────────────────────────
 
 /// Rebuilds the "players" entry in AnimationStore from the loaded GLTF.
-/// Priority for each key: AssetDefinition mapping → ModelSettings.anim_mapping → default_search.
+/// Each key resolves through `ClipSet::resolve` (def, ModelSettings override, rig preset,
+/// name search, fallback key).
 #[allow(clippy::too_many_arguments)]
 fn build_player_anim_graph(
     model_settings: Res<ModelSettings>,
@@ -234,8 +236,8 @@ fn build_player_anim_graph(
 
     let def_sig = def.map_or_default(|d| {
         format!(
-            "{:?}|{:?}|{:?}|{:?}",
-            d.animation_bindings, d.clip_tags, d.animation_mapping, d.animation_sources
+            "{:?}|{:?}",
+            d.animations, d.animation_sources
         )
     });
 
@@ -302,9 +304,10 @@ fn build_player_anim_graph(
     }
 }
 
-/// Build an animation graph for a model from its def (clip tags + bindings, legacy
-/// mapping), an optional `ModelSettings` mapping override, the model's own GLTF and any
-/// loaded external animation sources. Shared by the player and the def-driven enemies.
+/// Build an animation graph for a model from its def, an optional `ModelSettings` mapping
+/// override, the model's own GLTF and any loaded external animation sources: one node per
+/// key that resolves to a clip (`ClipSet::resolve`). Shared by the player and the
+/// def-driven enemies.
 pub fn build_graph(
     def: Option<&AssetDefinition>,
     settings_mapping: Option<&crate::model_settings::resources::AnimMapping>,
@@ -314,90 +317,40 @@ pub fn build_graph(
     AnimationGraph,
     std::collections::HashMap<AnimationKey, AnimationNodeIndex>,
 ) {
+    // Every playable clip by the name `ClipSet` resolves to: the model's own clip names,
+    // and `"<stem>|<clip>"` for each source's.
+    let mut handles: std::collections::HashMap<String, Handle<AnimationClip>> = gltf
+        .named_animations
+        .iter()
+        .map(|(name, handle)| (name.to_string(), handle.clone()))
+        .collect();
+    let mut sourced = Vec::new();
+    for (path, ext_gltf) in extra_gltfs {
+        let stem = std::path::Path::new(path)
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or_default();
+        for (name, handle) in &ext_gltf.named_animations {
+            handles
+                .entry(format!("{stem}|{name}"))
+                .or_insert_with(|| handle.clone());
+            sourced.push((stem.to_string(), name.to_string()));
+        }
+    }
+    let clips = ClipSet::new(
+        gltf.named_animations.keys().map(ToString::to_string),
+        sourced,
+    );
+
     let mut graph = AnimationGraph::new();
     let mut anims = std::collections::HashMap::new();
-
     for &key in ANIM_KEYS {
-        // Determine the search value: AssetDefinition first, then ModelSettings, then default.
-        // The def resolves a game key through clip tags + bindings (with a legacy
-        // animation_mapping fallback) into a concrete clip name.
-        let def_mapped = def
-            .and_then(|d| d.resolved_clip(key.default_search()))
-            .unwrap_or_default();
-        let settings_mapped = settings_mapping.map_or("", |m| m.get(key));
-        let search = if !def_mapped.is_empty() {
-            def_mapped.as_str()
-        } else if !settings_mapped.is_empty() {
-            settings_mapped
-        } else {
-            key.default_search()
+        let Some(resolved) = clips.resolve(key, def.map(|d| &d.animations), settings_mapping)
+        else {
+            continue;
         };
-
-        // If the value contains '|', it may be "ExternalStem|ClipName" (external source)
-        // OR simply a GLTF clip name that itself contains '|' (e.g. "CharacterArmature|Idle").
-        // Try external sources first; fall back to the model's own GLTF either way.
-        let handle = if let Some(pipe) = search.find('|') {
-            // `pipe` is the byte offset of an ASCII '|', so both slice points fall on
-            // char boundaries; `.get()` just avoids the panicking index operator.
-            let stem = search.get(..pipe).unwrap_or_default();
-            let clip_fragment = search.get(pipe + 1..).unwrap_or_default();
-            // Try to find a matching external GLTF by stem first.
-            let ext_handle = extra_gltfs
-                .iter()
-                .find(|(path, _)| {
-                    std::path::Path::new(path)
-                        .file_stem()
-                        .and_then(|s| s.to_str())
-                        == Some(stem)
-                })
-                .and_then(|(_, ext_gltf)| {
-                    ext_gltf
-                        .named_animations
-                        .iter()
-                        .find(|(name, _)| {
-                            let lower = name.to_lowercase();
-                            let s = clip_fragment.to_lowercase();
-                            let anim_part = lower.rsplit('|').next().unwrap_or(&lower);
-                            anim_part == s || lower.ends_with(&s)
-                        })
-                        .or_else(|| {
-                            ext_gltf
-                                .named_animations
-                                .iter()
-                                .find(|(name, _)| clip_matches(name, clip_fragment))
-                        })
-                        .map(|(_, h)| h.clone())
-                });
-            // If no external source matched, the '|' is part of a GLTF clip name —
-            // search the model's own GLTF using the full string as both exact name and fragment.
-            ext_handle.or_else(|| {
-                gltf.named_animations.get(search).cloned().or_else(|| {
-                    gltf.named_animations
-                        .iter()
-                        .find(|(name, _)| clip_matches(name, search))
-                        .map(|(_, h)| h.clone())
-                })
-            })
-        } else {
-            // No pipe — search in the model's own GLTF.
-            gltf.named_animations
-                .iter()
-                .find(|(name, _)| {
-                    let lower = name.to_lowercase();
-                    let s = search.to_lowercase();
-                    let anim_part = lower.rsplit('|').next().unwrap_or(&lower);
-                    anim_part == s || lower.ends_with(&s)
-                })
-                .or_else(|| {
-                    gltf.named_animations
-                        .iter()
-                        .find(|(name, _)| clip_matches(name, search))
-                })
-                .map(|(_, h)| h.clone())
-        };
-
-        if let Some(h) = handle {
-            anims.insert(key, graph.add_clip(h, 1.0, graph.root));
+        if let Some(handle) = handles.get(&resolved.clip) {
+            anims.insert(key, graph.add_clip(handle.clone(), 1.0, graph.root));
         }
     }
     (graph, anims)

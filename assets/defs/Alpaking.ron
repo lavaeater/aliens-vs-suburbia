@@ -11,14 +11,14 @@
         loot_table: Some("alien"),
     )),
     hidden_nodes: [],
-    animation_mapping: {
-        "no": "CharacterArmature|No",
-        "yes": "CharacterArmature|Yes",
-        "punch": "CharacterArmature|Bite_Front",
-        "idle": "CharacterArmature|Idle",
-        "walk": "CharacterArmature|Walk",
-        "death": "CharacterArmature|Death",
-        "jump": "CharacterArmature|Jump",
+    animations: {
+        Idle: "CharacterArmature|Idle",
+        Walk: "CharacterArmature|Walk",
+        Jump: "CharacterArmature|Jump",
+        Punch: "CharacterArmature|Bite_Front",
+        Yes: "CharacterArmature|Yes",
+        No: "CharacterArmature|No",
+        Death: "CharacterArmature|Death",
     },
     animation_sources: [],
 )

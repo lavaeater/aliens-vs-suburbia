@@ -186,6 +186,37 @@ impl Rng {
     }
 }
 
+/// Raise the gun while firing it: holding fire with a gun equipped holds the
+/// `IdleShoot` intent, which `CharacterState` turns into `IdleShoot` or `WalkShoot`.
+///
+/// Tracked per player here rather than off `Weapon::was_firing`, which a weapon
+/// switch resets mid-burst and which no system sees while the new gun is pending.
+#[allow(clippy::type_complexity)]
+pub fn aim_animation(
+    players: Query<
+        (Entity, &CharacterControl, Has<EquippedWeapon>),
+        (With<Player>, Without<PlayerDead>),
+    >,
+    mut aiming: Local<bevy::platform::collections::HashSet<Entity>>,
+    mut anim_mw: MessageWriter<AnimationEvent>,
+) {
+    for (player, control, armed) in &players {
+        let firing = armed && control.triggers.contains(&ControlCommand::Throw);
+        let event = match (firing, aiming.contains(&player)) {
+            (true, false) => {
+                aiming.insert(player);
+                AnimationEventType::GotoAnimState
+            }
+            (false, true) => {
+                aiming.remove(&player);
+                AnimationEventType::LeaveAnimState
+            }
+            _ => continue,
+        };
+        anim_mw.write(AnimationEvent(event, player, AnimationKey::IdleShoot));
+    }
+}
+
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn shoot_weapons(
     time: Res<Time>,

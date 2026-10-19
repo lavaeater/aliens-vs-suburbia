@@ -11,8 +11,8 @@
         loot_table: Some("crate"),
     )),
     hidden_nodes: [],
-    animation_mapping: {
-        "death": "CharacterArmature|Death",
+    animations: {
+        Death: "CharacterArmature|Death",
     },
     animation_sources: [],
 )

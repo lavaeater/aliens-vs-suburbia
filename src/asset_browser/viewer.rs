@@ -362,7 +362,7 @@ pub fn handle_model_load(
     }
 
     if let Some(path) = state.selected_path().map(std::string::ToString::to_string) {
-        // Pre-populate hidden_nodes and anim_mapping from existing definition.
+        // Pre-populate hidden nodes, animations etc. from the existing definition.
         state.load_definition();
         let handle: Handle<WorldAsset> =
             asset_server.load(GltfAssetLabel::Scene(0).from_asset(path.clone()));
@@ -536,7 +536,7 @@ pub fn setup_viewer_animation(
     state.anim_node_indices = nodes;
     state.anim_names = names_by_index;
     state.anim_dirty = !gltf.animations.is_empty(); // only auto-play if model has clips
-    state.tags_dirty = true;
+    state.clips_dirty = true;
     state.gltf_handle = None;
 }
 
@@ -627,7 +627,7 @@ pub fn merge_extra_anim_clips(
                 .entity(player_entity)
                 .insert(AnimationGraphHandle(graph_handle));
         }
-        state.tags_dirty = true;
+        state.clips_dirty = true;
     }
 
     let _ = last_merged_count; // suppress unused warning

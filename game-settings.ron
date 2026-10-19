@@ -2,7 +2,7 @@
     projection: Perspective,
     zoom: 4.0,
     pitch_degrees: -10.0,
-    yaw_degrees: 240.0,
+    yaw_degrees: 270.0,
     player_speed_multiplier: 1.0,
     player_unit: 1.0,
     ortho_near: -1150.0,

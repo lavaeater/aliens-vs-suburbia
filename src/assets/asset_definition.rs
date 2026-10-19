@@ -2,7 +2,8 @@ use crate::general::explosion::ExplosionProps;
 use crate::general::projectiles::ProjectileProps;
 use crate::gore::components::DamageKind;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use crate::animation::animation_plugin::AnimationKey;
+use std::collections::{BTreeMap, HashMap};
 
 const fn default_scale() -> f32 {
     1.0
@@ -482,22 +483,12 @@ pub struct AssetDefinition {
     /// Node names that should be hidden when this model is used in-game.
     #[serde(default)]
     pub hidden_nodes: Vec<String>,
-    /// LEGACY. Maps game-state keys (e.g. "idle", "walk", "throwing") directly to
-    /// clip name fragments. Superseded by `clip_tags` + `animation_bindings`, but
-    /// still read at runtime as a fallback so pre-migration defs keep working.
+    /// The clip each game animation key plays: the model's own clip name, or
+    /// `"<source stem>|<clip>"` for a clip from `animation_sources`. Only what differs
+    /// from the default needs listing: a key left out is resolved by
+    /// `animation::clips::ClipSet::resolve` (Mesh2Motion rig preset, then name search).
     #[serde(default)]
-    pub animation_mapping: HashMap<String, String>,
-    /// Free-form hierarchical tag assigned to each clip. Key = full clip name as it
-    /// appears in the browser's clip list (the model's own clip names, or
-    /// "SourceStem|ClipName" for clips supplied by an external source). Value = a
-    /// "/"-separated category path, e.g. "Combat/Ranged/Shoot". Purely for
-    /// organization; the leaf carries no special meaning.
-    #[serde(default)]
-    pub clip_tags: HashMap<String, String>,
-    /// Binds a game-state key (e.g. "idle", "throwing") to a tag path from
-    /// `clip_tags`. At runtime the key resolves to whichever clip carries that tag.
-    #[serde(default)]
-    pub animation_bindings: HashMap<String, String>,
+    pub animations: BTreeMap<AnimationKey, String>,
     /// Paths of external GLB/GLTF files that supply additional animation clips.
     /// Same convention as model_path: relative to the assets/ folder, no "assets/" prefix.
     /// e.g. "packs/AnimPack.glb"
@@ -534,35 +525,12 @@ impl Default for AssetDefinition {
             scale: 1.0,
             model_type: ModelType::default(),
             hidden_nodes: Vec::new(),
-            animation_mapping: HashMap::new(),
-            clip_tags: HashMap::new(),
-            animation_bindings: HashMap::new(),
+            animations: BTreeMap::new(),
             animation_sources: Vec::new(),
             attachments: Vec::new(),
             hardpoints: HashMap::new(),
             aim_bones: Vec::new(),
         }
-    }
-}
-
-impl AssetDefinition {
-    /// Resolve a game-state key (e.g. "idle") to the clip name it should play,
-    /// using the tag/binding system first and falling back to the legacy
-    /// `animation_mapping`. Returns `None` when nothing is configured for the key,
-    /// in which case the caller should use its own default search fragment.
-    pub fn resolved_clip(&self, key: &str) -> Option<String> {
-        if let Some(tag) = self.animation_bindings.get(key).filter(|t| !t.is_empty()) {
-            // Find the clip carrying this tag path.
-            if let Some((clip, _)) = self.clip_tags.iter().find(|(_, t)| *t == tag) {
-                return Some(clip.clone());
-            }
-            // Binding points at a tag no clip carries (yet) — nothing to play.
-            return None;
-        }
-        self.animation_mapping
-            .get(key)
-            .filter(|s| !s.is_empty())
-            .cloned()
     }
 }
 
@@ -620,67 +588,30 @@ mod tests {
             if let Err(e) = ron::from_str::<super::AssetDefinition>(&text) {
                 panic!("{} does not parse: {e}", path.display());
             }
+            // Unknown fields are skipped on load, so a def still carrying the retired
+            // animation fields would parse fine and silently lose its animations.
+            for retired in ["clip_tags", "animation_bindings", "animation_mapping"] {
+                assert!(
+                    !text.contains(&format!("{retired}:")),
+                    "{} still has `{retired}`; move it into `animations`",
+                    path.display()
+                );
+            }
             checked += 1;
         }
         assert!(checked > 0, "no defs found under {root}");
     }
 
-    use super::*;
-
+    /// `animations` is keyed by the enum, written as bare variant names (`Idle: "..."`).
     #[test]
-    fn resolved_clip_follows_binding_to_tagged_clip() {
-        let mut def = AssetDefinition::default();
-        def.clip_tags.insert(
-            "CharacterArmature|Run_Shoot".into(),
-            "Combat/Ranged/RunShoot".into(),
-        );
-        def.animation_bindings
-            .insert("run_shoot".into(), "Combat/Ranged/RunShoot".into());
-
-        assert_eq!(
-            def.resolved_clip("run_shoot").as_deref(),
-            Some("CharacterArmature|Run_Shoot")
-        );
-    }
-
-    #[test]
-    fn resolved_clip_binding_to_missing_tag_yields_none() {
-        let mut def = AssetDefinition::default();
-        // Binding points at a tag no clip carries.
-        def.animation_bindings
-            .insert("idle".into(), "Idle/Neutral".into());
-
-        assert_eq!(def.resolved_clip("idle"), None);
-    }
-
-    #[test]
-    fn resolved_clip_falls_back_to_legacy_mapping() {
-        let mut def = AssetDefinition::default();
-        def.animation_mapping
-            .insert("walk".into(), "CharacterArmature|Walk".into());
-
-        assert_eq!(
-            def.resolved_clip("walk").as_deref(),
-            Some("CharacterArmature|Walk")
-        );
-    }
-
-    #[test]
-    fn resolved_clip_binding_wins_over_legacy_mapping() {
-        let mut def = AssetDefinition::default();
-        def.animation_mapping
-            .insert("walk".into(), "Old|Walk".into());
-        def.clip_tags
-            .insert("New|Stroll".into(), "Locomotion/Walk".into());
-        def.animation_bindings
-            .insert("walk".into(), "Locomotion/Walk".into());
-
-        assert_eq!(def.resolved_clip("walk").as_deref(), Some("New|Stroll"));
-    }
-
-    #[test]
-    fn resolved_clip_unconfigured_key_is_none() {
-        let def = AssetDefinition::default();
-        assert_eq!(def.resolved_clip("death"), None);
+    fn animations_round_trip_with_enum_keys() {
+        use super::{AnimationKey, AssetDefinition};
+        let def: AssetDefinition =
+            ron::from_str(r#"(model_path: "m.glb", animations: { Idle: "Idle_A", Run: "Sprint" })"#)
+                .expect("parses");
+        assert_eq!(def.animations.get(&AnimationKey::Idle).map(String::as_str), Some("Idle_A"));
+        let text = ron::ser::to_string_pretty(&def, ron::ser::PrettyConfig::default()).unwrap();
+        let back: AssetDefinition = ron::from_str(&text).expect("round trips");
+        assert_eq!(back.animations, def.animations);
     }
 }

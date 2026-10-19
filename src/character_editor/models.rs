@@ -314,12 +314,9 @@ pub fn classify(model_path: &str) -> ImportKind {
     }
 }
 
-/// Add `source_path` to a def's `animation_sources` and tag every clip it carries.
-///
-/// The tagging is what makes it useful: the animation panel binds game keys to *tag paths*
-/// drawn from `clip_tags`, so a source added without tags contributes 162 clips that
-/// nothing can be bound to. Tags are `<stem>/<clip>`; the clip key is the
-/// `"<stem>|<clip>"` form `AssetDefinition::resolved_clip` expects for external sources.
+/// Add `source_path` to a def's `animation_sources`. Its clips show up in the Animation
+/// tab as `"<stem>|<clip>"`, and a Mesh2Motion library on the model's rig fills the
+/// preset's keys the model's own export left out.
 ///
 /// Returns a status line, and `false` if nothing changed.
 pub fn add_animation_source(def: &mut AssetDefinition, source_path: &str) -> (bool, String) {
@@ -332,10 +329,6 @@ pub fn add_animation_source(def: &mut AssetDefinition, source_path: &str) -> (bo
     };
 
     def.animation_sources.push(source_path.to_string());
-    for clip in &info.animations {
-        def.clip_tags
-            .insert(format!("{stem}|{clip}"), format!("{stem}/{clip}"));
-    }
     (
         true,
         format!("added {stem} ({} clips)", info.animations.len()),
@@ -482,40 +475,16 @@ pub fn swap_player_model(
 mod tests {
     use super::*;
 
-    /// The clips have to be tagged, or the animation panel — which binds keys to tag
-    /// paths, not clip names — offers nothing to bind them to.
     #[test]
-    fn an_added_source_tags_every_clip_it_brings() {
+    fn a_source_is_not_added_twice() {
         let mut def = AssetDefinition::default();
-        // Bypass the file read: this is the tagging half, exercised directly.
         def.animation_sources
             .push("models/male-anims.glb".to_string());
-        def.clip_tags.insert(
-            "male-anims|Backflip".to_string(),
-            "male-anims/Backflip".to_string(),
-        );
 
         let (changed, status) = add_animation_source(&mut def, "models/male-anims.glb");
         assert!(!changed, "a source already listed is not added twice");
         assert!(status.contains("already"), "got {status}");
         assert_eq!(def.animation_sources.len(), 1);
-    }
-
-    /// The clip key has to be the `"<stem>|<clip>"` form `resolved_clip` looks for, or a
-    /// binding made against the tag resolves to a clip name the runtime never sees.
-    #[test]
-    fn a_tagged_external_clip_resolves_back_through_its_tag() {
-        let mut def = AssetDefinition::default();
-        def.clip_tags.insert(
-            "male-anims|Backflip".to_string(),
-            "male-anims/Backflip".to_string(),
-        );
-        def.animation_bindings
-            .insert("jump".to_string(), "male-anims/Backflip".to_string());
-        assert_eq!(
-            def.resolved_clip("jump").as_deref(),
-            Some("male-anims|Backflip")
-        );
     }
 
     /// A file we cannot inspect must stay importable — an inspector that guesses wrong

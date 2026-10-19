@@ -15,9 +15,13 @@
         ],
     )),
     hidden_nodes: [],
-    animation_mapping: {},
-    clip_tags: {},
-    animation_bindings: {},
+    animations: {
+        Idle: "Idle_A",
+        IdleShoot: "Pistol_Aim_Neutral",
+        Walk: "Walk",
+        Run: "Sprint",
+        Death: "Death_A",
+    },
     animation_sources: [],
     attachments: [],
     hardpoints: {

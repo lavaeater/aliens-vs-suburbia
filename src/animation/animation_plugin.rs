@@ -5,6 +5,7 @@ use bevy::app::{App, Plugin, Update};
 use bevy::asset::{AssetServer, Handle};
 use bevy::ecs::component::Mutable;
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -15,6 +16,19 @@ pub enum AnimationEventType {
 
 #[derive(Message, Clone)]
 pub struct AnimationEvent(pub AnimationEventType, pub Entity, pub AnimationKey);
+
+/// Play `key`'s clip on `character` outright, bypassing `CharacterState` — the character
+/// editor's preview. `CharacterState` only lets a key play when it changes what the
+/// intent stack resolves to, so most keys (Run, Wave, Jump...) could never be previewed
+/// through it. `None` ends the preview: back to whatever the stack resolves to.
+///
+/// The previewed key becomes the `CurrentAnimationKey`, so a graph rebuild after a
+/// mapping edit replays it, and the next gameplay transition stops it like any other.
+#[derive(Message, Clone)]
+pub struct PreviewAnimation {
+    pub character: Entity,
+    pub key: Option<AnimationKey>,
+}
 
 #[derive(Component, Debug, Reflect, Default)]
 #[reflect(Component, Default)]
@@ -35,6 +49,7 @@ pub struct AnimationPlugin;
 impl Plugin for AnimationPlugin {
     fn build(&self, app: &mut App) {
         app.add_message::<AnimationEvent>()
+            .add_message::<PreviewAnimation>()
             .add_systems(OnEnter(GameState::InGame), load_animations)
             .add_systems(
                 Update,
@@ -42,6 +57,8 @@ impl Plugin for AnimationPlugin {
                     start_some_animations,
                     goto_animation_state_handler,
                     leave_animation_state_handler,
+                    preview_animation_handler,
+                    end_finished_throws,
                 )
                     .run_if(in_state(GameState::InGame)),
             );
@@ -54,10 +71,15 @@ pub struct AnimationStore {
     pub graphs: HashMap<String, Handle<AnimationGraph>>,
 }
 
-/// Animation keys.  Keys without a direct clip (e.g. `Throwing`) are
-/// intent-only: they are pushed onto `CharacterState`'s stack and resolved
-/// by `CharacterState::resolve()` into a concrete clip key at runtime.
-#[derive(Eq, Hash, PartialEq, Copy, Clone, Debug, Reflect, Default)]
+/// Animation keys: the game's animation vocabulary. A def maps each key to one of its
+/// model's clips (`AssetDefinition::animations`); a key it leaves out is resolved by
+/// `animation::clips::resolve` (rig preset, then name search, then `fallback`).
+///
+/// They double as the intents pushed onto `CharacterState`'s stack, which resolves the
+/// stack into the one key whose clip plays (Walk + IdleShoot -> WalkShoot, say).
+#[derive(
+    Eq, Hash, PartialEq, PartialOrd, Ord, Copy, Clone, Debug, Reflect, Default, Serialize, Deserialize,
+)]
 #[reflect(Default)]
 #[type_path = "avs"]
 pub enum AnimationKey {
@@ -84,23 +106,40 @@ pub enum AnimationKey {
     Death,
     HitReact,
     // ── Game-intent keys (resolved to composite clips by CharacterState) ───
-    Throwing, // → IdleShoot or WalkShoot depending on movement
+    Throwing, // one-shot throw (ball, grenade); left again when the clip ends
     Building, // direct clip ("interact" / "wave") or falls back to Idle
     Reload,   // one-shot while a magazine is swapped; freezes if the rig has no clip
 }
 
 impl AnimationKey {
     /// Whether this animation should loop.  One-shot animations (Death,
-    /// reactions, landing) hold their last frame instead of restarting.
+    /// reactions, landing, a throw) hold their last frame instead of restarting.
     pub const fn loops(self) -> bool {
         !matches!(
             self,
-            Self::Death | Self::HitReact | Self::JumpLand | Self::Reload
+            Self::Death | Self::HitReact | Self::JumpLand | Self::Reload | Self::Throwing
         )
     }
 
-    /// Fallback clip-name fragment used when the user hasn't configured a
-    /// mapping.  Matched against the last `|`-delimited segment of the GLTF
+    /// The key to borrow a clip from when the model has none for this one. Walking
+    /// while shooting on a rig without a walk-and-aim clip walks (torso twist still
+    /// aims), rather than freezing.
+    ///
+    /// A borrowed clip plays with the *borrowing* key's `loops`, so `Throwing` can take
+    /// Punch's clip and still end (it is left when its clip finishes).
+    pub const fn fallback(self) -> Option<Self> {
+        match self {
+            Self::IdleShoot => Some(Self::Idle),
+            Self::WalkShoot | Self::Run => Some(Self::Walk),
+            Self::RunShoot | Self::RunGun => Some(Self::Run),
+            Self::JumpIdle => Some(Self::Jump),
+            Self::Throwing => Some(Self::Punch),
+            _ => None,
+        }
+    }
+
+    /// Clip-name fragment searched for when neither the def nor a rig preset names a
+    /// clip.  Matched against the last `|`-delimited segment of the GLTF
     /// clip name (case-insensitive exact), then as a full-name suffix, then
     /// as a substring.  See `clip_matches()`.
     pub const fn default_search(self) -> &'static str {
@@ -116,7 +155,8 @@ impl AnimationKey {
             Self::Jump => "jump",
             Self::JumpIdle => "jump_idle",
             Self::JumpLand => "jump_land",
-            Self::Punch | Self::Throwing => "punch",
+            Self::Punch => "punch",
+            Self::Throwing => "throw",
             Self::Wave => "wave",
             Self::Yes => "yes",
             Self::No => "no",
@@ -287,6 +327,73 @@ pub fn goto_animation_state_handler(
                 Some(old),
             );
         }
+    }
+}
+
+/// A throw is a one-shot: once its clip has played out (or the model has none, so
+/// nothing would ever finish), leave `Throwing` so the stack falls back to whatever
+/// is underneath. Nothing else leaves it after a grenade lob.
+pub fn end_finished_throws(
+    anim_store: Res<AnimationStore>,
+    characters: Query<(Entity, &CurrentAnimationKey), With<CharacterState>>,
+    player_query: Query<&mut AnimationPlayer>,
+    child_query: Query<&Children>,
+    mut anim_mw: MessageWriter<AnimationEvent>,
+) {
+    for (character, current_key) in &characters {
+        if current_key.key != AnimationKey::Throwing {
+            continue;
+        }
+        let Some(player_entity) =
+            get_child_with_component_recursive(character, &child_query, &player_query)
+        else {
+            continue;
+        };
+        let Ok(player) = player_query.get(player_entity) else {
+            continue;
+        };
+        let finished = anim_store
+            .anims
+            .get(&current_key.group)
+            .and_then(|anims| anims.get(&AnimationKey::Throwing))
+            .and_then(|&idx| player.animation(idx))
+            .is_none_or(bevy::animation::ActiveAnimation::is_finished);
+        if finished {
+            anim_mw.write(AnimationEvent(
+                AnimationEventType::LeaveAnimState,
+                character,
+                AnimationKey::Throwing,
+            ));
+        }
+    }
+}
+
+pub fn preview_animation_handler(
+    anim_store: Res<AnimationStore>,
+    mut previews: MessageReader<PreviewAnimation>,
+    mut characters: Query<(&mut CurrentAnimationKey, &CharacterState)>,
+    mut player_query: Query<&mut AnimationPlayer>,
+    child_query: Query<&Children>,
+) {
+    for preview in previews.read() {
+        let Ok((mut current_key, character_state)) = characters.get_mut(preview.character)
+        else {
+            continue;
+        };
+        let Some(player_entity) =
+            get_child_with_component_recursive(preview.character, &child_query, &player_query)
+        else {
+            continue;
+        };
+        let Ok(mut player) = player_query.get_mut(player_entity) else {
+            continue;
+        };
+        let key = preview.key.unwrap_or_else(|| character_state.resolve());
+        current_key.key = key;
+        // Everything, not just the current key's clip: a preview must not blend with
+        // whatever was playing before it.
+        player.stop_all();
+        anim_thingie(&anim_store, &current_key.group, key, &mut player, None);
     }
 }
 

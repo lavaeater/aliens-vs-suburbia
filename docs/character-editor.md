@@ -194,15 +194,17 @@ All UI text stays ASCII (the embedded font has nothing else).
 - Hidden nodes: a toggle list of mesh nodes (browser: `rebuild_node_list`).
 - Mesh/clip/bone counts from `gltf_info`, with a warning if it has no meshes.
 
-**Animation**
-- Clip list: every clip from the model and its sources, each with its tag path. Click to
-  play it raw. Double-click or `T` to edit the tag (browser's tag editor).
-- Bindings: each game key, what it resolves to, and its tag. Click to play through the
-  state machine (Live) or raw (Studio). Pick a tag to re-bind. Unresolved bindings are
-  flagged as they are now.
-- Sources: add (from the Library), remove, and clip counts. Adding auto-tags
-  `<stem>/<clip>`.
-- Legacy `animation_mapping` is migrated on open, as the browser does now.
+**Animation** (as built; the clip tags this section first planned were dropped
+2026-10-19 for a plain key -> clip map plus Mesh2Motion rig presets)
+- Keys: each `AnimationKey`, the clip it resolves to and why (def / rig preset / by name /
+  borrowed from a fallback key). A def entry naming a clip the model lacks is flagged.
+- Picking a key previews it on the character (`PreviewAnimation`, which plays the clip
+  outright; going through the `CharacterState` stack only ever played the handful of keys
+  that change what the stack resolves to, and Death stuck). "stop preview" returns to the
+  stack.
+- Under the picked key: every clip from the model and its sources; click one to map the
+  key to it, "use default" to drop the entry and go back to the preset.
+- Sources: add (from the Library); their clips appear as `<stem>|<clip>`.
 
 **Hardpoints**
 - A side switch: **character** / **held weapon** (today's playground `HardpointSide`).

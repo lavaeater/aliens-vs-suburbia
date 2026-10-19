@@ -7,6 +7,6 @@
         health: None,
     )),
     hidden_nodes: [],
-    animation_mapping: {},
+    animations: {},
     animation_sources: [],
 )

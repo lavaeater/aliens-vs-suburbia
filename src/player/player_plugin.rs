@@ -18,7 +18,7 @@ use crate::player::systems::leg_ik::{
     GaitReadout, GaitSettings, LegIkEnabled, apply_leg_ik, resolve_legs, toggle_leg_ik,
 };
 use crate::player::systems::loadout::{SwitchWeapon, switch_weapons};
-use crate::player::systems::shoot::{ReloadRequest, shoot_weapons, tick_reloads};
+use crate::player::systems::shoot::{ReloadRequest, aim_animation, shoot_weapons, tick_reloads};
 use crate::player::systems::spawn_players::{fix_scene_transform, spawn_players};
 use crate::player::systems::torso_twist::{
     TorsoTwistEnabled, apply_torso_twist, resolve_twist_bones, toggle_torso_twist,
@@ -84,6 +84,7 @@ impl Plugin for PlayerPlugin {
                     switch_weapons,
                     equip_pending_weapons,
                     keep_weapons_snapped,
+                    aim_animation,
                     shoot_weapons,
                     tick_reloads,
                     fix_scene_transform,

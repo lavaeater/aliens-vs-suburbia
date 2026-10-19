@@ -43,15 +43,9 @@ pub struct DefDoc {
 impl DefDoc {
     /// Open the def at `def_path`. A file that fails to load gives a doc with a path but
     /// no def, so the panels can say which file is broken.
-    ///
-    /// A def from before clip tags existed is migrated onto them as it opens, which shows
-    /// as an unsaved edit until it is saved.
     pub fn open(def_path: &str) -> Self {
         let saved = AssetDefinition::load_from_def_path(def_path);
-        let mut def = saved.clone();
-        if let Some(def) = def.as_mut() {
-            crate::character_editor::animation::migrate_legacy_mapping(def);
-        }
+        let def = saved.clone();
         Self {
             def_path: Some(def_path.to_string()),
             saved,
@@ -226,7 +220,7 @@ pub fn expected_live(character: &AssetDefinition, held_weapon: Option<&str>) -> 
 
 /// Fields that only take effect when the character is spawned: the model itself, its
 /// size, what it carries and the twist chain resolved from its skeleton. A change to any
-/// of these needs a respawn to show. Everything else — hardpoints, clip tags, bindings,
+/// of these needs a respawn to show. Everything else — hardpoints, animations,
 /// animation sources — the live systems pick up from `PlayerAssetDef` as it changes.
 pub fn needs_respawn(live: &AssetDefinition, edited: &AssetDefinition) -> bool {
     live.model_path != edited.model_path
@@ -371,7 +365,7 @@ impl Docs<'_> {
 
     /// Write a def for `model_path` as `kind`, then open it. Refuses to overwrite a def
     /// that exists: re-importing a model you have tuned would reset its scale, hardpoints
-    /// and bindings. Anything set while previewing (the scale, once the Model tab can set
+    /// and animations. Anything set while previewing (the scale, once the Model tab can set
     /// it) carries into the new def.
     pub fn import_as(&mut self, model_path: &str, kind: DefKind) {
         let def_path = AssetDefinition::def_path(model_path)
@@ -516,7 +510,7 @@ pub fn sync_weapon_doc(
 
 /// Make the live character match the doc.
 ///
-/// Edits the live systems can follow (hardpoints, bindings, tags, sources) are copied
+/// Edits the live systems can follow (hardpoints, animations, sources) are copied
 /// into `PlayerAssetDef`. Edits that only take effect at spawn ([`needs_respawn`]) respawn
 /// the character from the doc — through the roster's `def_overrides`, so the respawn
 /// shows the unsaved edits rather than the file.
@@ -626,15 +620,16 @@ mod tests {
     }
 
     #[test]
-    fn hardpoint_and_binding_edits_apply_live() {
+    fn hardpoint_and_animation_edits_apply_live() {
         let live = character(None);
         let mut edited = live.clone();
         edited
             .hardpoints
             .insert("grip".to_string(), Hardpoint::default());
-        edited
-            .animation_bindings
-            .insert("wave".to_string(), "Social/Wave".to_string());
+        edited.animations.insert(
+            crate::animation::animation_plugin::AnimationKey::Wave,
+            "Greeting".to_string(),
+        );
         assert!(!needs_respawn(&live, &edited));
     }
 
