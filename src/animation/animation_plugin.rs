@@ -65,10 +65,41 @@ impl Plugin for AnimationPlugin {
     }
 }
 
+/// The graph nodes a key plays together: one clip, or a lower-body walk with an
+/// upper-body aim (`model_settings::plugin::build_graph`). The first is the key's main
+/// clip, the one that says when a one-shot is finished.
+pub type KeyNodes = Vec<AnimationNodeIndex>;
+
 #[derive(Resource)]
 pub struct AnimationStore {
-    pub anims: HashMap<String, HashMap<AnimationKey, AnimationNodeIndex>>,
+    pub anims: HashMap<String, HashMap<AnimationKey, KeyNodes>>,
     pub graphs: HashMap<String, Handle<AnimationGraph>>,
+}
+
+impl AnimationStore {
+    pub fn nodes(&self, group: &str, key: AnimationKey) -> &[AnimationNodeIndex] {
+        self.anims
+            .get(group)
+            .and_then(|anims| anims.get(&key))
+            .map_or(&[], Vec::as_slice)
+    }
+
+    /// Start every node of `key`, from `seek` seconds in.
+    pub fn play(&self, group: &str, key: AnimationKey, player: &mut AnimationPlayer, seek: f32) {
+        for &idx in self.nodes(group, key) {
+            let active = player.play(idx);
+            active.set_seek_time(seek);
+            if key.loops() {
+                active.repeat();
+            }
+        }
+    }
+
+    pub fn stop(&self, group: &str, key: AnimationKey, player: &mut AnimationPlayer) {
+        for &idx in self.nodes(group, key) {
+            player.stop(idx);
+        }
+    }
 }
 
 /// Animation keys: the game's animation vocabulary. A def maps each key to one of its
@@ -282,6 +313,9 @@ pub fn leave_animation_state_handler(
 
 /// Play `key`'s clip, stopping `old_key`'s clip first to clear any held pose
 /// (important after one-shot animations like Death).
+///
+/// Between a key and the one it borrows from (Walk and WalkShoot) the new clip picks up
+/// where the old one was, so starting to aim mid-stride doesn't restart the legs.
 fn anim_thingie(
     anim_store: &Res<AnimationStore>,
     group: &str,
@@ -289,17 +323,18 @@ fn anim_thingie(
     player: &mut Mut<AnimationPlayer>,
     old_key: Option<AnimationKey>,
 ) {
-    if let Some(old) = old_key
-        && let Some(idx) = anim_store.anims.get(group).and_then(|m| m.get(&old))
-    {
-        player.stop(*idx);
-    }
-    if let Some(idx) = anim_store.anims.get(group).and_then(|m| m.get(&key)) {
-        let active = player.play(*idx);
-        if key.loops() {
-            active.repeat();
+    let mut seek = 0.0;
+    if let Some(old) = old_key {
+        if key.fallback() == Some(old) || old.fallback() == Some(key) {
+            seek = anim_store
+                .nodes(group, old)
+                .first()
+                .and_then(|&idx| player.animation(idx))
+                .map_or(0.0, bevy::animation::ActiveAnimation::seek_time);
         }
+        anim_store.stop(group, old, player);
     }
+    anim_store.play(group, key, player, seek);
 }
 
 pub fn goto_animation_state_handler(
@@ -353,9 +388,8 @@ pub fn end_finished_throws(
             continue;
         };
         let finished = anim_store
-            .anims
-            .get(&current_key.group)
-            .and_then(|anims| anims.get(&AnimationKey::Throwing))
+            .nodes(&current_key.group, AnimationKey::Throwing)
+            .first()
             .and_then(|&idx| player.animation(idx))
             .is_none_or(bevy::animation::ActiveAnimation::is_finished);
         if finished {
@@ -404,7 +438,7 @@ pub fn load_animations(
 ) {
     // --- Aliens ---
     let mut alien_graph = AnimationGraph::new();
-    let mut alien_anims: HashMap<AnimationKey, AnimationNodeIndex> = HashMap::new();
+    let mut alien_anims: HashMap<AnimationKey, KeyNodes> = HashMap::new();
 
     let alien_walking_clip: Handle<AnimationClip> =
         asset_server.load("quaternius/alien.glb#Animation13"); // AlienArmature|Alien_Walk
@@ -413,11 +447,11 @@ pub fn load_animations(
 
     alien_anims.insert(
         AnimationKey::Walk,
-        alien_graph.add_clip(alien_walking_clip, 1.0, alien_graph.root),
+        vec![alien_graph.add_clip(alien_walking_clip, 1.0, alien_graph.root)],
     );
     alien_anims.insert(
         AnimationKey::Idle,
-        alien_graph.add_clip(alien_idle_clip, 1.0, alien_graph.root),
+        vec![alien_graph.add_clip(alien_idle_clip, 1.0, alien_graph.root)],
     );
 
     let alien_graph_handle = animation_graphs.add(alien_graph);

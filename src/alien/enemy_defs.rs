@@ -11,7 +11,7 @@
 use std::collections::HashMap;
 
 use avian3d::prelude::{Position, SpatialQuery, SpatialQueryFilter};
-use bevy::gltf::{Gltf, GltfAssetLabel};
+use bevy::gltf::{Gltf, GltfAssetLabel, GltfNode};
 use bevy::prelude::*;
 use bevy::world_serialization::WorldAsset;
 
@@ -112,6 +112,7 @@ impl RangedAttack {
 pub fn build_enemy_anim_graphs(
     cache: Res<EnemyDefCache>,
     gltf_assets: Res<Assets<Gltf>>,
+    gltf_nodes: Res<Assets<GltfNode>>,
     asset_server: Res<AssetServer>,
     anim_store: Option<ResMut<AnimationStore>>,
     mut animation_graphs: ResMut<Assets<AnimationGraph>>,
@@ -144,7 +145,7 @@ pub fn build_enemy_anim_graphs(
         if waiting {
             continue;
         }
-        let (graph, anims) = build_graph(Some(&loaded.def), None, gltf, &extra);
+        let (graph, anims) = build_graph(Some(&loaded.def), None, gltf, &gltf_nodes, &extra);
         let handle = animation_graphs.add(graph);
         store.anims.insert(path.clone(), anims);
         store.graphs.insert(path.clone(), handle);
@@ -170,12 +171,7 @@ pub fn build_enemy_anim_graphs(
         commands
             .entity(anim_entity)
             .try_insert(AnimationGraphHandle(graph_handle.clone()));
-        if let Some(&idx) = store.anims.get(&def.0).and_then(|m| m.get(&key.key)) {
-            let active = player.play(idx);
-            if key.key.loops() {
-                active.repeat();
-            }
-        }
+        store.play(&def.0, key.key, &mut player, 0.0);
     }
 }
 

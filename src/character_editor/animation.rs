@@ -65,7 +65,8 @@ pub fn unmap(def: &mut AssetDefinition, key: AnimationKey) {
 }
 
 /// What `key` plays, for display: the clip and, unless the def names it, where it came
-/// from. A def entry naming a clip the model lacks is called out — it looks mapped but
+/// from, plus the aim laid over the upper body when there is one. A def entry naming a
+/// clip the model lacks is called out — it looks mapped but
 /// the game skips it.
 pub fn resolution_label(
     clips: &ClipSet,
@@ -87,6 +88,10 @@ pub fn resolution_label(
             Via::NameSearch => format!("{}  (by name)", r.clip),
             Via::Fallback(from) => format!("{}  (as {})", r.clip, from.default_search()),
         },
+    };
+    let shown = match clips.upper_body_layer(key, Some(&def.animations), settings) {
+        Some(aim) => format!("{shown} + {aim} on the upper body"),
+        None => shown,
     };
     match missing {
         Some(clip) => format!("'{clip}' is not in the model - {shown}"),
@@ -127,6 +132,16 @@ mod tests {
         assert_eq!(
             resolution_label(&set, &def, None, AnimationKey::Run),
             "Sprint  (human preset)"
+        );
+    }
+
+    #[test]
+    fn walking_while_aiming_shows_the_upper_body_layer() {
+        let def = AssetDefinition::default();
+        let set = clips(&["Idle_A", "Walk", "Pistol_Aim_Neutral"]);
+        assert_eq!(
+            resolution_label(&set, &def, None, AnimationKey::WalkShoot),
+            "Walk  (as walk) + Pistol_Aim_Neutral on the upper body"
         );
     }
 

@@ -326,8 +326,11 @@ Tweak wave composition: `MapFile.waves` in the map `.ron`, or the default in `wa
 - **Animation** — `src/animation/` (state-machine, `AnimationStore`) + `src/model_settings/`
   (`build_player_anim_graph`). Each `AnimationKey` resolves to a clip through
   `animation::clips::ClipSet::resolve`: the def's `animations` entry, else the Mesh2Motion
-  rig preset, else a name search, else the key's fallback. External clips need identical
-  bone paths (no retargeting).
+  rig preset, else a name search, else the key's fallback. Walking while aiming on a rig
+  with only an aim pose layers the aim over the walk's upper body with graph masks
+  (`ClipSet::upper_body_layer`, `animation::body_mask`). External clips need identical
+  bone paths, including the scene root's name (no retargeting) - so export each
+  Mesh2Motion model with its own animations rather than sharing one library file.
 - **Camera** — `src/camera/systems.rs`: single orthographic isometric `GameCamera`,
   `camera_follow` tracks players; wall-occlusion fade. (`spawn_pixelated_camera` is dead
   code.)

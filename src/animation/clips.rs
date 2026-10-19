@@ -282,6 +282,26 @@ impl ClipSet {
         })
     }
 
+    /// The aim clip to lay over `key`'s upper body. Moving while aiming on a rig with an
+    /// aim pose but no clip for the combination (Mesh2Motion has `Pistol_Aim_Neutral`, no
+    /// walk-and-aim) plays the borrowed walk on the legs and the aim on the torso
+    /// (`build_graph`, `body_mask`). `None` when the key has a clip of its own or the
+    /// model has no aim pose (its `IdleShoot` is itself borrowed from `Idle`).
+    pub fn upper_body_layer(
+        &self,
+        key: AnimationKey,
+        animations: Option<&BTreeMap<AnimationKey, String>>,
+        settings: Option<&AnimMapping>,
+    ) -> Option<String> {
+        if !matches!(key, AnimationKey::WalkShoot | AnimationKey::RunShoot) {
+            return None;
+        }
+        let own = self.resolve(key, animations, settings)?;
+        let aim = self.resolve(AnimationKey::IdleShoot, animations, settings)?;
+        let borrowed = |via| matches!(via, Via::Fallback(_));
+        (borrowed(own.via) && !borrowed(aim.via)).then_some(aim.clip)
+    }
+
     fn resolve_direct(
         &self,
         key: AnimationKey,
@@ -478,5 +498,34 @@ mod tests {
         let s = set(&["Idle", "Walk", "Trot", "Kick"]);
         assert_eq!(s.rig, Some(Rig::Horse));
         assert_eq!(clip(&s, AnimationKey::Run).as_deref(), Some("Trot"));
+    }
+
+    #[test]
+    fn walking_while_aiming_lays_the_aim_over_the_walk() {
+        let set = male_simple();
+        let layer = |key| set.upper_body_layer(key, None, None);
+        assert_eq!(
+            layer(AnimationKey::WalkShoot).as_deref(),
+            Some("Pistol_Aim_Neutral")
+        );
+        assert_eq!(
+            layer(AnimationKey::RunShoot).as_deref(),
+            Some("Pistol_Aim_Neutral")
+        );
+        assert_eq!(layer(AnimationKey::Walk), None);
+    }
+
+    #[test]
+    fn no_layer_without_an_aim_pose_or_with_a_walk_and_aim_clip() {
+        let no_aim = set(&["Idle_A", "Walk"]);
+        assert_eq!(
+            no_aim.upper_body_layer(AnimationKey::WalkShoot, None, None),
+            None
+        );
+        let own = set(&["Idle", "Idle_Shoot", "Walk", "Walk_Shoot"]);
+        assert_eq!(
+            own.upper_body_layer(AnimationKey::WalkShoot, None, None),
+            None
+        );
     }
 }
