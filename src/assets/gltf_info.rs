@@ -62,15 +62,8 @@ pub fn inspect_file(path: &Path) -> Option<GltfInfo> {
 /// Read off the file rather than captured from the spawned scene, because by the time
 /// anything could look at the spawned joints the animation has already posed them.
 pub fn rest_pose(model_path: &str) -> Option<HashMap<String, Transform>> {
-    let path = Path::new(ASSET_ROOT).join(model_path);
-    let bytes = std::fs::read(&path).ok()?;
-    let (json, bin) = match path.extension().and_then(|e| e.to_str()) {
-        Some("gltf") => (String::from_utf8(bytes).ok()?, None),
-        _ => (glb_json(&bytes)?, glb_bin(&bytes).map(<[u8]>::to_vec)),
-    };
-    let doc: serde_json::Value = serde_json::from_str(&json).ok()?;
-    let dir = path.parent().unwrap_or_else(|| Path::new("."));
-    Some(rest_pose_of(&doc, &load_buffers(&doc, bin, dir)))
+    let (doc, buffers) = read_document(model_path)?;
+    Some(rest_pose_of(&doc, &buffers))
 }
 
 /// Every buffer the document declares, in order: the GLB's own `BIN` chunk for one with no
@@ -191,10 +184,118 @@ fn parse_info(json: &str) -> Option<GltfInfo> {
 /// Unnamed nodes are skipped (nothing could look them up), and the first of a duplicated
 /// name wins, matching `assets::gizmos::bone_map`.
 fn rest_pose_of(doc: &serde_json::Value, buffers: &[Vec<u8>]) -> HashMap<String, Transform> {
-    let nodes: &[serde_json::Value] = doc
-        .get("nodes")
+    let nodes = nodes_of(doc);
+    let parent = parents_of(nodes);
+    let bind_world = bind_worlds(doc, buffers, nodes, &parent);
+
+    let mut pose = HashMap::new();
+    for (index, node) in nodes.iter().enumerate() {
+        let Some(name) = node.get("name").and_then(|n| n.as_str()) else {
+            continue;
+        };
+        let local = bind_world.get(&index).map_or_else(
+            || node_transform(node),
+            |world| {
+                let parent_world = parent.get(&index).map_or(Mat4::IDENTITY, |&up| {
+                    bind_world
+                        .get(&up)
+                        .copied()
+                        .unwrap_or_else(|| authored_world(nodes, &parent, up))
+                });
+                Transform::from_matrix(parent_world.inverse() * *world)
+            },
+        );
+        pose.entry(name.to_string()).or_insert(local);
+    }
+    pose
+}
+
+/// The bind pose as *model-space* matrices (joint name -> world matrix): where each bone
+/// sits and how it is turned with the whole skeleton in its rest pose, which is what a
+/// suggestion has to reason about ("forward", "down") and a local pose cannot answer
+/// without its parents. Joints only; same first-name-wins rule as [`rest_pose`].
+pub fn bind_pose_world(model_path: &str) -> Option<HashMap<String, Mat4>> {
+    let (doc, buffers) = read_document(model_path)?;
+    let nodes = nodes_of(&doc);
+    let parent = parents_of(nodes);
+    let mut out = HashMap::new();
+    for (index, world) in bind_worlds(&doc, &buffers, nodes, &parent) {
+        if let Some(name) = nodes
+            .get(index)
+            .and_then(|node| node.get("name"))
+            .and_then(|n| n.as_str())
+        {
+            out.entry(name.to_string()).or_insert(world);
+        }
+    }
+    Some(out)
+}
+
+/// Every vertex of every mesh, in model space (node transforms applied, skinning not):
+/// the shape of a static model such as a gun, for guessing where its parts are.
+pub fn mesh_points(model_path: &str) -> Option<Vec<Vec3>> {
+    let (doc, buffers) = read_document(model_path)?;
+    let nodes = nodes_of(&doc);
+    let parent = parents_of(nodes);
+    let meshes = doc.get("meshes").and_then(|m| m.as_array())?;
+    let mut points = Vec::new();
+    for (index, node) in nodes.iter().enumerate() {
+        let Some(mesh) = node
+            .get("mesh")
+            .and_then(serde_json::Value::as_u64)
+            .and_then(|m| meshes.get(m as usize))
+        else {
+            continue;
+        };
+        let world = authored_world(nodes, &parent, index);
+        let primitives = mesh
+            .get("primitives")
+            .and_then(|p| p.as_array())
+            .into_iter()
+            .flatten();
+        for primitive in primitives {
+            let Some(positions) = primitive
+                .get("attributes")
+                .and_then(|a| a.get("POSITION"))
+                .and_then(serde_json::Value::as_u64)
+                .and_then(|accessor| {
+                    read_floats::<3>(&doc, &buffers, accessor as usize, "VEC3")
+                })
+            else {
+                continue;
+            };
+            points.extend(
+                positions
+                    .into_iter()
+                    .map(|p| world.transform_point3(Vec3::from(p))),
+            );
+        }
+    }
+    Some(points)
+}
+
+/// The parsed document and its buffers, for a model path as stored in a def.
+fn read_document(model_path: &str) -> Option<(serde_json::Value, Vec<Vec<u8>>)> {
+    let path = Path::new(ASSET_ROOT).join(model_path);
+    let bytes = std::fs::read(&path).ok()?;
+    let (json, bin) = match path.extension().and_then(|e| e.to_str()) {
+        Some("gltf") => (String::from_utf8(bytes).ok()?, None),
+        _ => (glb_json(&bytes)?, glb_bin(&bytes).map(<[u8]>::to_vec)),
+    };
+    let doc: serde_json::Value = serde_json::from_str(&json).ok()?;
+    let dir = path.parent().unwrap_or_else(|| Path::new("."));
+    let buffers = load_buffers(&doc, bin, dir);
+    Some((doc, buffers))
+}
+
+fn nodes_of(doc: &serde_json::Value) -> &[serde_json::Value] {
+    doc.get("nodes")
         .and_then(|n| n.as_array())
-        .map_or(&[], Vec::as_slice);
+        .map_or(&[], Vec::as_slice)
+}
+
+/// Child node index -> parent node index.
+fn parents_of(nodes: &[serde_json::Value]) -> HashMap<usize, usize> {
     let mut parent = HashMap::new();
     for (index, node) in nodes.iter().enumerate() {
         for child in node
@@ -208,21 +309,35 @@ fn rest_pose_of(doc: &serde_json::Value, buffers: &[Vec<u8>]) -> HashMap<String,
             }
         }
     }
-    let authored_world = |mut index: usize| {
-        let mut world = Mat4::IDENTITY;
-        // Bounded by the node count, so a malformed file with a cycle cannot hang.
-        for _ in 0..=nodes.len() {
-            let Some(node) = nodes.get(index) else { break };
-            world = node_transform(node).to_matrix() * world;
-            match parent.get(&index) {
-                Some(&up) => index = up,
-                None => break,
-            }
-        }
-        world
-    };
+    parent
+}
 
-    // Bind-pose world matrix per joint node, across every skin we can read.
+/// A node's world matrix from the authored node transforms.
+fn authored_world(
+    nodes: &[serde_json::Value],
+    parent: &HashMap<usize, usize>,
+    mut index: usize,
+) -> Mat4 {
+    let mut world = Mat4::IDENTITY;
+    // Bounded by the node count, so a malformed file with a cycle cannot hang.
+    for _ in 0..=nodes.len() {
+        let Some(node) = nodes.get(index) else { break };
+        world = node_transform(node).to_matrix() * world;
+        match parent.get(&index) {
+            Some(&up) => index = up,
+            None => break,
+        }
+    }
+    world
+}
+
+/// Bind-pose world matrix per joint node, across every skin we can read.
+fn bind_worlds(
+    doc: &serde_json::Value,
+    buffers: &[Vec<u8>],
+    nodes: &[serde_json::Value],
+    parent: &HashMap<usize, usize>,
+) -> HashMap<usize, Mat4> {
     let mut bind_world: HashMap<usize, Mat4> = HashMap::new();
     let skins = doc
         .get("skins")
@@ -242,7 +357,7 @@ fn rest_pose_of(doc: &serde_json::Value, buffers: &[Vec<u8>]) -> HashMap<String,
             .position(|n| {
                 n.get("skin").and_then(serde_json::Value::as_u64) == Some(skin_index as u64)
             })
-            .map_or(Mat4::IDENTITY, authored_world);
+            .map_or(Mat4::IDENTITY, |index| authored_world(nodes, parent, index));
         let joints = skin
             .get("joints")
             .and_then(|j| j.as_array())
@@ -256,35 +371,28 @@ fn rest_pose_of(doc: &serde_json::Value, buffers: &[Vec<u8>]) -> HashMap<String,
             }
         }
     }
-
-    let mut pose = HashMap::new();
-    for (index, node) in nodes.iter().enumerate() {
-        let Some(name) = node.get("name").and_then(|n| n.as_str()) else {
-            continue;
-        };
-        let local = bind_world.get(&index).map_or_else(
-            || node_transform(node),
-            |world| {
-                let parent_world = parent.get(&index).map_or(Mat4::IDENTITY, |&up| {
-                    bind_world
-                        .get(&up)
-                        .copied()
-                        .unwrap_or_else(|| authored_world(up))
-                });
-                Transform::from_matrix(parent_world.inverse() * *world)
-            },
-        );
-        pose.entry(name.to_string()).or_insert(local);
-    }
-    pose
+    bind_world
 }
 
 /// A `MAT4` float accessor's matrices, honouring the buffer view's stride.
 fn read_mat4s(doc: &serde_json::Value, buffers: &[Vec<u8>], accessor: usize) -> Option<Vec<Mat4>> {
-    const MAT4_BYTES: usize = 64;
+    let matrices = read_floats::<16>(doc, buffers, accessor, "MAT4")?;
+    Some(matrices.iter().map(Mat4::from_cols_array).collect())
+}
+
+/// A float accessor of `N` components per element (`kind` is its glTF `type`, `"VEC3"`
+/// or `"MAT4"`), honouring the buffer view's stride. Anything else -- quantized or
+/// sparse data -- is `None`.
+fn read_floats<const N: usize>(
+    doc: &serde_json::Value,
+    buffers: &[Vec<u8>],
+    accessor: usize,
+    kind: &str,
+) -> Option<Vec<[f32; N]>> {
     const FLOAT: u64 = 5126;
+    let element_bytes = N.checked_mul(4)?;
     let accessor = doc.get("accessors")?.get(accessor)?;
-    if accessor.get("type")?.as_str()? != "MAT4"
+    if accessor.get("type")?.as_str()? != kind
         || accessor.get("componentType")?.as_u64()? != FLOAT
     {
         return None;
@@ -303,17 +411,17 @@ fn read_mat4s(doc: &serde_json::Value, buffers: &[Vec<u8>], accessor: usize) -> 
     let stride = view
         .get("byteStride")
         .and_then(serde_json::Value::as_u64)
-        .map_or(MAT4_BYTES, |s| s as usize);
+        .map_or(element_bytes, |s| s as usize);
 
     (0..count)
         .map(|i| {
             let at = start.checked_add(i.checked_mul(stride)?)?;
-            let bytes = buffer.get(at..at.checked_add(MAT4_BYTES)?)?;
-            let mut cols = [0.0_f32; 16];
-            for (slot, chunk) in cols.iter_mut().zip(bytes.as_chunks::<4>().0) {
+            let bytes = buffer.get(at..at.checked_add(element_bytes)?)?;
+            let mut element = [0.0_f32; N];
+            for (slot, chunk) in element.iter_mut().zip(bytes.as_chunks::<4>().0) {
                 *slot = f32::from_le_bytes(*chunk);
             }
-            Some(Mat4::from_cols_array(&cols))
+            Some(element)
         })
         .collect()
 }

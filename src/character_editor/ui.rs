@@ -27,6 +27,7 @@ use crate::character_editor::models::{
     EditorLibrary, def_stem,
 };
 use crate::character_editor::prop::EditorProp;
+use crate::character_editor::suggest_hardpoints::ModelShape;
 use crate::character_editor::state::EditorSession;
 use crate::player::components::Player;
 
@@ -45,6 +46,9 @@ pub struct DebugTogglesContainer;
 /// The open docs, Save / Revert / Menu, and the unsaved-changes question when there is one.
 #[derive(Component)]
 pub struct DocBarContainer;
+
+/// The "suggest" rows in the hardpoint panel.
+const SUGGEST_COLOR: Color = Color::srgb(0.7, 0.85, 0.95);
 
 /// Holds the hardpoint role chips, nudge rows and bone picker.
 #[derive(Component)]
@@ -716,6 +720,36 @@ pub fn rebuild_hardpoint_panel(
             ));
         }
 
+        // First guesses read off the model file (`suggest_hardpoints`): every role this
+        // side lacks, or the selected one again. A starting point for the nudge rows.
+        if side.roles().iter().any(|role| !present.iter().any(|r| r == role)) {
+            row(
+                parent,
+                "suggest the missing frames".to_string(),
+                false,
+                SUGGEST_COLOR,
+            )
+            .observe(
+                |_: On<Activate>, mut editor: ResMut<HardpointEditor>, mut docs: SideDocs| {
+                    let side = editor.side;
+                    let Some(def) = docs.def_mut(side) else {
+                        return;
+                    };
+                    let Some(shape) = ModelShape::read(def, side) else {
+                        return;
+                    };
+                    for role in side.roles() {
+                        if !def.hardpoints.contains_key(*role)
+                            && let Some(frame) = shape.frame(role)
+                        {
+                            def.hardpoints.insert((*role).to_string(), frame);
+                        }
+                    }
+                    editor.touch();
+                },
+            );
+        }
+
         let Some(hardpoint) = hardpoint else { return };
         let role = active.clone().unwrap_or_default();
 
@@ -754,6 +788,28 @@ pub fn rebuild_hardpoint_panel(
                 true,
             );
         }
+
+        let suggested = role.clone();
+        row(
+            parent,
+            "suggest this frame (replaces it)".to_string(),
+            false,
+            SUGGEST_COLOR,
+        )
+        .observe(
+            move |_: On<Activate>, mut editor: ResMut<HardpointEditor>, mut docs: SideDocs| {
+                let side = editor.side;
+                let Some(def) = docs.def_mut(side) else {
+                    return;
+                };
+                if let Some(frame) =
+                    ModelShape::read(def, side).and_then(|shape| shape.frame(&suggested))
+                {
+                    def.hardpoints.insert(suggested.clone(), frame);
+                }
+                editor.touch();
+            },
+        );
 
         let removed = role.clone();
         row(

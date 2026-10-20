@@ -27,5 +27,6 @@ pub mod prop;
 pub mod props_tab;
 pub mod shell;
 pub mod state;
+pub mod suggest_hardpoints;
 pub mod text_field;
 pub mod ui;

@@ -211,6 +211,17 @@ All UI text stays ASCII (the embedded font has nothing else).
   When the open doc *is* a weapon, there is only one side.
 - Role chips, add/remove, anchor-bone picker (from the live rig), and nudge rows for
   translation and rotation with coarse/fine steps. Rotation stays wrapped to (-180, 180].
+- Suggestions (`suggest_hardpoints.rs`): "suggest the missing frames" fills every role a
+  side lacks, "suggest this frame" redoes the selected one. A character's come from its
+  bind pose using Mesh2Motion's prop rule (rest pose faces +Z, palms down; the gun runs
+  straight out from the hand, top toward the thumb, 9 cm along the hand and 3.5 cm below the
+  palm, scaled to the rig's height): grip on the right hand, foregrip on the left, stock in
+  the right shoulder pocket (on the clavicle), sight at the right eye. Rigs with no hand bone
+  hold on the forearm at the knuckles. A weapon's come from its mesh profile, assuming the
+  barrel runs +X with +Y up: muzzle at the front on the barrel's line, grip on the first part
+  hanging below the barrel (two-handed: skipping the stock butt and shallow receiver
+  undersides), foregrip under the barrel ahead of it, stock at the back, sight on top above
+  the grip.
 - Weapon picker: equip any weapon def. In Studio this is the browser's reference-weapon
   preview; in Live it is the real equip. It is one control backed by
   `hardpoint::snap_transform` in both cases.
