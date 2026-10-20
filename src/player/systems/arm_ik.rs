@@ -64,20 +64,25 @@ pub struct WeaponArms {
 /// Rigs differ in how many bones sit between the hardpoint and the arm — a grip anchored
 /// to a thumb tip is four bones below the shoulder, one anchored to the hand is two — so
 /// the chain is found rather than assumed: the first ancestor that looks like a hand fixes
-/// the wrist, and the two bones above it are the arm.
+/// the wrist, and the two bones above it are the arm. With no hand among the ancestors
+/// (a hardpoint anchored on the hand itself, as the editor's suggestions are) the
+/// effector is the wrist, and the arm is its parent and grandparent.
 ///
 /// `ancestors` is the effector's ancestors, nearest first. Returns `(upper, lower)` as
 /// indices into it.
 pub fn arm_chain(ancestors: &[&str]) -> Option<(usize, usize)> {
-    let hand = ancestors
-        .iter()
-        .position(|name| name.to_ascii_lowercase().contains("hand"))
-        // A hardpoint anchored directly to the hand has no "hand" among its *ancestors*,
-        // so fall back to treating the effector itself as the wrist.
-        .unwrap_or(0);
-    let lower = hand + 1;
-    let upper = hand + 2;
+    let (upper, lower) = match ancestors.iter().position(|name| is_hand(name)) {
+        Some(hand) => (hand + 2, hand + 1),
+        None => (1, 0),
+    };
     (upper < ancestors.len()).then_some((upper, lower))
+}
+
+/// A wrist rather than a finger: mixamo fingers carry "hand" too (`mixamorigRightHandIndex1`).
+fn is_hand(name: &str) -> bool {
+    const FINGERS: [&str; 5] = ["thumb", "index", "middle", "ring", "pinky"];
+    let lower = name.to_ascii_lowercase();
+    lower.contains("hand") && !FINGERS.iter().any(|finger| lower.contains(finger))
 }
 
 /// Where the elbow goes so that a two-bone arm reaches `target`.
@@ -511,11 +516,26 @@ mod tests {
         assert_eq!(arm_chain(&ancestors), Some((2, 1)));
     }
 
-    /// A hardpoint on the hand itself has no "hand" ancestor to find.
+    /// A hardpoint on the hand itself has no "hand" ancestor to find: the arm is the
+    /// forearm and upper arm right above it, not the upper arm and the collarbone (which
+    /// solved the shoulder as if it were the elbow and bunched the arms up along the gun).
     #[test]
     fn a_hardpoint_on_the_wrist_uses_the_two_bones_above_it() {
         let ancestors = ["lowerarm_r", "upperarm_r", "clavicle_r"];
-        assert_eq!(arm_chain(&ancestors), Some((2, 1)));
+        assert_eq!(arm_chain(&ancestors), Some((1, 0)));
+    }
+
+    /// Mixamo finger bones carry "hand" in their names; the wrist is the one that is not
+    /// a finger.
+    #[test]
+    fn a_mixamo_finger_is_not_mistaken_for_the_wrist() {
+        let ancestors = [
+            "mixamorigRightHandIndex1",
+            "mixamorigRightHand",
+            "mixamorigRightForeArm",
+            "mixamorigRightArm",
+        ];
+        assert_eq!(arm_chain(&ancestors), Some((3, 2)));
     }
 
     /// The whole point of the clamp: an absolute alignment would wring the neck right
@@ -550,6 +570,7 @@ mod tests {
     #[test]
     fn a_chain_that_runs_out_of_bones_is_refused() {
         assert_eq!(arm_chain(&["hand_r"]), None);
+        assert_eq!(arm_chain(&["lowerarm_r"]), None);
         assert_eq!(arm_chain(&[]), None);
     }
 }

@@ -12,6 +12,7 @@
         ammo: Rifle,
         magazine: 30,
         reload_secs: 2.0,
+        projectile: None,
     )),
     hidden_nodes: [],
     animations: {},
@@ -26,11 +27,11 @@
         "foregrip": (
             anchor: None,
             translation: (2.0, 0.39999998, 0.0),
-            rotation_euler_deg: (0.0, 0.0, 0.0),
+            rotation_euler_deg: (-90.0, 0.0, 0.0),
         ),
         "stock": (
             anchor: None,
-            translation: (-1.5, 0.10, 0.0),
+            translation: (-1.5, 0.1, 0.0),
             rotation_euler_deg: (0.0, 0.0, 0.0),
         ),
         "muzzle": (
