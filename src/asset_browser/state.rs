@@ -1,7 +1,9 @@
 use bevy::animation::graph::AnimationNodeIndex;
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
+
+use crate::animation::animation_plugin::AnimationKey;
 
 // Re-export from shared location so asset browser code keeps using the same name.
 pub use crate::assets::asset_definition::{AssetDefinition, Attachment, Hardpoint, ModelType};
@@ -10,28 +12,6 @@ use bevy::prelude::Entity;
 const WINDOW_SIZE: usize = 36;
 pub const CHARACTER_NODE_PREFIX: &str = "Character_";
 const ROOT: &str = "assets";
-
-// ── Game-state animation key names (order matches display) ────────────────────
-
-pub const ANIM_KEY_NAMES: &[&str] = &[
-    "idle",
-    "idle_shoot",
-    "walk",
-    "walk_shoot",
-    "run",
-    "run_gun",
-    "jump",
-    "jump_idle",
-    "jump_land",
-    "punch",
-    "wave",
-    "yes",
-    "no",
-    "death",
-    "hitreact",
-    "throwing",
-    "building",
-];
 
 /// Standard hardpoint role names, shared across characters and weapons so the snap
 /// can pair them (character `grip` <-> weapon `grip`, etc.). `muzzle` is weapon-only:
@@ -78,19 +58,12 @@ pub struct AssetBrowserState {
     pub model_type: ModelType,
     pub type_dirty: bool,
 
-    // ── Clip tagging + game-key bindings (for import) ──────────────────────────
-    /// Free-form hierarchical tag per clip. Key = clip name as it appears in
-    /// `anim_names`, value = "/"-separated path (e.g. "Combat/Ranged/Shoot").
-    /// Tag paths are unique across clips (enforced in `tag_edit_commit`), so a
-    /// path maps to exactly one clip.
-    pub clip_tags: HashMap<String, String>,
-    /// Binds a game-state key (ANIM_KEY_NAMES entry) → a tag path from `clip_tags`.
-    pub animation_bindings: HashMap<String, String>,
-    /// Rebuild flag for the clip-tag list and the bindings list.
-    pub tags_dirty: bool,
-    /// While a tag text-box is open: the clip being edited and the current buffer.
-    pub tag_edit_clip: Option<String>,
-    pub tag_edit_buffer: String,
+    // ── Animations ───────────────────────────────────────────────────────────
+    /// The loaded def's key -> clip map, carried through to the export untouched.
+    /// Authored in the character editor's Animation tab, not here.
+    pub animations: BTreeMap<AnimationKey, String>,
+    /// Rebuild flag for the clip list.
+    pub clips_dirty: bool,
 
     // ── Skeleton overlay ───────────────────────────────────────────────────────
     /// Draw the skinned-mesh skeleton (bones) as a gizmo overlay on the model.
@@ -186,11 +159,8 @@ impl Default for AssetBrowserState {
             hidden_nodes: HashSet::new(),
             nodes_dirty: false,
             nodes_ui_dirty: false,
-            clip_tags: HashMap::new(),
-            animation_bindings: HashMap::new(),
-            tags_dirty: false,
-            tag_edit_clip: None,
-            tag_edit_buffer: String::new(),
+            animations: BTreeMap::new(),
+            clips_dirty: false,
             show_skeleton: false,
             bone_names: Vec::new(),
             bones_ui_dirty: false,
@@ -258,10 +228,6 @@ impl AssetBrowserState {
         self.pending_scale = None;
         self.height_dirty = false;
         self.aabb_settle_frames = 0;
-        // Keep clip_tags / animation_bindings across loads (same-pack models share
-        // clip names, like the old anim_mapping did) but close any open text box.
-        self.tag_edit_clip = None;
-        self.tag_edit_buffer.clear();
         // Bone list belongs to the old skeleton; the preview weapons died with the
         // old scene. Attachments themselves are (re)populated by load_definition.
         self.bone_names.clear();
@@ -594,118 +560,6 @@ impl AssetBrowserState {
         self.nodes_ui_dirty = true;
     }
 
-    // ── Clip tagging ────────────────────────────────────────────────────────
-
-    /// Distinct tag paths currently in use, sorted. Used for binding cycling and
-    /// as the autocomplete pool while typing a tag.
-    pub fn distinct_tag_paths(&self) -> Vec<String> {
-        let mut paths: Vec<String> = self
-            .clip_tags
-            .values()
-            .filter(|p| !p.is_empty())
-            .cloned()
-            .collect::<HashSet<_>>()
-            .into_iter()
-            .collect();
-        paths.sort();
-        paths
-    }
-
-    /// Open the tag text-box for `clip`, seeded with its existing tag.
-    pub fn begin_tag_edit(&mut self, clip: &str) {
-        self.tag_edit_buffer = self.clip_tags.get(clip).cloned().unwrap_or_default();
-        self.tag_edit_clip = Some(clip.to_string());
-        self.tags_dirty = true;
-    }
-
-    pub fn tag_edit_push(&mut self, s: &str) {
-        if self.tag_edit_clip.is_some() {
-            self.tag_edit_buffer.push_str(s);
-            self.tags_dirty = true;
-        }
-    }
-
-    pub fn tag_edit_backspace(&mut self) {
-        if self.tag_edit_clip.is_some() {
-            self.tag_edit_buffer.pop();
-            self.tags_dirty = true;
-        }
-    }
-
-    pub fn tag_edit_cancel(&mut self) {
-        self.tag_edit_clip = None;
-        self.tag_edit_buffer.clear();
-        self.tags_dirty = true;
-    }
-
-    /// Commit the buffer as `clip`'s tag. Trims slashes/whitespace; an empty
-    /// result clears the tag. Tag paths are unique: assigning a path that another
-    /// clip already carries moves it off that clip, so each path maps to exactly
-    /// one clip and runtime resolution is deterministic.
-    pub fn tag_edit_commit(&mut self) {
-        if let Some(clip) = self.tag_edit_clip.take() {
-            let path = normalize_tag_path(&self.tag_edit_buffer);
-            if path.is_empty() {
-                self.clip_tags.remove(&clip);
-            } else {
-                // Steal the path from whatever other clip currently holds it.
-                self.clip_tags.retain(|c, t| c == &clip || t != &path);
-                self.clip_tags.insert(clip, path);
-            }
-        }
-        self.tag_edit_buffer.clear();
-        self.tags_dirty = true;
-    }
-
-    /// Fill the open text-box with an autocomplete suggestion.
-    pub fn tag_edit_accept_suggestion(&mut self, path: &str) {
-        if self.tag_edit_clip.is_some() {
-            self.tag_edit_buffer = path.to_string();
-            self.tags_dirty = true;
-        }
-    }
-
-    /// Existing tag paths matching the current buffer (case-insensitive substring),
-    /// excluding an exact match. Empty while the buffer is empty.
-    pub fn tag_suggestions(&self) -> Vec<String> {
-        let buf = self.tag_edit_buffer.trim().to_lowercase();
-        if buf.is_empty() {
-            return Vec::new();
-        }
-        self.distinct_tag_paths()
-            .into_iter()
-            .filter(|p| {
-                let pl = p.to_lowercase();
-                pl != buf && pl.contains(&buf)
-            })
-            .take(6)
-            .collect()
-    }
-
-    // ── Game-key → tag bindings ─────────────────────────────────────────────
-
-    /// Cycle `key`'s binding through the in-use tag paths (plus an unbound slot).
-    pub fn cycle_binding(&mut self, key: &str, delta: i32) {
-        let mut options = self.distinct_tag_paths();
-        options.insert(0, String::new()); // unbound
-        let current = self
-            .animation_bindings
-            .get(key)
-            .cloned()
-            .unwrap_or_default();
-        let idx = options.iter().position(|o| o == &current).unwrap_or(0) as i32;
-        // `options` always has at least the "unbound" slot inserted above, so this
-        // index is in range; `.get()` just avoids an explicit panic path for the lint.
-        let wrapped = (idx + delta).rem_euclid(options.len() as i32) as usize;
-        let next = options.get(wrapped).cloned().unwrap_or_default();
-        if next.is_empty() {
-            self.animation_bindings.remove(key);
-        } else {
-            self.animation_bindings.insert(key.to_string(), next);
-        }
-        self.tags_dirty = true;
-    }
-
     /// Write the current viewer state to `assets/defs/<model>.ron`.
     pub fn export_definition(&self) {
         let Some(path) = self.selected_path() else {
@@ -716,10 +570,7 @@ impl AssetBrowserState {
             scale: self.computed_scale(),
             model_type: self.model_type.clone(),
             hidden_nodes: self.hidden_nodes.iter().cloned().collect(),
-            // Legacy field retired in favour of clip_tags + animation_bindings.
-            animation_mapping: HashMap::new(),
-            clip_tags: self.clip_tags.clone(),
-            animation_bindings: self.animation_bindings.clone(),
+            animations: self.animations.clone(),
             animation_sources: self.animation_sources.clone(),
             attachments: self.attachments.clone(),
             hardpoints: self.hardpoints.clone(),
@@ -737,24 +588,7 @@ impl AssetBrowserState {
         };
         if let Some(def) = AssetDefinition::load(path) {
             self.hidden_nodes = def.hidden_nodes.into_iter().collect();
-            self.clip_tags = def.clip_tags;
-            self.animation_bindings = def.animation_bindings;
-            // Migrate legacy flat mappings: each game-key → clip becomes a flat tag
-            // (named after the key) on that clip, plus a binding to it. Lossless and
-            // gives the user a starting point to reorganize hierarchically.
-            if self.animation_bindings.is_empty() && !def.animation_mapping.is_empty() {
-                for (key, clip) in &def.animation_mapping {
-                    if clip.is_empty() {
-                        continue;
-                    }
-                    let tag = self
-                        .clip_tags
-                        .entry(clip.clone())
-                        .or_insert_with(|| key.clone())
-                        .clone();
-                    self.animation_bindings.insert(key.clone(), tag);
-                }
-            }
+            self.animations = def.animations;
             // Normalize paths: strip leading "assets/" if present (legacy wrong prefix).
             self.animation_sources = def
                 .animation_sources
@@ -777,8 +611,9 @@ impl AssetBrowserState {
             // Stash the stored scale; target_height_m is resolved once the mesh AABB is measured.
             self.pending_scale = Some(def.scale);
         } else {
-            // No def for this model. Clear node visibility but KEEP existing clip_tags /
-            // bindings — same-pack models share clip names so the user's work carries over.
+            // No def for this model: start clean. A Mesh2Motion model needs no
+            // `animations` (its rig preset covers it).
+            self.animations.clear();
             self.hidden_nodes.clear();
             self.animation_sources.clear();
             self.sources_dirty = true;
@@ -788,25 +623,20 @@ impl AssetBrowserState {
         self.active_attachment = None;
         self.attachments_struct_dirty = true;
         self.attachment_ui_dirty = true;
-        self.tag_edit_clip = None;
-        self.tag_edit_buffer.clear();
         self.nodes_dirty = true;
         self.nodes_ui_dirty = true;
-        self.tags_dirty = true;
+        self.clips_dirty = true;
     }
 
-    /// Reset tags, bindings and hidden nodes back to a clean state.
+    /// Reset animations and hidden nodes back to a clean state.
     pub fn clear_all(&mut self) {
-        self.clip_tags.clear();
-        self.animation_bindings.clear();
-        self.tag_edit_clip = None;
-        self.tag_edit_buffer.clear();
+        self.animations.clear();
         self.hidden_nodes.clear();
         self.animation_sources.clear();
         self.sources_dirty = true;
         self.nodes_dirty = true;
         self.nodes_ui_dirty = true;
-        self.tags_dirty = true;
+        self.clips_dirty = true;
     }
 
     pub const fn anim_next(&mut self) {
@@ -913,14 +743,4 @@ pub fn scan_folder(folder: &str) -> (Vec<String>, Vec<String>) {
     folders.sort();
     files.sort();
     (folders, files)
-}
-
-/// Normalize a free-form tag path: split on '/', trim each segment, drop empties,
-/// rejoin with '/'. "  Combat // Ranged /Shoot " → "Combat/Ranged/Shoot".
-fn normalize_tag_path(raw: &str) -> String {
-    raw.split('/')
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-        .collect::<Vec<_>>()
-        .join("/")
 }

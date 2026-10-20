@@ -324,8 +324,13 @@ Tweak wave composition: `MapFile.waves` in the map `.ron`, or the default in `wa
 ## 10. Presentation: animation, camera, music, UI
 
 - **Animation** — `src/animation/` (state-machine, `AnimationStore`) + `src/model_settings/`
-  (`build_player_anim_graph`). Game keys → tag paths → clips via `animation_bindings` /
-  `clip_tags` in the def. External clips need identical bone paths (no retargeting).
+  (`build_player_anim_graph`). Each `AnimationKey` resolves to a clip through
+  `animation::clips::ClipSet::resolve`: the def's `animations` entry, else the Mesh2Motion
+  rig preset, else a name search, else the key's fallback. Walking while aiming on a rig
+  with only an aim pose layers the aim over the walk's upper body with graph masks
+  (`ClipSet::upper_body_layer`, `animation::body_mask`). External clips need identical
+  bone paths, including the scene root's name (no retargeting) - so export each
+  Mesh2Motion model with its own animations rather than sharing one library file.
 - **Camera** — `src/camera/systems.rs`: single orthographic isometric `GameCamera`,
   `camera_follow` tracks players; wall-occlusion fade. (`spawn_pixelated_camera` is dead
   code.)
@@ -342,8 +347,8 @@ Tweak wave composition: `MapFile.waves` in the map `.ron`, or the default in `wa
 
 - **`AssetDefinition`** (`src/assets/asset_definition.rs`) — the per-model `.ron`
   (`assets/defs/*.ron`): `model_path`, `scale`, `model_type` (`Player/Tower/Terrain/Item/
-  Enemy/Weapon` each with props), `hidden_nodes`, `clip_tags`, `animation_bindings`,
-  `animation_sources`, `attachments`, `hardpoints`. This is the main data-driven knob for
+  Enemy/Weapon` each with props), `hidden_nodes`, `animations` (key -> clip, only what
+  differs from the rig preset), `animation_sources`, `attachments`, `hardpoints`. This is the main data-driven knob for
   per-model behavior.
 - **Asset browser** (`src/asset_browser/`, `GameState::AssetBrowser`) — import a GLB, set
   scale/height, tag clips, author hardpoints (incl. `muzzle`), preview a weapon on the model,

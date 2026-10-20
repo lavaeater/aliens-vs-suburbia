@@ -165,7 +165,7 @@ pub struct Legs {
     /// `fix_scene_transform` writes the model's real scale and offset in `Update`, and
     /// nothing orders it against [`resolve_legs`] — an unchained `add_systems` tuple is not
     /// a sequence — so any measurement taken at resolve is a coin flip on whether the model
-    /// had been sized yet. Reading it live also means the playground's scale slider moves
+    /// had been sized yet. Reading it live also means the character editor's scale slider moves
     /// the feet with the model instead of leaving them behind.
     model_root: Entity,
     /// Ankle height above the model's origin, in the model's own units.
@@ -198,7 +198,7 @@ pub struct PendingLegs {
 /// **Off by default.** The procedural walk works but is not finished — the feet keep the
 /// clip's orientation, so they neither lie flat nor roll heel to toe, and only the knee has
 /// joint limits. The clip's own legs look better today, so that is what ships while the
-/// weapon and hardpoint work goes on. `F9`, or the playground's gait panel, turns it back
+/// weapon and hardpoint work goes on. `F9`, or the character editor's gait panel, turns it back
 /// on; nothing else changes, since everything it writes is overwritten by the animation the
 /// moment it stops writing. See `docs/procedural-walk.md`.
 #[derive(Resource, Default)]

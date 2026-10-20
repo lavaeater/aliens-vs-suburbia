@@ -4,3 +4,4 @@
 assets/poly_pizza_cache/
 # Per-developer playground scratch state (last model worn), not project config.
 playground-prefs.ron
+editor-prefs.ron

@@ -30,7 +30,7 @@ impl Plugin for UiPlugin {
             .add_systems(OnEnter(GameState::InGame), spawn_ui_camera)
             .add_systems(
                 OnEnter(GameState::InGame),
-                (spawn_ui, spawn_player_bar).run_if(crate::playground::state::in_normal_game),
+                (spawn_ui, spawn_player_bar).run_if(crate::character_editor::state::in_normal_game),
             )
             .add_systems(OnEnter(GameState::Menu), (spawn_ui_camera, spawn_menu))
             .add_systems(

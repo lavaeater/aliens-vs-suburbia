@@ -187,7 +187,7 @@ impl Plugin for StatefulMapPlugin {
         app.add_plugins(NonStateMapStuff)
             .add_systems(
                 OnEnter(GameState::InGame),
-                load_map_one.run_if(crate::playground::state::in_normal_game),
+                load_map_one.run_if(crate::character_editor::state::in_normal_game),
             )
             .add_systems(OnEnter(GameState::ModelShowcase), load_map_showcase)
             .add_systems(

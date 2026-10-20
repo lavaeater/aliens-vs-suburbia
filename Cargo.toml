@@ -71,7 +71,7 @@ used_underscore_binding = "allow"
 wildcard_imports = "allow"
 
 [dependencies]
-bevy = { version = "0.19.0", features = ["wayland", "3d", "ui", "bevy_feathers", "webp"] }
+bevy = { version = "0.19.1", features = ["wayland", "3d", "ui", "bevy_feathers", "webp"] }
 avian3d = { version = "0.7.0", default-features = false, features = ["3d", "parry-f32", "debug-plugin", "collider-from-mesh", "simd", "parallel", "serialize", "bevy_scene", "bevy_picking", "xpbd_joints"] }
 pathfinding = "4.6"
 itertools = "0.15.0"
@@ -87,9 +87,9 @@ dotenvy = "0.15"
 urlencoding = "2"
 bevy_wind_waker_shader = { path = "bevy_wind_waker_shader" }
 bevy_skein = "0.6.0"
-ratatui   = { version = "0.30", optional = true }
+ratatui = { version = "0.30", optional = true }
 crossterm = { version = "0.29", optional = true }
-enumflags2 = { version = "0.7.12",  features = ["serde"] }
+enumflags2 = { version = "0.7.12", features = ["serde"] }
 # Use the submodule checkout so local edits to rusty_music take effect immediately.
 rusty_music = { path = "rusty_music" }
 bevy_seedling = { version = "0.8.0", default-features = false, features = ["wav"] }

@@ -11,6 +11,6 @@
         loot_table: Some("crate"),
     )),
     hidden_nodes: [],
-    animation_mapping: {},
+    animations: {},
     animation_sources: [],
 )

@@ -5,20 +5,22 @@
 //! the weapon in hand — which is the only way to tell whether a grip looks right while the
 //! arm is moving.
 //!
-//! The edited value lives in `PlayerAssetDef`, the def resource `spawn_players` already
-//! populates. Two things then follow for free:
+//! The panel edits the docs (`EditorDoc` for the character, `WeaponDoc` for its gun);
+//! `doc::sync_doc_to_live` copies the character's into `PlayerAssetDef`. Two things then
+//! follow for free:
 //!
-//! - the hardpoint overlay (`playground::debug`) reads that resource, so the gizmo moves
-//!   as you nudge;
+//! - the hardpoint overlay (`character_editor::debug`) reads those, so the gizmo moves as
+//!   you nudge;
 //! - `keep_weapons_snapped` re-derives the weapon's transform every frame from
 //!   `WeaponModel::char_grip`, so pushing the edited grip into that component is all it
 //!   takes for the held weapon to follow.
 //!
-//! Nothing is written to disk until you press Save.
+//! Nothing is written to disk until you Save, from the doc bar.
 
 use bevy::prelude::*;
 
-use crate::assets::asset_definition::{AssetDefinition, Hardpoint, ModelType};
+use crate::assets::asset_definition::{AssetDefinition, Hardpoint};
+use crate::character_editor::doc::{Subject, WeaponDoc};
 use crate::model_settings::plugin::PlayerAssetDef;
 use crate::player::components::Player;
 use crate::player::systems::equip::{EquippedWeapon, GRIP_ROLE, MUZZLE_ROLE, WeaponModel};
@@ -43,13 +45,16 @@ pub enum HardpointSide {
     #[default]
     Character,
     Weapon,
+    /// A model opened on its own (an enemy, a tower): its hardpoints, anchored to its own
+    /// bones. Every role is offered — an enemy with a gun has a grip and a muzzle.
+    Prop,
 }
 
 impl HardpointSide {
     pub const fn roles(self) -> &'static [&'static str] {
         match self {
             Self::Character => &ROLES,
-            Self::Weapon => &WEAPON_ROLES,
+            Self::Weapon | Self::Prop => &WEAPON_ROLES,
         }
     }
 
@@ -57,59 +62,33 @@ impl HardpointSide {
         match self {
             Self::Character => "character",
             Self::Weapon => "weapon",
+            Self::Prop => "model",
         }
     }
-}
 
-/// The def of the weapon the player is holding, loaded from `PlayerProps::weapon`.
-///
-/// Kept beside `PlayerAssetDef` rather than inside it because the equipped weapon is a
-/// separate asset with its own file on disk and its own Save.
-#[derive(Resource, Default)]
-pub struct PlaygroundWeaponDef {
-    /// Def path this was loaded from, e.g. `"assets/defs/Pistol.ron"`. Also the identity
-    /// [`sync_weapon_def`] compares against, so in-flight edits are never reloaded over.
-    pub def_path: Option<String>,
-    pub def: Option<AssetDefinition>,
-}
-
-impl PlaygroundWeaponDef {
-    pub fn name(&self) -> Option<&str> {
-        self.def_path.as_deref().map(|path| {
-            std::path::Path::new(path)
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or(path)
-        })
+    /// Frames anchored to bones (and so offered the bone picker), as opposed to the
+    /// weapon's, which are relative to its model origin.
+    pub const fn has_bones(self) -> bool {
+        !matches!(self, Self::Weapon)
     }
-}
 
-/// The weapon def path a character def asks for, if any.
-pub fn weapon_def_path(character: &AssetDefinition) -> Option<String> {
-    match &character.model_type {
-        ModelType::Player(props) => props.weapon.clone(),
-        _ => None,
+    /// The sides worth offering for what is open. A prop has only itself; a character
+    /// or a weapon in its hand have both ends of the grip.
+    pub const fn for_subject(subject: Subject) -> &'static [Self] {
+        match subject {
+            Subject::Character | Subject::Weapon => &[Self::Character, Self::Weapon],
+            Subject::Prop => &[Self::Prop],
+        }
     }
-}
 
-/// Load the equipped weapon's def when the character changes to one that wants a
-/// different weapon.
-///
-/// Deliberately keyed on the *path* rather than on `PlayerAssetDef::is_changed()`: every
-/// hardpoint nudge marks that resource changed, and reloading here would silently throw
-/// away the weapon edits made since the last Save.
-pub fn sync_weapon_def(
-    player_def: Res<PlayerAssetDef>,
-    mut weapon_def: ResMut<PlaygroundWeaponDef>,
-) {
-    let wanted = player_def.0.as_ref().and_then(weapon_def_path);
-    if wanted == weapon_def.def_path {
-        return;
+    /// The side the panel opens on for what is open.
+    pub const fn default_for(subject: Subject) -> Self {
+        match subject {
+            Subject::Character => Self::Character,
+            Subject::Weapon => Self::Weapon,
+            Subject::Prop => Self::Prop,
+        }
     }
-    weapon_def.def = wanted
-        .as_deref()
-        .and_then(AssetDefinition::load_from_def_path);
-    weapon_def.def_path = wanted;
 }
 
 /// Metres per nudge. Fine is what you use once the grip is roughly right.
@@ -126,12 +105,7 @@ pub struct HardpointEditor {
     pub side: HardpointSide,
     /// Role being edited, if any.
     pub active_role: Option<String>,
-    /// Unsaved edits, tracked per side — the two defs are separate files with separate
-    /// Saves, so one "dirty" flag would lie about whichever side you were not looking at.
-    pub character_dirty: bool,
-    pub weapon_dirty: bool,
     pub ui_dirty: bool,
-    pub status: String,
 }
 
 impl HardpointEditor {
@@ -146,29 +120,12 @@ impl HardpointEditor {
         if self.side != side {
             self.side = side;
             self.active_role = None;
-            self.status.clear();
         }
         self.ui_dirty = true;
     }
 
-    pub const fn dirty(&self, side: HardpointSide) -> bool {
-        match side {
-            HardpointSide::Character => self.character_dirty,
-            HardpointSide::Weapon => self.weapon_dirty,
-        }
-    }
-
-    pub const fn set_dirty(&mut self, side: HardpointSide, dirty: bool) {
-        match side {
-            HardpointSide::Character => self.character_dirty = dirty,
-            HardpointSide::Weapon => self.weapon_dirty = dirty,
-        }
-    }
-
-    /// Mark the side currently being edited as changed, and redraw the panel.
-    pub fn touch(&mut self) {
-        let side = self.side;
-        self.set_dirty(side, true);
+    /// Redraw the panel after an edit.
+    pub const fn touch(&mut self) {
         self.ui_dirty = true;
     }
 }
@@ -186,6 +143,57 @@ pub fn ensure_role<'a>(def: &'a mut AssetDefinition, role: &str) -> &'a mut Hard
             anchor: inherited,
             ..Default::default()
         })
+}
+
+/// Add `role` if the def does not have it yet; a role it already has is left alone.
+///
+/// The anchor comes from an existing hardpoint when there is one (see [`ensure_role`]),
+/// otherwise from `fallback_anchor` — on a character with no hardpoints yet, the caller's
+/// best guess at the hand, so the new frame appears in the palm rather than at the feet.
+pub fn add_role(def: &mut AssetDefinition, role: &str, fallback_anchor: Option<String>) {
+    if def.hardpoints.contains_key(role) {
+        return;
+    }
+    let anchor = def
+        .hardpoints
+        .values()
+        .find_map(|hp| hp.anchor.clone())
+        .or(fallback_anchor);
+    def.hardpoints.insert(
+        role.to_string(),
+        Hardpoint {
+            anchor,
+            ..Default::default()
+        },
+    );
+}
+
+/// The bone a weapon grip most likely belongs on: a right hand, not a finger.
+///
+/// Rigs name it every which way (`mixamorigRightHand`, `Hand.R`, `hand_r`,
+/// `RightHand`), so this looks for "hand" plus a right-side marker and skips the finger
+/// bones that also contain "hand". Only a starting point — the anchor picker is right
+/// there to correct it.
+pub fn guess_hand_bone(bones: &[String]) -> Option<String> {
+    const FINGERS: [&str; 5] = ["thumb", "index", "middle", "ring", "pinky"];
+    let is_hand = |name: &str| {
+        let lower = name.to_lowercase();
+        lower.contains("hand") && !FINGERS.iter().any(|f| lower.contains(f))
+    };
+    let is_right = |name: &str| {
+        let lower = name.to_lowercase();
+        lower.contains("right")
+            || lower.ends_with(".r")
+            || lower.ends_with("_r")
+            || lower.ends_with(" r")
+            || lower.starts_with("r_")
+    };
+    bones
+        .iter()
+        .filter(|bone| is_hand(bone))
+        // Shortest wins: `RightHand` over `RightHandEnd` and similar leaf helpers.
+        .min_by_key(|bone| (!is_right(bone), bone.len()))
+        .cloned()
 }
 
 /// Nudge one translation axis. `axis` is 0/1/2 for x/y/z.
@@ -217,14 +225,17 @@ pub fn wrap_degrees(degrees: f32) -> f32 {
 
 /// Push the edited `grip` into the live weapon so it moves with the gizmo.
 ///
-/// Only runs when the def actually changed. `keep_weapons_snapped` does the rest every
-/// frame from the component this writes.
+/// Runs when the def changed, and when a weapon has just been equipped: the equip
+/// resolves its frames from the files on disk, so without the second case a respawn would
+/// show the saved grip instead of the one being edited. `keep_weapons_snapped` does the
+/// rest every frame from the component this writes.
 pub fn apply_grip_to_equipped_weapon(
     player_def: Res<PlayerAssetDef>,
     players: Query<&EquippedWeapon, With<Player>>,
+    just_equipped: Query<(), (With<Player>, Added<EquippedWeapon>)>,
     mut weapons: Query<&mut WeaponModel>,
 ) {
-    if !player_def.is_changed() {
+    if !player_def.is_changed() && just_equipped.is_empty() {
         return;
     }
     let Some(def) = player_def.0.as_ref() else {
@@ -248,11 +259,12 @@ pub fn apply_grip_to_equipped_weapon(
 /// `Weapon::muzzle`, so with this in place you can fire while nudging and watch the
 /// streak line up with the barrel.
 pub fn apply_weapon_def_to_equipped_weapon(
-    weapon_def: Res<PlaygroundWeaponDef>,
+    weapon_def: Res<WeaponDoc>,
     players: Query<&EquippedWeapon, With<Player>>,
+    just_equipped: Query<(), (With<Player>, Added<EquippedWeapon>)>,
     mut weapons: Query<(&mut WeaponModel, &mut Weapon)>,
 ) {
-    if !weapon_def.is_changed() {
+    if !weapon_def.is_changed() && just_equipped.is_empty() {
         return;
     }
     let Some(def) = weapon_def.def.as_ref() else {
@@ -267,32 +279,6 @@ pub fn apply_weapon_def_to_equipped_weapon(
             model.set_weapon_grip(grip.clone());
         }
         weapon.muzzle = def.hardpoints.get(MUZZLE_ROLE).cloned();
-    }
-}
-
-/// Write the edited weapon def back to the path it was loaded from.
-///
-/// Unlike the character, this does not go through `AssetDefinition::save` — that derives
-/// the filename from the model stem, and a weapon def is reached by the explicit path in
-/// `PlayerProps::weapon`, which need not agree.
-pub fn save_weapon_def(def: &AssetDefinition, def_path: &str) -> String {
-    let Ok(text) = ron::ser::to_string_pretty(def, ron::ser::PrettyConfig::default()) else {
-        return format!("FAILED to serialize {def_path}");
-    };
-    match std::fs::write(def_path, text) {
-        Ok(()) => format!("saved {def_path}"),
-        Err(error) => format!("FAILED to write {def_path}: {error}"),
-    }
-}
-
-/// Write the edited def back to `assets/defs/<stem>.ron`.
-pub fn save_player_def(def: &AssetDefinition) -> String {
-    def.save();
-    let path = AssetDefinition::def_path(&def.model_path);
-    if path.exists() {
-        format!("saved {}", path.display())
-    } else {
-        format!("FAILED to write {}", path.display())
     }
 }
 
@@ -320,6 +306,47 @@ mod tests {
         let mut def = def_with_grip_on("mixamorigRightHand");
         let created = ensure_role(&mut def, "sight");
         assert_eq!(created.anchor.as_deref(), Some("mixamorigRightHand"));
+    }
+
+    #[test]
+    fn adding_a_role_to_a_bare_character_uses_the_guessed_hand() {
+        let mut def = AssetDefinition::default();
+        add_role(&mut def, "grip", Some("mixamorigRightHand".to_string()));
+        assert_eq!(
+            def.hardpoints["grip"].anchor.as_deref(),
+            Some("mixamorigRightHand")
+        );
+    }
+
+    #[test]
+    fn adding_a_role_that_exists_keeps_its_values() {
+        let mut def = def_with_grip_on("Hand");
+        def.hardpoints.get_mut("grip").unwrap().translation = [1.0, 2.0, 3.0];
+        add_role(&mut def, "grip", Some("Elsewhere".to_string()));
+        assert_eq!(def.hardpoints["grip"].translation, [1.0, 2.0, 3.0]);
+        assert_eq!(def.hardpoints["grip"].anchor.as_deref(), Some("Hand"));
+    }
+
+    #[test]
+    fn the_hand_guess_prefers_the_right_hand_over_fingers_and_the_left() {
+        let bones: Vec<String> = [
+            "mixamorigLeftHand",
+            "mixamorigRightHandIndex1",
+            "mixamorigRightHand",
+            "mixamorigSpine",
+        ]
+        .map(str::to_string)
+        .to_vec();
+        assert_eq!(
+            guess_hand_bone(&bones).as_deref(),
+            Some("mixamorigRightHand")
+        );
+
+        let blender: Vec<String> = ["Hand.L", "Hand.R", "Thumb.R"].map(str::to_string).to_vec();
+        assert_eq!(guess_hand_bone(&blender).as_deref(), Some("Hand.R"));
+
+        let none: Vec<String> = ["Spine", "Head"].map(str::to_string).to_vec();
+        assert_eq!(guess_hand_bone(&none), None);
     }
 
     #[test]
@@ -385,49 +412,6 @@ mod tests {
         editor.select_role("grip");
         editor.select_side(HardpointSide::Character);
         assert_eq!(editor.active_role.as_deref(), Some("grip"));
-    }
-
-    /// Two files, two Saves: saving one must not claim the other is clean.
-    #[test]
-    fn unsaved_edits_are_tracked_per_side() {
-        let mut editor = HardpointEditor::default();
-        editor.touch();
-        editor.select_side(HardpointSide::Weapon);
-        editor.touch();
-        editor.set_dirty(HardpointSide::Weapon, false);
-        assert!(
-            editor.dirty(HardpointSide::Character),
-            "character edits still unsaved"
-        );
-        assert!(!editor.dirty(HardpointSide::Weapon));
-    }
-
-    #[test]
-    fn a_character_def_reports_the_weapon_it_wants() {
-        use crate::assets::asset_definition::{ModelType, PlayerProps};
-        let def = AssetDefinition {
-            model_type: ModelType::Player(PlayerProps {
-                weapon: Some("assets/defs/Pistol.ron".to_string()),
-                ..Default::default()
-            }),
-            ..Default::default()
-        };
-        assert_eq!(
-            weapon_def_path(&def).as_deref(),
-            Some("assets/defs/Pistol.ron")
-        );
-    }
-
-    /// A weapon def is reached by the explicit path in `PlayerProps::weapon`, so the
-    /// panel's title must come from that path rather than the model stem.
-    #[test]
-    fn the_weapon_is_named_after_the_def_it_was_loaded_from() {
-        let weapon = PlaygroundWeaponDef {
-            def_path: Some("assets/defs/Blaster A.ron".to_string()),
-            def: None,
-        };
-        assert_eq!(weapon.name(), Some("Blaster A"));
-        assert_eq!(PlaygroundWeaponDef::default().name(), None);
     }
 
     #[test]

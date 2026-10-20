@@ -8,6 +8,21 @@ use std::collections::HashSet;
 #[derive(Component, Reflect)]
 pub struct InputKeyboard;
 
+/// Tells the keyboard and mouse players' input to stand down, because something else on
+/// screen wants the keys or the pointer — a tool screen's panel, a text field.
+///
+/// Absent in a normal match, so the game never pays for it. Only the keyboard/mouse
+/// scheme is gated: a gamepad cannot click a panel or type into a field, so it never
+/// conflicts and keeps driving the character.
+#[derive(Resource, Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct GameInputBlock {
+    /// Ignore key *presses*. Releases still land, so a key held when the block starts
+    /// does not stay stuck down after it ends.
+    pub keyboard: bool,
+    /// Leave `AutoAim` where it is instead of following the cursor.
+    pub mouse_aim: bool,
+}
+
 #[derive(Hash, PartialEq, Eq, Clone, Reflect, Copy)]
 pub enum ControlCommand {
     Throw,
@@ -129,8 +144,11 @@ pub struct CharacterState {
 
 impl CharacterState {
     /// Resolves the current intent stack to the concrete animation clip that
-    /// should play.  Handles composite states (e.g. Walk + Throwing →
+    /// should play.  Handles composite states (e.g. Walk + IdleShoot →
     /// WalkShoot) so callers only need to push/pop simple intent keys.
+    ///
+    /// `IdleShoot` is the "gun raised" intent, held while a gun is fired
+    /// (`player::systems::shoot::aim_animation`); `Throwing` is a one-shot throw.
     pub fn resolve(&self) -> AnimationKey {
         let has = |k: AnimationKey| self.state.contains(&k);
         if has(AnimationKey::Death) {
@@ -145,8 +163,12 @@ impl CharacterState {
         if has(AnimationKey::Duck) {
             return AnimationKey::Duck;
         }
-        match (has(AnimationKey::Walk), has(AnimationKey::Throwing)) {
-            (_, true) => AnimationKey::Throwing,
+        if has(AnimationKey::Throwing) {
+            return AnimationKey::Throwing;
+        }
+        match (has(AnimationKey::Walk), has(AnimationKey::IdleShoot)) {
+            (true, true) => AnimationKey::WalkShoot,
+            (false, true) => AnimationKey::IdleShoot,
             (true, false) => AnimationKey::Walk,
             (false, false) => AnimationKey::Idle,
         }
@@ -200,6 +222,22 @@ mod tests {
         s.enter_state(AnimationKey::Walk);
         s.enter_state(AnimationKey::Throwing);
         assert_eq!(s.resolve(), AnimationKey::Throwing);
+    }
+
+    #[test]
+    fn firing_a_gun_aims_and_walking_while_firing_walks_and_aims() {
+        let mut s = CharacterState::default();
+        assert_eq!(s.enter_state(AnimationKey::IdleShoot), Some(AnimationKey::IdleShoot));
+        assert_eq!(s.enter_state(AnimationKey::Walk), Some(AnimationKey::WalkShoot));
+        assert_eq!(s.leave_state(AnimationKey::IdleShoot), Some(AnimationKey::Walk));
+    }
+
+    #[test]
+    fn a_throw_plays_over_aiming() {
+        let mut s = CharacterState::default();
+        s.enter_state(AnimationKey::IdleShoot);
+        assert_eq!(s.enter_state(AnimationKey::Throwing), Some(AnimationKey::Throwing));
+        assert_eq!(s.leave_state(AnimationKey::Throwing), Some(AnimationKey::IdleShoot));
     }
 
     #[test]

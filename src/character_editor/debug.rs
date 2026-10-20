@@ -2,8 +2,8 @@
 //!
 //! The skeleton and hardpoint drawing is shared with the asset browser (see
 //! `assets::gizmos`); what differs here is *which* joints to draw. The browser has one
-//! model in an empty scene and can take every skinned mesh in the world. The playground has
-//! the player plus three skinned dummies, so the overlay is scoped to the player's subtree.
+//! model in an empty scene and can take every skinned mesh in the world. The character editor has
+//! the player plus whatever else is skinned in the arena, so the overlay is scoped to the player's subtree.
 //!
 //! Physics debug is avian's own `PhysicsGizmos` config, the same one `F3` toggles globally.
 //! The panel button and the key stay in sync because the button reads and writes that
@@ -15,15 +15,16 @@ use bevy::mesh::skinning::SkinnedMesh;
 use bevy::prelude::*;
 
 use crate::assets::gizmos::{bone_map, draw_hardpoints, draw_skeleton, joints_under};
+use crate::character_editor::doc::{PropDoc, WeaponDoc};
+use crate::character_editor::prop::EditorProp;
 use crate::model_settings::plugin::PlayerAssetDef;
 use crate::player::components::Player;
 use crate::player::systems::equip::EquippedWeapon;
 use crate::player::systems::gait::Foot;
 use crate::player::systems::leg_ik::Legs;
-use crate::playground::hardpoints::PlaygroundWeaponDef;
 
 #[derive(Resource, Default)]
-pub struct PlaygroundDebug {
+pub struct EditorOverlays {
     pub skeleton: bool,
     pub hardpoints: bool,
     /// Mirror of avian's `PhysicsGizmos::enabled`, so the panel can show its state. Kept
@@ -32,10 +33,14 @@ pub struct PlaygroundDebug {
     /// The walk's footfalls: where each foot is going, where it is nailed, and how far the
     /// legs can reach.
     pub gait: bool,
+    /// Blender-style orbit camera in place of the follow camera. See `inspect`.
+    pub orbit_camera: bool,
+    /// Hold the character in its rest pose (the T-pose on most rigs). See `inspect`.
+    pub rest_pose: bool,
     pub ui_dirty: bool,
 }
 
-impl PlaygroundDebug {
+impl EditorOverlays {
     pub const fn toggle_skeleton(&mut self) {
         self.skeleton = !self.skeleton;
         self.ui_dirty = true;
@@ -49,6 +54,21 @@ impl PlaygroundDebug {
     pub const fn toggle_gait(&mut self) {
         self.gait = !self.gait;
         self.ui_dirty = true;
+    }
+
+    pub const fn toggle_orbit_camera(&mut self) {
+        self.orbit_camera = !self.orbit_camera;
+        self.ui_dirty = true;
+    }
+
+    pub const fn toggle_rest_pose(&mut self) {
+        self.rest_pose = !self.rest_pose;
+        self.ui_dirty = true;
+    }
+
+    /// Either inspect tool is on, so the character should hold still for it.
+    pub const fn inspecting(&self) -> bool {
+        self.orbit_camera || self.rest_pose
     }
 }
 
@@ -72,7 +92,7 @@ const fn foot_color(foot: Foot) -> Color {
 // Indexed only by `Foot::index()` (0/1 over a two-variant enum) into `[T; 2]`
 // arrays -- structurally in bounds, not a real panic risk.
 #[allow(clippy::indexing_slicing)]
-pub fn draw_gait_gizmos(debug: Res<PlaygroundDebug>, mut gizmos: Gizmos, players: Query<&Legs>) {
+pub fn draw_gait_gizmos(debug: Res<EditorOverlays>, mut gizmos: Gizmos, players: Query<&Legs>) {
     if !debug.gait {
         return;
     }
@@ -144,7 +164,7 @@ pub fn physics_gizmos_enabled(store: &GizmoConfigStore) -> bool {
 
 /// Pick up `F3` presses (or anything else touching the config) so the panel label matches
 /// what is actually on screen.
-pub fn sync_physics_toggle(mut debug: ResMut<PlaygroundDebug>, store: Res<GizmoConfigStore>) {
+pub fn sync_physics_toggle(mut debug: ResMut<EditorOverlays>, store: Res<GizmoConfigStore>) {
     let enabled = physics_gizmos_enabled(&store);
     if debug.physics != enabled {
         debug.physics = enabled;
@@ -168,9 +188,9 @@ pub fn reset_gizmo_bias(mut store: ResMut<GizmoConfigStore>) {
 /// Skeleton and hardpoint overlays for every player in the arena.
 #[allow(clippy::too_many_arguments)]
 pub fn draw_player_overlays(
-    debug: Res<PlaygroundDebug>,
+    debug: Res<EditorOverlays>,
     player_def: Res<PlayerAssetDef>,
-    weapon_def: Res<PlaygroundWeaponDef>,
+    weapon_def: Res<WeaponDoc>,
     mut gizmos: Gizmos,
     players: Query<(Entity, Option<&EquippedWeapon>), With<Player>>,
     children_q: Query<&Children>,
@@ -178,8 +198,34 @@ pub fn draw_player_overlays(
     transforms: Query<&GlobalTransform>,
     names: Query<&Name>,
     parents: Query<&ChildOf>,
+    prop_def: Res<PropDoc>,
+    props: Query<Entity, With<EditorProp>>,
 ) {
     if !debug.skeleton && !debug.hardpoints {
+        return;
+    }
+
+    // A prop stands in for the hidden character: draw it, and only it.
+    if let Some(prop) = props.iter().next() {
+        let joints = joints_under(prop, &children_q, &skinned_q);
+        if debug.skeleton && !joints.is_empty() {
+            draw_skeleton(&mut gizmos, &joints, None, &transforms, &names, &parents);
+        }
+        if debug.hardpoints
+            && let Some(def) = prop_def.def.as_ref()
+        {
+            let bones = bone_map(&joints, &names);
+            draw_hardpoints(
+                &mut gizmos,
+                &def.hardpoints,
+                None,
+                &transforms,
+                |anchor| match anchor {
+                    Some(bone) => bones.get(bone).copied(),
+                    None => Some(prop),
+                },
+            );
+        }
         return;
     }
 

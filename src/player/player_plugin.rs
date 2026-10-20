@@ -18,7 +18,7 @@ use crate::player::systems::leg_ik::{
     GaitReadout, GaitSettings, LegIkEnabled, apply_leg_ik, resolve_legs, toggle_leg_ik,
 };
 use crate::player::systems::loadout::{SwitchWeapon, switch_weapons};
-use crate::player::systems::shoot::{ReloadRequest, shoot_weapons, tick_reloads};
+use crate::player::systems::shoot::{ReloadRequest, aim_animation, shoot_weapons, tick_reloads};
 use crate::player::systems::spawn_players::{fix_scene_transform, spawn_players};
 use crate::player::systems::torso_twist::{
     TorsoTwistEnabled, apply_torso_twist, resolve_twist_bones, toggle_torso_twist,
@@ -84,6 +84,7 @@ impl Plugin for PlayerPlugin {
                     switch_weapons,
                     equip_pending_weapons,
                     keep_weapons_snapped,
+                    aim_animation,
                     shoot_weapons,
                     tick_reloads,
                     fix_scene_transform,
@@ -94,7 +95,7 @@ impl Plugin for PlayerPlugin {
                     tick_bleed_out,
                     choose_respawn_anchor,
                     tick_respawns,
-                    check_team_wipe.run_if(crate::playground::state::in_normal_game),
+                    check_team_wipe.run_if(crate::character_editor::state::in_normal_game),
                 )
                     .run_if(in_state(GameState::InGame)),
             )
@@ -135,7 +136,7 @@ fn auto_outline_scenes(
 ) {
     for entity in query.iter() {
         // `try_insert`, not `insert`: a scene root can be despawned between this system
-        // queueing the command and the buffers being applied — the playground's model swap
+        // queueing the command and the buffers being applied — the character editor's model swap
         // does exactly that on the frame it changes character — and a plain `insert` on a
         // despawned entity is a hard error that takes the app down.
         commands.entity(entity).try_insert((

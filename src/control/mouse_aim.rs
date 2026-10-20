@@ -10,7 +10,7 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 use crate::camera::components::GameCamera;
-use crate::control::components::InputKeyboard;
+use crate::control::components::{GameInputBlock, InputKeyboard};
 use crate::player::components::{AutoAim, Player, PlayerDead};
 
 /// Project the cursor onto the ground plane and point the keyboard player's `AutoAim`
@@ -23,7 +23,11 @@ pub fn mouse_aim(
         (&GlobalTransform, &mut AutoAim),
         (With<Player>, With<InputKeyboard>, Without<PlayerDead>),
     >,
+    block: Option<Res<GameInputBlock>>,
 ) {
+    if block.is_some_and(|b| b.mouse_aim) {
+        return;
+    }
     let Ok(window) = windows.single() else { return };
     let Some(cursor) = window.cursor_position() else {
         return;

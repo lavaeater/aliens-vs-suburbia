@@ -1,8 +1,8 @@
 use crate::asset_browser::state::AssetBrowserState;
 use crate::asset_browser::ui::{
-    handle_key_input, rebuild_attachment_panel, rebuild_bone_list, rebuild_clip_tag_list,
+    handle_key_input, rebuild_attachment_panel, rebuild_bone_list, rebuild_clip_list,
     rebuild_folder_list, rebuild_hardpoint_panel, rebuild_list, rebuild_node_list,
-    rebuild_sources_list, rebuild_type_picker, scroll_clip_tag_list, scroll_to_selection,
+    rebuild_sources_list, rebuild_type_picker, scroll_clip_list, scroll_to_selection,
     spawn_asset_browser_ui, update_selected_bone_label,
 };
 use crate::asset_browser::viewer::{
@@ -62,9 +62,9 @@ impl Plugin for AssetBrowserPlugin {
                     apply_viewer_scale,
                     load_extra_animation_sources,
                     merge_extra_anim_clips,
-                    scroll_clip_tag_list,
+                    scroll_clip_list,
                     rebuild_node_list,
-                    rebuild_clip_tag_list,
+                    rebuild_clip_list,
                     rebuild_sources_list,
                     rebuild_type_picker,
                 )

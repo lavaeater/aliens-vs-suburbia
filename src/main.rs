@@ -1,14 +1,18 @@
+// Proving `Sync` for bevy_render's `ViewTarget` walks deep into wgpu's types and passes
+// the default limit of 128; newer nightlies flag that as `recursion_depth_exceeding_limit`
+// (rust-lang/rust#159228), due to become a hard error. Compile-time only.
+#![recursion_limit = "256"]
+
 use crate::ai::components::approach_and_attack_player_components::ApproachAndAttackPlayerData;
 use crate::ai::components::avoid_wall_components::AvoidWallsData;
 use crate::game_state::game_state_plugin::GamePlugin;
 use crate::general::components::Health;
 use crate::general::components::map_components::CurrentTile;
 use avian3d::prelude::{PhysicsDebugPlugin, PhysicsGizmos, PhysicsPlugins};
-use bevy::app::{App, PluginGroup, Startup};
 use bevy::gizmos::AppGizmoBuilder;
 use bevy::gizmos::config::GizmoConfig;
 use bevy::log::LogPlugin;
-use bevy::prelude::{Commands, NextState, ResMut};
+use bevy::prelude::*;
 use bevy::{DefaultPlugins, log};
 use bevy_skein::SkeinPlugin;
 use bevy_wind_waker_shader::flat::FlatShaderPlugin;
@@ -23,6 +27,7 @@ mod assets;
 pub mod behavior;
 mod building;
 pub(crate) mod camera;
+pub(crate) mod character_editor;
 mod constants;
 mod control;
 pub(crate) mod facts;
@@ -40,9 +45,9 @@ pub(crate) mod model_settings;
 pub(crate) mod music;
 pub(crate) mod player;
 pub(crate) mod player_setup;
-pub(crate) mod playground;
 pub(crate) mod poly_pizza;
 pub(crate) mod settings;
+pub mod skein;
 pub(crate) mod towers;
 pub(crate) mod ui;
 
@@ -128,7 +133,10 @@ fn print_help() {
     println!("Aliens vs Suburbia\n");
     println!("USAGE:");
     println!("  cargo run                                  Launch the game");
-    println!("  cargo run -- --playground                  Launch straight into the playground");
+    println!(
+        "  cargo run -- --editor                      Launch straight into the character editor"
+    );
+    println!("                                             (--playground still works as an alias)");
     println!("  cargo run -- --asset-browser               Launch straight into the asset browser");
     println!("  cargo run --features map-editor -- --map-editor [--file <path>]");
     println!("                                             Launch the map editor TUI");
@@ -172,9 +180,10 @@ fn main() -> std::process::ExitCode {
         };
     }
 
-    // Boot straight into the playground, skipping the menu. Handy when iterating on the
-    // playground itself; the menu button does the same two things.
-    let straight_to_playground = args.iter().any(|a| a == "--playground");
+    // Boot straight into the character editor, skipping the menu. Handy when iterating on
+    // the editor itself; the menu button does the same two things. `--playground` is the
+    // editor's old name, kept so muscle memory still works.
+    let straight_to_editor = args.iter().any(|a| a == "--editor" || a == "--playground");
     // Same idea for the asset browser: it is a tool screen you open, tweak in, and reload.
     let straight_to_asset_browser = args.iter().any(|a| a == "--asset-browser");
 
@@ -213,11 +222,11 @@ fn main() -> std::process::ExitCode {
         );
     }
 
-    if straight_to_playground {
+    if straight_to_editor {
         app.add_systems(
             Startup,
             |mut commands: Commands, mut next: ResMut<NextState<game_state::GameState>>| {
-                commands.init_resource::<playground::state::PlaygroundSession>();
+                commands.init_resource::<character_editor::state::EditorSession>();
                 next.set(game_state::GameState::InGame);
             },
         );

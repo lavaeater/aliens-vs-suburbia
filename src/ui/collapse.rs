@@ -1,6 +1,6 @@
 //! Foldable sections for the tool screens.
 //!
-//! Both the playground and the asset browser are one tall column of lists in a narrow
+//! Both the character editor and the asset browser are one tall column of lists in a narrow
 //! pane, and there is never enough room for all of them. Which list needs the space
 //! depends on what you are doing, so rather than pick heights that suit nobody, every
 //! section title is a button that folds its contents away.

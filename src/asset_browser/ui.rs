@@ -1,5 +1,5 @@
 use crate::asset_browser::state::{
-    ANIM_KEY_NAMES, AssetBrowserState, CHARACTER_NODE_PREFIX, HARDPOINT_ROLES, ModelType,
+    AssetBrowserState, CHARACTER_NODE_PREFIX, HARDPOINT_ROLES, ModelType,
 };
 use crate::asset_browser::viewer::AssetBrowserViewerPanel;
 use crate::game_state::GameState;
@@ -23,12 +23,7 @@ pub struct AssetAnimLabel;
 #[derive(Component)]
 pub struct NodeListContainer;
 #[derive(Component)]
-pub struct ClipTagContainer;
-/// Kept for a future re-enable of the game-key -> tag-path binding UI. Currently
-/// not spawned; bind resolution still works off the persisted `animation_bindings`.
-#[allow(dead_code)]
-#[derive(Component)]
-pub struct BindingContainer;
+pub struct ClipListContainer;
 #[derive(Component)]
 pub struct FolderContainer;
 #[derive(Component)]
@@ -192,21 +187,21 @@ pub fn spawn_asset_browser_ui(
                 .insert(NodeListContainer);
         });
 
-        // Clip tags section — tag each of the model's clips with a free-form path.
-        section_header(left, "CLIP TAGS", &section_theme);
+        // Clips section — what the model carries and which keys the def maps to them.
+        section_header(left, "CLIPS", &section_theme);
         left.with_child(|c| {
             c.insert_bundle(lava_ui_builder::label(
-                "click a clip, type a path e.g. Combat/Ranged/Shoot",
+                "map keys to clips in the Character Editor",
                 &hint,
             ))
-            .insert(SectionBody("CLIP TAGS"));
+            .insert(SectionBody("CLIPS"));
         });
         left.with_child(|c| {
             c.insert_bundle(lava_ui_builder::label(
                 "scroll wheel over the list to see more",
                 &hint,
             ))
-            .insert(SectionBody("CLIP TAGS"));
+            .insert(SectionBody("CLIPS"));
         });
         left.with_child(|c| {
             c.display_flex()
@@ -217,9 +212,9 @@ pub fn spawn_asset_browser_ui(
                     n.align_self = AlignSelf::Stretch;
                     n.max_height = Val::Px(180.0);
                 })
-                .insert(ClipTagContainer)
+                .insert(ClipListContainer)
                 .insert(ScrollPosition::default())
-                .insert(SectionBody("CLIP TAGS"));
+                .insert(SectionBody("CLIPS"));
         });
 
         // Height section
@@ -478,19 +473,6 @@ pub fn handle_key_input(
             continue;
         }
 
-        // While a tag text-box is open, keystrokes edit the buffer instead of navigating.
-        if state.tag_edit_clip.is_some() {
-            match &event.logical_key {
-                Key::Escape => state.tag_edit_cancel(),
-                Key::Enter => state.tag_edit_commit(),
-                Key::Backspace => state.tag_edit_backspace(),
-                Key::Space => state.tag_edit_push(" "),
-                Key::Character(c) => state.tag_edit_push(c.as_str()),
-                _ => {}
-            }
-            continue;
-        }
-
         match &event.logical_key {
             Key::ArrowUp => state.move_up(),
             Key::ArrowDown => state.move_down(),
@@ -695,10 +677,10 @@ pub fn scroll_to_selection(
     }
 }
 
-/// Mouse-wheel scrolling for the clip-tag list: scrolls only while the cursor is
+/// Mouse-wheel scrolling for the clip list: scrolls only while the cursor is
 /// over the list, and clamps to the scrollable range so scroll offset never runs
 /// past the content (Bevy clamps the rendered offset but not the component value).
-pub fn scroll_clip_tag_list(
+pub fn scroll_clip_list(
     mut wheel: MessageReader<bevy::input::mouse::MouseWheel>,
     windows: Query<&Window>,
     mut container_q: Query<
@@ -707,7 +689,7 @@ pub fn scroll_clip_tag_list(
             &bevy::ui::UiGlobalTransform,
             &mut ScrollPosition,
         ),
-        With<ClipTagContainer>,
+        With<ClipListContainer>,
     >,
 ) {
     use bevy::input::mouse::MouseScrollUnit;
@@ -810,18 +792,17 @@ pub fn rebuild_node_list(
     });
 }
 
-/// One list item per clip in the model (plus external-source clips). Click a clip
-/// to open a text box and type a free-form hierarchical tag path. While editing,
-/// the buffer and any matching autocomplete suggestions are shown inline.
-pub fn rebuild_clip_tag_list(
+/// One row per clip in the model (plus external-source clips), with the keys the def
+/// maps to it. Read-only: the character editor's Animation tab is where keys are mapped.
+pub fn rebuild_clip_list(
     mut state: ResMut<AssetBrowserState>,
     mut commands: Commands,
-    container_q: Query<Entity, With<ClipTagContainer>>,
+    container_q: Query<Entity, With<ClipListContainer>>,
 ) {
-    if !state.tags_dirty {
+    if !state.clips_dirty {
         return;
     }
-    state.tags_dirty = false;
+    state.clips_dirty = false;
 
     let Ok(container) = container_q.single() else {
         return;
@@ -838,10 +819,6 @@ pub fn rebuild_clip_tag_list(
     clips.sort();
     clips.dedup();
 
-    let editing = state.tag_edit_clip.clone();
-    let buffer = state.tag_edit_buffer.clone();
-    let suggestions = state.tag_suggestions();
-
     commands.entity(container).with_children(|parent| {
         if clips.is_empty() {
             parent.spawn((
@@ -852,17 +829,13 @@ pub fn rebuild_clip_tag_list(
             return;
         }
         for clip in clips {
-            let tag = state.clip_tags.get(&clip).cloned().unwrap_or_default();
+            let keys: Vec<String> = state
+                .animations
+                .iter()
+                .filter(|(_, mapped)| **mapped == clip)
+                .map(|(key, _)| key.default_search().to_string())
+                .collect();
             let short = clip.rsplit('|').next().unwrap_or(&clip).to_string();
-            let is_editing = editing.as_deref() == Some(clip.as_str());
-
-            // Clickable row: "clipname   tag".
-            let clip_for_click = clip.clone();
-            let bg = if is_editing {
-                Color::srgba(0.14, 0.20, 0.10, 0.95)
-            } else {
-                Color::srgba(0.07, 0.10, 0.14, 0.70)
-            };
             parent
                 .spawn((
                     Node {
@@ -875,14 +848,7 @@ pub fn rebuild_clip_tag_list(
                         column_gap: Val::Px(6.0),
                         ..Default::default()
                     },
-                    BackgroundColor(bg),
-                    InteractionPalette {
-                        none: bg,
-                        hovered: Color::srgba(0.15, 0.24, 0.14, 0.95),
-                        pressed: Color::srgba(0.10, 0.16, 0.10, 1.0),
-                    },
-                    bevy::picking::hover::Hovered::default(),
-                    bevy::ui_widgets::Button,
+                    BackgroundColor(Color::srgba(0.07, 0.10, 0.14, 0.70)),
                 ))
                 .with_children(|row| {
                     row.spawn((
@@ -895,201 +861,16 @@ pub fn rebuild_clip_tag_list(
                             ..Default::default()
                         },
                     ));
-                    let (tag_text, tag_color) = if tag.is_empty() {
+                    let (keys_text, keys_color) = if keys.is_empty() {
                         ("--".to_string(), Color::srgba(0.5, 0.55, 0.5, 0.6))
                     } else {
-                        (tag.clone(), Color::srgb(0.55, 0.85, 0.65))
+                        (keys.join(", "), Color::srgb(0.55, 0.85, 0.65))
                     };
                     row.spawn((
-                        Text::new(tag_text),
+                        Text::new(keys_text),
                         TextFont::default().with_font_size(10.0),
-                        TextColor(tag_color),
+                        TextColor(keys_color),
                     ));
-                })
-                .observe(move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
-                    s.begin_tag_edit(&clip_for_click);
-                });
-
-            // While this clip is being edited, show the text box + suggestions.
-            if is_editing {
-                let display = format!("> {buffer}_");
-                parent.spawn((
-                    Text::new(display),
-                    TextFont::default().with_font_size(11.0),
-                    TextColor(Color::srgb(0.95, 0.95, 0.7)),
-                    Node {
-                        padding: UiRect::axes(Val::Px(8.0), Val::Px(2.0)),
-                        ..Default::default()
-                    },
-                    BackgroundColor(Color::srgba(0.05, 0.08, 0.05, 0.9)),
-                ));
-                parent.spawn((
-                    Text::new("[Enter] save  [Esc] cancel"),
-                    TextFont::default().with_font_size(9.0),
-                    TextColor(Color::srgba(0.45, 0.6, 0.45, 0.7)),
-                    Node {
-                        padding: UiRect::axes(Val::Px(8.0), Val::Px(0.0)),
-                        ..Default::default()
-                    },
-                ));
-                if !suggestions.is_empty() {
-                    parent
-                        .spawn((Node {
-                            flex_direction: FlexDirection::Row,
-                            flex_wrap: FlexWrap::Wrap,
-                            column_gap: Val::Px(3.0),
-                            row_gap: Val::Px(3.0),
-                            padding: UiRect::axes(Val::Px(8.0), Val::Px(2.0)),
-                            ..Default::default()
-                        },))
-                        .with_children(|chips| {
-                            for sug in &suggestions {
-                                let sug_clone = sug.clone();
-                                let cbg = Color::srgba(0.10, 0.22, 0.18, 0.9);
-                                chips
-                                    .spawn((
-                                        Node {
-                                            padding: UiRect::axes(Val::Px(5.0), Val::Px(2.0)),
-                                            border_radius: BorderRadius::all(Val::Px(3.0)),
-                                            ..Default::default()
-                                        },
-                                        BackgroundColor(cbg),
-                                        InteractionPalette {
-                                            none: cbg,
-                                            hovered: Color::srgba(0.15, 0.35, 0.28, 0.95),
-                                            pressed: Color::srgba(0.08, 0.18, 0.14, 1.0),
-                                        },
-                                        bevy::picking::hover::Hovered::default(),
-                                        bevy::ui_widgets::Button,
-                                    ))
-                                    .with_child((
-                                        Text::new(sug.clone()),
-                                        TextFont::default().with_font_size(9.0),
-                                        TextColor(Color::srgb(0.7, 0.9, 0.8)),
-                                    ))
-                                    .observe(
-                                        move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
-                                            s.tag_edit_accept_suggestion(&sug_clone);
-                                        },
-                                    );
-                            }
-                        });
-                }
-            }
-        }
-    });
-}
-
-/// One row per game animation key, cycling its binding through the in-use tag paths.
-/// Currently unregistered — the bindings UI is hidden for now (see BindingContainer).
-#[allow(dead_code)]
-pub fn rebuild_binding_list(
-    state: Res<AssetBrowserState>,
-    mut commands: Commands,
-    container_q: Query<Entity, With<BindingContainer>>,
-) {
-    if !state.tags_dirty {
-        return;
-    }
-
-    let Ok(container) = container_q.single() else {
-        return;
-    };
-    commands.entity(container).despawn_related::<Children>();
-
-    let rows: Vec<(String, String)> = ANIM_KEY_NAMES
-        .iter()
-        .map(|&k| {
-            (
-                k.to_string(),
-                state.animation_bindings.get(k).cloned().unwrap_or_default(),
-            )
-        })
-        .collect();
-
-    commands.entity(container).with_children(|parent| {
-        for (key, tag) in rows {
-            let key_prev = key.clone();
-            let key_next = key.clone();
-            let tag_display = if tag.is_empty() {
-                "--".to_string()
-            } else {
-                tag.clone()
-            };
-            let tag_color = if tag.is_empty() {
-                Color::srgb(0.5, 0.55, 0.5)
-            } else {
-                Color::srgb(0.9, 0.85, 0.65)
-            };
-            parent
-                .spawn((
-                    Node {
-                        width: Val::Percent(100.0),
-                        flex_direction: FlexDirection::Row,
-                        justify_content: JustifyContent::SpaceBetween,
-                        align_items: AlignItems::Center,
-                        padding: UiRect::axes(Val::Px(4.0), Val::Px(2.0)),
-                        column_gap: Val::Px(4.0),
-                        ..Default::default()
-                    },
-                    BackgroundColor(Color::srgba(0.07, 0.10, 0.14, 0.70)),
-                ))
-                .with_children(|row| {
-                    row.spawn((
-                        Text::new(key.clone()),
-                        TextFont::default().with_font_size(10.0),
-                        TextColor(Color::srgb(0.6, 0.75, 0.6)),
-                    ));
-                    row.spawn((
-                        Node {
-                            width: Val::Px(14.0),
-                            ..Default::default()
-                        },
-                        BackgroundColor(Color::srgba(0.15, 0.15, 0.15, 0.6)),
-                        bevy::picking::hover::Hovered::default(),
-                        bevy::ui_widgets::Button,
-                    ))
-                    .with_child((
-                        Text::new("<"),
-                        TextFont::default().with_font_size(9.0),
-                        TextColor(Color::srgb(0.8, 0.8, 0.8)),
-                    ))
-                    .observe(
-                        move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
-                            s.cycle_binding(&key_prev, -1);
-                        },
-                    );
-
-                    row.spawn((
-                        Text::new(tag_display),
-                        TextFont::default().with_font_size(10.0),
-                        TextColor(tag_color),
-                        Node {
-                            flex_grow: 1.0,
-                            overflow: Overflow::clip(),
-                            ..Default::default()
-                        },
-                    ));
-
-                    row.spawn((
-                        Node {
-                            width: Val::Px(14.0),
-                            ..Default::default()
-                        },
-                        BackgroundColor(Color::srgba(0.15, 0.15, 0.15, 0.6)),
-                        bevy::picking::hover::Hovered::default(),
-                        bevy::ui_widgets::Button,
-                    ))
-                    .with_child((
-                        Text::new(">"),
-                        TextFont::default().with_font_size(9.0),
-                        TextColor(Color::srgb(0.8, 0.8, 0.8)),
-                    ))
-                    .observe(
-                        move |_: On<Activate>, mut s: ResMut<AssetBrowserState>| {
-                            s.cycle_binding(&key_next, 1);
-                        },
-                    );
                 });
         }
     });

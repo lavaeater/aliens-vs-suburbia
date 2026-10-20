@@ -1,0 +1,163 @@
+#:schema https://dystroy.org/bacon/.bacon.schema.json
+#
+# bacon config for aliens-vs-suburbia.
+#
+# Every job runs on nightly with the same fast-compile setup, so they all share
+# one target dir and one sccache namespace:
+#
+#   * cranelift as the dev-profile codegen backend
+#     (CARGO_PROFILE_DEV_CODEGEN_BACKEND + `-Z codegen-backend`; release keeps LLVM)
+#   * sccache in front of rustc (RUSTC_WRAPPER)
+#   * the parallel rustc frontend (`-Z threads=8`; rustc recommends 8 as the sweet spot)
+#   * `--timings` on every job: a report lands in target/cargo-timings/ each run
+#   * `-Zhint-mostly-unused` for dependencies only, via the cargo profile key
+#     `hint-mostly-unused` (`-Z profile-hint-mostly-unused` + `--config`), which is
+#     where it pays off: bevy is huge and we touch a sliver of it. Applying it to
+#     our own crates would only make them slower to compile.
+#
+# Prerequisites:
+#   rustup toolchain install nightly
+#   rustup component add rustc-codegen-cranelift-preview --toolchain nightly
+#   cargo install sccache cargo-nextest
+#
+# Keys:  c check   y clippy   a clippy-all (default)   f fix   d doc   o doc-open
+#        t nextest   r run   e run-release
+#
+# `check` chains into `clippy` on success (on_success = "job:clippy"): press `c`
+# for the fast pass, and if it is clean bacon moves on to the slower lint pass
+# by itself. Press `c` again to go back to plain check.
+#
+# Complete help on configuration: https://dystroy.org/bacon/config/
+
+default_job = "clippy-all"
+
+# Environment shared by every job.
+[env]
+CARGO_TERM_COLOR = "always"
+RUSTC_WRAPPER = "sccache"
+CARGO_PROFILE_DEV_CODEGEN_BACKEND = "cranelift"
+RUSTFLAGS = "-Z threads=8"
+
+# --- static analysis -----------------------------------------------------------
+
+[jobs.check]
+command = [
+    "cargo", "+nightly", "check",
+    "-Z", "codegen-backend", "-Z", "profile-hint-mostly-unused", "--timings",
+    "--config", 'profile.dev.package."*".hint-mostly-unused=true',
+    "--workspace", "--all-targets",
+]
+need_stdout = false
+on_success = "job:clippy"
+
+# Default target only; `clippy-all` covers tests, examples and benches too.
+[jobs.clippy]
+command = [
+    "cargo", "+nightly", "clippy",
+    "-Z", "codegen-backend", "-Z", "profile-hint-mostly-unused", "--timings",
+    "--config", 'profile.dev.package."*".hint-mostly-unused=true',
+]
+need_stdout = false
+
+[jobs.clippy-all]
+command = [
+    "cargo", "+nightly", "clippy",
+    "-Z", "codegen-backend", "-Z", "profile-hint-mostly-unused", "--timings",
+    "--config", 'profile.dev.package."*".hint-mostly-unused=true',
+    "--workspace", "--all-targets",
+]
+need_stdout = false
+
+# One-shot: apply every machine-fixable clippy suggestion across the workspace,
+# then hand over to `clippy-all` to show what is left. It moves on whether or not
+# the fix run "succeeds" - with deny-level lints still in the tree cargo exits
+# non-zero even though the fixes were written. Not a job to sit in: it edits
+# your files, so it would fire on its own edits.
+[jobs.fix]
+command = [
+    "cargo", "+nightly", "clippy",
+    "-Z", "codegen-backend", "-Z", "profile-hint-mostly-unused", "--timings",
+    "--config", 'profile.dev.package."*".hint-mostly-unused=true',
+    "--workspace", "--all-targets",
+    "--fix", "--allow-dirty", "--allow-staged",
+]
+need_stdout = false
+on_success = "job:clippy-all"
+on_failure = "job:clippy-all"
+
+# --- docs ------------------------------------------------------------------------
+
+[jobs.doc]
+command = [
+    "cargo", "+nightly", "doc",
+    "-Z", "codegen-backend", "-Z", "profile-hint-mostly-unused", "--timings",
+    "--config", 'profile.dev.package."*".hint-mostly-unused=true',
+    "--no-deps",
+]
+need_stdout = false
+
+# If the doc compiles, it opens in your browser and bacon switches back to the
+# previous job so we don't open a new tab on every change.
+[jobs.doc-open]
+command = [
+    "cargo", "+nightly", "doc",
+    "-Z", "codegen-backend", "-Z", "profile-hint-mostly-unused", "--timings",
+    "--config", 'profile.dev.package."*".hint-mostly-unused=true',
+    "--no-deps", "--open",
+]
+need_stdout = false
+on_success = "back"
+
+# --- tests -------------------------------------------------------------------------
+
+[jobs.nextest]
+command = [
+    "cargo", "+nightly", "nextest", "run",
+    "-Z", "codegen-backend", "-Z", "profile-hint-mostly-unused", "--timings",
+    "--config", 'profile.dev.package."*".hint-mostly-unused=true',
+    "--workspace",
+]
+need_stdout = true
+analyzer = "nextest"
+
+# --- running the game ----------------------------------------------------------------
+
+# Dev build: cranelift, fastest to compile. Output streams into bacon as the game
+# runs; saving a file kills the game and rebuilds. Game args go after `--`, e.g.
+#   bacon run -- -- --playground
+[jobs.run]
+command = [
+    "cargo", "+nightly", "run",
+    "-Z", "codegen-backend", "-Z", "profile-hint-mostly-unused", "--timings",
+    "--config", 'profile.dev.package."*".hint-mostly-unused=true',
+]
+need_stdout = true
+allow_warnings = true
+background = false
+on_change_strategy = "kill_then_restart"
+
+# Release build: the `[profile.release]` in Cargo.toml (LLVM, thin LTO, one
+# codegen unit). The cranelift env var only touches the dev profile, so this is a
+# real optimised binary; it still gets sccache and the parallel frontend.
+[jobs.run-release]
+command = [
+    "cargo", "+nightly", "run",
+    "-Z", "codegen-backend", "-Z", "profile-hint-mostly-unused", "--timings",
+    "--config", 'profile.dev.package."*".hint-mostly-unused=true',
+    "--release",
+]
+need_stdout = true
+allow_warnings = true
+background = false
+on_change_strategy = "kill_then_restart"
+
+[keybindings]
+c = "job:check"
+y = "job:clippy"
+a = "job:clippy-all"
+d = "job:doc"
+o = "job:doc-open"
+t = "job:nextest"
+f = "job:fix"
+r = "job:run"
+e = "job:run-release"

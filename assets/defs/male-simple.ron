@@ -1,0 +1,35 @@
+(
+    model_path: "new-models/male-simple.glb",
+    scale: 1.0,
+    model_type: Player((
+        ability: Bombardment,
+        throw_rate_per_minute: 60.0,
+        weapon: Some("assets/defs/Pistol.ron"),
+        extra_weapons: [
+            "assets/defs/Shotgun.ron",
+        ],
+        starting_ammo: [
+            (Pistol, 36),
+            (Shells, 12),
+            (Molotov, 2),
+        ],
+    )),
+    hidden_nodes: [],
+    animations: {
+        Idle: "Idle_A",
+        IdleShoot: "Pistol_Aim_Neutral",
+        Walk: "Walk",
+        Run: "Sprint",
+        Death: "Death_A",
+    },
+    animation_sources: [],
+    attachments: [],
+    hardpoints: {
+        "grip": (
+            anchor: Some("hand_r"),
+            translation: (-0.02, 0.06, 0.0),
+            rotation_euler_deg: (180.0, 90.0, -90.0),
+        ),
+    },
+    aim_bones: [],
+)
