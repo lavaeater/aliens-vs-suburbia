@@ -1,19 +1,17 @@
 use bevy::asset::Handle;
-use bevy::prelude::Commands;
-use bevy_seedling::prelude::{AudioSample, PlaybackSettings, SamplePlayer, Volume};
+use bevy_seedling::prelude::AudioSample;
 use rusty_music::clock::Beat;
-use rusty_music::musicians::{Chord, MusicPlayer, Note, Sampler, TonalPlayer, midi_diff_to_pitch};
+use rusty_music::instrument::{Channels, Instrument, NoteEvent};
+use rusty_music::musicians::{Chord, MusicPlayer, Note, Sampler, TonalPlayer};
 
-fn spawn_note(
-    commands: &mut Commands,
-    handle: &Handle<AudioSample>,
-    volume_db: f32,
-    midi_note_diff: i32,
-) {
-    commands.spawn((
-        SamplePlayer::new(handle.clone()).with_volume(Volume::Decibels(volume_db)),
-        PlaybackSettings::default().with_speed(midi_diff_to_pitch(midi_note_diff)),
-    ));
+/// One `Sampler` per sample, addressed by `NoteEvent::channel`.
+fn sample_channels(samples: &[Handle<AudioSample>], volume_db: f32) -> Box<dyn Instrument> {
+    Box::new(samples.iter().fold(Channels::default(), |channels, handle| {
+        channels.with(Sampler {
+            handle: handle.clone(),
+            volume: volume_db as f64,
+        })
+    }))
 }
 
 /// Sustained chord layer. Triggers on quarter-note positions; more positions
@@ -23,7 +21,14 @@ pub struct PadPlayer {
 }
 
 impl MusicPlayer for PadPlayer {
-    fn play(&mut self, beat: Beat, commands: &mut Commands, base_intensity: f32, chord: &Chord) {
+    fn take_instrument(&mut self) -> Option<Box<dyn Instrument>> {
+        Some(Box::new(Sampler {
+            handle: self.sampler.handle.clone(),
+            volume: self.sampler.volume,
+        }))
+    }
+
+    fn play(&mut self, beat: Beat, notes: &mut Vec<NoteEvent>, base_intensity: f32, chord: &Chord) {
         if beat.sixteenth != 0 {
             return;
         }
@@ -37,8 +42,7 @@ impl MusicPlayer for PadPlayer {
             return;
         }
         if let Some(note) = TonalPlayer::get_chord_note(chord, 1.0 - base_intensity) {
-            let vol = self.sampler.volume as f32 - 2.0 + base_intensity * 4.0;
-            spawn_note(commands, &self.sampler.handle, vol, note.midi_note_diff);
+            notes.push(NoteEvent::from_diff(note.midi_note_diff).gain_db(-2.0 + base_intensity * 4.0));
         }
     }
 }
@@ -52,7 +56,11 @@ pub struct ChordStabs {
 }
 
 impl MusicPlayer for ChordStabs {
-    fn play(&mut self, beat: Beat, commands: &mut Commands, base_intensity: f32, chord: &Chord) {
+    fn take_instrument(&mut self) -> Option<Box<dyn Instrument>> {
+        Some(sample_channels(&self.samples, self.volume))
+    }
+
+    fn play(&mut self, beat: Beat, notes: &mut Vec<NoteEvent>, base_intensity: f32, chord: &Chord) {
         if self.samples.is_empty() {
             return;
         }
@@ -74,14 +82,10 @@ impl MusicPlayer for ChordStabs {
             .collect();
         for (i, note) in strong.iter().enumerate() {
             let idx = (beat.bar_count as usize + beat.beat as usize + i) % self.samples.len();
-            let Some(sample) = self.samples.get(idx) else {
-                continue;
-            };
-            spawn_note(
-                commands,
-                sample,
-                self.volume - i as f32 * 2.0,
-                note.midi_note_diff,
+            notes.push(
+                NoteEvent::from_diff(note.midi_note_diff)
+                    .channel(idx)
+                    .gain_db(-(i as f32) * 2.0),
             );
         }
     }
@@ -95,25 +99,33 @@ pub struct UfoStingers {
     pub volume: f32,
 }
 
+impl UfoStingers {
+    const UFO: usize = 0;
+    const SID: usize = 1;
+}
+
 impl MusicPlayer for UfoStingers {
-    fn play(&mut self, beat: Beat, commands: &mut Commands, base_intensity: f32, chord: &Chord) {
+    fn take_instrument(&mut self) -> Option<Box<dyn Instrument>> {
+        Some(sample_channels(&[self.ufo.clone(), self.sid.clone()], self.volume))
+    }
+
+    fn play(&mut self, beat: Beat, notes: &mut Vec<NoteEvent>, base_intensity: f32, chord: &Chord) {
         if beat.beat == 0
             && beat.sixteenth == 0
             && beat.bar_count.is_multiple_of(2)
             && let Some(note) = TonalPlayer::get_scale_note(chord, 1.0 - base_intensity)
         {
-            spawn_note(commands, &self.ufo, self.volume, note.midi_note_diff);
+            notes.push(NoteEvent::from_diff(note.midi_note_diff).channel(Self::UFO));
         }
         if base_intensity > 0.5
             && beat.sixteenth == 3
             && beat.beat.is_multiple_of(2)
             && let Some(note) = TonalPlayer::get_chord_note(chord, 0.5)
         {
-            spawn_note(
-                commands,
-                &self.sid,
-                self.volume - 4.0,
-                note.midi_note_diff + 12,
+            notes.push(
+                NoteEvent::from_diff(note.midi_note_diff + 12)
+                    .channel(Self::SID)
+                    .gain_db(-4.0),
             );
         }
     }
