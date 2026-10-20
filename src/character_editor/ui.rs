@@ -20,8 +20,9 @@ use crate::character_editor::doc::{
     ConfirmAction, DocBar, Docs, EditorDoc, EditorFocus, PropDoc, SideDocs, Subject, WeaponDoc,
 };
 use crate::character_editor::hardpoints::{
-    COARSE_ROTATION, COARSE_TRANSLATION, FINE_ROTATION, FINE_TRANSLATION, HardpointEditor,
-    HardpointSide, add_role, ensure_role, guess_hand_bone, nudge_rotation, nudge_translation,
+    ActiveFrame, COARSE_ROTATION, COARSE_TRANSLATION, FINE_ROTATION, FINE_TRANSLATION,
+    HardpointEditor, HardpointSide, NudgeSpace, add_role, ensure_role, guess_hand_bone,
+    nudge_rotation, nudge_rotation_in_model, nudge_translation, nudge_translation_in_model,
 };
 use crate::character_editor::models::{
     EditorLibrary, def_stem,
@@ -497,7 +498,7 @@ fn nudge_row(
         .with_children(|strip| {
             strip.spawn((
                 Node {
-                    width: Val::Px(86.0),
+                    width: Val::Px(104.0),
                     ..Default::default()
                 },
                 Text::new(label),
@@ -531,18 +532,29 @@ fn nudge_row(
                     .observe(
                         move |_: On<Activate>,
                               mut editor: ResMut<HardpointEditor>,
+                              frame: Res<ActiveFrame>,
                               mut docs: SideDocs| {
                             let Some(role) = editor.active_role.clone() else {
                                 return;
                             };
+                            // Model axes need the live anchor; without one (nothing
+                            // spawned yet) the stored axes are all there is.
+                            let in_model = frame
+                                .anchor_in_model
+                                .filter(|_| editor.space == NudgeSpace::Model);
                             let Some(def) = docs.def_mut(editor.side) else {
                                 return;
                             };
                             let hardpoint = ensure_role(def, &role);
-                            if rotation {
-                                nudge_rotation(hardpoint, axis, delta);
-                            } else {
-                                nudge_translation(hardpoint, axis, delta);
+                            match (in_model, rotation) {
+                                (Some((turn, _)), true) => {
+                                    nudge_rotation_in_model(hardpoint, turn, axis, delta);
+                                }
+                                (Some(anchor), false) => {
+                                    nudge_translation_in_model(hardpoint, anchor, axis, delta);
+                                }
+                                (None, true) => nudge_rotation(hardpoint, axis, delta),
+                                (None, false) => nudge_translation(hardpoint, axis, delta),
                             }
                             editor.touch();
                         },
@@ -659,6 +671,7 @@ pub fn rebuild_hardpoint_panel(
     };
 
     let active = editor.active_role.clone();
+    let space = editor.space;
     let present: Vec<String> = def.hardpoints.keys().cloned().collect();
     let hardpoint = active
         .as_ref()
@@ -768,7 +781,41 @@ pub fn rebuild_hardpoint_panel(
             TextColor(Color::srgb(0.6, 0.8, 0.95)),
         ));
 
-        for (axis, name) in ["move X", "move Y", "move Z"].into_iter().enumerate() {
+        // Which way each row goes. A weapon's own axes are its model axes, so it has no
+        // switch; on a bone-anchored frame "model" and "anchor" differ, often wildly.
+        let (moves, turns) = match (side, space) {
+            (HardpointSide::Weapon, _) => (
+                ["move X (barrel)", "move Y (up)", "move Z (side)"],
+                ["turn X (roll)", "turn Y (yaw)", "turn Z (pitch)"],
+            ),
+            (HardpointSide::Character, NudgeSpace::Model) => (
+                ["move X (left)", "move Y (up)", "move Z (fwd)"],
+                ["turn X (pitch)", "turn Y (yaw)", "turn Z (roll)"],
+            ),
+            _ => (
+                ["move X", "move Y", "move Z"],
+                ["turn X", "turn Y", "turn Z"],
+            ),
+        };
+        if side.has_bones() {
+            let label = match space {
+                NudgeSpace::Model => "moves along: the model's axes",
+                NudgeSpace::Anchor => "moves along: the anchor bone's axes",
+            };
+            row(parent, label.to_string(), false, SUGGEST_COLOR).observe(
+                |_: On<Activate>, mut editor: ResMut<HardpointEditor>| {
+                    editor.space = editor.space.toggled();
+                    editor.touch();
+                },
+            );
+            parent.spawn((
+                Text::new("arrows on the frame: red X, green Y, blue Z"),
+                TextFont::default().with_font_size(10.0),
+                TextColor(Color::srgb(0.55, 0.7, 0.8)),
+            ));
+        }
+
+        for (axis, name) in moves.into_iter().enumerate() {
             nudge_row(
                 parent,
                 name.to_string(),
@@ -778,7 +825,7 @@ pub fn rebuild_hardpoint_panel(
                 false,
             );
         }
-        for (axis, name) in ["turn X", "turn Y", "turn Z"].into_iter().enumerate() {
+        for (axis, name) in turns.into_iter().enumerate() {
             nudge_row(
                 parent,
                 name.to_string(),

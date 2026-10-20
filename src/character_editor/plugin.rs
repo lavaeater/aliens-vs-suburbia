@@ -20,7 +20,8 @@ use crate::character_editor::doc::{
 };
 use crate::character_editor::focus::{EditorInputFocus, update_game_input_block};
 use crate::character_editor::hardpoints::{
-    HardpointEditor, apply_grip_to_equipped_weapon, apply_weapon_def_to_equipped_weapon,
+    ActiveFrame, HardpointEditor, apply_grip_to_equipped_weapon,
+    apply_weapon_def_to_equipped_weapon, draw_nudge_axes, track_active_hardpoint,
 };
 use crate::character_editor::inspect::{
     drive_orbit_camera, hold_player_still, hold_rest_pose, inspect_keys, inspecting,
@@ -107,6 +108,7 @@ impl Plugin for CharacterEditorPlugin {
                     draw_player_overlays,
                     draw_gait_gizmos,
                     rebuild_hardpoint_panel,
+                    (track_active_hardpoint, draw_nudge_axes).chain(),
                 )
                     .run_if(in_state(GameState::InGame))
                     .run_if(in_editor),
@@ -237,6 +239,7 @@ fn init_model_list(mut commands: Commands) {
         ui_dirty: true,
         ..Default::default()
     });
+    commands.insert_resource(ActiveFrame::default());
     // Fresh docs every session: `sync_weapon_doc` compares paths, so a stale one from a
     // previous session would suppress the reload of an edited-then-abandoned def.
     commands.insert_resource(EditorDoc::default());
