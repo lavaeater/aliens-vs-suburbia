@@ -59,6 +59,8 @@ pub enum PlayerAction {
     Ability,
     /// Hold to revive a downed teammate.
     Interact,
+    /// Switch the flashlight on or off.
+    Flashlight,
     BuildMode,
     PlaceBuild,
     CancelBuild,
@@ -75,7 +77,7 @@ pub enum PlayerAction {
 
 impl PlayerAction {
     /// The rows of the controls screen, in display order.
-    pub const REBINDABLE: [Self; 21] = [
+    pub const REBINDABLE: [Self; 22] = [
         Self::MoveUp,
         Self::MoveDown,
         Self::MoveLeft,
@@ -91,6 +93,7 @@ impl PlayerAction {
         Self::ThrowSpecial,
         Self::Ability,
         Self::Interact,
+        Self::Flashlight,
         Self::BuildMode,
         Self::PlaceBuild,
         Self::CancelBuild,
@@ -116,6 +119,7 @@ impl PlayerAction {
             Self::ThrowSpecial => "Grenade / molotov",
             Self::Ability => "Special ability",
             Self::Interact => "Interact / revive",
+            Self::Flashlight => "Flashlight",
             Self::BuildMode => "Build mode",
             Self::PlaceBuild => "Place (build)",
             Self::CancelBuild => "Cancel (build)",
@@ -224,6 +228,7 @@ fn default_binding(action: PlayerAction) -> ActionBinding {
         PlayerAction::Ability => ([Some(Key(KeyCode::KeyQ)), None], Some(Pad::North)), // Triangle
         // Circle, shared with cancel-build, which only applies in build mode.
         PlayerAction::Interact => ([Some(Key(KeyCode::KeyE)), None], Some(Pad::East)),
+        PlayerAction::Flashlight => ([Some(Key(KeyCode::KeyF)), None], Some(Pad::LeftThumb)), // L3
         PlayerAction::BuildMode => ([Some(Key(KeyCode::KeyB)), None], Some(Pad::West)), // Square
         PlayerAction::PlaceBuild => (
             [Some(Mouse(MouseButton::Left)), Some(Key(KeyCode::Space))],

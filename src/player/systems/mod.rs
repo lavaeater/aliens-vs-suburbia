@@ -3,6 +3,7 @@ pub(crate) mod arm_ik;
 pub(crate) mod auto_aim;
 pub(crate) mod death_revive;
 pub(crate) mod equip;
+pub(crate) mod flashlight;
 pub(crate) mod gait;
 pub(crate) mod leg_ik;
 pub(crate) mod loadout;

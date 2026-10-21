@@ -22,6 +22,7 @@
         ThrowSpecial: (keys: (Some(Key(KeyG)), None), pad: Some(LeftTrigger)),
         Ability: (keys: (Some(Key(KeyQ)), None), pad: Some(North)),
         Interact: (keys: (Some(Key(KeyE)), None), pad: Some(East)),
+        Flashlight: (keys: (Some(Key(KeyF)), None), pad: Some(LeftThumb)),
         BuildMode: (keys: (Some(Key(KeyB)), None), pad: Some(West)),
         PlaceBuild: (keys: (Some(Mouse(Left)), Some(Key(Space))), pad: Some(South)),
         CancelBuild: (keys: (Some(Key(Escape)), Some(Mouse(Right))), pad: Some(East)),

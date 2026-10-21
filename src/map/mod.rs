@@ -6,11 +6,14 @@ use enumflags2::*;
 pub mod chunk_loader;
 pub mod chunks;
 pub mod map_generator;
+pub mod map_lights;
 pub mod map_plugins;
 pub mod procgen;
 pub mod scatter;
 pub mod stitch;
 pub mod text_format;
+pub mod wall_mesh;
+pub mod walls;
 
 #[bitflags(default = Nothing)]
 #[repr(u64)]
