@@ -81,7 +81,9 @@ pub fn measure_subject(
             None => (None, 1.0),
         },
         Subject::Weapon => (
-            players.iter().find_map(|(_, equipped)| equipped.map(|e| e.0)),
+            players
+                .iter()
+                .find_map(|(_, equipped)| equipped.map(|e| e.0)),
             weapon_doc.def.as_ref().map_or(1.0, |d| d.scale),
         ),
         Subject::Character => (players.iter().next().map(|(entity, _)| entity), 1.0),
@@ -110,7 +112,10 @@ pub fn apply_prop_hidden_nodes(
     let Some(prop) = props.iter().next() else {
         return;
     };
-    let hidden = prop_doc.def.as_ref().map_or(&[][..], |d| d.hidden_nodes.as_slice());
+    let hidden = prop_doc
+        .def
+        .as_ref()
+        .map_or(&[][..], |d| d.hidden_nodes.as_slice());
     let mut stack = vec![prop];
     while let Some(entity) = stack.pop() {
         if let Ok((name, mut visibility)) = nodes.get_mut(entity) {
@@ -199,13 +204,20 @@ pub fn rebuild_model_tab(
     };
     let info = cached_info(&mut info_cache, &def);
     let subject = focus.subject;
-    let name = open.name().map_or_else(|| "(preview)".to_string(), str::to_string);
+    let name = open
+        .name()
+        .map_or_else(|| "(preview)".to_string(), str::to_string);
     let measure_height = measure.height;
     let at_scale = measure.at_scale;
 
     commands.entity(container).with_children(|parent| {
         heading(parent, "MODEL");
-        text(parent, format!("{name}  ({})", subject_label(subject)), 13.0, INFO);
+        text(
+            parent,
+            format!("{name}  ({})", subject_label(subject)),
+            13.0,
+            INFO,
+        );
         text(parent, def.model_path.clone(), 10.0, INFO);
         match &info {
             Some(info) => text(
@@ -231,7 +243,10 @@ fn cached_info(
     cache: &mut Option<(String, Option<gltf_info::GltfInfo>)>,
     def: &AssetDefinition,
 ) -> Option<gltf_info::GltfInfo> {
-    if cache.as_ref().is_none_or(|(path, _)| *path != def.model_path) {
+    if cache
+        .as_ref()
+        .is_none_or(|(path, _)| *path != def.model_path)
+    {
         *cache = Some((def.model_path.clone(), gltf_info::inspect(&def.model_path)));
     }
     cache.as_ref().and_then(|(_, info)| info.clone())

@@ -109,7 +109,18 @@ impl AnimationStore {
 /// They double as the intents pushed onto `CharacterState`'s stack, which resolves the
 /// stack into the one key whose clip plays (Walk + IdleShoot -> WalkShoot, say).
 #[derive(
-    Eq, Hash, PartialEq, PartialOrd, Ord, Copy, Clone, Debug, Reflect, Default, Serialize, Deserialize,
+    Eq,
+    Hash,
+    PartialEq,
+    PartialOrd,
+    Ord,
+    Copy,
+    Clone,
+    Debug,
+    Reflect,
+    Default,
+    Serialize,
+    Deserialize,
 )]
 #[reflect(Default)]
 #[type_path = "avs"]
@@ -410,8 +421,7 @@ pub fn preview_animation_handler(
     child_query: Query<&Children>,
 ) {
     for preview in previews.read() {
-        let Ok((mut current_key, character_state)) = characters.get_mut(preview.character)
-        else {
+        let Ok((mut current_key, character_state)) = characters.get_mut(preview.character) else {
             continue;
         };
         let Some(player_entity) =

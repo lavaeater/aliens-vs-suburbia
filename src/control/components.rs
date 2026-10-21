@@ -227,17 +227,32 @@ mod tests {
     #[test]
     fn firing_a_gun_aims_and_walking_while_firing_walks_and_aims() {
         let mut s = CharacterState::default();
-        assert_eq!(s.enter_state(AnimationKey::IdleShoot), Some(AnimationKey::IdleShoot));
-        assert_eq!(s.enter_state(AnimationKey::Walk), Some(AnimationKey::WalkShoot));
-        assert_eq!(s.leave_state(AnimationKey::IdleShoot), Some(AnimationKey::Walk));
+        assert_eq!(
+            s.enter_state(AnimationKey::IdleShoot),
+            Some(AnimationKey::IdleShoot)
+        );
+        assert_eq!(
+            s.enter_state(AnimationKey::Walk),
+            Some(AnimationKey::WalkShoot)
+        );
+        assert_eq!(
+            s.leave_state(AnimationKey::IdleShoot),
+            Some(AnimationKey::Walk)
+        );
     }
 
     #[test]
     fn a_throw_plays_over_aiming() {
         let mut s = CharacterState::default();
         s.enter_state(AnimationKey::IdleShoot);
-        assert_eq!(s.enter_state(AnimationKey::Throwing), Some(AnimationKey::Throwing));
-        assert_eq!(s.leave_state(AnimationKey::Throwing), Some(AnimationKey::IdleShoot));
+        assert_eq!(
+            s.enter_state(AnimationKey::Throwing),
+            Some(AnimationKey::Throwing)
+        );
+        assert_eq!(
+            s.leave_state(AnimationKey::Throwing),
+            Some(AnimationKey::IdleShoot)
+        );
     }
 
     #[test]

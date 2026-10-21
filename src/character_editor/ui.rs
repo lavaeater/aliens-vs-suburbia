@@ -24,12 +24,10 @@ use crate::character_editor::hardpoints::{
     HardpointEditor, HardpointSide, NudgeSpace, add_role, ensure_role, guess_hand_bone,
     nudge_rotation, nudge_rotation_in_model, nudge_translation, nudge_translation_in_model,
 };
-use crate::character_editor::models::{
-    EditorLibrary, def_stem,
-};
+use crate::character_editor::models::{EditorLibrary, def_stem};
 use crate::character_editor::prop::EditorProp;
-use crate::character_editor::suggest_hardpoints::ModelShape;
 use crate::character_editor::state::EditorSession;
+use crate::character_editor::suggest_hardpoints::ModelShape;
 use crate::player::components::Player;
 
 /// The right-hand pane. Its computed rectangle drives the game camera's viewport.
@@ -735,7 +733,11 @@ pub fn rebuild_hardpoint_panel(
 
         // First guesses read off the model file (`suggest_hardpoints`): every role this
         // side lacks, or the selected one again. A starting point for the nudge rows.
-        if side.roles().iter().any(|role| !present.iter().any(|r| r == role)) {
+        if side
+            .roles()
+            .iter()
+            .any(|role| !present.iter().any(|r| r == role))
+        {
             row(
                 parent,
                 "suggest the missing frames".to_string(),

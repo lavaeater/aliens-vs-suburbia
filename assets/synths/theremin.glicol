@@ -1,0 +1,17 @@
+// The saucer theremin: a sine that slides between notes with a wide, wobbling
+// vibrato and a faint octave shimmer. #rate and #wobble follow the danger.
+// @name theremin
+// @mode legato
+// @glide 0.3
+// @gain 0.3
+// @param cutoff 2400
+// @param rate 5.5
+// @param wobble 0.01
+
+~vib: sin #rate >> mul #wobble >> add 1
+~f: ~freq >> mul ~vib
+~f2: ~f >> mul 2.004
+~a: sin ~f
+~b: tri ~f2 >> mul 0.2
+~amp: ~gate >> adsr 0.2 0.4 0.85 0.8
+out: mix ~a ~b >> lpf #cutoff 0.7 >> mul ~amp

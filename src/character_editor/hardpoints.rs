@@ -502,7 +502,10 @@ mod tests {
         let mut hardpoint = Hardpoint::default();
         nudge_translation_in_model(&mut hardpoint, anchor, 1, 0.1);
         let in_model = anchor.0 * Vec3::from(hardpoint.translation) * anchor.1;
-        assert!((in_model - Vec3::new(0.0, 0.1, 0.0)).length() < 1e-4, "got {in_model}");
+        assert!(
+            (in_model - Vec3::new(0.0, 0.1, 0.0)).length() < 1e-4,
+            "got {in_model}"
+        );
     }
 
     #[test]
@@ -512,7 +515,11 @@ mod tests {
         nudge_rotation_in_model(&mut hardpoint, anchor, 1, 90.0);
         let world = anchor * hardpoint_frame(&hardpoint).rotation;
         let wanted = Quat::from_rotation_y(std::f32::consts::FRAC_PI_2) * anchor;
-        assert!(world.angle_between(wanted) < 1e-3, "off by {}", world.angle_between(wanted));
+        assert!(
+            world.angle_between(wanted) < 1e-3,
+            "off by {}",
+            world.angle_between(wanted)
+        );
     }
 
     /// A new role anchored to the model origin would put the gizmo at the character's

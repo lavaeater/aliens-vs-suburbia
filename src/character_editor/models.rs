@@ -335,7 +335,6 @@ pub fn add_animation_source(def: &mut AssetDefinition, source_path: &str) -> (bo
     )
 }
 
-
 /// Append `name` to a browser folder path, treating an empty path as the `assets/` root.
 pub fn join_folder(current: &str, name: &str) -> String {
     if current.is_empty() {

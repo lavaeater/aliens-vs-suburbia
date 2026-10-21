@@ -10,6 +10,7 @@ use bevy::transform::TransformSystems;
 
 use crate::alien::wave_manager::WaveManager;
 use crate::character_editor::animation::AnimationEditor;
+use crate::character_editor::animation_tab::rebuild_animation_tab;
 use crate::character_editor::debug::{
     EditorOverlays, bias_gizmos_over_mesh, draw_gait_gizmos, draw_player_overlays,
     reset_gizmo_bias, sync_physics_toggle,
@@ -27,28 +28,26 @@ use crate::character_editor::inspect::{
     drive_orbit_camera, hold_player_still, hold_rest_pose, inspect_keys, inspecting,
     orbit_camera_active, rest_pose_held, switch_orbit_camera,
 };
-use crate::character_editor::animation_tab::rebuild_animation_tab;
+use crate::character_editor::library::{navigate_library, rebuild_library, sync_search_query};
 use crate::character_editor::model_tab::{
     ModelMeasure, apply_prop_hidden_nodes, measure_subject, rebuild_model_tab,
 };
-use crate::character_editor::props_tab::{PropsTab, rebuild_props_tab};
-use crate::character_editor::library::{navigate_library, rebuild_library, sync_search_query};
 use crate::character_editor::models::{EditorLibrary, swap_player_model};
-use crate::character_editor::text_field::{
-    FieldKey, FocusedField, blur_on_click_elsewhere, draw_fields, focus_on_click, sync_text_capture,
-    type_into_field,
-};
 use crate::character_editor::prop::{
     despawn_prop, hide_player_for_prop, keep_studio_for_props, sync_prop,
 };
+use crate::character_editor::props_tab::{PropsTab, rebuild_props_tab};
 use crate::character_editor::shell::{
     ActiveTab, EditorTab, remember_tab_and_stage, spawn_editor_ui, sync_tabs, update_status_bar,
 };
 use crate::character_editor::state::in_editor;
+use crate::character_editor::text_field::{
+    FieldKey, FocusedField, blur_on_click_elsewhere, draw_fields, focus_on_click,
+    sync_text_capture, type_into_field,
+};
 use crate::character_editor::ui::{
-    clear_editor_viewport, end_editor_session, rebuild_debug_toggles,
-    rebuild_doc_bar, rebuild_hardpoint_panel,
-    rebuild_weapon_list, sync_editor_viewport,
+    clear_editor_viewport, end_editor_session, rebuild_debug_toggles, rebuild_doc_bar,
+    rebuild_hardpoint_panel, rebuild_weapon_list, sync_editor_viewport,
 };
 use crate::game_state::GameState;
 use crate::general::components::map_components::MapFile;

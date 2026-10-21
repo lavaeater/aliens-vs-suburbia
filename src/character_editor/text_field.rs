@@ -89,7 +89,10 @@ pub fn edit_value(value: &mut String, key: &Key) -> bool {
             true
         }
         Key::Character(text) => {
-            let typed: String = text.chars().filter(|c| c.is_ascii() && !c.is_control()).collect();
+            let typed: String = text
+                .chars()
+                .filter(|c| c.is_ascii() && !c.is_control())
+                .collect();
             value.push_str(&typed);
             !typed.is_empty()
         }
@@ -98,7 +101,11 @@ pub fn edit_value(value: &mut String, key: &Key) -> bool {
 }
 
 /// Clicking a field gives it the keyboard.
-pub fn focus_on_click(activate: On<Activate>, fields: Query<(), With<TextField>>, mut focused: ResMut<FocusedField>) {
+pub fn focus_on_click(
+    activate: On<Activate>,
+    fields: Query<(), With<TextField>>,
+    mut focused: ResMut<FocusedField>,
+) {
     if fields.contains(activate.entity) {
         focused.0 = Some(activate.entity);
     }
@@ -118,9 +125,8 @@ pub fn blur_on_click_elsewhere(
         return;
     }
     let on_field = hover_map.values().any(|hits| {
-        hits.keys().any(|&entity| {
-            entity == field || parents.iter_ancestors(entity).any(|a| a == field)
-        })
+        hits.keys()
+            .any(|&entity| entity == field || parents.iter_ancestors(entity).any(|a| a == field))
     });
     if !on_field {
         focused.0 = None;

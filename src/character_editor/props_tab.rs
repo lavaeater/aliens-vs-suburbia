@@ -18,15 +18,15 @@ use bevy::ui_widgets::Activate;
 use crate::assets::asset_definition::{
     AmmoKind, EnemyAttack, ItemKind, ModelType, PlayerAbility, TowerKind, WeaponHands,
 };
+use crate::assets::gizmos::{bone_map, joints_under};
+use crate::character_editor::aim_bones::spawn_aim_bones;
 use crate::character_editor::doc::{
     EditorDoc, EditorFocus, PropDoc, SideDocs, WeaponDoc, subject_doc,
 };
-use crate::assets::gizmos::{bone_map, joints_under};
-use crate::character_editor::aim_bones::spawn_aim_bones;
 use crate::character_editor::models::DefKind;
+use crate::character_editor::ui::row;
 use crate::player::components::Player;
 use bevy::mesh::skinning::SkinnedMesh;
-use crate::character_editor::ui::row;
 
 /// The tab's contents.
 #[derive(Component)]
@@ -147,12 +147,27 @@ fn info(id: &'static str, label: &'static str, value: String) -> Field {
     }
 }
 
-const ABILITIES: &[&str] = &["Bombardment", "Healing", "Whirlwind", "GoldDigger", "Molotov"];
+const ABILITIES: &[&str] = &[
+    "Bombardment",
+    "Healing",
+    "Whirlwind",
+    "GoldDigger",
+    "Molotov",
+];
 const HANDS: &[&str] = &["OneHanded", "TwoHanded"];
-const AMMO: &[&str] = &["Infinite", "Pistol", "Rifle", "Shells", "Grenade", "Molotov"];
+const AMMO: &[&str] = &[
+    "Infinite", "Pistol", "Rifle", "Shells", "Grenade", "Molotov",
+];
 const ATTACKS: &[&str] = &["Melee", "Ranged"];
 const TOWER_KINDS: &[&str] = &["Shooter", "Slow", "Area"];
-const ITEM_KINDS: &[&str] = &["Decorative", "HealthPickup", "AmmoPickup", "WeaponPickup", "Coins", "Key"];
+const ITEM_KINDS: &[&str] = &[
+    "Decorative",
+    "HealthPickup",
+    "AmmoPickup",
+    "WeaponPickup",
+    "Coins",
+    "Key",
+];
 
 const fn ability_name(ability: &PlayerAbility) -> &'static str {
     match ability {
@@ -202,8 +217,18 @@ pub fn fields(model_type: &ModelType) -> Vec<Field> {
     match model_type {
         ModelType::Player(p) => vec![
             choice("ability", "ability", ability_name(&p.ability), ABILITIES),
-            num("throw_rate", "throws / min", p.throw_rate_per_minute, 10.0, 1.0),
-            info("weapon", "weapon", p.weapon.clone().unwrap_or_else(|| "(none)".into())),
+            num(
+                "throw_rate",
+                "throws / min",
+                p.throw_rate_per_minute,
+                10.0,
+                1.0,
+            ),
+            info(
+                "weapon",
+                "weapon",
+                p.weapon.clone().unwrap_or_else(|| "(none)".into()),
+            ),
             info("extra_weapons", "extra weapons", summary(&p.extra_weapons)),
             info("starting_ammo", "starting ammo", summary(&p.starting_ammo)),
         ],
@@ -218,7 +243,13 @@ pub fn fields(model_type: &ModelType) -> Vec<Field> {
                 HANDS,
             ),
             int("damage", "damage", w.damage as f32, 5.0),
-            num("fire_rate", "shots / min", w.fire_rate_per_minute, 30.0, 5.0),
+            num(
+                "fire_rate",
+                "shots / min",
+                w.fire_rate_per_minute,
+                30.0,
+                5.0,
+            ),
             num("range", "range", w.range, 5.0, 1.0),
             num("spread", "spread (deg)", w.spread_deg, 0.5, 0.1),
             int("pellets", "pellets", w.pellets as f32, 1.0),
@@ -252,11 +283,21 @@ pub fn fields(model_type: &ModelType) -> Vec<Field> {
             {
                 fields.push(int("ranged_damage", "  shot damage", damage as f32, 5.0));
                 fields.push(num("ranged_range", "  shot range", range, 1.0, 0.1));
-                fields.push(num("ranged_rate", "  shots / min", fire_rate_per_minute, 10.0, 1.0));
+                fields.push(num(
+                    "ranged_rate",
+                    "  shots / min",
+                    fire_rate_per_minute,
+                    10.0,
+                    1.0,
+                ));
             }
             fields.push(info("loot", "loot table", summary(&e.loot_table)));
             fields.push(info("resistances", "resistances", summary(&e.resistances)));
-            fields.push(info("explodes", "explodes on death", summary(&e.explodes_on_death)));
+            fields.push(info(
+                "explodes",
+                "explodes on death",
+                summary(&e.explodes_on_death),
+            ));
             fields
         }
         ModelType::Tower(t) => {
@@ -300,7 +341,11 @@ pub fn fields(model_type: &ModelType) -> Vec<Field> {
                 fields.push(num("health", "  health", health, 10.0, 1.0));
             }
             fields.push(info("loot", "loot table", summary(&t.loot_table)));
-            fields.push(info("explodes", "explodes on death", summary(&t.explodes_on_death)));
+            fields.push(info(
+                "explodes",
+                "explodes on death",
+                summary(&t.explodes_on_death),
+            ));
             fields
         }
         ModelType::Item(i) => {
@@ -321,8 +366,12 @@ pub fn fields(model_type: &ModelType) -> Vec<Field> {
                     fields.push(choice("ammo", "  ammo", ammo_name(*kind), AMMO));
                     fields.push(int("rounds", "  rounds", *rounds as f32, 5.0));
                 }
-                ItemKind::Coins { value } => fields.push(int("value", "  value", *value as f32, 5.0)),
-                ItemKind::WeaponPickup { def } => fields.push(info("def", "  weapon def", def.clone())),
+                ItemKind::Coins { value } => {
+                    fields.push(int("value", "  value", *value as f32, 5.0))
+                }
+                ItemKind::WeaponPickup { def } => {
+                    fields.push(info("def", "  weapon def", def.clone()))
+                }
                 ItemKind::Key { id } => fields.push(info("id", "  key id", id.clone())),
                 ItemKind::Decorative => {}
             }
@@ -467,12 +516,13 @@ pub fn set_choice(model_type: &mut ModelType, id: &str, option: &str) {
         }
         ModelType::Item(i) => match id {
             "kind" => {
-                let current = fields(&ModelType::Item(i.clone()))
-                    .first()
-                    .and_then(|f| match f.value {
-                        FieldValue::Choice { value, .. } => Some(value),
-                        _ => None,
-                    });
+                let current =
+                    fields(&ModelType::Item(i.clone()))
+                        .first()
+                        .and_then(|f| match f.value {
+                            FieldValue::Choice { value, .. } => Some(value),
+                            _ => None,
+                        });
                 if current == Some(option) {
                     return;
                 }
@@ -579,7 +629,11 @@ pub fn rebuild_props_tab(
     let field_list = fields(&def.model_type);
     let pending = tab.pending_type;
     let is_character = matches!(def.model_type, ModelType::Player(_));
-    let bones = if is_character { rig.bones() } else { Vec::new() };
+    let bones = if is_character {
+        rig.bones()
+    } else {
+        Vec::new()
+    };
     let def_for_twist = def.clone();
 
     commands.entity(container).with_children(|parent| {
@@ -596,7 +650,10 @@ pub fn rebuild_props_tab(
         if let Some(kind) = pending {
             label(
                 parent,
-                &format!("change to {}? its stats reset to the defaults", kind.label()),
+                &format!(
+                    "change to {}? its stats reset to the defaults",
+                    kind.label()
+                ),
                 0.0,
                 Color::srgb(1.0, 0.8, 0.45),
             );
@@ -713,10 +770,13 @@ mod tests {
     };
 
     fn number(fields: &[Field], id: &str) -> Option<f32> {
-        fields.iter().find(|f| f.id == id).and_then(|f| match f.value {
-            FieldValue::Number { value, .. } => Some(value),
-            _ => None,
-        })
+        fields
+            .iter()
+            .find(|f| f.id == id)
+            .and_then(|f| match f.value {
+                FieldValue::Number { value, .. } => Some(value),
+                _ => None,
+            })
     }
 
     /// Every editable field a type shows must be one its setters handle, or the buttons
@@ -770,7 +830,11 @@ mod tests {
         set_number(&mut weapon, "range", -5.0);
         assert_eq!(number(&fields(&weapon), "range"), Some(0.0));
         set_number(&mut weapon, "pellets", 0.0);
-        assert_eq!(number(&fields(&weapon), "pellets"), Some(1.0), "a gun fires something");
+        assert_eq!(
+            number(&fields(&weapon), "pellets"),
+            Some(1.0),
+            "a gun fires something"
+        );
     }
 
     #[test]

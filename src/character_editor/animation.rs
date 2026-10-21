@@ -119,7 +119,10 @@ mod tests {
             resolution_label(&set, &def, None, AnimationKey::WalkShoot),
             "Walk  (as walk)"
         );
-        assert_eq!(resolution_label(&set, &def, None, AnimationKey::Wave), "(no clip)");
+        assert_eq!(
+            resolution_label(&set, &def, None, AnimationKey::Wave),
+            "(no clip)"
+        );
     }
 
     #[test]
@@ -127,7 +130,10 @@ mod tests {
         let mut def = AssetDefinition::default();
         let set = clips(&["Idle_A", "Run_Anime", "Sprint"]);
         map(&mut def, AnimationKey::Run, "Run_Anime");
-        assert_eq!(resolution_label(&set, &def, None, AnimationKey::Run), "Run_Anime");
+        assert_eq!(
+            resolution_label(&set, &def, None, AnimationKey::Run),
+            "Run_Anime"
+        );
         unmap(&mut def, AnimationKey::Run);
         assert_eq!(
             resolution_label(&set, &def, None, AnimationKey::Run),
@@ -151,6 +157,9 @@ mod tests {
         let mut def = AssetDefinition::default();
         map(&mut def, AnimationKey::Idle, "Renamed");
         let label = resolution_label(&clips(&["Idle_A"]), &def, None, AnimationKey::Idle);
-        assert!(label.starts_with("'Renamed' is not in the model"), "got {label}");
+        assert!(
+            label.starts_with("'Renamed' is not in the model"),
+            "got {label}"
+        );
     }
 }

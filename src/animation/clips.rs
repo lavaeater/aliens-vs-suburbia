@@ -43,7 +43,10 @@ type Preset = &'static [(AnimationKey, &'static [&'static str])];
 
 const HUMAN: Preset = &[
     (AnimationKey::Idle, &["Idle_A", "Idle_Subtle"]),
-    (AnimationKey::IdleShoot, &["Pistol_Aim_Neutral", "Pistol_Idle"]),
+    (
+        AnimationKey::IdleShoot,
+        &["Pistol_Aim_Neutral", "Pistol_Idle"],
+    ),
     (AnimationKey::Walk, &["Walk"]),
     (AnimationKey::Run, &["Sprint", "Jog", "Run_Anime"]),
     (AnimationKey::Duck, &["Crouch_Idle"]),
@@ -54,7 +57,10 @@ const HUMAN: Preset = &[
     (AnimationKey::Wave, &["Greeting"]),
     (AnimationKey::Yes, &["Yes", "Head Nod"]),
     (AnimationKey::No, &["Reject"]),
-    (AnimationKey::Death, &["Death_A", "Death_B", "Death_C", "Death_D"]),
+    (
+        AnimationKey::Death,
+        &["Death_A", "Death_B", "Death_C", "Death_D"],
+    ),
     (AnimationKey::HitReact, &["Hit_Chest", "Hit_Head"]),
     (AnimationKey::Throwing, &["OverhandThrow", "Throw Object"]),
     (AnimationKey::Building, &["Interact", "Fixing_Kneeling"]),

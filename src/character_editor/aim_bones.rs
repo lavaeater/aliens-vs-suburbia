@@ -74,10 +74,7 @@ pub fn toggle_bone(def: &mut AssetDefinition, bone: &str) {
     if let Some(index) = def.aim_bones.iter().position(|a| a.bone == bone) {
         def.aim_bones.remove(index);
     } else {
-        let weight = def
-            .aim_bones
-            .last()
-            .map_or(0.3, |last| last.weight);
+        let weight = def.aim_bones.last().map_or(0.3, |last| last.weight);
         def.aim_bones.push(AimBone {
             bone: bone.to_string(),
             weight,
@@ -126,7 +123,11 @@ pub fn spawn_aim_bones(parent: &mut ChildSpawnerCommands, def: &AssetDefinition,
         if bones.is_empty() {
             text(parent, "using the default mixamo spine chain", INFO);
         } else if missing.is_empty() {
-            text(parent, "using the default mixamo spine chain (this rig has it)", INFO);
+            text(
+                parent,
+                "using the default mixamo spine chain (this rig has it)",
+                INFO,
+            );
         } else {
             text(
                 parent,
@@ -165,7 +166,13 @@ pub fn spawn_aim_bones(parent: &mut ChildSpawnerCommands, def: &AssetDefinition,
                 );
             }
             let bone = aim.bone.clone();
-            row(line, "remove".to_string(), false, Color::srgb(0.95, 0.7, 0.6)).observe(
+            row(
+                line,
+                "remove".to_string(),
+                false,
+                Color::srgb(0.95, 0.7, 0.6),
+            )
+            .observe(
                 move |_: On<Activate>, focus: Res<EditorFocus>, mut docs: SideDocs| {
                     if let Some(def) = docs.subject_mut(focus.subject) {
                         toggle_bone(def, &bone);
@@ -229,7 +236,9 @@ mod tests {
     /// The rig that started this: Unreal-style names, no mixamo spine.
     #[test]
     fn an_unreal_rig_gets_its_spine_suggested_in_order() {
-        let bones = names(&["pelvis", "spine_03", "spine_01", "neck_01", "spine_02", "hand_r"]);
+        let bones = names(&[
+            "pelvis", "spine_03", "spine_01", "neck_01", "spine_02", "hand_r",
+        ]);
         let chain = suggest_chain(&bones);
         let order: Vec<&str> = chain.iter().map(|a| a.bone.as_str()).collect();
         assert_eq!(order, ["spine_01", "spine_02", "spine_03"]);

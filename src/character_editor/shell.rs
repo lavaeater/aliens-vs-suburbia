@@ -29,16 +29,16 @@ use bevy::ui_widgets::Activate;
 use crate::character_editor::debug::EditorOverlays;
 use crate::character_editor::doc::{EditorDoc, EditorFocus, PropDoc, Subject, WeaponDoc};
 use crate::character_editor::hardpoints::{HardpointEditor, HardpointSide};
-use crate::character_editor::ui::{
-    AnimationContainer, DebugTogglesContainer, DocBarContainer, EditorViewportPane,
-    HardpointContainer, WeaponListContainer, row,
-};
 use crate::character_editor::library::{
     LibraryChips, LibraryImportBar, LibraryList, LibrarySearch, LibraryStatus,
 };
 use crate::character_editor::model_tab::ModelContainer;
 use crate::character_editor::props_tab::PropsContainer;
 use crate::character_editor::text_field::text_field;
+use crate::character_editor::ui::{
+    AnimationContainer, DebugTogglesContainer, DocBarContainer, EditorViewportPane,
+    HardpointContainer, WeaponListContainer, row,
+};
 use crate::ui::spawn_ui::StateMarker;
 
 /// The tabs, in strip order.
