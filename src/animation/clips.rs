@@ -48,6 +48,9 @@ const HUMAN: Preset = &[
         &["Pistol_Aim_Neutral", "Pistol_Idle"],
     ),
     (AnimationKey::Walk, &["Walk"]),
+    (AnimationKey::WalkBack, &["Walk_Backwards"]),
+    (AnimationKey::StrafeLeft, &["Strafe_left"]),
+    (AnimationKey::StrafeRight, &["Strafe_right"]),
     (AnimationKey::Run, &["Sprint", "Jog", "Run_Anime"]),
     (AnimationKey::Duck, &["Crouch_Idle"]),
     (AnimationKey::Jump, &["Jump_Start"]),
@@ -299,7 +302,14 @@ impl ClipSet {
         animations: Option<&BTreeMap<AnimationKey, String>>,
         settings: Option<&AnimMapping>,
     ) -> Option<String> {
-        if !matches!(key, AnimationKey::WalkShoot | AnimationKey::RunShoot) {
+        if !matches!(
+            key,
+            AnimationKey::WalkShoot
+                | AnimationKey::RunShoot
+                | AnimationKey::WalkBackShoot
+                | AnimationKey::StrafeLeftShoot
+                | AnimationKey::StrafeRightShoot
+        ) {
             return None;
         }
         let own = self.resolve(key, animations, settings)?;

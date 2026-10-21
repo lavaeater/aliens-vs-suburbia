@@ -470,7 +470,11 @@ mod tests {
         .expect("theremin.glicol exists");
         let patch = SynthPatch::from_glicol("theremin", &source).expect("theremin parses");
         let program = patch.glicol.expect("a glicol patch");
-        let knobs: Vec<&str> = program.params.iter().map(|(name, _)| name.as_str()).collect();
+        let knobs: Vec<&str> = program
+            .params
+            .iter()
+            .map(|(name, _)| name.as_str())
+            .collect();
         assert_eq!(knobs, ["rate", "wobble"]);
         assert_eq!(program.cutoff, Some(2_400.0));
     }

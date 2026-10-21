@@ -92,7 +92,11 @@ pub enum InputGate {
 
 /// Pure, so the rules can be tested without an app. Gamepads only stop for the pause:
 /// they cannot click a panel or type into a field.
-pub const fn input_gate(keyboard_player: bool, paused: bool, block: Option<GameInputBlock>) -> InputGate {
+pub const fn input_gate(
+    keyboard_player: bool,
+    paused: bool,
+    block: Option<GameInputBlock>,
+) -> InputGate {
     if paused {
         return InputGate::Closed;
     }
@@ -176,8 +180,8 @@ pub fn player_input(
         // ── Movement: world space, camera relative ──────────────────────────
         // Keys and stick are summed so a pad player can bind the d-pad to the move
         // buttons too; the clamp keeps diagonals at full speed, not 1.41x.
-        let walk = (move_buttons(actions) + actions.axis_pair(&PlayerAction::Move))
-            .clamp_length_max(1.0);
+        let walk =
+            (move_buttons(actions) + actions.axis_pair(&PlayerAction::Move)).clamp_length_max(1.0);
         let moving = walk.length_squared() > 1e-4;
         let was_moving = controller.walk_direction.length_squared() > 1e-4;
         let move_dir = if moving {
@@ -217,15 +221,16 @@ pub fn player_input(
 
         // ── Build mode ──────────────────────────────────────────────────────
         let in_build_mode = controller.triggers.contains(&ControlCommand::Build);
-        let leave_build = |anim_ew: &mut MessageWriter<AnimationEvent>,
-                           exit_build_ew: &mut MessageWriter<ExitBuildMode>| {
-            anim_ew.write(AnimationEvent(
-                AnimationEventType::LeaveAnimState,
-                entity,
-                AnimationKey::Building,
-            ));
-            exit_build_ew.write(ExitBuildMode(entity));
-        };
+        let leave_build =
+            |anim_ew: &mut MessageWriter<AnimationEvent>,
+             exit_build_ew: &mut MessageWriter<ExitBuildMode>| {
+                anim_ew.write(AnimationEvent(
+                    AnimationEventType::LeaveAnimState,
+                    entity,
+                    AnimationKey::Building,
+                ));
+                exit_build_ew.write(ExitBuildMode(entity));
+            };
 
         if actions.just_pressed(&PlayerAction::BuildMode) {
             if in_build_mode {

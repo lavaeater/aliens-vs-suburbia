@@ -136,7 +136,11 @@ pub enum KbmInput {
 }
 
 impl KbmInput {
-    pub fn just_pressed(self, keys: &ButtonInput<KeyCode>, mouse: &ButtonInput<MouseButton>) -> bool {
+    pub fn just_pressed(
+        self,
+        keys: &ButtonInput<KeyCode>,
+        mouse: &ButtonInput<MouseButton>,
+    ) -> bool {
         match self {
             Self::Key(key) => keys.just_pressed(key),
             Self::Mouse(button) => mouse.just_pressed(button),
@@ -229,7 +233,9 @@ fn default_binding(action: PlayerAction) -> ActionBinding {
             [Some(Key(KeyCode::Escape)), Some(Mouse(MouseButton::Right))],
             Some(Pad::East), // Circle
         ),
-        PlayerAction::NextBuildItem => ([Some(Key(KeyCode::ArrowRight)), None], Some(Pad::DPadRight)),
+        PlayerAction::NextBuildItem => {
+            ([Some(Key(KeyCode::ArrowRight)), None], Some(Pad::DPadRight))
+        }
         PlayerAction::PrevBuildItem => ([Some(Key(KeyCode::ArrowLeft)), None], Some(Pad::DPadLeft)),
         PlayerAction::Pause => ([Some(Key(KeyCode::Escape)), None], Some(Pad::Start)),
         PlayerAction::Move | PlayerAction::Aim => ([None, None], None),
@@ -521,7 +527,10 @@ mod tests {
         )
         .expect("parses")
         .with_missing_defaults();
-        assert_eq!(bindings.binding(PlayerAction::Ability), ActionBinding::default());
+        assert_eq!(
+            bindings.binding(PlayerAction::Ability),
+            ActionBinding::default()
+        );
     }
 
     #[test]

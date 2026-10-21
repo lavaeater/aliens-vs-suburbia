@@ -1,4 +1,4 @@
-use crate::control::components::CharacterState;
+use crate::control::components::{CharacterState, Stride};
 use crate::game_state::GameState;
 use bevy::animation::AnimationClip;
 use bevy::app::{App, Plugin, Update};
@@ -30,6 +30,15 @@ pub struct PreviewAnimation {
     pub key: Option<AnimationKey>,
 }
 
+/// Walk `character` with a new `Stride` (forward / back / sideways), written by
+/// `torso_twist::choose_stride` when the aim crosses into another sector around the walk
+/// direction.
+#[derive(Message, Clone)]
+pub struct SetStride {
+    pub character: Entity,
+    pub stride: Stride,
+}
+
 #[derive(Component, Debug, Reflect, Default)]
 #[reflect(Component, Default)]
 #[type_path = "avs"]
@@ -50,6 +59,7 @@ impl Plugin for AnimationPlugin {
     fn build(&self, app: &mut App) {
         app.add_message::<AnimationEvent>()
             .add_message::<PreviewAnimation>()
+            .add_message::<SetStride>()
             .add_systems(OnEnter(GameState::InGame), load_animations)
             .add_systems(
                 Update,
@@ -57,6 +67,7 @@ impl Plugin for AnimationPlugin {
                     start_some_animations,
                     goto_animation_state_handler,
                     leave_animation_state_handler,
+                    stride_handler,
                     preview_animation_handler,
                     end_finished_throws,
                 )
@@ -77,18 +88,41 @@ pub struct AnimationStore {
 }
 
 impl AnimationStore {
-    pub fn nodes(&self, group: &str, key: AnimationKey) -> &[AnimationNodeIndex] {
+    /// Whether the model has nodes of its own for `key` (a clip, or a borrowed one), as
+    /// opposed to playing another key's in reverse.
+    pub fn has(&self, group: &str, key: AnimationKey) -> bool {
         self.anims
             .get(group)
-            .and_then(|anims| anims.get(&key))
+            .is_some_and(|anims| anims.contains_key(&key))
+    }
+
+    /// The nodes `key` plays: its own, or for a key the model has no clip for, the ones
+    /// it plays in reverse (`AnimationKey::reversed_from`, see `speed`).
+    pub fn nodes(&self, group: &str, key: AnimationKey) -> &[AnimationNodeIndex] {
+        let own = |key| self.anims.get(group).and_then(|anims| anims.get(&key));
+        own(key)
+            .or_else(|| key.reversed_from().and_then(own))
             .map_or(&[], Vec::as_slice)
+    }
+
+    /// Playback speed for `key`'s nodes: -1 when they are another key's played backwards.
+    pub fn speed(&self, group: &str, key: AnimationKey) -> f32 {
+        if !self.has(group, key) && key.reversed_from().is_some() {
+            -1.0
+        } else {
+            1.0
+        }
     }
 
     /// Start every node of `key`, from `seek` seconds in.
     pub fn play(&self, group: &str, key: AnimationKey, player: &mut AnimationPlayer, seek: f32) {
+        let speed = self.speed(group, key);
         for &idx in self.nodes(group, key) {
             let active = player.play(idx);
             active.set_seek_time(seek);
+            // Always set: `play` hands back an animation already running on this node,
+            // which may still carry a reversed walk's -1.
+            active.set_speed(speed);
             if key.loops() {
                 active.repeat();
             }
@@ -131,6 +165,16 @@ pub enum AnimationKey {
     IdleShoot,
     Walk,
     WalkShoot,
+    /// Walking backwards: the legs move away from where the body faces, because the aim
+    /// is behind the direction of travel. A rig without a clip plays `Walk` in reverse
+    /// (`reversed_from`).
+    WalkBack,
+    WalkBackShoot,
+    /// Sidestepping to the body's left / right, aim held across the direction of travel.
+    StrafeLeft,
+    StrafeLeftShoot,
+    StrafeRight,
+    StrafeRightShoot,
     Run,
     RunShoot,
     RunGun,
@@ -173,9 +217,24 @@ impl AnimationKey {
         match self {
             Self::IdleShoot => Some(Self::Idle),
             Self::WalkShoot | Self::Run => Some(Self::Walk),
+            Self::WalkBackShoot => Some(Self::WalkBack),
+            Self::StrafeLeftShoot => Some(Self::StrafeLeft),
+            Self::StrafeRightShoot => Some(Self::StrafeRight),
             Self::RunShoot | Self::RunGun => Some(Self::Run),
             Self::JumpIdle => Some(Self::Jump),
             Self::Throwing => Some(Self::Punch),
+            _ => None,
+        }
+    }
+
+    /// The key whose clip, played backwards, stands in for this one on a rig with no clip
+    /// of its own: a walk cycle run in reverse is a passable backpedal. Unlike `fallback`
+    /// this is decided at play time (`AnimationStore::nodes` / `speed`), since a graph
+    /// node has no playback direction.
+    pub const fn reversed_from(self) -> Option<Self> {
+        match self {
+            Self::WalkBack => Some(Self::Walk),
+            Self::WalkBackShoot => Some(Self::WalkShoot),
             _ => None,
         }
     }
@@ -190,6 +249,12 @@ impl AnimationKey {
             Self::IdleShoot => "idle_shoot",
             Self::Walk => "walk",
             Self::WalkShoot => "walk_shoot",
+            Self::WalkBack => "walk_back",
+            Self::WalkBackShoot => "walk_back_shoot",
+            Self::StrafeLeft => "strafe_left",
+            Self::StrafeLeftShoot => "strafe_left_shoot",
+            Self::StrafeRight => "strafe_right",
+            Self::StrafeRightShoot => "strafe_right_shoot",
             Self::Run => "run",
             Self::RunShoot => "run_shoot",
             Self::RunGun => "run_gun",
@@ -232,6 +297,12 @@ pub const ANIM_KEYS: &[AnimationKey] = &[
     AnimationKey::IdleShoot,
     AnimationKey::Walk,
     AnimationKey::WalkShoot,
+    AnimationKey::WalkBack,
+    AnimationKey::WalkBackShoot,
+    AnimationKey::StrafeLeft,
+    AnimationKey::StrafeLeftShoot,
+    AnimationKey::StrafeRight,
+    AnimationKey::StrafeRightShoot,
     AnimationKey::Run,
     AnimationKey::RunShoot,
     AnimationKey::RunGun,
@@ -361,6 +432,33 @@ pub fn goto_animation_state_handler(
             && let Some(resolved) = character_state.enter_state(*anim_key)
             && let Some(player_entity) =
                 get_child_with_component_recursive(*entity, &child_query, &player_query)
+            && let Ok(mut player) = player_query.get_mut(player_entity)
+        {
+            let old = current_key.key;
+            current_key.key = resolved;
+            anim_thingie(
+                &anim_store,
+                &current_key.group,
+                resolved,
+                &mut player,
+                Some(old),
+            );
+        }
+    }
+}
+
+pub fn stride_handler(
+    anim_store: Res<AnimationStore>,
+    mut strides: MessageReader<SetStride>,
+    mut characters: Query<(&mut CurrentAnimationKey, &mut CharacterState)>,
+    mut player_query: Query<&mut AnimationPlayer>,
+    child_query: Query<&Children>,
+) {
+    for SetStride { character, stride } in strides.read() {
+        if let Ok((mut current_key, mut character_state)) = characters.get_mut(*character)
+            && let Some(resolved) = character_state.set_stride(*stride)
+            && let Some(player_entity) =
+                get_child_with_component_recursive(*character, &child_query, &player_query)
             && let Ok(mut player) = player_query.get_mut(player_entity)
         {
             let old = current_key.key;

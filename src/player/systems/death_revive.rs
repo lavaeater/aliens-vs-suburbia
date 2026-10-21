@@ -302,7 +302,8 @@ pub fn choose_respawn_anchor(
         // the bindings are checked against the devices directly. Build-item cycling or
         // walking left/right both step.
         let kbm = |a: PlayerAction, b: PlayerAction| {
-            bindings.kbm_just_pressed(a, &keys, &mouse) || bindings.kbm_just_pressed(b, &keys, &mouse)
+            bindings.kbm_just_pressed(a, &keys, &mouse)
+                || bindings.kbm_just_pressed(b, &keys, &mouse)
         };
         let step = match roster.devices.get(entry.slot) {
             Some(InputDevice::Keyboard) => {

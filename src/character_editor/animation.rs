@@ -80,7 +80,10 @@ pub fn resolution_label(
         .get(&key)
         .filter(|clip| !clips.contains(clip));
     let shown = match resolved {
-        None => "(no clip)".to_string(),
+        None => match key.reversed_from() {
+            Some(from) => format!("(plays {} in reverse)", from.default_search()),
+            None => "(no clip)".to_string(),
+        },
         Some(r) => match r.via {
             Via::Def => r.clip,
             Via::Preset(rig) => format!("{}  ({} preset)", r.clip, rig.label()),

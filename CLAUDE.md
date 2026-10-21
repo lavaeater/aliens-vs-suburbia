@@ -136,6 +136,16 @@ mixamo `Spine`/`Spine1`/`Spine2` chain with rising weights. Twist is clamped to
 `TWIST_LIMIT_DEGREES` (60); past that the body turns to absorb the excess. **F7 toggles it**
 at runtime for A/B comparison.
 
+**Strides.** While walking, `choose_stride` picks a `Stride` (`control::components`:
+Forward / Back / Left / Right) from which quarter around the walk direction the aim falls in
+(`pick_stride`, 15 degree hysteresis), and `face_movement_direction` turns the body to
+`stride_facing` so the feet keep travelling along the walk direction while the twist covers
+the rest (at most ~50 degrees with all four). `CharacterState.stride` turns `Walk` into
+`WalkBack` / `StrafeLeft` / `StrafeRight` (and their `*Shoot` aim-layered variants); it is
+set through the `SetStride` message (`stride_handler`). Strafes are used only when the rig has
+both clips; Back always is: with no `WalkBack` clip, `AnimationStore::nodes`/`speed` play
+`Walk` in reverse (`AnimationKey::reversed_from`).
+
 ### Physics & Collision
 
 Uses **avian3d 0.7**. Collision layers in `src/general/components/mod.rs`: `ImpassableAll`, `Floor`, `Ball`, `Alien`, `Player`, `BuildIndicator`, `Sensor`, `PlayerAimSensor`, `AlienSpawnPoint`, `AlienGoal`.

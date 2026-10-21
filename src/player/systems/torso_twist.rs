@@ -18,11 +18,25 @@
 //!
 //! The twist is clamped; past the limit the body itself turns to take up the slack, so
 //! you can't wind the torso around backwards.
+//!
+//! # Strides
+//!
+//! The feet always travel along the walk direction, but the body need not face it. The aim
+//! picks a [`Stride`] by which quarter around the walk direction it falls in (`pick_stride`):
+//! ahead walks forward, behind walks backwards (`Walk_Backwards`, or the walk clip played
+//! in reverse), to either side sidesteps (`Strafe_left` / `Strafe_right`, when the rig has
+//! both). The body faces the stride's way (`stride_facing`) and the twist covers what is
+//! left, which with all four strides is never more than ~50 degrees.
 
 use bevy::prelude::*;
 
+use std::f32::consts::{FRAC_PI_2, PI, TAU};
+
+use crate::animation::animation_plugin::{
+    AnimationKey, AnimationStore, CurrentAnimationKey, SetStride,
+};
 use crate::assets::asset_definition::AimBone;
-use crate::control::components::CharacterControl;
+use crate::control::components::{CharacterControl, CharacterState, Stride};
 use crate::player::components::{AutoAim, Player, PlayerDead};
 
 /// How far the torso may lead the hips, in degrees. Beyond this the body turns.
@@ -131,6 +145,62 @@ pub fn yaw_between(forward: Vec3, aim: Vec3) -> Option<f32> {
     let (f, a) = (f.normalize(), a.normalize());
     // cross(f, a).y is sin of the angle, dot is cos — atan2 of the pair is the signed angle.
     Some((f.z * a.x - f.x * a.z).atan2(f.dot(a)))
+}
+
+/// How far past the boundary between two strides the aim must go before the stride
+/// changes, so an aim sitting on the line does not flicker between clips.
+const STRIDE_HYSTERESIS_DEGREES: f32 = 15.0;
+
+/// `angle` wrapped into `(-PI, PI]`.
+fn wrap_angle(angle: f32) -> f32 {
+    let a = (angle + PI).rem_euclid(TAU) - PI;
+    if a <= -PI { a + TAU } else { a }
+}
+
+/// Where the aim sits, as `yaw_between(walk, aim)`, when it is dead centre of `stride`'s
+/// sector -- which is also how far the body turns from the walk direction to face it.
+pub const fn stride_offset(stride: Stride) -> f32 {
+    match stride {
+        Stride::Forward => 0.0,
+        // The body faces a quarter turn right of travel, so the walk is to its left.
+        Stride::Left => -FRAC_PI_2,
+        Stride::Right => FRAC_PI_2,
+        Stride::Back => PI,
+    }
+}
+
+/// The way the body faces while walking along `walk` with `stride`.
+pub fn stride_facing(stride: Stride, walk: Vec3) -> Vec3 {
+    Quat::from_rotation_y(stride_offset(stride)) * walk
+}
+
+/// The stride for walking along `walk` while aiming along `aim`: whichever available
+/// stride's sector is nearest the aim, sticking with `current` until another is nearer by
+/// the hysteresis margin. `available` says which the rig can play.
+pub fn pick_stride(
+    walk: Vec3,
+    aim: Vec3,
+    current: Stride,
+    available: impl Fn(Stride) -> bool,
+) -> Stride {
+    let Some(theta) = yaw_between(walk, aim) else {
+        return current;
+    };
+    let distance = |stride| wrap_angle(theta - stride_offset(stride)).abs();
+    let Some(best) = Stride::ALL
+        .into_iter()
+        .filter(|&s| available(s))
+        .min_by(|&a, &b| distance(a).total_cmp(&distance(b)))
+    else {
+        return current;
+    };
+    if !available(current)
+        || distance(best) + STRIDE_HYSTERESIS_DEGREES.to_radians() < distance(current)
+    {
+        best
+    } else {
+        current
+    }
 }
 
 /// Split a total twist across the chain by weight, normalizing whatever weights the
@@ -279,13 +349,51 @@ pub fn toggle_torso_twist(keys: Res<ButtonInput<KeyCode>>, mut enabled: ResMut<T
     }
 }
 
-/// Steer the body toward the direction of travel. The torso then covers the rest of the
-/// way to the aim, which is the whole point of the split: legs walk where you're going,
-/// gun points where you're looking.
+/// Pick each walking player's stride from where they aim relative to where they walk
+/// (`pick_stride`), and ask the animation side to switch clips when it changes. Back is
+/// always on offer (a rig without the clip reverses its walk); the strafes only when the
+/// rig has both.
+#[allow(clippy::type_complexity)]
+pub fn choose_stride(
+    store: Option<Res<AnimationStore>>,
+    players: Query<
+        (
+            Entity,
+            &CharacterControl,
+            &AutoAim,
+            &CharacterState,
+            &CurrentAnimationKey,
+        ),
+        (With<Player>, Without<PlayerDead>),
+    >,
+    mut strides: MessageWriter<SetStride>,
+) {
+    let Some(store) = store else {
+        return;
+    };
+    for (character, control, aim, state, current) in &players {
+        if control.walk_direction.length_squared() <= 0.01 {
+            continue;
+        }
+        let strafes = store.has(&current.group, AnimationKey::StrafeLeft)
+            && store.has(&current.group, AnimationKey::StrafeRight);
+        let available = |s| !matches!(s, Stride::Left | Stride::Right) || strafes;
+        let stride = pick_stride(control.walk_direction, aim.0, state.stride, available);
+        if stride != state.stride {
+            strides.write(SetStride { character, stride });
+        }
+    }
+}
+
+/// Steer the body: walking, to face the way its stride wants (`stride_facing` -- the walk
+/// direction itself, its reverse, or a quarter turn off for a sidestep), so the legs step
+/// along the walk direction whatever the aim. The torso then covers the rest of the way
+/// to the aim, which is the whole point of the split: legs walk where you're going, gun
+/// points where you're looking.
 ///
-/// When the aim is further off than the torso can twist, the body absorbs the excess so
-/// the character can't wind up facing backwards. Standing still, the body holds its
-/// facing and only the torso moves.
+/// When the aim is further off than the torso can twist (only on a rig without strafes),
+/// the body absorbs the excess, giving up a little foot direction rather than aim.
+/// Standing still, the body holds its facing and only the torso moves.
 #[allow(clippy::type_complexity)]
 pub fn face_movement_direction(
     mut players: Query<
@@ -294,20 +402,28 @@ pub fn face_movement_direction(
             &mut avian3d::prelude::AngularVelocity,
             &AutoAim,
             &CharacterControl,
+            Option<&CharacterState>,
         ),
         (With<Player>, Without<PlayerDead>),
     >,
 ) {
     let limit = TWIST_LIMIT_DEGREES.to_radians();
 
-    for (transform, mut angular, aim, control) in players.iter_mut() {
+    for (transform, mut angular, aim, control, state) in players.iter_mut() {
         let forward = transform.rotation * Vec3::NEG_Z;
         let walking = control.walk_direction.length_squared() > 0.01;
 
-        // Prefer the direction of travel; when standing still only correct if the aim
-        // has run past what the torso can cover.
+        // Walking, face the stride's way; standing still, only correct if the aim has run
+        // past what the torso can cover.
         let goal = if walking {
-            control.walk_direction
+            let stride = state.map_or(Stride::Forward, |s| s.stride);
+            let facing = stride_facing(stride, control.walk_direction);
+            match yaw_between(facing, aim.0) {
+                Some(off) if off.abs() > limit => {
+                    Quat::from_rotation_y(off - off.signum() * limit) * facing
+                }
+                _ => facing,
+            }
         } else {
             match yaw_between(forward, aim.0) {
                 Some(off) if off.abs() > limit => aim.0,
@@ -330,7 +446,100 @@ pub fn face_movement_direction(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::f32::consts::FRAC_PI_2;
+
+    fn all(_: Stride) -> bool {
+        true
+    }
+
+    fn no_strafes(s: Stride) -> bool {
+        !matches!(s, Stride::Left | Stride::Right)
+    }
+
+    /// Aim `degrees` off the walk direction (-Z), positive turning left.
+    fn aim_off(degrees: f32) -> Vec3 {
+        Quat::from_rotation_y(degrees.to_radians()) * Vec3::NEG_Z
+    }
+
+    #[test]
+    fn the_aim_picks_the_stride_by_quarter() {
+        let walk = Vec3::NEG_Z;
+        let pick = |deg| pick_stride(walk, aim_off(deg), Stride::Forward, all);
+        assert_eq!(pick(10.0), Stride::Forward);
+        assert_eq!(pick(170.0), Stride::Back);
+        assert_eq!(pick(-170.0), Stride::Back);
+        // Aim a quarter turn right of travel: the body faces right, the walk is to its
+        // left.
+        assert_eq!(pick(-90.0), Stride::Left);
+        assert_eq!(pick(90.0), Stride::Right);
+    }
+
+    #[test]
+    fn a_strafing_body_faces_the_aim_and_walks_out_to_its_side() {
+        let walk = Vec3::NEG_Z;
+        for stride in Stride::ALL {
+            let facing = stride_facing(stride, walk);
+            let aim = aim_off(stride_offset(stride).to_degrees());
+            assert!(
+                (facing - aim).length() < 1e-5,
+                "{stride:?}: the body faces the centre of its sector"
+            );
+        }
+        // Left: the walk direction is a quarter turn left of the facing.
+        let facing = stride_facing(Stride::Left, walk);
+        let left_of_facing = Quat::from_rotation_y(FRAC_PI_2) * facing;
+        assert!((left_of_facing - walk).length() < 1e-5);
+    }
+
+    #[test]
+    fn the_stride_holds_across_the_boundary_until_the_margin() {
+        let walk = Vec3::NEG_Z;
+        // 50 degrees is past the 45 degree line but inside the hysteresis.
+        assert_eq!(
+            pick_stride(walk, aim_off(50.0), Stride::Forward, all),
+            Stride::Forward
+        );
+        assert_eq!(
+            pick_stride(walk, aim_off(40.0), Stride::Right, all),
+            Stride::Right
+        );
+        assert_eq!(
+            pick_stride(walk, aim_off(60.0), Stride::Forward, all),
+            Stride::Right
+        );
+    }
+
+    #[test]
+    fn without_strafe_clips_it_walks_forward_or_back() {
+        let walk = Vec3::NEG_Z;
+        assert_eq!(
+            pick_stride(walk, aim_off(80.0), Stride::Forward, no_strafes),
+            Stride::Forward
+        );
+        assert_eq!(
+            pick_stride(walk, aim_off(110.0), Stride::Forward, no_strafes),
+            Stride::Back
+        );
+        // A strafe left over from another rig is dropped at once.
+        assert_eq!(
+            pick_stride(walk, aim_off(80.0), Stride::Right, no_strafes),
+            Stride::Forward
+        );
+    }
+
+    #[test]
+    fn wrap_angle_stays_in_a_half_turn() {
+        for (a, want) in [
+            (0.0, 0.0),
+            (3.0 * PI / 2.0, -PI / 2.0),
+            (-5.0 * PI / 2.0, -PI / 2.0),
+        ] {
+            assert!(
+                (wrap_angle(a) - want).abs() < 1e-5,
+                "{a} -> {}",
+                wrap_angle(a)
+            );
+        }
+    }
 
     /// Compare rotations by what they do to the basis vectors. `Quat::angle_between`
     /// uses an approximate `acos`, which amplifies float noise badly near zero — it
