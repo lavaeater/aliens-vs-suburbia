@@ -51,3 +51,4 @@ downmixed to mono 16-bit 44.1 kHz, trimmed, faded out and peak-normalised.
 | `death_groan.wav` | GDC 2019, Glitchedtones - Zombie: *Zombie Subject B Groan (8)* |
 | `fire_ignite.wav` | GDC 2018, Gregor Quendel - Designed Fire: *Impacts - Large, ignition 03* (first 2 s) |
 | `shoot_pistol.wav` | GDC 2017, Gamemaster Audio - Gun Sound Pack: *gun_revolver_pistol_shot_04* |
+| `heartbeat.wav` | GDC 2018, Airborne Sound - Human: *Heartbeat, Sound Design, Pulse, Throb, Steady, Accelerate, Panic, Fear* (first lub-dub) |
