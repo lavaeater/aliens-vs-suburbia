@@ -23,7 +23,7 @@ This is a plan for turning the sketch above into something buildable, grounded i
 
 ### Why not throw out the tile grid
 
-`MapFile` (`src/general/components/map_components.rs`) is tile-based: a `Vec<Vec<u64>>` of `BitFlags<MapFeatures>` for pathfinding/collision, plus `placements: Vec<TilePlacement>` for def-driven models on tiles, plus free-floating `decorations`. `map_editor/` already has a working grid painter (palette tabs, brush rotation, `place_at`/`erase_at`, save/load) and `map/map_generator.rs` + `map/scatter.rs` already do seeded procedural generation and prop scattering onto that grid.
+`MapFile` (`../../src/general/components/map_components.rs`) is tile-based: a `Vec<Vec<u64>>` of `BitFlags<MapFeatures>` for pathfinding/collision, plus `placements: Vec<TilePlacement>` for def-driven models on tiles, plus free-floating `decorations`. `map_editor/` already has a working grid painter (palette tabs, brush rotation, `place_at`/`erase_at`, save/load) and `map/map_generator.rs` + `map/scatter.rs` already do seeded procedural generation and prop scattering onto that grid.
 
 The polygon idea shouldn't replace this — it should sit **above** it as an authoring layer. A polygon-defined house is a generator that resolves down to ordinary `TilePlacement`s (for the footprint/walls, snapped to the grid) plus free-form decorations/meshes (for roofs, trim, windows) that get baked into a `MapFile`. That keeps the runtime (`map_loader`, pathfinding, `MapGraph`) completely untouched — it only ever sees tiles and placements, same as today.
 
@@ -68,7 +68,7 @@ Given the codebase already has both a working tile editor and a two-pane live-pr
 
 ## Thoughts: Styling the Game and Shaders
 
-The doc's instinct (flatten materials, keep shadows but make them starker, cut the palette) is already mostly *available* today, not hypothetical — `bevy_wind_waker_shader` (vendored submodule, already a dependency in `Cargo.toml` and wired up in `src/main.rs` via `FlatShaderPlugin`) ships exactly this:
+The doc's instinct (flatten materials, keep shadows but make them starker, cut the palette) is already mostly *available* today, not hypothetical — `bevy_wind_waker_shader` (vendored submodule, already a dependency in `../../Cargo.toml` and wired up in `src/main.rs` via `FlatShaderPlugin`) ships exactly this:
 
 - `FlatShaderBuilder::shadow_darkness(0.0)` — pushes shadow areas toward pure black without touching lit-area color, which is precisely "keep shadows, make them entirely black."
 - `FlatShaderBuilder::highlight_tint(Color::WHITE)` (the default) already avoids adding any highlight tint on top of the base texture — "remove highlights entirely" is close to free; if any residual specular pop is visible it's coming from Bevy's underlying PBR `StandardMaterial` still contributing specular highlights *before* the flat shader's shadow/highlight mix is applied, since the flat shader multiplies onto the lit result rather than replacing the lighting model. Worth checking whether PBR's specular term needs zeroing (e.g. forcing `perceptual_roughness` high / `metallic` 0 on materials the shader touches) to fully kill specular pop, separate from the toon banding.

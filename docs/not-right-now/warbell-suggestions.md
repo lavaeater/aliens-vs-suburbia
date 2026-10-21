@@ -125,7 +125,7 @@ tried the "proper" two-camera / `RenderLayers` first-person view-model pattern a
 failed three ways (ambiguous `Single<Camera3d>` queries silently freezing the main
 camera; a 2nd HDR+Tonemapping camera corrupting output — Bevy #17530; and the heavy
 prepass+post stack throwing a wgpu validation error that quits the app). If AvS ever adds
-a second 3D camera (minimap, portrait, view-model), read `CLAUDE.md` lines ~285-302
+a second 3D camera (minimap, portrait, view-model), read `../../CLAUDE.md` lines ~285-302
 first.
 
 ### 5. The verified-API reference doc (`docs/specs/bevy-0-18-1-polished-static-3d-scene-verified-apis.md`)
@@ -218,4 +218,4 @@ These pair with the capture harness (#3); the skills are mostly thin wrappers ar
 Reference points in the warbell tree:
 `src/quality.rs` · `src/capture.rs` · `src/palette.rs` · `src/trees.rs` · `src/props.rs` ·
 `src/scene.rs` · `src/audio/synth.rs` · `assets/shaders/*.wgsl` ·
-`docs/specs/bevy-0-18-1-polished-static-3d-scene-verified-apis.md` · `CLAUDE.md`.
+`docs/specs/bevy-0-18-1-polished-static-3d-scene-verified-apis.md` · `../../CLAUDE.md`.

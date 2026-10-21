@@ -94,7 +94,7 @@ Map the pieces as follows:
 | `FactSystem` interval rules | normal Bevy systems writing into `Facts` |
 | `silent {}` | a method that mutates without queuing `FactChanged` |
 
-New module: `src/facts/` with a `FactsPlugin`, registered in `GamePlugin`
+New module: `../../src/facts` with a `FactsPlugin`, registered in `GamePlugin`
 (`src/game_state/game_state_plugin.rs`).
 
 ```
@@ -357,15 +357,15 @@ push `Criterion` values — direct analog of `TurboRuleBuilder` extension functi
 ### 2.8 Persistence & data loading
 
 - **Save/load** (`FactPersistence`): serialize the scalar subset of `Facts.map` to RON
-  (`assets/`-external, e.g. project-root `facts-save.ron`, matching how `game-settings.ron`
+  (`../../assets`-external, e.g. project-root `facts-save.ron`, matching how `game-settings.ron`
   lives at root). Skip `TextList`/`TextSet` (runtime-only), same as Kotlin. `FactValue`
   already derives `Serialize`/`Deserialize`, so this is mostly `ron::to_string`.
 - **Story files**: since `Criterion`/`Consequence`/`Story` are all `Serialize`/`Deserialize`,
   prefer **RON story files** under `assets/stories/*.ron` over the bespoke JSON loader —
-  this matches the project's RON-everywhere convention (`assets/defs`, `assets/maps`).
+  this matches the project's RON-everywhere convention (`../../assets/defs`, `assets/maps`).
   Load with the asset server or a simple `ron::de` at startup.
 - **Map-embedded stories**: the Kotlin `StoryTextParser` reads a line format from map files.
-  Our `MapFile` (`src/general/components/map_components.rs`) can gain an optional
+  Our `MapFile` (`../../src/general/components/map_components.rs`) can gain an optional
   `stories: Vec<Story>` field (it's serde-friendly), so editor-authored stories ride along
   in `assets/maps/*.ron` with no separate text parser. Only build `text_format.rs` if we
   specifically want the terse hand-typed syntax in the map editor.
@@ -394,9 +394,9 @@ Concrete first stories to validate the system (mirroring `StoryHelper`):
   the UI/score system listens for.
 - **Level failed**: `LivingPlayerCount == 0` & `LevelStarted` -> `LevelFailed`.
 - **Wave/accelerating-spawn modifiers**: facts read by `WaveManager`
-  (`src/alien/wave_manager.rs`) instead of hardcoded progression.
+  (`../../src/alien/wave_manager.rs`) instead of hardcoded progression.
 
-Existing systems read facts instead of bespoke flags: HUD (`src/ui/spawn_ui.rs`) can show
+Existing systems read facts instead of bespoke flags: HUD (`../../src/ui/spawn_ui.rs`) can show
 fact-driven values; `WaveManager`, abilities, economy can gate behavior on facts.
 
 ---
@@ -442,10 +442,10 @@ flow, so win/lose/score decisions live in declarative stories instead of the han
 
 - `LevelTracker` resource holds `level_state: LevelState` (NotStarted/InProgress/Completed/
   Failed) plus the counters (`aliens_killed`, `aliens_reached_goal`, `aliens_to_spawn`, …).
-- `level_state_system` (`src/game_state/score_keeper.rs`) computes win/lose **inline** every
+- `level_state_system` (`../../src/game_state/score_keeper.rs`) computes win/lose **inline** every
   frame: win = all waves done && all spawned aliens killed; lose = too many escaped, or all
   players dead. On Completed/Failed it waits `end_delay` then writes `GotoState(Menu)`.
-- `wave_system` (`src/alien/wave_manager.rs`) gates on `LevelState::InProgress`.
+- `wave_system` (`../../src/alien/wave_manager.rs`) gates on `LevelState::InProgress`.
 - Score lives in per-player `Score` components and `LevelTracker` counters, fed by
   `GameTrackingEvent` messages from collision / goal / spawn / throw systems.
 

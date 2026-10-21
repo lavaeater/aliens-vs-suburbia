@@ -6,7 +6,7 @@ metadata:
 ---
 
 Ported the Kotlin `turbofacts` engine (from `~/projects/java/turbo-rocket-ultra`) into
-`src/facts/` on branch `turbofacts`. Plan lives in `docs/turbofacts.md`.
+`src/facts/` on branch `turbofacts`. Plan lives in `../docs/not-right-now/turbofacts.md`.
 
 **Design decision (user-confirmed):** messaging drives reactions, NOT observers. Facts are
 mutated directly on the `Facts` resource; a per-frame `emit_fact_changes` system drains the

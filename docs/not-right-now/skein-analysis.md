@@ -21,7 +21,7 @@ staged plan at the end.
   type, scale, hidden nodes, clip tags/bindings, animation sources, attachments, and
   **hardpoints** (`HashMap<String, Hardpoint>` — role -> frame as translation + XYZ euler,
   optionally anchored to a named bone).
-- Hardpoints are consumed by `src/assets/hardpoint.rs` (unit-tested quaternion math) for both
+- Hardpoints are consumed by `../../src/assets/hardpoint.rs` (unit-tested quaternion math) for both
   the browser preview and in-game equip (`src/player/systems/equip.rs`,
   `src/player/systems/shoot.rs`).
 
@@ -114,7 +114,7 @@ Reasons not to go all-in now:
 
 - Our hardpoint system is **working, unit-tested, and WYSIWYG in-engine** — the thing skein would
   replace is the least broken part.
-- Guns/gore momentum (see `ultraviolence.md`) is higher-value than an authoring-pipeline refactor.
+- Guns/gore momentum (see `../ultraviolence.md`) is higher-value than an authoring-pipeline refactor.
 - Additive adoption is reversible; a full migration is not.
 
 ## Staged plan (to consider later)

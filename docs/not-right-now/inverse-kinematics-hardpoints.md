@@ -5,7 +5,7 @@ SMGs, rifles) without hand-tuning every character × weapon combination or openi
 Blender for each model.
 
 Status: **design agreed, not yet built.** Builds on the asset-browser socket
-tool (`src/asset_browser/`), the skeleton overlay (`B`), and the `Attachment`
+tool (`../../src/asset_browser`), the skeleton overlay (`B`), and the `Attachment`
 type in `src/assets/asset_definition.rs`.
 
 ---
@@ -233,7 +233,7 @@ useful even if IK is deprioritized (one-handed weapons just work).
 
 ## 13. Progress
 
-- ✅ **Snap math** (`src/assets/hardpoint.rs`): `frame_from_euler`, `hardpoint_frame`,
+- ✅ **Snap math** (`../../src/assets/hardpoint.rs`): `frame_from_euler`, `hardpoint_frame`,
   `weapon_local`, `weapon_world`, `transform_from_frame` — unit-tested (weapon grip
   lands exactly on character grip; world == parented-local).
 - ✅ **Data model**: `ModelType::Weapon(WeaponProps)`, `Hardpoint`, and
@@ -243,13 +243,13 @@ useful even if IK is deprioritized (one-handed weapons just work).
   (grip/foregrip/stock/sight), anchor a character role to the selected bone, Pos/Rot
   nudge, delete; `H` toggles RGB axis-gizmo frames; "Preview selected weapon" snaps a
   saved weapon onto a character's `grip` live via `weapon_local`.
-- ✅ **In-game equip** (`src/player/systems/equip.rs`): `PlayerProps.weapon` names a
+- ✅ **In-game equip** (`../../src/player/systems/equip.rs`): `PlayerProps.weapon` names a
   weapon def path; `PendingEquip::resolve` reads both defs at spawn, and
   `equip_pending_weapons` waits for the skeleton, finds the grip bone *under that
   character*, and spawns the weapon as its child using the shared
   `hardpoint::snap_transform`. Browser preview and in-game equip call the same
   function, so they can't drift apart.
-- ✅ **Torso twist / aim offset** (`src/player/systems/torso_twist.rs`) — see §15. Not on
+- ✅ **Torso twist / aim offset** (`../../src/player/systems/torso_twist.rs`) — see §15. Not on
   the original staging plan, and deliberately jumped ahead of stage 2: it is FK rather
   than IK, so it is much cheaper, and it buys more visible payoff than the support hand.
 - ⏳ **Stage 2**: two-bone analytic IK for the support hand onto the rifle `foregrip`.
@@ -364,7 +364,7 @@ Built the other way round, on the observation that what a rifle actually needs i
 > **aim -> weapon -> hands.** The weapon's pose comes from the aim; the arms are solved to
 > reach whatever hardpoints the weapon ended up presenting.
 
-### Placing the weapon (`src/player/systems/weapon_aim.rs`)
+### Placing the weapon (`../../src/player/systems/weapon_aim.rs`)
 
 Two steps, because an aim direction only pins two of three degrees of freedom:
 
@@ -383,7 +383,7 @@ The weapon parents to the **character root**, not to a bone. Parenting it to a b
 IK is about to rotate would have the weapon ride the correction meant to reach it, and the
 two would chase each other.
 
-### Solving the arms (`src/player/systems/arm_ik.rs`)
+### Solving the arms (`../../src/player/systems/arm_ik.rs`)
 
 Analytic two-bone, law of cosines. An arm is two bones and one target; that has a closed
 form, so there is nothing to iterate and nothing to converge. `bevy_mod_inverse_kinematics`
