@@ -6,7 +6,7 @@
         throw_rate_per_minute: 60.0,
         weapon: Some("assets/defs/Assault Rifle.ron"),
         extra_weapons: [],
-        starting_ammo: [],
+        starting_ammo: [(Rifle, 120)],
     )),
     hidden_nodes: [],
     animations: {},
