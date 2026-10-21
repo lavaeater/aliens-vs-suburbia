@@ -82,9 +82,9 @@ pub struct AimedPlan {
     pub weapon_anchor: Vec3,
     /// Weapon-local anchor-to-muzzle direction.
     pub weapon_axis: Vec3,
-    /// Character hardpoint and matching weapon hardpoint per arm role, for the IK. Both
+    /// Role, character hardpoint and matching weapon hardpoint per arm, for the IK. Both
     /// full frames now, not just points: the rotations are what orient the hands.
-    pub arm_targets: Vec<(Hardpoint, Hardpoint)>,
+    pub arm_targets: Vec<(&'static str, Hardpoint, Hardpoint)>,
     /// Character and weapon `sight` frames, when both sides carry one.
     pub sight: Option<(Hardpoint, Hardpoint)>,
 }
@@ -164,7 +164,7 @@ fn plan_aimed(
             let char_point = character.hardpoints.get(*role)?;
             char_point.anchor.as_ref()?;
             let weapon_point = weapon.hardpoints.get(*role)?;
-            Some((char_point.clone(), weapon_point.clone()))
+            Some((*role, char_point.clone(), weapon_point.clone()))
         })
         .collect();
 
@@ -198,7 +198,7 @@ fn resolve_arms(
     let arms = plan
         .arm_targets
         .iter()
-        .filter_map(|(char_point, weapon_point)| {
+        .filter_map(|(role, char_point, weapon_point)| {
             let bone_name = char_point.anchor.as_ref()?;
             let effector = find_descendant_named(character, bone_name, children, names)?;
 
@@ -227,7 +227,7 @@ fn resolve_arms(
                 weapon_frame: hardpoint::transform_from_frame(hardpoint::hardpoint_frame(
                     weapon_point,
                 )),
-                pole: arm_ik::DEFAULT_POLE,
+                pole: arm_ik::pole_for(role),
             })
         })
         .collect();

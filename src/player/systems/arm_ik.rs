@@ -48,7 +48,8 @@ pub struct WeaponArm {
     pub effector_frame: Transform,
     /// The weapon-side hardpoint frame, local to the weapon.
     pub weapon_frame: Transform,
-    /// Which way the elbow bends, in the character's local space.
+    /// Which way the elbow bends, in the character's local space with `x` meaning
+    /// *outward* from the body's midline; `solve_arm` mirrors it to the arm's own side.
     pub pole: Vec3,
 }
 
@@ -145,9 +146,34 @@ pub fn local_from_world(parent_world: Quat, world: Quat) -> Quat {
     (parent_world.inverse() * world).normalize()
 }
 
-/// Bend the elbows down and back, the neutral rifle stance. Expressed in the character's
-/// own space so it turns with the body rather than pointing a fixed way in the world.
-pub const DEFAULT_POLE: Vec3 = Vec3::new(0.0, -1.0, -1.0);
+/// Bend the elbow down and back, under the gun: the support arm's stance. Poles are in the
+/// character's own space so they turn with the body rather than pointing a fixed way in
+/// the world, with `x` meaning outward (see `WeaponArm::pole`).
+pub const SUPPORT_POLE: Vec3 = Vec3::new(0.0, -1.0, -1.0);
+
+/// The trigger arm's elbow goes out to the side and only somewhat down — a shouldered
+/// rifle. Straight down, the trigger hand sits so close to the chest that the elbow folds
+/// in through the ribs.
+pub const TRIGGER_POLE: Vec3 = Vec3::new(1.0, -0.6, -0.3);
+
+/// The elbow pole for the arm solved onto `role`.
+pub fn pole_for(role: &str) -> Vec3 {
+    if role == crate::player::systems::equip::GRIP_ROLE {
+        TRIGGER_POLE
+    } else {
+        SUPPORT_POLE
+    }
+}
+
+/// `pole` with its outward `x` pointed at the side of the body `shoulder_x` (the shoulder
+/// in the character's space) is on. A shoulder on the midline leaves it as is.
+pub fn mirror_pole(pole: Vec3, shoulder_x: f32) -> Vec3 {
+    if shoulder_x < 0.0 {
+        Vec3::new(-pole.x, pole.y, pole.z)
+    } else {
+        pole
+    }
+}
 
 /// The bones from `stop` (exclusive) down to `effector` (inclusive), in order.
 ///
@@ -276,7 +302,8 @@ fn solve_arm(
         return None;
     }
 
-    let pole = owner.rotation() * arm.pole;
+    let shoulder_in_owner = owner.affine().inverse().transform_point3(shoulder);
+    let pole = owner.rotation() * mirror_pole(arm.pole, shoulder_in_owner.x);
     let wanted_elbow = solve_elbow(shoulder, wanted_hand, upper_len, lower_len, pole);
 
     // Upper arm: swing the shoulder so the elbow lands where the solve wants it.
@@ -467,6 +494,15 @@ mod tests {
     fn a_target_on_the_shoulder_is_survivable() {
         let elbow = solve_elbow(Vec3::ZERO, Vec3::ZERO, 1.0, 1.0, Vec3::NEG_Y);
         assert!(elbow.is_finite());
+    }
+
+    /// The outward component has to follow the arm: a left arm whose "outward" pointed
+    /// right would drive its elbow into the chest, which is the bug this exists for.
+    #[test]
+    fn outward_poles_point_away_from_the_body_on_either_side() {
+        assert!(mirror_pole(TRIGGER_POLE, 0.2).x > 0.0);
+        assert!(mirror_pole(TRIGGER_POLE, -0.2).x < 0.0);
+        assert_eq!(mirror_pole(TRIGGER_POLE, -0.2).yz(), TRIGGER_POLE.yz());
     }
 
     /// A pole pointing along the arm says nothing about the bend plane; any perpendicular
