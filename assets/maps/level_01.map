@@ -4,29 +4,25 @@
 
 [tiles]
 wwwwwwwwwwwwwwwwwwww
-wffffffffffffffffffw
-wffffffffffffffffffw
-wffvvffffffffffffffw
-wffvvffffffffffffffw
-wffffffffffffffvvffw
-efffffffvvvffffvvffw
-wfffffffvvvffffvvffw
-wfffffffvvvffffvvffw
+wffffffffffefffffeww
+wffffffffffffffffww
+wffvvfffffffffffww
+wffvvfffffffffffw
+wfffffffffffvvffw
+wfffffffvvvfvvffww
+wfffffffvvvffvvffww
+wfffffffvvvfffvvffww
 wfffffffvvvffffffffw
 wffffffffffffffffffw
 wfffffffffffvvvvfffw
-efffpfffffffvvvvfffx
+wfffpfffffffvvvvfffw
 wfffffffffffvvvvfffw
 wffffffffffffffffffw
 wffffffvvffffffffffw
 wffffffvvffffffffffw
 wffffffvvffffffffffw
-effffffvvffffffffffw
-wffffffffffffffffffw
-wffffffffffffffffffw
-wffffffffffffffffffw
-wffffffffffffffffffw
-wwwwwwwwwwwwwwwwwwww
+wfffffvvfffxffffffww
+wwwwwwwwwwwwwwwwwww
 
 [decorations]
 # at: x, y | model: <path under assets/> | rotation: <degrees> | scale: <s>
@@ -36,3 +32,4 @@ wwwwwwwwwwwwwwwwwwww
 
 [waves]
 # enemy: <enemy def path, omit for the built-in alien> | count: <n> | rate: <per minute>
+enemy: | count: 5 | rate: 5
