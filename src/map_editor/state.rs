@@ -2,6 +2,8 @@ use crate::assets::asset_definition::{AssetDefinition, ModelType};
 use crate::general::components::map_components::{MapFile, TilePlacement, WaveDef};
 use crate::map::MapFeatures;
 use crate::map::procgen::{HouseSpec, Polygon, apply_house, resolve_house};
+use crate::map::text_format;
+use crate::map_editor::modal::{History, Mode};
 use bevy::prelude::Resource;
 
 pub const TILE_SPECIAL_FLOOR: u64 = MapFeatures::Floor as u64;
@@ -17,7 +19,7 @@ pub const TILE_WALL_ALIEN: u64 =
     MapFeatures::Floor as u64 | MapFeatures::ImpassableForEnemies as u64;
 pub const TILE_VOID: u64 = 0;
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum PaletteTab {
     Terrain,
     Tower,
@@ -36,6 +38,18 @@ impl PaletteTab {
             Self::Special,
         ]
     }
+    /// Position in [`PaletteTab::all`], which is also the index into
+    /// `MapEditorState::catalog`.
+    pub const fn index(self) -> usize {
+        match self {
+            Self::Terrain => 0,
+            Self::Tower => 1,
+            Self::Item => 2,
+            Self::Enemy => 3,
+            Self::Special => 4,
+        }
+    }
+
     pub const fn label(&self) -> &'static str {
         match self {
             Self::Terrain => "Terrain",
@@ -47,15 +61,7 @@ impl PaletteTab {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub enum EditorTool {
-    Paint,
-    /// Click-drag a rectangle; on release it's resolved into a wall ring with doors and
-    /// windows via `crate::map::procgen` and stamped into the grid.
-    House,
-}
-
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PaletteItem {
     /// A model def file.
     Def { path: String, name: String },
@@ -88,17 +94,22 @@ pub struct MapEditorState {
     pub waves: Vec<WaveDef>,
     /// Currently selected palette tab.
     pub active_tab: PaletteTab,
+    /// Every brush, per tab (indexed by `PaletteTab::index`). Scanned once, so search and
+    /// the eyedropper can reach brushes in other tabs.
+    pub catalog: Vec<Vec<PaletteItem>>,
     /// Items in the active tab.
     pub palette_items: Vec<PaletteItem>,
     pub selected_palette: usize,
+    /// The selection each tab had when last left, so cycling tabs comes back to it.
+    pub tab_selection: [usize; 5],
+    /// The brush before the current one, for the swap key.
+    pub previous_brush: Option<(PaletteTab, usize)>,
     /// Brush rotation in 45° steps.
     pub rotation_steps: u8,
     /// If true, palette / wave list needs UI rebuild.
     pub palette_dirty: bool,
     pub waves_dirty: bool,
     pub grid_dirty: bool,
-    /// When true, left-click erases instead of placing.
-    pub erase_mode: bool,
     /// Last seed used by "Generate Map".
     pub gen_seed: u64,
     pub seed_label_dirty: bool,
@@ -106,8 +117,23 @@ pub struct MapEditorState {
     pub enemy_defs: Vec<(String, String)>,
     pub selected_enemy: usize,
     pub enemy_picker_dirty: bool,
-    /// Active editing tool.
-    pub tool: EditorTool,
+    /// The modal editor's mode (`modal.rs`).
+    pub mode: Mode,
+    /// The mode to go back to when a search ends.
+    pub mode_before_search: Mode,
+    /// The keyboard cursor, in tiles. The mouse moves it too, by hovering.
+    pub cursor: (i32, i32),
+    /// The search query and its hits, `(tab, index)` best first.
+    pub search: String,
+    pub search_hits: Vec<(PaletteTab, usize)>,
+    pub search_selected: usize,
+    /// Undo / redo of the tiles and placements.
+    pub history: History,
+    /// An edit is in progress (a run of pen-down moves, a mouse drag), so further edits
+    /// join its undo step instead of making their own.
+    pub stroke_open: bool,
+    /// One line of feedback for the status bar: saved, nothing to undo, ...
+    pub status: String,
     /// Nodes of an in-progress House polygon, in tile coordinates, in click order.
     /// Each new node snaps onto a horizontal or vertical line from the previous node, so
     /// every house drawn this way is rectilinear (arbitrary L/T/U shapes, not just rectangles).
@@ -128,19 +154,29 @@ impl Default for MapEditorState {
             placements: Vec::new(),
             waves: Vec::new(),
             active_tab: PaletteTab::Special,
+            catalog: scan_catalog(),
             palette_items: Vec::new(),
             selected_palette: 0,
+            tab_selection: [0; 5],
+            previous_brush: None,
             rotation_steps: 0,
             palette_dirty: true,
             waves_dirty: true,
             grid_dirty: true,
-            erase_mode: false,
             gen_seed: 0,
             seed_label_dirty: false,
             enemy_defs: scan_enemy_defs(),
             selected_enemy: 0,
             enemy_picker_dirty: true,
-            tool: EditorTool::Paint,
+            mode: Mode::Normal,
+            mode_before_search: Mode::Normal,
+            cursor: (0, 0),
+            search: String::new(),
+            search_hits: Vec::new(),
+            search_selected: 0,
+            history: History::default(),
+            stroke_open: false,
+            status: String::new(),
             house_points: Vec::new(),
             house_wall_def: scan_wall_def().unwrap_or_default(),
         };
@@ -150,57 +186,165 @@ impl Default for MapEditorState {
 }
 
 impl MapEditorState {
+    /// Load the active tab's brushes from the catalog, selecting the one it had last.
     pub fn refresh_palette(&mut self) {
-        self.palette_items = match self.active_tab {
-            PaletteTab::Special => vec![
-                PaletteItem::Special {
-                    label: "Floor",
-                    tile_value: TILE_SPECIAL_FLOOR,
-                },
-                PaletteItem::Special {
-                    label: "Wall (all)",
-                    tile_value: TILE_WALL_ALL,
-                },
-                PaletteItem::Special {
-                    label: "Wall (player)",
-                    tile_value: TILE_WALL_PLAYER,
-                },
-                PaletteItem::Special {
-                    label: "Wall (alien)",
-                    tile_value: TILE_WALL_ALIEN,
-                },
-                PaletteItem::Special {
-                    label: "Void",
-                    tile_value: TILE_VOID,
-                },
-                PaletteItem::Special {
-                    label: "Alien Spawn",
-                    tile_value: TILE_ALIEN_SPAWN,
-                },
-                PaletteItem::Special {
-                    label: "Alien Goal",
-                    tile_value: TILE_ALIEN_GOAL,
-                },
-                PaletteItem::Special {
-                    label: "Player Spawn",
-                    tile_value: TILE_PLAYER_SPAWN,
-                },
-            ],
-            _ => scan_defs_for_tab(&self.active_tab),
-        };
-        self.selected_palette = 0;
+        self.palette_items = self
+            .catalog
+            .get(self.active_tab.index())
+            .cloned()
+            .unwrap_or_default();
+        let remembered = self.remembered(self.active_tab);
+        self.selected_palette = remembered.min(self.palette_items.len().saturating_sub(1));
         self.palette_dirty = true;
     }
 
     pub fn set_tab(&mut self, tab: PaletteTab) {
+        self.remember(self.active_tab, self.selected_palette);
         self.active_tab = tab;
         self.refresh_palette();
+    }
+
+    /// Make `(tab, index)` the brush, remembering the old one for the swap key.
+    pub fn select_brush(&mut self, tab: PaletteTab, index: usize) {
+        let current = (self.active_tab, self.selected_palette);
+        if current == (tab, index) {
+            return;
+        }
+        self.previous_brush = Some(current);
+        if tab != self.active_tab {
+            self.set_tab(tab);
+        }
+        self.selected_palette = index.min(self.palette_items.len().saturating_sub(1));
+        self.remember(tab, self.selected_palette);
+        self.palette_dirty = true;
     }
 
     pub fn selected_item(&self) -> Option<&PaletteItem> {
         self.palette_items.get(self.selected_palette)
     }
 
+    /// The brush at `(tab, index)` in the catalog.
+    pub fn catalog_item(&self, tab: PaletteTab, index: usize) -> Option<&PaletteItem> {
+        self.tab_items(tab).get(index)
+    }
+
+    /// Every brush in `tab`.
+    pub fn tab_items(&self, tab: PaletteTab) -> &[PaletteItem] {
+        self.catalog.get(tab.index()).map_or(&[], Vec::as_slice)
+    }
+
+    /// The selection `tab` had when last left.
+    pub fn remembered(&self, tab: PaletteTab) -> usize {
+        self.tab_selection.get(tab.index()).copied().unwrap_or(0)
+    }
+
+    fn remember(&mut self, tab: PaletteTab, index: usize) {
+        if let Some(slot) = self.tab_selection.get_mut(tab.index()) {
+            *slot = index;
+        }
+    }
+
+    pub const fn in_bounds(&self, x: i32, y: i32) -> bool {
+        x >= 0 && y >= 0 && x < self.width as i32 && y < self.height as i32
+    }
+
+    // ── Undo ─────────────────────────────────────────────────────────────────
+
+    /// Start an undo step of its own for a one-off edit (a house, a generated map).
+    pub fn checkpoint(&mut self) {
+        self.stroke_open = false;
+        self.history.checkpoint(&self.tiles, &self.placements);
+    }
+
+    /// Start an undo step unless one is already open for this stroke.
+    pub fn begin_stroke(&mut self) {
+        if !self.stroke_open {
+            self.history.checkpoint(&self.tiles, &self.placements);
+            self.stroke_open = true;
+        }
+    }
+
+    /// Undo can restore a map of another size (a generated one replaced it).
+    fn after_restore(&mut self) {
+        self.height = self.tiles.len();
+        self.width = self.tiles.first().map_or(0, Vec::len);
+        self.cursor = (
+            self.cursor.0.clamp(0, (self.width as i32 - 1).max(0)),
+            self.cursor.1.clamp(0, (self.height as i32 - 1).max(0)),
+        );
+        self.grid_dirty = true;
+    }
+
+    pub fn undo(&mut self) {
+        self.stroke_open = false;
+        if self.history.undo(&mut self.tiles, &mut self.placements) {
+            self.after_restore();
+            self.status = "undo".into();
+        } else {
+            self.status = "nothing to undo".into();
+        }
+    }
+
+    pub fn redo(&mut self) {
+        self.stroke_open = false;
+        if self.history.redo(&mut self.tiles, &mut self.placements) {
+            self.after_restore();
+            self.status = "redo".into();
+        } else {
+            self.status = "nothing to redo".into();
+        }
+    }
+}
+
+/// Every tab's brushes, in `PaletteTab::all` order.
+fn scan_catalog() -> Vec<Vec<PaletteItem>> {
+    PaletteTab::all()
+        .iter()
+        .map(|tab| match tab {
+            PaletteTab::Special => special_items(),
+            _ => scan_defs_for_tab(tab),
+        })
+        .collect()
+}
+
+fn special_items() -> Vec<PaletteItem> {
+    vec![
+        PaletteItem::Special {
+            label: "Floor",
+            tile_value: TILE_SPECIAL_FLOOR,
+        },
+        PaletteItem::Special {
+            label: "Wall (all)",
+            tile_value: TILE_WALL_ALL,
+        },
+        PaletteItem::Special {
+            label: "Wall (player)",
+            tile_value: TILE_WALL_PLAYER,
+        },
+        PaletteItem::Special {
+            label: "Wall (alien)",
+            tile_value: TILE_WALL_ALIEN,
+        },
+        PaletteItem::Special {
+            label: "Void",
+            tile_value: TILE_VOID,
+        },
+        PaletteItem::Special {
+            label: "Alien Spawn",
+            tile_value: TILE_ALIEN_SPAWN,
+        },
+        PaletteItem::Special {
+            label: "Alien Goal",
+            tile_value: TILE_ALIEN_GOAL,
+        },
+        PaletteItem::Special {
+            label: "Player Spawn",
+            tile_value: TILE_PLAYER_SPAWN,
+        },
+    ]
+}
+
+impl MapEditorState {
     pub fn place_at(&mut self, x: i32, y: i32) {
         if x < 0 || y < 0 || x >= self.width as i32 || y >= self.height as i32 {
             return;
@@ -269,14 +413,6 @@ impl MapEditorState {
         }
     }
 
-    pub fn toggle_tool(&mut self) {
-        self.tool = match self.tool {
-            EditorTool::Paint => EditorTool::House,
-            EditorTool::House => EditorTool::Paint,
-        };
-        self.house_points.clear();
-    }
-
     /// Adds a click as the next node of the in-progress House polygon. A click landing on
     /// the first node (with at least 3 nodes already placed) closes and resolves the
     /// polygon instead of adding a degenerate node. Every node after the first is snapped
@@ -311,6 +447,7 @@ impl MapEditorState {
     /// it into the grid. No-ops (and clears) if fewer than 3 nodes were placed.
     pub fn finish_house_polygon(&mut self) {
         if self.house_points.len() >= 3 {
+            self.checkpoint();
             let polygon = Polygon {
                 points: self.house_points.clone(),
             };
@@ -334,8 +471,13 @@ impl MapEditorState {
         self.house_points.clear();
     }
 
-    pub const fn rotate_brush(&mut self) {
-        self.rotation_steps = (self.rotation_steps + 1) % 8;
+    /// Rotate the brush by one 45 degree step, backwards with `back`.
+    pub const fn rotate_brush(&mut self, back: bool) {
+        self.rotation_steps = if back {
+            (self.rotation_steps + 7) % 8
+        } else {
+            (self.rotation_steps + 1) % 8
+        };
         self.palette_dirty = true; // refresh label with new rotation angle
     }
 
@@ -353,22 +495,46 @@ impl MapEditorState {
         }
     }
 
-    pub fn save(&self) {
+    /// Write the map as `.ron` and say how it went in the status line.
+    ///
+    /// A `.map` text file beside the `.ron` is what the game loads for that level
+    /// (`text_format::load_level`), so the save is called out as shadowed when one exists.
+    pub fn save(&mut self) {
         let map = self.to_map_file();
         let path = format!("assets/maps/{}.ron", self.map_name);
-        if let Ok(text) = ron::ser::to_string_pretty(&map, ron::ser::PrettyConfig::default()) {
-            let _ = std::fs::create_dir_all("assets/maps");
-            let _ = std::fs::write(&path, text);
-            bevy::log::info!("Map saved to {path}");
+        let written = ron::ser::to_string_pretty(&map, ron::ser::PrettyConfig::default())
+            .map_err(|e| e.to_string())
+            .and_then(|text| {
+                std::fs::create_dir_all("assets/maps").map_err(|e| e.to_string())?;
+                std::fs::write(&path, text).map_err(|e| e.to_string())
+            });
+        if let Err(e) = written {
+            self.status = format!("save failed: {e}");
+            return;
         }
+        bevy::log::info!("Map saved to {path}");
+        let text_map = text_format::converted_path(std::path::Path::new(&path));
+        self.status = if text_map.exists() {
+            format!(
+                "saved {path} - but {} exists and the game loads that instead",
+                text_map.display()
+            )
+        } else {
+            format!("saved {path}")
+        };
     }
 
     pub fn load_from_map_file(&mut self, map: MapFile) {
+        self.checkpoint();
         self.width = map.map_width;
         self.height = map.map_height;
         self.tiles = map.tiles;
         self.placements = map.placements;
         self.waves = map.waves;
+        self.cursor = (
+            self.cursor.0.clamp(0, self.width as i32 - 1),
+            self.cursor.1.clamp(0, self.height as i32 - 1),
+        );
         self.grid_dirty = true;
         self.waves_dirty = true;
     }

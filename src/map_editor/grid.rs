@@ -1,5 +1,6 @@
 use crate::map::MapFeatures;
-use crate::map_editor::state::{EditorTool, MapEditorState};
+use crate::map_editor::modal::Mode;
+use crate::map_editor::state::MapEditorState;
 use crate::ui::spawn_ui::StateMarker;
 use bevy::input::mouse::MouseButton;
 use bevy::prelude::*;
@@ -19,8 +20,13 @@ pub struct GridCellMarker {
     pub y: usize,
 }
 
+/// The editor's cursor: the keyboard's, which the mouse also moves by hovering.
 #[derive(Component)]
 pub struct HoverHighlight;
+
+/// The rectangle being selected in Select mode.
+#[derive(Component)]
+pub struct SelectionOverlay;
 
 pub fn spawn_grid_camera(mut commands: Commands) {
     commands.spawn((
@@ -45,7 +51,24 @@ pub fn spawn_grid_camera(mut commands: Commands) {
             ..Default::default()
         },
         BackgroundColor(Color::srgba(1.0, 1.0, 1.0, 0.25)),
+        BorderColor::all(Color::WHITE),
         Visibility::Hidden,
+        // Drawn over the tiles, which are respawned (and so re-ordered) on every edit.
+        GlobalZIndex(10),
+    ));
+
+    commands.spawn((
+        SelectionOverlay,
+        StateMarker,
+        Node {
+            position_type: PositionType::Absolute,
+            border: UiRect::all(Val::Px(2.0)),
+            ..Default::default()
+        },
+        BackgroundColor(Color::srgba(0.4, 0.7, 1.0, 0.2)),
+        BorderColor::all(Color::srgba(0.5, 0.8, 1.0, 0.9)),
+        Visibility::Hidden,
+        GlobalZIndex(9),
     ));
 }
 
@@ -198,26 +221,67 @@ fn cursor_to_tile(window: &Window, w: usize, h: usize) -> Option<(i32, i32)> {
     Some((col, row))
 }
 
-/// Update the hover highlight position each frame.
+/// Hovering a new tile moves the cursor there. Only a *change* of hovered tile does, so
+/// a mouse resting on the grid does not pull the cursor back after every arrow key.
+pub fn follow_mouse(
+    mut state: ResMut<MapEditorState>,
+    windows: Query<&Window, With<PrimaryWindow>>,
+    mut last_hovered: Local<Option<(i32, i32)>>,
+) {
+    let Ok(window) = windows.single() else { return };
+    let hovered = cursor_to_tile(window, state.width, state.height);
+    if hovered != *last_hovered {
+        *last_hovered = hovered;
+        if let Some(tile) = hovered
+            && state.cursor != tile
+        {
+            state.cursor = tile;
+        }
+    }
+}
+
+/// Draw the cursor, tinted by mode, and the Select mode rectangle.
+#[allow(clippy::type_complexity)]
 pub fn update_hover_highlight(
     state: Res<MapEditorState>,
     windows: Query<&Window, With<PrimaryWindow>>,
-    mut highlight_q: Query<(&mut Node, &mut Visibility), With<HoverHighlight>>,
+    mut highlight_q: Query<
+        (&mut Node, &mut Visibility, &mut BackgroundColor),
+        (With<HoverHighlight>, Without<SelectionOverlay>),
+    >,
+    mut selection_q: Query<(&mut Node, &mut Visibility), With<SelectionOverlay>>,
 ) {
-    let Ok((mut node, mut vis)) = highlight_q.single_mut() else {
-        return;
-    };
     let Ok(window) = windows.single() else { return };
+    let grid_left = (window.width() * 0.5 - state.width as f32 * CELL_SIZE * 0.5).round();
+    let grid_top = (window.height() * 0.5 - state.height as f32 * CELL_SIZE * 0.5).round();
 
-    match cursor_to_tile(window, state.width, state.height) {
-        Some((col, row)) => {
-            let grid_left = (window.width() * 0.5 - state.width as f32 * CELL_SIZE * 0.5).round();
-            let grid_top = (window.height() * 0.5 - state.height as f32 * CELL_SIZE * 0.5).round();
-            node.left = Val::Px(grid_left + col as f32 * CELL_SIZE);
-            node.top = Val::Px(grid_top + row as f32 * CELL_SIZE);
+    if let Ok((mut node, mut vis, mut bg)) = highlight_q.single_mut() {
+        let (col, row) = state.cursor;
+        node.left = Val::Px(grid_left + col as f32 * CELL_SIZE);
+        node.top = Val::Px(grid_top + row as f32 * CELL_SIZE);
+        node.border = UiRect::all(Val::Px(2.0));
+        bg.0 = match state.mode {
+            Mode::Paint => Color::srgba(0.4, 1.0, 0.4, 0.45),
+            Mode::Erase => Color::srgba(1.0, 0.3, 0.3, 0.45),
+            Mode::House => Color::srgba(1.0, 0.9, 0.2, 0.45),
+            _ => Color::srgba(1.0, 1.0, 1.0, 0.25),
+        };
+        *vis = if state.in_bounds(col, row) {
+            Visibility::Visible
+        } else {
+            Visibility::Hidden
+        };
+    }
+
+    if let Ok((mut node, mut vis)) = selection_q.single_mut() {
+        if let Mode::Select { anchor } = state.mode {
+            let ((x0, y0), (x1, y1)) = MapEditorState::rect(anchor, state.cursor);
+            node.left = Val::Px(grid_left + x0 as f32 * CELL_SIZE);
+            node.top = Val::Px(grid_top + y0 as f32 * CELL_SIZE);
+            node.width = Val::Px((x1 - x0 + 1) as f32 * CELL_SIZE - 1.0);
+            node.height = Val::Px((y1 - y0 + 1) as f32 * CELL_SIZE - 1.0);
             *vis = Visibility::Visible;
-        }
-        None => {
+        } else {
             *vis = Visibility::Hidden;
         }
     }
@@ -232,9 +296,18 @@ pub fn handle_grid_click(
 ) {
     let Ok(window) = windows.single() else { return };
 
-    if state.tool == EditorTool::House {
-        handle_house_polygon_input(&mut state, &mouse, window);
-        return;
+    match state.mode {
+        Mode::House => {
+            handle_house_polygon_input(&mut state, &mouse, window);
+            return;
+        }
+        // The mouse sizes a selection by hovering; clicks would fight the keys.
+        Mode::Select { .. } | Mode::Search => return,
+        _ => {}
+    }
+    // A new press is a new undo step.
+    if mouse.any_just_pressed([MouseButton::Left, MouseButton::Right]) {
+        state.stroke_open = false;
     }
 
     let (left, right) = (
@@ -249,7 +322,8 @@ pub fn handle_grid_click(
         return;
     };
 
-    let erasing = right || (left && state.erase_mode);
+    state.begin_stroke();
+    let erasing = right || (left && state.mode == Mode::Erase);
     if erasing {
         state.erase_at(col, row);
     } else if left {

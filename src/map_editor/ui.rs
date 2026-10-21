@@ -2,13 +2,15 @@ use crate::game_state::GameState;
 use crate::map::chunk_loader::stitch_map_from_dir;
 use crate::map::chunks::CHUNK_SIZE;
 use crate::map::map_generator::generate_suburb_map;
-use crate::map_editor::state::{EditorTool, MapEditorState, PaletteTab};
+use crate::map_editor::modal::{EditorKey, KeyOutcome, Mode, Mods};
+use crate::map_editor::state::{MapEditorState, PaletteTab};
 use crate::ui::spawn_ui::StateMarker;
 use bevy::input::ButtonState;
 use bevy::input::keyboard::{Key, KeyboardInput};
 use bevy::prelude::*;
 use bevy::ui_widgets::Activate;
 use lava_ui_builder::{LavaTheme, UIBuilder, spawn_list_item};
+use std::fmt::Write as _;
 
 // ── Markers ──────────────────────────────────────────────────────────────────
 
@@ -26,6 +28,22 @@ pub struct ActiveBrushLabel;
 pub struct ModeLabel;
 #[derive(Component)]
 pub struct GenSeedLabel;
+#[derive(Component)]
+pub struct StatusLabel;
+
+const HELP_COLOR: Color = Color::srgba(0.5, 0.7, 0.5, 0.7);
+
+/// The keymap, as shown in the left panel (`modal.rs` has the full story).
+const HELP: &[&str] = &[
+    "Arrows move (Shift: 5)  Esc normal",
+    "P paint  X erase  V select  H house",
+    "Space stamp/corner  Del erase tile",
+    "Select: Enter fill, X erase, H house",
+    "Tab category  [ ] or , . brush  1-9",
+    "/ search  I eyedrop  ' last brush",
+    "R/Shift+R rotate  U undo  Ctrl+Y redo",
+    "Ctrl+S save  Ctrl+Q quit",
+];
 
 const PANEL_BG: Color = Color::srgba(0.04, 0.08, 0.05, 0.95);
 
@@ -50,41 +68,30 @@ pub fn spawn_map_editor_ui(
     // ── Left panel: palette ──────────────────────────────────────────────────
     ui.side_panel(200.0, PANEL_BG, |left| {
         left.themed_header("Map Editor");
-        left.label(
-            "[R] rotate  [S] save  [Esc] back",
-            11.0,
-            Color::srgba(0.5, 0.7, 0.5, 0.7),
-        );
-        left.label(
-            "[E] toggle erase  RClick erase",
-            11.0,
-            Color::srgba(0.5, 0.7, 0.5, 0.7),
-        );
-        left.label(
-            "Hold LMB to drag-paint",
-            11.0,
-            Color::srgba(0.5, 0.7, 0.5, 0.7),
-        );
-        left.label(
-            "[H] House tool: click nodes, click",
-            11.0,
-            Color::srgba(0.5, 0.7, 0.5, 0.7),
-        );
-        left.label(
-            "  start (or Enter) to close, Esc/RClick cancel",
-            11.0,
-            Color::srgba(0.5, 0.7, 0.5, 0.7),
-        );
+        for line in HELP {
+            left.label(*line, 10.0, HELP_COLOR);
+        }
+        left.label("Mouse: LMB paint, RMB erase", 10.0, HELP_COLOR);
 
         left.with_child(|c| {
             c.with_text(
-                "Mode: Paint",
+                "-- NORMAL --",
                 Some(lava_ui_builder::TextStyle::size_color(
                     12.0,
                     Color::srgb(0.6, 1.0, 0.6),
                 )),
             )
             .insert(ModeLabel);
+        });
+        left.with_child(|c| {
+            c.with_text(
+                "",
+                Some(lava_ui_builder::TextStyle::size_color(
+                    10.0,
+                    Color::srgb(0.95, 0.85, 0.5),
+                )),
+            )
+            .insert(StatusLabel);
         });
 
         left.with_child(|c| {
@@ -118,7 +125,8 @@ pub fn spawn_map_editor_ui(
                 let seed = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .map_or(42, |d| d.as_nanos() as u64);
-                let map = generate_suburb_map(seed, s.width, s.height);
+                let (width, height) = (s.width, s.height);
+                let map = generate_suburb_map(seed, width, height);
                 s.load_from_map_file(map);
                 s.gen_seed = seed;
                 s.seed_label_dirty = true;
@@ -190,7 +198,7 @@ pub fn spawn_map_editor_ui(
             |b| {
                 b.width(percent(100.0)).height(px(28.0)).font_size(13.0);
             },
-            |_: On<Activate>, s: Res<MapEditorState>| {
+            |_: On<Activate>, mut s: ResMut<MapEditorState>| {
                 s.save();
             },
         );
@@ -249,15 +257,21 @@ pub fn rebuild_palette(
     }
     state.palette_dirty = false;
 
+    let searching = state.mode == Mode::Search;
     if let Ok(mut t) = brush_label_q.single_mut() {
-        let name = state
-            .selected_item()
-            .map_or("-", super::state::PaletteItem::display_name);
-        let rot = state.rotation_steps;
-        **t = if rot == 0 {
-            format!("Brush: {name}")
+        **t = if searching {
+            format!("Search: {}_", state.search)
         } else {
-            format!("Brush: {name}  r{}deg", rot * 45)
+            let name = state
+                .selected_item()
+                .map_or("-", super::state::PaletteItem::display_name);
+            let rot = state.rotation_steps;
+            let tab = state.active_tab.label();
+            if rot == 0 {
+                format!("Brush: {tab} / {name}")
+            } else {
+                format!("Brush: {tab} / {name}  {}deg", u32::from(rot) * 45)
+            }
         };
     }
 
@@ -266,28 +280,51 @@ pub fn rebuild_palette(
     };
     commands.entity(container).despawn_related::<Children>();
 
-    let items: Vec<(usize, String, bool)> = state
-        .palette_items
-        .iter()
-        .enumerate()
-        .map(|(i, item)| {
-            (
-                i,
-                item.display_name().to_string(),
-                i == state.selected_palette,
-            )
-        })
-        .collect();
+    // While searching the list shows the hits from every tab, else the active tab
+    // numbered for the 1-9 keys.
+    let rows: Vec<(usize, String, bool)> = if searching {
+        state
+            .search_hits
+            .iter()
+            .enumerate()
+            .filter_map(|(i, &(tab, index))| {
+                let item = state.catalog_item(tab, index)?;
+                Some((
+                    i,
+                    format!("{}: {}", tab.label(), item.display_name()),
+                    i == state.search_selected,
+                ))
+            })
+            .collect()
+    } else {
+        state
+            .palette_items
+            .iter()
+            .enumerate()
+            .map(|(i, item)| {
+                let name = if i < 9 {
+                    format!("{}  {}", i + 1, item.display_name())
+                } else {
+                    format!("   {}", item.display_name())
+                };
+                (i, name, i == state.selected_palette)
+            })
+            .collect()
+    };
 
     commands.entity(container).with_children(|parent| {
-        for (idx, name, selected) in items {
+        for (idx, name, selected) in rows {
             spawn_list_item(
                 parent,
                 name,
                 selected,
                 move |_: On<Activate>, mut s: ResMut<MapEditorState>| {
-                    s.selected_palette = idx;
-                    s.palette_dirty = true;
+                    if s.mode == Mode::Search {
+                        s.pick_search_hit(idx);
+                    } else {
+                        let tab = s.active_tab;
+                        s.select_brush(tab, idx);
+                    }
                 },
             );
         }
@@ -461,47 +498,105 @@ pub fn rebuild_seed_label(
 
 // ── Key input ─────────────────────────────────────────────────────────────────
 
+/// The mode line and the status line under it.
 pub fn rebuild_mode_label(
     state: Res<MapEditorState>,
-    mut label_q: Query<&mut Text, With<ModeLabel>>,
+    mut mode_q: Query<&mut Text, (With<ModeLabel>, Without<StatusLabel>)>,
+    mut status_q: Query<&mut Text, (With<StatusLabel>, Without<ModeLabel>)>,
 ) {
     if !state.is_changed() {
         return;
     }
-    let Ok(mut t) = label_q.single_mut() else {
-        return;
+    if let Ok(mut t) = mode_q.single_mut() {
+        let (x, y) = state.cursor;
+        let mut line = format!("-- {} --  ({x},{y})", state.mode.label());
+        if let Mode::Select { anchor } = state.mode {
+            let ((x0, y0), (x1, y1)) = MapEditorState::rect(anchor, state.cursor);
+            let _ = write!(line, "  {}x{}", x1 - x0 + 1, y1 - y0 + 1);
+        }
+        if !state.house_points.is_empty() {
+            let _ = write!(line, "  {} corners", state.house_points.len());
+        }
+        **t = line;
+    }
+    if let Ok(mut t) = status_q.single_mut()
+        && **t != state.status
+    {
+        t.0.clone_from(&state.status);
+    }
+}
+
+/// Translate a key press into the editor's own [`EditorKey`]. Ctrl combinations go by
+/// the physical key, since with Ctrl held some layouts report a control character.
+/// Brackets and the slash also go by position, for layouts (Swedish, German) where they
+/// need AltGr or Shift.
+fn editor_key(event: &KeyboardInput, ctrl: bool) -> Option<EditorKey> {
+    let by_key = match &event.logical_key {
+        Key::ArrowUp => Some(EditorKey::Up),
+        Key::ArrowDown => Some(EditorKey::Down),
+        Key::ArrowLeft => Some(EditorKey::Left),
+        Key::ArrowRight => Some(EditorKey::Right),
+        Key::Space => Some(EditorKey::Space),
+        Key::Enter => Some(EditorKey::Enter),
+        Key::Escape => Some(EditorKey::Escape),
+        Key::Backspace => Some(EditorKey::Backspace),
+        Key::Delete => Some(EditorKey::Delete),
+        Key::Tab => Some(EditorKey::Tab),
+        Key::Character(c) if !ctrl => {
+            let c = c.chars().next()?;
+            Some(EditorKey::Char(c.to_ascii_lowercase()))
+        }
+        _ => None,
     };
-    **t = match state.tool {
-        EditorTool::House => format!("Mode: House ({} pts)", state.house_points.len()),
-        EditorTool::Paint if state.erase_mode => "Mode: Erase".to_string(),
-        EditorTool::Paint => "Mode: Paint".to_string(),
+    if by_key.is_some() {
+        return by_key;
+    }
+    let c = match event.key_code {
+        KeyCode::KeyS => 's',
+        KeyCode::KeyZ => 'z',
+        KeyCode::KeyY => 'y',
+        KeyCode::KeyQ => 'q',
+        _ => return None,
     };
+    ctrl.then_some(EditorKey::Char(c))
+}
+
+/// Keys that should work by position whatever the layout prints on them: the brush
+/// steppers and search. Only outside a search, where the printed character is what counts.
+fn by_position(key_code: KeyCode) -> Option<EditorKey> {
+    match key_code {
+        KeyCode::BracketLeft => Some(EditorKey::Char('[')),
+        KeyCode::BracketRight => Some(EditorKey::Char(']')),
+        KeyCode::Slash => Some(EditorKey::Char('/')),
+        _ => None,
+    }
 }
 
 pub fn handle_editor_keys(
     mut state: ResMut<MapEditorState>,
     mut next: ResMut<NextState<GameState>>,
     mut keyboard: MessageReader<KeyboardInput>,
+    held: Res<ButtonInput<KeyCode>>,
 ) {
+    let mods = Mods {
+        shift: held.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]),
+        ctrl: held.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]),
+    };
     for event in keyboard.read() {
         if event.state != ButtonState::Pressed {
             continue;
         }
-        match &event.logical_key {
-            Key::Character(c) if c == "r" || c == "R" => state.rotate_brush(),
-            Key::Character(c) if c == "s" || c == "S" => state.save(),
-            Key::Character(c) if c == "e" || c == "E" => {
-                state.erase_mode = !state.erase_mode;
-            }
-            Key::Character(c) if c == "h" || c == "H" => state.toggle_tool(),
-            Key::Enter if state.tool == EditorTool::House && !state.house_points.is_empty() => {
-                state.finish_house_polygon();
-            }
-            Key::Escape if state.tool == EditorTool::House && !state.house_points.is_empty() => {
-                state.cancel_house_polygon();
-            }
-            Key::Escape => next.set(GameState::Menu),
-            _ => {}
+        let positional = (state.mode != Mode::Search && !mods.ctrl)
+            .then(|| by_position(event.key_code))
+            .flatten();
+        let Some(key) = positional.or_else(|| editor_key(event, mods.ctrl)) else {
+            continue;
+        };
+        if event.repeat && !key.repeats() {
+            continue;
+        }
+        if state.handle_key(key, mods) == KeyOutcome::Quit {
+            next.set(GameState::Menu);
         }
     }
 }
