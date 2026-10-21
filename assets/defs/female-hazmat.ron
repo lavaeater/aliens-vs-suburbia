@@ -1,0 +1,51 @@
+(
+    model_path: "new-models/female-hazmat.glb",
+    scale: 1.0,
+    model_type: Player((
+        ability: Bombardment,
+        throw_rate_per_minute: 60.0,
+        weapon: Some("assets/defs/Assault Rifle.ron"),
+        extra_weapons: [],
+        starting_ammo: [],
+    )),
+    hidden_nodes: [],
+    animations: {},
+    animation_sources: [],
+    attachments: [],
+    hardpoints: {
+        "grip": (
+            anchor: Some("hand_r"),
+            translation: (-0.033, 0.0847, -0.0),
+            rotation_euler_deg: (-0.8, 90.0, 86.8),
+        ),
+        "sight": (
+            anchor: Some("head"),
+            translation: (-0.0282, 0.0824, 0.0779),
+            rotation_euler_deg: (-5.0, -90.0, -0.0),
+        ),
+        "stock": (
+            anchor: Some("clavicle_r"),
+            translation: (-0.0032, 0.0849, -0.0266),
+            rotation_euler_deg: (-92.2, -42.3, 178.6),
+        ),
+        "foregrip": (
+            anchor: Some("hand_l"),
+            translation: (0.033, 0.0847, -0.0),
+            rotation_euler_deg: (179.2, 90.0, -86.8),
+        ),
+    },
+    aim_bones: [
+        (
+            bone: "spine_01",
+            weight: 0.17,
+        ),
+        (
+            bone: "spine_02",
+            weight: 0.33,
+        ),
+        (
+            bone: "spine_03",
+            weight: 0.5,
+        ),
+    ],
+)

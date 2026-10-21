@@ -1,0 +1,51 @@
+(
+    model_path: "new-models/male-police.glb",
+    scale: 1.0,
+    model_type: Player((
+        ability: Bombardment,
+        throw_rate_per_minute: 60.0,
+        weapon: Some("assets/defs/Assault Rifle.ron"),
+        extra_weapons: [],
+        starting_ammo: [],
+    )),
+    hidden_nodes: [],
+    animations: {},
+    animation_sources: [],
+    attachments: [],
+    hardpoints: {
+        "grip": (
+            anchor: Some("hand_r"),
+            translation: (-0.0339, 0.0872, -0.0),
+            rotation_euler_deg: (2.3, 90.0, 82.1),
+        ),
+        "foregrip": (
+            anchor: Some("hand_l"),
+            translation: (0.0339, 0.0872, -0.0),
+            rotation_euler_deg: (-179.2, 90.0, -90.0),
+        ),
+        "stock": (
+            anchor: Some("clavicle_r"),
+            translation: (-0.0151, 0.0654, -0.0175),
+            rotation_euler_deg: (-98.0, -34.4, 180.0),
+        ),
+        "sight": (
+            anchor: Some("head"),
+            translation: (-0.0291, 0.0847, 0.0801),
+            rotation_euler_deg: (-5.0, -90.0, -0.0),
+        ),
+    },
+    aim_bones: [
+        (
+            bone: "spine_01",
+            weight: 0.17,
+        ),
+        (
+            bone: "spine_02",
+            weight: 0.33,
+        ),
+        (
+            bone: "spine_03",
+            weight: 0.5,
+        ),
+    ],
+)
