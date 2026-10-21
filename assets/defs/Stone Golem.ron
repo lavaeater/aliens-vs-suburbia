@@ -1,0 +1,24 @@
+(
+    model_path: "packs/monsters/stone-golem/StoneGolem.glb",
+    scale: 1.2,
+    model_type: Enemy((
+        // Tank: slow, armoured, hits hard up close.
+        health: 400.0,
+        speed: 1.2,
+        coin_drop: 25,
+        resistances: { Ballistic: 0.6, Blunt: 0.5, Fire: 0.25 },
+        touch_dps: 20.0,
+        attack: Melee,
+        loot_table: Some("alien"),
+    )),
+    hidden_nodes: [],
+    animations: {
+        Idle: "idle1",
+        Walk: "walkF",
+        Run: "jogF",
+        Punch: "attack1",
+        Death: "death1",
+        HitReact: "gethit1",
+    },
+    animation_sources: [],
+)
