@@ -1,6 +1,6 @@
 (
     model_path: "packs/monsters/Alien.glb",
-    scale: 0.45188886,
+    scale: 0.30125925,
     model_type: Enemy((
         health: 100.0,
         speed: 2.0,
