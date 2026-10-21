@@ -341,6 +341,7 @@ impl MapEditorState {
 
     pub fn to_map_file(&self) -> MapFile {
         MapFile {
+            name: String::new(),
             generated: false,
             seed: 0,
             map_width: self.width,

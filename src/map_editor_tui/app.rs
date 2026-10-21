@@ -1,7 +1,6 @@
 use crate::general::components::map_components::{MapFile, WaveDef};
 use crate::map::MapFeatures;
 use crossterm::event::KeyCode;
-use ron::ser::PrettyConfig;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Mode {
@@ -89,6 +88,7 @@ impl App {
 
     pub fn blank_map(width: usize, height: usize) -> MapFile {
         MapFile {
+            name: String::new(),
             generated: false,
             seed: 0,
             map_width: width,
@@ -101,8 +101,7 @@ impl App {
     }
 
     fn load_from(path: &str) -> Result<MapFile, String> {
-        let text = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
-        ron::from_str::<MapFile>(&text).map_err(|e| e.to_string())
+        crate::map::text_format::read_map_file(path)
     }
 
     pub fn map_width(&self) -> usize {
@@ -149,9 +148,7 @@ impl App {
 
     pub fn save(&mut self) -> Result<(), String> {
         let path = self.file_path.clone().ok_or("No file path set")?;
-        let pretty = PrettyConfig::new().depth_limit(4);
-        let out = ron::ser::to_string_pretty(&self.map, pretty).map_err(|e| e.to_string())?;
-        std::fs::write(&path, out).map_err(|e| e.to_string())?;
+        crate::map::text_format::write_map_file(&path, &self.map)?;
         self.dirty = false;
         self.status_msg = Some(format!("Saved {path}"));
         Ok(())

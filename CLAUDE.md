@@ -182,6 +182,7 @@ Each behavior has its own submodule under `src/ai/`. When aliens can't find a pa
 - 3D models: `.glb`/`.gltf` files under `assets/packs/`
 - Model definitions: `assets/defs/*.ron`
 - Maps: `assets/maps/*.ron` (format: `MapFile` in `src/general/components/map_components.rs`)
+- Text maps: `assets/maps/*.map`, a hand-editable letter-per-tile companion to the RON format (`src/map/text_format.rs`, `docs/map-text-format.md`). Lossless both ways; `--convert-map <in> [<out>]` converts; a `.map` next to a level's `.ron` replaces it when the game loads that level (`text_format::load_level`).
 - Settings: `game-settings.ron`, `player-settings.ron`, `input-bindings.ron` at project root
 
 ### Known Gotchas

@@ -10,6 +10,7 @@ pub mod map_plugins;
 pub mod procgen;
 pub mod scatter;
 pub mod stitch;
+pub mod text_format;
 
 #[bitflags(default = Nothing)]
 #[repr(u64)]

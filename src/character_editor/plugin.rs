@@ -50,7 +50,6 @@ use crate::character_editor::ui::{
     rebuild_hardpoint_panel, rebuild_weapon_list, sync_editor_viewport,
 };
 use crate::game_state::GameState;
-use crate::general::components::map_components::MapFile;
 use crate::general::events::map_events::LoadMap;
 
 /// The arena: a small walled room with nothing in it, for trying out the controls.
@@ -200,18 +199,11 @@ impl Plugin for CharacterEditorPlugin {
 
 /// Load the sandbox arena instead of `level_01`.
 fn load_arena_map(mut load_map_mw: MessageWriter<LoadMap>) {
-    let text = match std::fs::read_to_string(ARENA_MAP) {
-        Ok(text) => text,
-        Err(err) => {
-            error!("character editor: cannot read {ARENA_MAP}: {err}");
-            return;
-        }
-    };
-    match ron::from_str::<MapFile>(&text) {
-        Ok(map) => {
+    match crate::map::text_format::load_level(ARENA_MAP) {
+        Ok((map, _)) => {
             load_map_mw.write(LoadMap { map });
         }
-        Err(err) => error!("character editor: cannot parse {ARENA_MAP}: {err}"),
+        Err(err) => error!("character editor: {err}"),
     }
 }
 

@@ -44,17 +44,14 @@ use crate::towers::systems::spawn_tower_sensor;
 use crate::ui::spawn_ui::AddHealthBar;
 
 pub fn load_map_one(mut send_event: MessageWriter<LoadMap>) {
-    let text = match std::fs::read_to_string("assets/maps/level_01.ron") {
-        Ok(text) => text,
-        Err(e) => {
-            bevy::log::error!("assets/maps/level_01.ron not found: {e}");
-            return;
+    // A `level_01.map` next to the `.ron` takes its place.
+    let mut map = match crate::map::text_format::load_level("assets/maps/level_01.ron") {
+        Ok((map, path)) => {
+            bevy::log::info!("Loaded {}", path.display());
+            map
         }
-    };
-    let mut map: crate::general::components::map_components::MapFile = match ron::from_str(&text) {
-        Ok(map) => map,
         Err(e) => {
-            bevy::log::error!("Failed to parse assets/maps/level_01.ron: {e}");
+            bevy::log::error!("{e}");
             return;
         }
     };

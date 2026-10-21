@@ -58,6 +58,9 @@ const fn default_map_height() -> usize {
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct MapFile {
+    /// Display name. Optional; the `.map` text format writes it under `[properties]`.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
     /// When true, `tiles` and `decorations` are ignored and the map is procedurally generated from `seed`.
     #[serde(default)]
     pub generated: bool,

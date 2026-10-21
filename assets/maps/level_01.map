@@ -1,0 +1,38 @@
+# Tiles: v void, f floor, w wall, e enemy spawn, p player spawn, x goal (enemy exit), g grass, m mud, s snow, r rock, ~ water
+
+[properties]
+
+[tiles]
+wwwwwwwwwwwwwwwwwwww
+wffffffffffffffffffw
+wffffffffffffffffffw
+wffvvffffffffffffffw
+wffvvffffffffffffffw
+wffffffffffffffvvffw
+efffffffvvvffffvvffw
+wfffffffvvvffffvvffw
+wfffffffvvvffffvvffw
+wfffffffvvvffffffffw
+wffffffffffffffffffw
+wfffffffffffvvvvfffw
+efffpfffffffvvvvfffx
+wfffffffffffvvvvfffw
+wffffffffffffffffffw
+wffffffvvffffffffffw
+wffffffvvffffffffffw
+wffffffvvffffffffffw
+effffffvvffffffffffw
+wffffffffffffffffffw
+wffffffffffffffffffw
+wffffffffffffffffffw
+wffffffffffffffffffw
+wwwwwwwwwwwwwwwwwwww
+
+[decorations]
+# at: x, y | model: <path under assets/> | rotation: <degrees> | scale: <s>
+
+[placements]
+# at: x, y | def: <def .ron path> | rotation: <degrees, steps of 45>
+
+[waves]
+# enemy: <enemy def path, omit for the built-in alien> | count: <n> | rate: <per minute>
