@@ -1,13 +1,15 @@
 (
     model_path: "packs/monsters/Alien.glb",
-    scale: 0.618184,
+    scale: 0.45188886,
     model_type: Enemy((
-        // The baseline alien.
         health: 100.0,
         speed: 2.0,
         coin_drop: 5,
-        touch_dps: 10.0,
+        resistances: {},
         loot_table: Some("alien"),
+        touch_dps: 10.0,
+        attack: Melee,
+        explodes_on_death: None,
     )),
     hidden_nodes: [],
     animations: {
@@ -20,4 +22,7 @@
         Death: "CharacterArmature|Death",
     },
     animation_sources: [],
+    attachments: [],
+    hardpoints: {},
+    aim_bones: [],
 )

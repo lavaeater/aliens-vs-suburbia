@@ -1,16 +1,31 @@
 (
     model_path: "packs/monsters/Alpaking Evolved.glb",
-    scale: 0.672716,
+    scale: 0.5595605,
     model_type: Enemy((
-        // Boss brute.
         health: 900.0,
         speed: 1.0,
         coin_drop: 40,
-        touch_dps: 40.0,
-        resistances: { Ballistic: 0.5, Blunt: 0.5 },
+        resistances: {
+            Blunt: 0.5,
+            Ballistic: 0.5,
+        },
         loot_table: Some("crate"),
+        touch_dps: 40.0,
+        attack: Melee,
+        explodes_on_death: None,
     )),
     hidden_nodes: [],
-    animations: {},
+    animations: {
+        Idle: "CharacterArmature|Flying_Idle",
+    },
     animation_sources: [],
+    attachments: [],
+    hardpoints: {
+        "sight": (
+            anchor: Some("Head"),
+            translation: (-0.0004, 0.001, -0.0013),
+            rotation_euler_deg: (-0.0, -90.0, 100.0),
+        ),
+    },
+    aim_bones: [],
 )

@@ -1,5 +1,5 @@
 (
     last_model_def: Some("assets/defs/male-police.ron"),
-    last_tab: Some("Props"),
+    last_tab: Some("Model"),
     studio: false,
 )
