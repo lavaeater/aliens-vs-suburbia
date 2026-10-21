@@ -248,24 +248,24 @@ fn main() -> std::process::ExitCode {
             level: log::Level::INFO,
             ..Default::default()
         }))
-        .add_plugins(SkeinPlugin::default())
+        // .add_plugins(SkeinPlugin::default())
         .add_plugins(PhysicsPlugins::default())
-        .add_plugins(PhysicsDebugPlugin)
-        .insert_gizmo_config(
-            PhysicsGizmos::default(),
-            GizmoConfig {
-                enabled: false,
-                ..Default::default()
-            },
-        )
+        // .add_plugins(PhysicsDebugPlugin)
+        // .insert_gizmo_config(
+        //     PhysicsGizmos::default(),
+        //     GizmoConfig {
+        //         enabled: false,
+        //         ..Default::default()
+        //     },
+        // )
         // Lit by lamps and flashlights rather than ambient light (`lights_systems`), so
         // unlit ground has to be allowed to go dark, and coloured lights to tint.
-        .add_plugins(FlatShaderPlugin::global_with(
-            FlatShaderBuilder::default()
-                .dark_level(0.25)
-                .light_tint(0.8)
-                .build(),
-        ))
+        // .add_plugins(FlatShaderPlugin::global_with(
+        //     FlatShaderBuilder::default()
+        //         .dark_level(0.25)
+        //         .light_tint(0.8)
+        //         .build(),
+        // ))
         // .add_plugins(PixelShaderPlugin::default())
         .add_plugins(GamePlugin);
 
