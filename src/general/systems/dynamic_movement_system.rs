@@ -5,7 +5,7 @@ use avian3d::prelude::LinearVelocity;
 use bevy::prelude::{Query, Res, With};
 
 /// Move in world space. Both input paths now write a camera-relative `walk_direction`
-/// (keyboard WASD via `keyboard_input`, gamepad left stick via `gamepad_game_input`),
+/// (move keys or the left stick, both via `control::player_input`),
 /// so it is applied as-is rather than rotated by the body's facing. That decoupling is
 /// what lets the character strafe while the torso aims somewhere else — the body is
 /// steered separately by `face_movement_direction`.

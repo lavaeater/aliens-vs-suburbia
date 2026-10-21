@@ -93,6 +93,7 @@ impl Plugin for GamePlugin {
                 FactsGameIntegrationPlugin,
                 GameMusicPlugin,
                 GorePlugin,
+                crate::ui::pause_menu::PauseMenuPlugin,
             ))
             .add_systems(OnEnter(GameState::InGame), spawn_lights)
             .add_systems(Update, toggle_physics_debug)

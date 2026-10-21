@@ -2,7 +2,7 @@
 //! project root. A `playground-prefs.ron` from before the rename is read if the new file is
 //! missing, so the editor comes back on the model you last wore.
 //!
-//! Same load/save shape as `GameSettings` and `GamepadBindings`: a missing or unparseable
+//! Same load/save shape as `GameSettings` and `ControlBindings`: a missing or unparseable
 //! file falls back to defaults, so deleting it always gets you back to a working state.
 //!
 //! Deliberately not part of `GameSettings` — that file is gameplay and camera config that
