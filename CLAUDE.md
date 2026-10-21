@@ -120,6 +120,10 @@ player carries a shadow-casting spot (`player/systems/flashlight.rs`): its own e
 after transform propagation along `AutoAim` and tilted down; `PlayerAction::Flashlight` (F / L3)
 switches it, and it is off while downed. Light levels are in lumens, tuned against the default
 exposure; all the constants sit at the top of `map_lights.rs` (`lumens`) and `flashlight.rs`.
+Muzzle flashes: `shoot_weapons` only writes a `MuzzleFlash` message; `player/systems/muzzle_flash.rs`
+(`MuzzleFlashPlugin`, `MuzzleFlashSettings`) draws it as a brief point light parented to the
+weapon at its `muzzle` hardpoint (default), the original swelling puff (`spawn_puff`), or both;
+**Ctrl+M** cycles the style.
 The global flat toon shader (`bevy_wind_waker_shader`, submodule) is configured in `main.rs`
 with `dark_level` (below it a surface bands down to black instead of resting at the 50% shadow
 tint; 0 = the old look) and `light_tint` (coloured lights tint what they hit). `cargo run --

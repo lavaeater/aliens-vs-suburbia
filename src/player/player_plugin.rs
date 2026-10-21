@@ -73,6 +73,7 @@ impl Plugin for PlayerPlugin {
                     .run_if(in_state(GameState::InGame)),
             )
             .add_plugins((
+                crate::player::systems::muzzle_flash::MuzzleFlashPlugin,
                 OutlinePlugin::EXTRUDE_VERTEX,
                 AutoGenerateOutlineNormalsPlugin::default(),
             ))

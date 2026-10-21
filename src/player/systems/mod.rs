@@ -7,6 +7,7 @@ pub(crate) mod flashlight;
 pub(crate) mod gait;
 pub(crate) mod leg_ik;
 pub(crate) mod loadout;
+pub(crate) mod muzzle_flash;
 pub(crate) mod shoot;
 pub(crate) mod spawn_players;
 pub(crate) mod torso_twist;
