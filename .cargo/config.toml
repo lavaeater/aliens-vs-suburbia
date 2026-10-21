@@ -2,4 +2,4 @@
 # sccache disabled: Windows path length (OS error 206) causes it to fail on deeply
 # nested project paths. Enable long paths via registry or move the project to a
 # shorter root to use sccache again.
-rustc-wrapper = ""
+#rustc-wrapper = ""
