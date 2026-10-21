@@ -1,6 +1,6 @@
 (
     model_path: "packs/monsters/stone-golem/StoneGolem.glb",
-    scale: 1.2,
+    scale: 0.4,
     model_type: Enemy((
         // Tank: slow, armoured, hits hard up close.
         health: 400.0,
