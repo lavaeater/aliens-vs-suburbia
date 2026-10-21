@@ -1,5 +1,5 @@
 (
-    last_model_def: Some("assets/defs/male-police.ron"),
-    last_tab: Some("Model"),
-    studio: false,
+    last_model_def: Some("assets/defs/male-hazmat.ron"),
+    last_tab: Some("Library"),
+    studio: true,
 )
