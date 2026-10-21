@@ -51,7 +51,7 @@ The pieces that need `in_normal_game`:
 ### Stages
 
 **1 — Session, map, two-pane shell.** `PlaygroundSession` resource + run conditions;
-`Playground` menu button (inserts the resource, sets `InGame`); `assets/maps/playground.ron`,
+`Playground` menu button (inserts the resource, sets `InGame`); `../../assets/maps/playground.ron`,
 a small walled arena with `waves: []`; playground setup clears `WaveManager`. Left pane =
 tweak UI (empty scaffold), right pane = the game camera, restricted with the same
 `Camera::viewport` trick `sync_viewer_viewport` uses in the asset browser. Three
@@ -75,7 +75,7 @@ Save writes back to the def ron.
 
 **5 — Animation + settings.** Bind animation keys to clip tag paths and trigger clips on
 the live player; sliders for the `GameSettings` fields worth feeling in motion (camera
-yaw/pitch/zoom, `player_speed_multiplier`) saving to `game-settings.ron`.
+yaw/pitch/zoom, `player_speed_multiplier`) saving to `../../game-settings.ron`.
 
 Stage 1 is the one that proves the architecture; 2–5 are additive panels on top of it.
 
@@ -84,7 +84,7 @@ Stage 1 is the one that proves the architecture; 2–5 are additive panels on to
 ### Stage 1 — built
 
 `src/playground/`: `state.rs` (session + run conditions), `plugin.rs`, `ui.rs` (two-pane
-shell + viewport clipping), `dummies.rs`. Map at `assets/maps/playground.ron`. Menu button
+shell + viewport clipping), `dummies.rs`. Map at `../../assets/maps/playground.ron`. Menu button
 plus a `--playground` flag that skips the menu.
 
 Verified with a probe system: 1 player, 3 dummies, camera viewport clipped to
@@ -127,13 +127,13 @@ reset its scale, hardpoints and animation bindings. Scale stays at the default b
 computing it needs the mesh AABB, which needs the model loaded; the asset browser is still
 the place for that.
 
-Verified end-to-end with a probe: 4 player defs found, 15 folders under `assets/packs`,
+Verified end-to-end with a probe: 4 player defs found, 15 folders under `../../assets/packs`,
 and selecting `amy.ron` respawned the player with `packs/mesh2motion/amy.glb` loaded — with
 no torso-twist warning, i.e. the spine chain resolved on the new rig.
 
 ### Stage 3 — built
 
-`src/assets/gizmos.rs` now holds the skeleton and hardpoint drawing, called by both the
+`../../src/assets/gizmos.rs` now holds the skeleton and hardpoint drawing, called by both the
 asset browser and `src/playground/debug.rs`. Three panel toggles: physics colliders,
 skeleton, hardpoint frames.
 

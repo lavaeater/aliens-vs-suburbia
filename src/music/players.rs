@@ -1,46 +1,28 @@
 use bevy::asset::Handle;
-use bevy::prelude::Commands;
-use bevy_seedling::prelude::{AudioSample, PlaybackSettings, SamplePlayer, Volume};
+use bevy_seedling::prelude::AudioSample;
 use rusty_music::clock::Beat;
-use rusty_music::musicians::{Chord, MusicPlayer, Note, Sampler, TonalPlayer, midi_diff_to_pitch};
+use rusty_music::instrument::{Channels, Instrument, NoteEvent};
+use rusty_music::musicians::{Chord, MusicPlayer, Note, Sampler};
 
-fn spawn_note(
-    commands: &mut Commands,
-    handle: &Handle<AudioSample>,
-    volume_db: f32,
-    midi_note_diff: i32,
-) {
-    commands.spawn((
-        SamplePlayer::new(handle.clone()).with_volume(Volume::Decibels(volume_db)),
-        PlaybackSettings::default().with_speed(midi_diff_to_pitch(midi_note_diff)),
-    ));
+/// One `Sampler` per sample, addressed by `NoteEvent::channel`.
+fn sample_channels(samples: &[Handle<AudioSample>], volume_db: f32) -> Box<dyn Instrument> {
+    Box::new(
+        samples
+            .iter()
+            .fold(Channels::default(), |channels, handle| {
+                channels.with(Sampler {
+                    handle: handle.clone(),
+                    volume: f64::from(volume_db),
+                })
+            }),
+    )
 }
 
-/// Sustained chord layer. Triggers on quarter-note positions; more positions
-/// become active and the volume swells as intensity rises.
-pub struct PadPlayer {
-    pub sampler: Sampler,
-}
+/// Plays nothing by itself: an instrument reserved for `Stinger`s.
+pub struct StingerOnly;
 
-impl MusicPlayer for PadPlayer {
-    fn play(&mut self, beat: Beat, commands: &mut Commands, base_intensity: f32, chord: &Chord) {
-        if beat.sixteenth != 0 {
-            return;
-        }
-        let active = match beat.beat {
-            0 => true,
-            2 => base_intensity > 0.3,
-            1 | 3 => base_intensity > 0.65,
-            _ => false,
-        };
-        if !active {
-            return;
-        }
-        if let Some(note) = TonalPlayer::get_chord_note(chord, 1.0 - base_intensity) {
-            let vol = self.sampler.volume as f32 - 2.0 + base_intensity * 4.0;
-            spawn_note(commands, &self.sampler.handle, vol, note.midi_note_diff);
-        }
-    }
+impl MusicPlayer for StingerOnly {
+    fn play(&mut self, _: Beat, _: &mut Vec<NoteEvent>, _: f32, _: &Chord) {}
 }
 
 /// Surf-spy chord stabs on the "and" of 2 and 4. Near the climax an extra
@@ -52,7 +34,11 @@ pub struct ChordStabs {
 }
 
 impl MusicPlayer for ChordStabs {
-    fn play(&mut self, beat: Beat, commands: &mut Commands, base_intensity: f32, chord: &Chord) {
+    fn take_instrument(&mut self) -> Option<Box<dyn Instrument>> {
+        Some(sample_channels(&self.samples, self.volume))
+    }
+
+    fn play(&mut self, beat: Beat, notes: &mut Vec<NoteEvent>, base_intensity: f32, chord: &Chord) {
         if self.samples.is_empty() {
             return;
         }
@@ -74,46 +60,10 @@ impl MusicPlayer for ChordStabs {
             .collect();
         for (i, note) in strong.iter().enumerate() {
             let idx = (beat.bar_count as usize + beat.beat as usize + i) % self.samples.len();
-            let Some(sample) = self.samples.get(idx) else {
-                continue;
-            };
-            spawn_note(
-                commands,
-                sample,
-                self.volume - i as f32 * 2.0,
-                note.midi_note_diff,
-            );
-        }
-    }
-}
-
-/// Alien-danger FX layer: eerie saucer swells on alternating bar downbeats,
-/// with SID-chip blips creeping onto offbeats as the danger rises.
-pub struct UfoStingers {
-    pub ufo: Handle<AudioSample>,
-    pub sid: Handle<AudioSample>,
-    pub volume: f32,
-}
-
-impl MusicPlayer for UfoStingers {
-    fn play(&mut self, beat: Beat, commands: &mut Commands, base_intensity: f32, chord: &Chord) {
-        if beat.beat == 0
-            && beat.sixteenth == 0
-            && beat.bar_count.is_multiple_of(2)
-            && let Some(note) = TonalPlayer::get_scale_note(chord, 1.0 - base_intensity)
-        {
-            spawn_note(commands, &self.ufo, self.volume, note.midi_note_diff);
-        }
-        if base_intensity > 0.5
-            && beat.sixteenth == 3
-            && beat.beat.is_multiple_of(2)
-            && let Some(note) = TonalPlayer::get_chord_note(chord, 0.5)
-        {
-            spawn_note(
-                commands,
-                &self.sid,
-                self.volume - 4.0,
-                note.midi_note_diff + 12,
+            notes.push(
+                NoteEvent::from_diff(note.midi_note_diff)
+                    .channel(idx)
+                    .gain_db(-(i as f32) * 2.0),
             );
         }
     }

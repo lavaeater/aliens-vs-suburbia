@@ -4,7 +4,7 @@
     model_type: Player((
         ability: Bombardment,
         throw_rate_per_minute: 60.0,
-        weapon: Some("assets/defs/Pistol.ron"),
+        weapon: Some("assets/defs/Assault Rifle.ron"),
         extra_weapons: [
             "assets/defs/Shotgun.ron",
         ],
@@ -30,6 +30,34 @@
             translation: (-0.02, 0.06, 0.0),
             rotation_euler_deg: (180.0, 90.0, -90.0),
         ),
+        "foregrip": (
+            anchor: Some("hand_l"),
+            translation: (0.0345, 0.0887, -0.0),
+            rotation_euler_deg: (178.4, 90.0, -86.9),
+        ),
+        "stock": (
+            anchor: Some("clavicle_r"),
+            translation: (-0.0035, 0.08, -0.0189),
+            rotation_euler_deg: (-98.2, -42.2, 178.6),
+        ),
+        "sight": (
+            anchor: Some("head"),
+            translation: (-0.0296, 0.0862, 0.0815),
+            rotation_euler_deg: (-5.0, -90.0, -0.0),
+        ),
     },
-    aim_bones: [],
+    aim_bones: [
+        (
+            bone: "spine_01",
+            weight: 0.17,
+        ),
+        (
+            bone: "spine_02",
+            weight: 0.33,
+        ),
+        (
+            bone: "spine_03",
+            weight: 0.5,
+        ),
+    ],
 )

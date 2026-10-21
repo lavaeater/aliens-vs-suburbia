@@ -2,7 +2,7 @@ use avian3d::prelude::PhysicsGizmos;
 use bevy::app::{App, Plugin, Update};
 use bevy::gizmos::config::GizmoConfigStore;
 use bevy::prelude::{
-    ButtonInput, IntoScheduleConfigs, KeyCode, OnEnter, Res, ResMut, Time, in_state,
+    ButtonInput, IntoScheduleConfigs, KeyCode, OnEnter, OnExit, Res, ResMut, Time, in_state,
 };
 
 use crate::ai::stateful_ai_plugin::StatefulAiPlugin;
@@ -26,7 +26,10 @@ use crate::general::systems::coin_system::TeamWallet;
 use crate::general::systems::collision_handling_system::collision_handling_system;
 use crate::general::systems::death_effect_system::{spawn_death_effects, tick_death_effects};
 use crate::general::systems::health_monitor_system::health_monitor_system;
-use crate::general::systems::lights_systems::spawn_lights;
+use crate::general::systems::lights_systems::{
+    LightingPreset, animate_lights, apply_lighting_preset, cycle_lighting_preset, restore_ambient,
+    spawn_lights,
+};
 use crate::general::systems::throwing_system::throwing;
 use crate::general::systems::touch_damage_system::touch_damage_system;
 use crate::gore::plugin::GorePlugin;
@@ -93,8 +96,17 @@ impl Plugin for GamePlugin {
                 FactsGameIntegrationPlugin,
                 GameMusicPlugin,
                 GorePlugin,
+                crate::ui::pause_menu::PauseMenuPlugin,
             ))
+            .init_resource::<LightingPreset>()
             .add_systems(OnEnter(GameState::InGame), spawn_lights)
+            .add_systems(OnExit(GameState::InGame), restore_ambient)
+            .add_systems(
+                Update,
+                (cycle_lighting_preset, apply_lighting_preset, animate_lights)
+                    .chain()
+                    .run_if(in_state(GameState::InGame)),
+            )
             .add_systems(Update, toggle_physics_debug)
             .add_systems(
                 Update,

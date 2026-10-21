@@ -15,7 +15,7 @@ use bevy::log::LogPlugin;
 use bevy::prelude::*;
 use bevy::{DefaultPlugins, log};
 use bevy_skein::SkeinPlugin;
-use bevy_wind_waker_shader::flat::FlatShaderPlugin;
+use bevy_wind_waker_shader::flat::{FlatShaderBuilder, FlatShaderPlugin};
 use camera::components::CameraOffset;
 use control::components::CharacterControl;
 
@@ -129,6 +129,44 @@ fn parse_create_map_args(args: &[String]) -> Option<Result<(), String>> {
     Some(create_map(seed, width, height, output))
 }
 
+/// `--convert-map <in> [<out>] [--force]`: RON <-> `.map` text, by extension. Without
+/// `<out>` the file lands next to `<in>` with the other extension. Never overwrites an
+/// existing file unless `--force` is given.
+fn parse_convert_map_args(args: &[String]) -> Option<Result<(), String>> {
+    let position = args.iter().position(|a| a == "--convert-map")?;
+    let paths: Vec<&String> = args
+        .iter()
+        .skip(position.saturating_add(1))
+        .take_while(|a| !a.starts_with("--"))
+        .collect();
+    let force = args.iter().any(|a| a == "--force");
+    Some(convert_map(
+        paths.first().copied(),
+        paths.get(1).copied(),
+        force,
+    ))
+}
+
+fn convert_map(input: Option<&String>, output: Option<&String>, force: bool) -> Result<(), String> {
+    use map::text_format;
+
+    let input = std::path::Path::new(input.ok_or("--convert-map needs an input file")?);
+    let output = output.map_or_else(
+        || text_format::converted_path(input),
+        std::path::PathBuf::from,
+    );
+    if output.exists() && !force {
+        return Err(format!(
+            "{} already exists; pass --force to overwrite it",
+            output.display()
+        ));
+    }
+    let map = text_format::read_map_file(input)?;
+    text_format::write_map_file(&output, &map)?;
+    println!("Converted {} -> {}", input.display(), output.display());
+    Ok(())
+}
+
 fn print_help() {
     println!("Aliens vs Suburbia\n");
     println!("USAGE:");
@@ -138,9 +176,17 @@ fn print_help() {
     );
     println!("                                             (--playground still works as an alias)");
     println!("  cargo run -- --asset-browser               Launch straight into the asset browser");
+    println!("  cargo run -- --play                        Launch straight into a match (level 1)");
     println!("  cargo run --features map-editor -- --map-editor [--file <path>]");
     println!("                                             Launch the map editor TUI");
-    println!("  cargo run -- --create-map [OPTIONS]        Generate a map file\n");
+    println!("  cargo run -- --create-map [OPTIONS]        Generate a map file");
+    println!("  cargo run -- --convert-map <in> [<out>] [--force]");
+    println!(
+        "                                             Convert a map between .ron and .map text"
+    );
+    println!(
+        "                                             (out defaults to <in> with the other extension)\n"
+    );
     println!("MAP EDITOR OPTIONS:");
     println!("  --file <path>    Open an existing map file (e.g. assets/maps/map_1.ron)\n");
     println!("CREATE MAP OPTIONS:");
@@ -158,7 +204,7 @@ fn main() -> std::process::ExitCode {
         return std::process::ExitCode::SUCCESS;
     }
 
-    if let Some(result) = parse_create_map_args(&args) {
+    if let Some(result) = parse_create_map_args(&args).or_else(|| parse_convert_map_args(&args)) {
         return match result {
             Ok(()) => std::process::ExitCode::SUCCESS,
             Err(e) => {
@@ -186,6 +232,9 @@ fn main() -> std::process::ExitCode {
     let straight_to_editor = args.iter().any(|a| a == "--editor" || a == "--playground");
     // Same idea for the asset browser: it is a tool screen you open, tweak in, and reload.
     let straight_to_asset_browser = args.iter().any(|a| a == "--asset-browser");
+    // And into a match, skipping the menu and the player setup (one keyboard player, with a
+    // connected pad handed to them by `assign_gamepads`' fallback).
+    let straight_to_game = args.iter().any(|a| a == "--play");
 
     let mut app = App::new();
     app.register_type::<CameraOffset>()
@@ -199,17 +248,24 @@ fn main() -> std::process::ExitCode {
             level: log::Level::INFO,
             ..Default::default()
         }))
-        .add_plugins(SkeinPlugin::default())
+        // .add_plugins(SkeinPlugin::default())
         .add_plugins(PhysicsPlugins::default())
-        .add_plugins(PhysicsDebugPlugin)
-        .insert_gizmo_config(
-            PhysicsGizmos::default(),
-            GizmoConfig {
-                enabled: false,
-                ..Default::default()
-            },
-        )
-        .add_plugins(FlatShaderPlugin::global())
+        // .add_plugins(PhysicsDebugPlugin)
+        // .insert_gizmo_config(
+        //     PhysicsGizmos::default(),
+        //     GizmoConfig {
+        //         enabled: false,
+        //         ..Default::default()
+        //     },
+        // )
+        // Lit by lamps and flashlights rather than ambient light (`lights_systems`), so
+        // unlit ground has to be allowed to go dark, and coloured lights to tint.
+        // .add_plugins(FlatShaderPlugin::global_with(
+        //     FlatShaderBuilder::default()
+        //         .dark_level(0.25)
+        //         .light_tint(0.8)
+        //         .build(),
+        // ))
         // .add_plugins(PixelShaderPlugin::default())
         .add_plugins(GamePlugin);
 
@@ -218,6 +274,15 @@ fn main() -> std::process::ExitCode {
             Startup,
             |mut next: ResMut<NextState<game_state::GameState>>| {
                 next.set(game_state::GameState::AssetBrowser);
+            },
+        );
+    }
+
+    if straight_to_game && !straight_to_editor {
+        app.add_systems(
+            Startup,
+            |mut next: ResMut<NextState<game_state::GameState>>| {
+                next.set(game_state::GameState::InGame);
             },
         );
     }

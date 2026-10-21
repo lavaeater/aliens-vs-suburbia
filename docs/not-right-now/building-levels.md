@@ -195,7 +195,7 @@ Each cell value maps to a bitmask:
 | 17 | Floor + Player Spawn |
 
 Walls are auto-generated at map edges and wherever a floor tile borders a `0` cell.
-The wall model used is `assets/map/wall_small.glb`, floor is `assets/map/floor_small.glb`.
+The wall model used is `assets/map/wall_small.glb`, floor is `../../assets/map/floor_small.glb`.
 
 The tile system is defined in `TileDefinitions` (inserted as a Bevy `Resource`).
 Each tile is 16×16 units. The world origin is tile (0,0).
@@ -207,9 +207,9 @@ Each tile is 16×16 units. The world origin is tile (0,0).
 ### Phase 1 — Map Files (immediate value, low effort)
 
 Extract the hardcoded map array into a `.ron` file.
-The game already uses RON (`game-settings.ron`), so the serialization infrastructure is ready.
+The game already uses RON (`../../game-settings.ron`), so the serialization infrastructure is ready.
 
-**Proposed format** (`assets/maps/level_01.ron`):
+**Proposed format** (`../../assets/maps/level_01.ron`):
 
 ```ron
 (
@@ -231,7 +231,7 @@ The game already uses RON (`game-settings.ron`), so the serialization infrastruc
 The `decorations` list spawns pure-visual `SceneRoot` entities on the floor surface,
 no collision, no pathfinding impact. This is the fastest way to make levels look different.
 
-**Implementation sketch** (`src/map/`):
+**Implementation sketch** (`../../src/map`):
 
 1. Add `MapFile` struct that derives `serde::Deserialize` + `bevy::Reflect`.
 2. Load via `asset_server.load::<MapFile>("maps/level_01.ron")` in `load_map_one`.
@@ -246,7 +246,7 @@ A simple overlay mode — press a hotkey during play to enter "map edit mode".
 The cursor becomes a tile-picker. Click to set tile type; right-click to place a decoration
 from a palette. Press another key to save the current map back to its `.ron` file.
 
-This fits the existing `BuildMode` system in `src/building/`. The building mode already
+This fits the existing `BuildMode` system in `../../src/building`. The building mode already
 shows tile previews and handles mouse-to-world projection via `ToWorldCoordinates`.
 Extending it into a full map paint mode is mostly additive.
 

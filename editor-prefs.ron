@@ -1,0 +1,5 @@
+(
+    last_model_def: Some("assets/defs/male-hazmat.ron"),
+    last_tab: Some("Hardpoints"),
+    studio: true,
+)

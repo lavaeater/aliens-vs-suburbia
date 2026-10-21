@@ -1,6 +1,6 @@
 use crate::game_state::GameState;
 use crate::map_editor::grid::{
-    handle_grid_click, rebuild_grid, spawn_grid_camera, update_house_preview,
+    follow_mouse, handle_grid_click, rebuild_grid, spawn_grid_camera, update_house_preview,
     update_hover_highlight,
 };
 use crate::map_editor::state::MapEditorState;
@@ -25,6 +25,7 @@ impl Plugin for MapEditorPlugin {
             .add_systems(
                 Update,
                 (
+                    follow_mouse,
                     handle_editor_keys,
                     handle_grid_click,
                     update_hover_highlight,

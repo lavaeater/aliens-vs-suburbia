@@ -12,25 +12,26 @@
         ammo: Rifle,
         magazine: 30,
         reload_secs: 2.0,
+        projectile: None,
     )),
     hidden_nodes: [],
     animations: {},
     animation_sources: [],
     attachments: [],
     hardpoints: {
-        "grip": (
-            anchor: None,
-            translation: (0.0, 0.0, 0.0),
-            rotation_euler_deg: (0.0, 0.0, 0.0),
-        ),
         "foregrip": (
             anchor: None,
-            translation: (2.0, 0.39999998, 0.0),
-            rotation_euler_deg: (0.0, 0.0, 0.0),
+            translation: (2.32, 0.39999998, 0.08),
+            rotation_euler_deg: (-90.0, 0.0, 0.0),
         ),
         "stock": (
             anchor: None,
-            translation: (-1.5, 0.10, 0.0),
+            translation: (-1.5, 0.1, 0.0),
+            rotation_euler_deg: (0.0, 0.0, 0.0),
+        ),
+        "grip": (
+            anchor: None,
+            translation: (0.0, 0.0, 0.0),
             rotation_euler_deg: (0.0, 0.0, 0.0),
         ),
         "muzzle": (

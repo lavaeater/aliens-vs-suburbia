@@ -135,11 +135,47 @@ pub struct DynamicMovement;
 #[type_path = "avs"]
 pub struct KinematicMovement;
 
+/// Which way the legs walk relative to where the body faces. The feet always travel along
+/// the walk direction; the stride decides how the body is turned on top of that so the
+/// torso twist can reach the aim (`torso_twist::choose_stride`).
+#[derive(Hash, PartialEq, Eq, Copy, Clone, Debug, Reflect, Default)]
+#[reflect(Default)]
+#[type_path = "avs"]
+pub enum Stride {
+    #[default]
+    Forward,
+    /// Walking away from the aim, backpedalling.
+    Back,
+    /// Stepping toward the body's left, aim across the direction of travel.
+    Left,
+    Right,
+}
+
+impl Stride {
+    pub const ALL: [Self; 4] = [Self::Forward, Self::Back, Self::Left, Self::Right];
+
+    /// The clip key for walking this way, aiming or not.
+    pub const fn key(self, aiming: bool) -> AnimationKey {
+        match (self, aiming) {
+            (Self::Forward, false) => AnimationKey::Walk,
+            (Self::Forward, true) => AnimationKey::WalkShoot,
+            (Self::Back, false) => AnimationKey::WalkBack,
+            (Self::Back, true) => AnimationKey::WalkBackShoot,
+            (Self::Left, false) => AnimationKey::StrafeLeft,
+            (Self::Left, true) => AnimationKey::StrafeLeftShoot,
+            (Self::Right, false) => AnimationKey::StrafeRight,
+            (Self::Right, true) => AnimationKey::StrafeRightShoot,
+        }
+    }
+}
+
 #[derive(Component, Reflect)]
 #[reflect(Component, Default)]
 #[type_path = "avs"]
 pub struct CharacterState {
     pub state: Vec<AnimationKey>,
+    /// How a `Walk` on the stack is played: forwards, backwards or sideways.
+    pub stride: Stride,
 }
 
 impl CharacterState {
@@ -166,12 +202,21 @@ impl CharacterState {
         if has(AnimationKey::Throwing) {
             return AnimationKey::Throwing;
         }
-        match (has(AnimationKey::Walk), has(AnimationKey::IdleShoot)) {
-            (true, true) => AnimationKey::WalkShoot,
+        let aiming = has(AnimationKey::IdleShoot);
+        match (has(AnimationKey::Walk), aiming) {
+            (true, _) => self.stride.key(aiming),
             (false, true) => AnimationKey::IdleShoot,
-            (true, false) => AnimationKey::Walk,
             (false, false) => AnimationKey::Idle,
         }
+    }
+
+    /// Change the stride. Returns the resolved clip key if the visible animation changed
+    /// (only while walking), like `enter_state`.
+    pub fn set_stride(&mut self, stride: Stride) -> Option<AnimationKey> {
+        let prev = self.resolve();
+        self.stride = stride;
+        let next = self.resolve();
+        if next == prev { None } else { Some(next) }
     }
 
     /// Push an intent state.  Returns the resolved clip key if the visible
@@ -202,14 +247,41 @@ impl Default for CharacterState {
     fn default() -> Self {
         Self {
             state: vec![AnimationKey::Idle],
+            stride: Stride::Forward,
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::CharacterState;
+    use super::{CharacterState, Stride};
     use crate::animation::animation_plugin::AnimationKey;
+
+    #[test]
+    fn the_stride_picks_the_walk_clip_and_only_matters_while_walking() {
+        let mut s = CharacterState::default();
+        assert_eq!(
+            s.set_stride(Stride::Back),
+            None,
+            "standing: nothing to change"
+        );
+        assert_eq!(
+            s.enter_state(AnimationKey::Walk),
+            Some(AnimationKey::WalkBack)
+        );
+        assert_eq!(
+            s.enter_state(AnimationKey::IdleShoot),
+            Some(AnimationKey::WalkBackShoot)
+        );
+        assert_eq!(
+            s.set_stride(Stride::Left),
+            Some(AnimationKey::StrafeLeftShoot)
+        );
+        assert_eq!(
+            s.leave_state(AnimationKey::Walk),
+            Some(AnimationKey::IdleShoot)
+        );
+    }
 
     #[test]
     fn default_state_is_idle() {
@@ -227,17 +299,32 @@ mod tests {
     #[test]
     fn firing_a_gun_aims_and_walking_while_firing_walks_and_aims() {
         let mut s = CharacterState::default();
-        assert_eq!(s.enter_state(AnimationKey::IdleShoot), Some(AnimationKey::IdleShoot));
-        assert_eq!(s.enter_state(AnimationKey::Walk), Some(AnimationKey::WalkShoot));
-        assert_eq!(s.leave_state(AnimationKey::IdleShoot), Some(AnimationKey::Walk));
+        assert_eq!(
+            s.enter_state(AnimationKey::IdleShoot),
+            Some(AnimationKey::IdleShoot)
+        );
+        assert_eq!(
+            s.enter_state(AnimationKey::Walk),
+            Some(AnimationKey::WalkShoot)
+        );
+        assert_eq!(
+            s.leave_state(AnimationKey::IdleShoot),
+            Some(AnimationKey::Walk)
+        );
     }
 
     #[test]
     fn a_throw_plays_over_aiming() {
         let mut s = CharacterState::default();
         s.enter_state(AnimationKey::IdleShoot);
-        assert_eq!(s.enter_state(AnimationKey::Throwing), Some(AnimationKey::Throwing));
-        assert_eq!(s.leave_state(AnimationKey::Throwing), Some(AnimationKey::IdleShoot));
+        assert_eq!(
+            s.enter_state(AnimationKey::Throwing),
+            Some(AnimationKey::Throwing)
+        );
+        assert_eq!(
+            s.leave_state(AnimationKey::Throwing),
+            Some(AnimationKey::IdleShoot)
+        );
     }
 
     #[test]

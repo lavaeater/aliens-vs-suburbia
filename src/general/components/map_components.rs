@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// A user-placed model (from an AssetDefinition) on a specific grid tile.
-#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct TilePlacement {
     pub x: i32,
     pub y: i32,
@@ -58,6 +58,9 @@ const fn default_map_height() -> usize {
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct MapFile {
+    /// Display name. Optional; the `.map` text format writes it under `[properties]`.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
     /// When true, `tiles` and `decorations` are ignored and the map is procedurally generated from `seed`.
     #[serde(default)]
     pub generated: bool,

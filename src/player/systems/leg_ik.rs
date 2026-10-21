@@ -37,7 +37,7 @@ pub const GAIT_SETTINGS_PATH: &str = "gait-settings.ron";
 impl GaitSettings {
     /// Load the saved gait, falling back to the human-scale defaults.
     ///
-    /// Same shape as `GameSettings::load` / `GamepadBindings::load`: a missing or unreadable
+    /// Same shape as `GameSettings::load` / `ControlBindings::load`: a missing or unreadable
     /// file is not an error, it just means nothing has been tuned yet.
     #[must_use]
     pub fn load() -> Self {

@@ -1,7 +1,8 @@
 //! Firing equipped guns. Hitscan: on the fire input, cast a ray from the weapon's
 //! `muzzle` hardpoint along the player's auto-aim and request [`ApplyDamage`] on whatever
 //! it hits — the damage pipeline decides whether it lands and tells the gore layer.
-//! Muzzle flash + tracer are cheap [`Ephemeral`] visuals.
+//! Tracers are cheap [`Ephemeral`] visuals; the muzzle flash is reported as a
+//! [`MuzzleFlash`] message and drawn by `muzzle_flash.rs`.
 //!
 //! Guns replace throwing while equipped — `throwing` is gated `Without<EquippedWeapon>`
 //! and this system requires it, so the same fire button does one or the other.
@@ -20,6 +21,7 @@ use crate::gore::components::{DamageKind, Ephemeral};
 use crate::player::ammo::AmmoPouch;
 use crate::player::components::{AutoAim, Player, PlayerDead};
 use crate::player::systems::equip::EquippedWeapon;
+use crate::player::systems::muzzle_flash::MuzzleFlash;
 
 /// Runtime combat state of an equipped weapon, resolved from its `WeaponProps` at
 /// equip time and carried on the weapon entity.
@@ -238,6 +240,7 @@ pub fn shoot_weapons(
     mut game_mw: MessageWriter<GameTrackingEvent>,
     mut damage_mw: MessageWriter<ApplyDamage>,
     mut reload_mw: MessageWriter<ReloadRequest>,
+    mut flash_mw: MessageWriter<MuzzleFlash>,
     mut rng_seed: Local<u32>,
 ) {
     let dt = time.delta_secs();
@@ -282,6 +285,13 @@ pub fn shoot_weapons(
             None => player_pos.0 + Vec3::Y * 0.35 + aim.0 * 0.3,
         };
         let aim_dir = aim.0.normalize_or(Vec3::X);
+        flash_mw.write(MuzzleFlash {
+            weapon: weapon
+                .muzzle
+                .as_ref()
+                .map(|m| (equipped.0, Vec3::from(m.translation))),
+            at: origin,
+        });
 
         game_mw.write(GameTrackingEvent::ShotFired(player));
 
@@ -296,7 +306,6 @@ pub fn shoot_weapons(
                 aim_dir * props.speed,
                 props,
             );
-            spawn_muzzle_flash(&mut commands, &mut meshes, &mut materials, origin);
             continue;
         }
 
@@ -326,8 +335,6 @@ pub fn shoot_weapons(
 
             spawn_tracer(&mut commands, &mut meshes, &mut materials, origin, end);
         }
-
-        spawn_muzzle_flash(&mut commands, &mut meshes, &mut materials, origin);
     }
 }
 
@@ -358,27 +365,6 @@ fn spawn_tracer(
             .looking_to(delta / len, Vec3::Y)
             .with_scale(Vec3::new(0.02, 0.02, len)),
         Ephemeral::new(0.05),
-    ));
-}
-
-/// A tiny bright puff at the muzzle.
-fn spawn_muzzle_flash(
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    at: Vec3,
-) {
-    let mat = materials.add(StandardMaterial {
-        base_color: Color::srgb(1.0, 0.85, 0.4),
-        alpha_mode: AlphaMode::Blend,
-        unlit: true,
-        ..default()
-    });
-    commands.spawn((
-        Mesh3d(meshes.add(Sphere::new(0.06))),
-        MeshMaterial3d(mat),
-        Transform::from_translation(at),
-        Ephemeral::new(0.06).with_grow(1.8).base_scale(Vec3::ONE),
     ));
 }
 

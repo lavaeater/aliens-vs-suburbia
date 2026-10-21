@@ -19,7 +19,7 @@ use crate::alien::components::general::Alien;
 use crate::animation::animation_plugin::{AnimationEvent, AnimationEventType, AnimationKey};
 use crate::assets::asset_definition::ItemKind;
 use crate::building::systems::ToWorldCoordinates;
-use crate::control::bindings::GamepadBindings;
+use crate::control::bindings::{ControlBindings, PlayerAction};
 use crate::control::components::{CharacterControl, ControlCommand};
 use crate::game_state::score_keeper::{LevelState, LevelTracker};
 use crate::general::components::Health;
@@ -282,11 +282,14 @@ pub fn choose_respawn_anchor(
     mut queue: ResMut<RespawnQueue>,
     roster: Option<Res<PlayerRoster>>,
     keys: Res<ButtonInput<KeyCode>>,
+    mouse: Res<ButtonInput<MouseButton>>,
     gamepads: Query<&Gamepad>,
-    bindings: Option<Res<GamepadBindings>>,
+    bindings: Option<Res<ControlBindings>>,
     living: Query<&PlayerSlot, (With<Player>, Without<PlayerDead>)>,
 ) {
-    let Some(roster) = roster else { return };
+    let (Some(roster), Some(bindings)) = (roster, bindings) else {
+        return;
+    };
     let mut living_slots: Vec<usize> = living.iter().map(|s| s.0).collect();
     living_slots.sort_unstable();
     if living_slots.is_empty() {
@@ -295,21 +298,22 @@ pub fn choose_respawn_anchor(
     let pads: Vec<&Gamepad> = gamepads.iter().collect();
 
     for entry in &mut queue.pending {
+        // The player entity is gone while it waits, so there is no `ActionState` to read:
+        // the bindings are checked against the devices directly. Build-item cycling or
+        // walking left/right both step.
+        let kbm = |a: PlayerAction, b: PlayerAction| {
+            bindings.kbm_just_pressed(a, &keys, &mouse)
+                || bindings.kbm_just_pressed(b, &keys, &mouse)
+        };
         let step = match roster.devices.get(entry.slot) {
             Some(InputDevice::Keyboard) => {
-                i32::from(
-                    keys.just_pressed(KeyCode::ArrowRight) || keys.just_pressed(KeyCode::KeyD),
-                ) - i32::from(
-                    keys.just_pressed(KeyCode::ArrowLeft) || keys.just_pressed(KeyCode::KeyA),
-                )
+                i32::from(kbm(PlayerAction::NextBuildItem, PlayerAction::MoveRight))
+                    - i32::from(kbm(PlayerAction::PrevBuildItem, PlayerAction::MoveLeft))
             }
-            Some(InputDevice::Gamepad(index)) => match (pads.get(*index), bindings.as_ref()) {
-                (Some(pad), Some(b)) => {
-                    i32::from(pad.just_pressed(b.next_build_item))
-                        - i32::from(pad.just_pressed(b.prev_build_item))
-                }
-                _ => 0,
-            },
+            Some(InputDevice::Gamepad(index)) => pads.get(*index).map_or(0, |pad| {
+                i32::from(bindings.pad_just_pressed(PlayerAction::NextBuildItem, pad))
+                    - i32::from(bindings.pad_just_pressed(PlayerAction::PrevBuildItem, pad))
+            }),
             None => 0,
         };
         if step != 0 {

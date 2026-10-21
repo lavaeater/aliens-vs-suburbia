@@ -51,7 +51,7 @@ This section describes the architecture and sequencing for each action item abov
 
 **Current state:** The map generator places alien spawn points (`tile value 5`) and the goal (`tile value 9`) at arbitrary positions. The `MoveTowardsGoal` AI behavior and A* pathfinding grid already work end-to-end.
 
-**Done:** Map generator (`src/map/map_generator.rs`) rewritten so spawn points are fixed to column 0 (west edge) spread across 2–3 evenly-spaced rows, goal is fixed to column `w-1` (east edge) vertically centred, and player spawns a few columns in from the left at mid-height. House placement still randomised but connectivity-checked.
+**Done:** Map generator (`../../src/map/map_generator.rs`) rewritten so spawn points are fixed to column 0 (west edge) spread across 2–3 evenly-spaced rows, goal is fixed to column `w-1` (east edge) vertically centred, and player spawns a few columns in from the left at mid-height. House placement still randomised but connectivity-checked.
 
 **Map convention:**
 ```
@@ -66,19 +66,19 @@ For the hand-crafted `level_01.ron`, switch from `generated: true` to an explici
 
 ### 2. Pass-through meter ✅
 
-**Done:** Red progress bar + "Aliens escaped: X / Y" label added to top-centre HUD (`src/ui/spawn_ui.rs`). `update_alien_meter` system updates it reactively on `Changed<LevelTracker>`. Default cutoff lowered from 600 → 10 for a playable game. Bar fills red; hitting 100% triggers `LevelState::Failed`.
+**Done:** Red progress bar + "Aliens escaped: X / Y" label added to top-centre HUD (`../../src/ui/spawn_ui.rs`). `update_alien_meter` system updates it reactively on `Changed<LevelTracker>`. Default cutoff lowered from 600 → 10 for a playable game. Bar fills red; hitting 100% triggers `LevelState::Failed`.
 
 ---
 
 ### 3. Wave system ✅
 
-**Done:** `WaveManager` resource (`src/alien/wave_manager.rs`) with 3 hardcoded waves (10, 15, 20 aliens at increasing rates). `wave_system` counts down between waves, sets `AlienSpawnPoint.spawn_rate_per_minute` at wave start. `alien_spawner_system` gates on `WaveManager.spawning`. HUD shows "Wave X / Y in Ns" or "Wave X / Y" when active. Win condition requires all waves done AND all aliens killed.
+**Done:** `WaveManager` resource (`../../src/alien/wave_manager.rs`) with 3 hardcoded waves (10, 15, 20 aliens at increasing rates). `wave_system` counts down between waves, sets `AlienSpawnPoint.spawn_rate_per_minute` at wave start. `alien_spawner_system` gates on `WaveManager.spawning`. HUD shows "Wave X / Y in Ns" or "Wave X / Y" when active. Win condition requires all waves done AND all aliens killed.
 
 ---
 
 ### 4. Game-over & win conditions ✅
 
-**Done:** `level_state_system` (`src/game_state/score_keeper.rs`) rewritten:
+**Done:** `level_state_system` (`../../src/game_state/score_keeper.rs`) rewritten:
 - **Win:** all aliens spawned and killed → `Completed`.
 - **Lose 1:** `aliens_reached_goal >= aliens_win_cut_off` → `Failed`.
 - **Lose 2:** all `Player` entities have `health <= 0` simultaneously → `Failed`.
@@ -90,7 +90,7 @@ For the hand-crafted `level_01.ron`, switch from `generated: true` to an explici
 
 **Done:**
 - `health_monitor_system` now excludes `Player` entities — players are never despawned automatically.
-- `detect_player_death` (`src/player/systems/death_revive.rs`): on `Changed<Health>` with `health <= 0`, inserts `PlayerDead`, zeroes velocity, sends `AnimationKey::Death`, spawns a blue WorldFollower bar above the player.
+- `detect_player_death` (`../../src/player/systems/death_revive.rs`): on `Changed<Health>` with `health <= 0`, inserts `PlayerDead`, zeroes velocity, sends `AnimationKey::Death`, spawns a blue WorldFollower bar above the player.
 - `player_revive_system`: living player within 1.8 units + hold `E` fills `revive_progress` over 3 s; on completion restores 50% health, removes `PlayerDead`, despawns bar.
 - Keyboard input (`keyboard_input.rs`) gains `Without<PlayerDead>` so downed players can't move.
 - Win/lose already correct — health check in `level_state_system` catches the all-dead case.
@@ -99,7 +99,7 @@ For the hand-crafted `level_01.ron`, switch from `generated: true` to an explici
 
 ### 6. Barrier & tower placement
 
-**Current state:** The building system (`src/building/`) lets the player place tiles. Only one tower type exists (`TowerShooter` that fires projectiles). Barriers block alien pathfinding via the `ImpassableAll` collision layer.
+**Current state:** The building system (`../../src/building`) lets the player place tiles. Only one tower type exists (`TowerShooter` that fires projectiles). Barriers block alien pathfinding via the `ImpassableAll` collision layer.
 
 **Tower type architecture:**
 
@@ -132,7 +132,7 @@ The existing `shoot_alien_system` becomes one branch; `slow_alien_system` and `a
 
 ### 7. Asset browser: file explorer
 
-**Current state:** `scan_assets()` in `src/asset_browser/state.rs` recursively scans `assets/packs/toon-shooter/` and returns a flat list of GLB paths.
+**Current state:** `scan_assets()` in `../../src/asset_browser/state.rs` recursively scans `assets/packs/toon-shooter/` and returns a flat list of GLB paths.
 
 **Change:** Replace with a two-panel explorer:
 - **Left panel (folders):** shows immediate subdirectories of a root folder. Clicking a folder sets it as the active folder.
@@ -299,7 +299,7 @@ pub enum   ItemKind    { Decorative, HealthPickup { amount: f32 }, CratePickup }
 
 **In-game use:** when spawning terrain, towers or enemies at runtime, read `model_type` from the def to insert the right components (`Health`, `TowerShooter`, `AlienProperties`, etc.).
 
-**Infinite floor:** extend `src/map/` floor generation to tile out an extra `N` rows and columns beyond the defined grid using a simple `Plane` mesh with the floor material, so the void never shows.
+**Infinite floor:** extend `../../src/map` floor generation to tile out an extra `N` rows and columns beyond the defined grid using a simple `Plane` mesh with the floor material, so the void never shows.
 
 ---
 
@@ -307,7 +307,7 @@ pub enum   ItemKind    { Decorative, HealthPickup { amount: f32 }, CratePickup }
 
 **Goal:** walking into a player deals damage; existing death/revive mechanic handles the rest.
 
-This is entirely additive to the existing `src/general/` collision systems.
+This is entirely additive to the existing `../../src/general` collision systems.
 
 **New component:**
 ```rust
@@ -317,7 +317,7 @@ pub struct TouchDamage { pub dps: f32 }
 
 Add `TouchDamage { dps: 5.0 }` (or from `EnemyProps`) when spawning aliens.
 
-**New system** `touch_damage_system` in `src/general/systems/`:
+**New system** `touch_damage_system` in `../../src/general/systems`:
 - Query `(&CollidingEntities, &TouchDamage)` on alien entities.
 - For each colliding entity that has `(&mut Health, Without<PlayerDead>)` and is on the `Player` collision layer, subtract `dps * delta_time` per frame.
 - Re-uses the existing `Health` component and `health_monitor_system`; no extra death logic needed.
@@ -328,7 +328,7 @@ Register in `GeneralPlugin` with `.run_if(in_state(InGame))`.
 
 ### 17. Pathfinding Recalculation Robustness — Implementation
 
-**Current state:** `DestroyTheMap` AI already targets blocking tiles. The A* grid in `src/map/` is rebuilt when tiles change. The main gap is the *fallback path* (ignore-blocking route) when no normal path exists.
+**Current state:** `DestroyTheMap` AI already targets blocking tiles. The A* grid in `../../src/map` is rebuilt when tiles change. The main gap is the *fallback path* (ignore-blocking route) when no normal path exists.
 
 **Changes:**
 1. **Trigger on tile change:** `pathfinding_dirty` flag already exists; verify it is set whenever a tile is placed *or removed* (building and destruction both). Add the missing removal side if absent.
@@ -347,11 +347,11 @@ No new files needed; changes are confined to `src/map/pathfinding.rs` and `src/a
 **Flow:**
 1. Menu "Play" button → `PlayerSetup`.
 2. A large "Press Enter / A to join" prompt per potential slot (up to 4). Keyboard Enter or Gamepad A marks that slot as joined and activates a model carousel for it.
-3. Carousel shows `Player`-typed model defs (filtered from `assets/defs/`). Left/right d-pad or arrow keys cycle models; a 3D preview renders the selected model (re-use the asset browser's viewer camera approach).
+3. Carousel shows `Player`-typed model defs (filtered from `../../assets/defs`). Left/right d-pad or arrow keys cycle models; a 3D preview renders the selected model (re-use the asset browser's viewer camera approach).
 4. Once all joined players confirm (Enter/A again), transition to `InGame` with each player's chosen `AssetDefinition` path stored in a `PlayerRoster` resource.
-5. `spawn_players` reads `PlayerRoster` instead of the hardcoded `player-settings.ron` model path.
+5. `spawn_players` reads `PlayerRoster` instead of the hardcoded `../../player-settings.ron` model path.
 
-**New files:** `src/player_setup/` plugin mirroring the asset browser structure (state, ui, plugin).
+**New files:** `../../src/player_setup` plugin mirroring the asset browser structure (state, ui, plugin).
 
 ---
 
@@ -389,7 +389,7 @@ Value comes from `EnemyProps.coin_drop`.
 
 **Tower placement cost:** `building_system` checks `TeamWallet.coins >= tower_def.cost` before placing; deducts on placement.
 
-**HUD:** add a coin counter to the existing in-game HUD (`src/ui/spawn_ui.rs`).
+**HUD:** add a coin counter to the existing in-game HUD (`../../src/ui/spawn_ui.rs`).
 
 ---
 
@@ -432,7 +432,7 @@ Set from the player def (`PlayerProps.ability`). Activated by a dedicated key/bu
 
 **Left panel (palette):**
 - Tabs: Terrain | Items | Towers | Enemies | Special (spawn/exit/player-spawn markers).
-- Each tab lists models of that `ModelType` from `assets/defs/`. Clicking selects the active brush.
+- Each tab lists models of that `ModelType` from `../../assets/defs`. Clicking selects the active brush.
 
 **Grid interaction:**
 - Left-click on a tile → place current brush (a tile may hold one terrain feature + multiple items).
@@ -453,4 +453,4 @@ Set from the player def (`PlayerProps.ability`). Activated by a dedicated key/bu
 
 **Runtime map loading:** `map_generator` reads `placements`, looks up each def, and spawns the model with the stored rotation and runtime components (from `ModelType`).
 
-**New files:** `src/map_editor/` (plugin, state, ui, camera). The heavy lifting reuses `scan_folder` from the asset browser and `LevelMap` from the map module.
+**New files:** `../../src/map_editor` (plugin, state, ui, camera). The heavy lifting reuses `scan_folder` from the asset browser and `LevelMap` from the map module.

@@ -85,7 +85,11 @@ pub fn character_frame(bones: &HashMap<String, Mat4>, role: &str) -> Option<Hard
     let names: Vec<&str> = bones.keys().map(String::as_str).collect();
     let (anchor, offset) = match role {
         "grip" | "foregrip" => {
-            let side = if role == "grip" { Side::Right } else { Side::Left };
+            let side = if role == "grip" {
+                Side::Right
+            } else {
+                Side::Left
+            };
             let (hand, palm) = palm(bones, &names, side)?;
             let offset = palm - UP * 0.035 * scale - bones[hand].w_axis.truncate();
             // Barrel out to the side the hand is on (the right of a character facing +Z is
@@ -164,7 +168,9 @@ fn palm<'a>(
         .map(|name| bones[*name].w_axis.truncate())
         .collect();
     let elbow = bones[forearm].w_axis.truncate();
-    let along = bones[forearm].transform_vector3(Vec3::Y).normalize_or_zero();
+    let along = bones[forearm]
+        .transform_vector3(Vec3::Y)
+        .normalize_or_zero();
     let palm = if knuckles.is_empty() {
         elbow + along * 0.3 * scale
     } else {
@@ -199,7 +205,11 @@ fn round_translation(v: Vec3) -> [f32; 3] {
 fn rig_height(bones: &HashMap<String, Mat4>) -> f32 {
     let heights = bones.values().map(|m| m.w_axis.y);
     let (low, high) = heights.fold((f32::MAX, f32::MIN), |(lo, hi), y| (lo.min(y), hi.max(y)));
-    if high > low { high - low } else { REFERENCE_HEIGHT }
+    if high > low {
+        high - low
+    } else {
+        REFERENCE_HEIGHT
+    }
 }
 
 const FINGERS: [&str; 5] = ["thumb", "index", "middle", "ring", "pinky"];
@@ -226,9 +236,9 @@ fn find_bone<'a>(names: &[&'a str], limb: Limb, side: Option<Side>) -> Option<&'
     const HELPERS: [&str; 5] = ["end", "leaf", "nub", "top", "twist"];
     let is_limb = |lower: &str| match limb {
         Limb::Hand => lower.contains("hand") && !FINGERS.iter().any(|f| lower.contains(f)),
-        Limb::Forearm => {
-            ["forearm", "lowerarm", "lower_arm"].iter().any(|w| lower.contains(w))
-        }
+        Limb::Forearm => ["forearm", "lowerarm", "lower_arm"]
+            .iter()
+            .any(|w| lower.contains(w)),
         Limb::UpperArm => {
             (lower.contains("upperarm") || lower.contains("upper_arm") || lower.contains("arm"))
                 && !["fore", "lower", "hand"].iter().any(|w| lower.contains(w))
@@ -330,7 +340,9 @@ impl GunShape {
         let from = self.max.x - self.length() * 0.1;
         let (lo, hi) = self
             .between(from, self.max.x)
-            .fold((f32::MAX, f32::MIN), |(lo, hi), p| (lo.min(p.y), hi.max(p.y)));
+            .fold((f32::MAX, f32::MIN), |(lo, hi), p| {
+                (lo.min(p.y), hi.max(p.y))
+            });
         let z = Self::centre(self.between(from, self.max.x)).map_or(0.0, |c| c.z);
         Vec3::new(self.max.x, f32::midpoint(lo, hi), z)
     }
@@ -347,7 +359,10 @@ impl GunShape {
             .map(|(lo, _)| *lo)
             .collect();
         bottoms.sort_by(f32::total_cmp);
-        bottoms.get(bottoms.len() / 2).copied().unwrap_or(self.min.y)
+        bottoms
+            .get(bottoms.len() / 2)
+            .copied()
+            .unwrap_or(self.min.y)
     }
 
     /// Runs of slices hanging below the barrel, rear to front, as (first, last) slice.
@@ -405,7 +420,10 @@ impl GunShape {
             WeaponHands::OneHanded => (self.slice_x(first), self.slice_x(last)),
             WeaponHands::TwoHanded => {
                 let start = self.slice_x(first) - slice_width / 2.0;
-                (start, start + (self.length() * 0.08).min(slice_width * (last - first + 1) as f32))
+                (
+                    start,
+                    start + (self.length() * 0.08).min(slice_width * (last - first + 1) as f32),
+                )
             }
         };
         let handle = Self::centre(self.between(from - slice_width / 2.0, to + slice_width / 2.0))
@@ -435,8 +453,14 @@ impl GunShape {
                 let half = self.length() / SLICES as f32;
                 let (lo, hi) = self
                     .between(x - half, x + half)
-                    .fold((f32::MAX, f32::MIN), |(lo, hi), p| (lo.min(p.y), hi.max(p.y)));
-                let y = if lo <= hi { f32::midpoint(lo, hi) } else { self.front().y };
+                    .fold((f32::MAX, f32::MIN), |(lo, hi), p| {
+                        (lo.min(p.y), hi.max(p.y))
+                    });
+                let y = if lo <= hi {
+                    f32::midpoint(lo, hi)
+                } else {
+                    self.front().y
+                };
                 Vec3::new(x, y, self.front().z)
             }
         }
@@ -489,7 +513,10 @@ mod tests {
             grip.translation
         );
         let theirs = Quat::from_xyzw(0.4939, 0.506, 0.4939, 0.506);
-        let angle = hardpoint_frame(&grip).rotation.angle_between(theirs).to_degrees();
+        let angle = hardpoint_frame(&grip)
+            .rotation
+            .angle_between(theirs)
+            .to_degrees();
         assert!(angle < 5.0, "{angle} degrees off");
     }
 
@@ -507,13 +534,15 @@ mod tests {
     /// the fingers.
     #[test]
     fn a_rig_without_hands_holds_on_its_forearm() {
-        let bones =
-            gltf_info::bind_pose_world("packs/monsters/Blue Demon.glb").expect("model");
+        let bones = gltf_info::bind_pose_world("packs/monsters/Blue Demon.glb").expect("model");
         let grip = character_frame(&bones, "grip").expect("grip");
         assert_eq!(grip.anchor.as_deref(), Some("LowerArm.R"));
         let world = bones["LowerArm.R"].transform_point3(Vec3::from(grip.translation));
         let knuckle = bones["Middle1.R"].w_axis.truncate();
-        assert!(world.distance(knuckle) < 0.2, "{world} vs knuckle {knuckle}");
+        assert!(
+            world.distance(knuckle) < 0.2,
+            "{world} vs knuckle {knuckle}"
+        );
     }
 
     #[test]
@@ -528,8 +557,14 @@ mod tests {
             "mixamorig:Head",
             "mixamorig:HeadTop_End",
         ];
-        assert_eq!(find_bone(&mixamo, Limb::Hand, Some(Side::Right)), Some("mixamorig:RightHand"));
-        assert_eq!(find_bone(&mixamo, Limb::Hand, Some(Side::Left)), Some("mixamorig:LeftHand"));
+        assert_eq!(
+            find_bone(&mixamo, Limb::Hand, Some(Side::Right)),
+            Some("mixamorig:RightHand")
+        );
+        assert_eq!(
+            find_bone(&mixamo, Limb::Hand, Some(Side::Left)),
+            Some("mixamorig:LeftHand")
+        );
         assert_eq!(
             find_bone(&mixamo, Limb::UpperArm, Some(Side::Right)),
             Some("mixamorig:RightArm")
@@ -540,8 +575,14 @@ mod tests {
         );
         assert_eq!(find_bone(&mixamo, Limb::Head, None), Some("mixamorig:Head"));
         let blender = ["Hand.R", "Hand.L", "UpperArm.R"];
-        assert_eq!(find_bone(&blender, Limb::Hand, Some(Side::Left)), Some("Hand.L"));
-        assert_eq!(find_bone(&blender, Limb::UpperArm, Some(Side::Right)), Some("UpperArm.R"));
+        assert_eq!(
+            find_bone(&blender, Limb::Hand, Some(Side::Left)),
+            Some("Hand.L")
+        );
+        assert_eq!(
+            find_bone(&blender, Limb::UpperArm, Some(Side::Right)),
+            Some("UpperArm.R")
+        );
     }
 
     /// A box gun: barrel along +X from x=0 to 10 at y 4..5, a handle hanging at x 2..3.
@@ -591,7 +632,13 @@ mod tests {
     /// Every weapon in the game gets a full set, inside its own bounds.
     #[test]
     fn every_weapon_def_gets_frames_inside_its_model() {
-        for def in ["Pistol", "SMG", "Shotgun", "Assault Rifle", "Grenade Launcher"] {
+        for def in [
+            "Pistol",
+            "SMG",
+            "Shotgun",
+            "Assault Rifle",
+            "Grenade Launcher",
+        ] {
             let text = std::fs::read_to_string(format!("assets/defs/{def}.ron")).expect("def");
             let def: crate::assets::asset_definition::AssetDefinition =
                 ron::from_str(&text).expect("parses");

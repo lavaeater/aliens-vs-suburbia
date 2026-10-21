@@ -65,10 +65,16 @@ pub enum FileState {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LibraryRow {
     Heading(String),
-    Def { def_path: String, kind: DefKind },
+    Def {
+        def_path: String,
+        kind: DefKind,
+    },
     Up,
     Folder(String),
-    File { model_path: String, state: FileState },
+    File {
+        model_path: String,
+        state: FileState,
+    },
 }
 
 impl LibraryRow {
@@ -151,7 +157,9 @@ pub fn step_highlight(rows: &[LibraryRow], from: Option<usize>, direction: isize
     if count == 0 || !rows.iter().any(LibraryRow::selectable) {
         return None;
     }
-    let mut index = from.map_or(if direction > 0 { count - 1 } else { 0 }, |i| i.min(count - 1));
+    let mut index = from.map_or(if direction > 0 { count - 1 } else { 0 }, |i| {
+        i.min(count - 1)
+    });
     for _ in 0..count {
         index = (index as isize + direction).rem_euclid(count as isize) as usize;
         if rows.get(index).is_some_and(LibraryRow::selectable) {
@@ -282,11 +290,13 @@ pub fn navigate_library(
     for key in keys.read() {
         match *key {
             FieldKey::Up(field) if field == search => {
-                docs.library.highlight = step_highlight(&docs.library.rows, docs.library.highlight, -1);
+                docs.library.highlight =
+                    step_highlight(&docs.library.rows, docs.library.highlight, -1);
                 docs.library.list_dirty = true;
             }
             FieldKey::Down(field) if field == search => {
-                docs.library.highlight = step_highlight(&docs.library.rows, docs.library.highlight, 1);
+                docs.library.highlight =
+                    step_highlight(&docs.library.rows, docs.library.highlight, 1);
                 docs.library.list_dirty = true;
             }
             FieldKey::Submit(field) if field == search => {
@@ -312,7 +322,12 @@ const ROW_MUTED: Color = Color::srgb(0.75, 0.6, 0.5);
 
 /// The label and colour of a row. `*` marks what is open, `-` what else is in use (the
 /// character worn, the weapon held), `>` the keyboard highlight.
-fn row_label(row: &LibraryRow, open: &[Option<String>; 3], subject: Option<&str>, mesh_less: bool) -> (String, Color) {
+fn row_label(
+    row: &LibraryRow,
+    open: &[Option<String>; 3],
+    subject: Option<&str>,
+    mesh_less: bool,
+) -> (String, Color) {
     let file_name = |path: &str| path.rsplit('/').next().unwrap_or(path).to_string();
     match row {
         LibraryRow::Heading(text) => (text.clone(), HEADING),
@@ -325,7 +340,10 @@ fn row_label(row: &LibraryRow, open: &[Option<String>; 3], subject: Option<&str>
                 " "
             };
             if mesh_less {
-                (format!("{mark} {} (no mesh)", def_stem(def_path)), ROW_MUTED)
+                (
+                    format!("{mark} {} (no mesh)", def_stem(def_path)),
+                    ROW_MUTED,
+                )
             } else {
                 (format!("{mark} {}", def_stem(def_path)), ROW_DEF)
             }
@@ -377,8 +395,7 @@ pub fn rebuild_library(
     }
     // Cleared only once there is somewhere to draw, so a frame without the containers
     // retries instead of leaving the list empty for the session.
-    let (Ok(list), Ok(chip_row), Ok(bar)) = (lists.single(), chips.single(), bars.single())
-    else {
+    let (Ok(list), Ok(chip_row), Ok(bar)) = (lists.single(), chips.single(), bars.single()) else {
         return;
     };
     library.list_dirty = false;
@@ -479,7 +496,8 @@ pub fn rebuild_library(
             ));
         }
         for (index, entry) in rows.into_iter().enumerate() {
-            let is_mesh_less = matches!(&entry, LibraryRow::Def { def_path, .. } if mesh_less.contains(def_path));
+            let is_mesh_less =
+                matches!(&entry, LibraryRow::Def { def_path, .. } if mesh_less.contains(def_path));
             let (label, color) = row_label(&entry, &open, subject.as_deref(), is_mesh_less);
             if let LibraryRow::Heading(_) = entry {
                 parent.spawn((
@@ -573,7 +591,10 @@ mod tests {
             model_path: "packs/b/Pistol.glb".to_string(),
             state: FileState::New,
         }));
-        assert!(!rows.contains(&LibraryRow::Up), "no folder browsing while searching");
+        assert!(
+            !rows.contains(&LibraryRow::Up),
+            "no folder browsing while searching"
+        );
     }
 
     #[test]
@@ -586,9 +607,20 @@ mod tests {
         ];
         assert_eq!(step_highlight(&rows, None, 1), Some(1));
         assert_eq!(step_highlight(&rows, Some(1), 1), Some(3));
-        assert_eq!(step_highlight(&rows, Some(3), 1), Some(1), "wraps past the end");
-        assert_eq!(step_highlight(&rows, Some(1), -1), Some(3), "wraps past the start");
-        assert_eq!(step_highlight(&[LibraryRow::Heading("A".into())], None, 1), None);
+        assert_eq!(
+            step_highlight(&rows, Some(3), 1),
+            Some(1),
+            "wraps past the end"
+        );
+        assert_eq!(
+            step_highlight(&rows, Some(1), -1),
+            Some(3),
+            "wraps past the start"
+        );
+        assert_eq!(
+            step_highlight(&[LibraryRow::Heading("A".into())], None, 1),
+            None
+        );
     }
 
     #[test]

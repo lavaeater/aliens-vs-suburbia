@@ -43,8 +43,14 @@ type Preset = &'static [(AnimationKey, &'static [&'static str])];
 
 const HUMAN: Preset = &[
     (AnimationKey::Idle, &["Idle_A", "Idle_Subtle"]),
-    (AnimationKey::IdleShoot, &["Pistol_Aim_Neutral", "Pistol_Idle"]),
+    (
+        AnimationKey::IdleShoot,
+        &["Pistol_Aim_Neutral", "Pistol_Idle"],
+    ),
     (AnimationKey::Walk, &["Walk"]),
+    (AnimationKey::WalkBack, &["Walk_Backwards"]),
+    (AnimationKey::StrafeLeft, &["Strafe_left"]),
+    (AnimationKey::StrafeRight, &["Strafe_right"]),
     (AnimationKey::Run, &["Sprint", "Jog", "Run_Anime"]),
     (AnimationKey::Duck, &["Crouch_Idle"]),
     (AnimationKey::Jump, &["Jump_Start"]),
@@ -54,7 +60,10 @@ const HUMAN: Preset = &[
     (AnimationKey::Wave, &["Greeting"]),
     (AnimationKey::Yes, &["Yes", "Head Nod"]),
     (AnimationKey::No, &["Reject"]),
-    (AnimationKey::Death, &["Death_A", "Death_B", "Death_C", "Death_D"]),
+    (
+        AnimationKey::Death,
+        &["Death_A", "Death_B", "Death_C", "Death_D"],
+    ),
     (AnimationKey::HitReact, &["Hit_Chest", "Hit_Head"]),
     (AnimationKey::Throwing, &["OverhandThrow", "Throw Object"]),
     (AnimationKey::Building, &["Interact", "Fixing_Kneeling"]),
@@ -293,7 +302,14 @@ impl ClipSet {
         animations: Option<&BTreeMap<AnimationKey, String>>,
         settings: Option<&AnimMapping>,
     ) -> Option<String> {
-        if !matches!(key, AnimationKey::WalkShoot | AnimationKey::RunShoot) {
+        if !matches!(
+            key,
+            AnimationKey::WalkShoot
+                | AnimationKey::RunShoot
+                | AnimationKey::WalkBackShoot
+                | AnimationKey::StrafeLeftShoot
+                | AnimationKey::StrafeRightShoot
+        ) {
             return None;
         }
         let own = self.resolve(key, animations, settings)?;

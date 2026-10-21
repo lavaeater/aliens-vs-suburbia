@@ -3,7 +3,7 @@ use bevy::prelude::*;
 #[derive(Component, Debug, Reflect)]
 #[reflect(Component)]
 pub struct RightHand {
-  pub transform: Transform
+    pub transform: Transform,
 }
 
 #[derive(Component, Debug, Reflect)]

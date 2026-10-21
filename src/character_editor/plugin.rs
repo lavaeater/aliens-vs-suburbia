@@ -10,6 +10,7 @@ use bevy::transform::TransformSystems;
 
 use crate::alien::wave_manager::WaveManager;
 use crate::character_editor::animation::AnimationEditor;
+use crate::character_editor::animation_tab::rebuild_animation_tab;
 use crate::character_editor::debug::{
     EditorOverlays, bias_gizmos_over_mesh, draw_gait_gizmos, draw_player_overlays,
     reset_gizmo_bias, sync_physics_toggle,
@@ -20,37 +21,35 @@ use crate::character_editor::doc::{
 };
 use crate::character_editor::focus::{EditorInputFocus, update_game_input_block};
 use crate::character_editor::hardpoints::{
-    HardpointEditor, apply_grip_to_equipped_weapon, apply_weapon_def_to_equipped_weapon,
+    ActiveFrame, HardpointEditor, apply_grip_to_equipped_weapon,
+    apply_weapon_def_to_equipped_weapon, draw_nudge_axes, track_active_hardpoint,
 };
 use crate::character_editor::inspect::{
     drive_orbit_camera, hold_player_still, hold_rest_pose, inspect_keys, inspecting,
     orbit_camera_active, rest_pose_held, switch_orbit_camera,
 };
-use crate::character_editor::animation_tab::rebuild_animation_tab;
+use crate::character_editor::library::{navigate_library, rebuild_library, sync_search_query};
 use crate::character_editor::model_tab::{
     ModelMeasure, apply_prop_hidden_nodes, measure_subject, rebuild_model_tab,
 };
-use crate::character_editor::props_tab::{PropsTab, rebuild_props_tab};
-use crate::character_editor::library::{navigate_library, rebuild_library, sync_search_query};
 use crate::character_editor::models::{EditorLibrary, swap_player_model};
-use crate::character_editor::text_field::{
-    FieldKey, FocusedField, blur_on_click_elsewhere, draw_fields, focus_on_click, sync_text_capture,
-    type_into_field,
-};
 use crate::character_editor::prop::{
     despawn_prop, hide_player_for_prop, keep_studio_for_props, sync_prop,
 };
+use crate::character_editor::props_tab::{PropsTab, rebuild_props_tab};
 use crate::character_editor::shell::{
     ActiveTab, EditorTab, remember_tab_and_stage, spawn_editor_ui, sync_tabs, update_status_bar,
 };
 use crate::character_editor::state::in_editor;
+use crate::character_editor::text_field::{
+    FieldKey, FocusedField, blur_on_click_elsewhere, draw_fields, focus_on_click,
+    sync_text_capture, type_into_field,
+};
 use crate::character_editor::ui::{
-    clear_editor_viewport, end_editor_session, rebuild_debug_toggles,
-    rebuild_doc_bar, rebuild_hardpoint_panel,
-    rebuild_weapon_list, sync_editor_viewport,
+    clear_editor_viewport, end_editor_session, rebuild_debug_toggles, rebuild_doc_bar,
+    rebuild_hardpoint_panel, rebuild_weapon_list, sync_editor_viewport,
 };
 use crate::game_state::GameState;
-use crate::general::components::map_components::MapFile;
 use crate::general::events::map_events::LoadMap;
 
 /// The arena: a small walled room with nothing in it, for trying out the controls.
@@ -107,6 +106,7 @@ impl Plugin for CharacterEditorPlugin {
                     draw_player_overlays,
                     draw_gait_gizmos,
                     rebuild_hardpoint_panel,
+                    (track_active_hardpoint, draw_nudge_axes).chain(),
                 )
                     .run_if(in_state(GameState::InGame))
                     .run_if(in_editor),
@@ -199,18 +199,11 @@ impl Plugin for CharacterEditorPlugin {
 
 /// Load the sandbox arena instead of `level_01`.
 fn load_arena_map(mut load_map_mw: MessageWriter<LoadMap>) {
-    let text = match std::fs::read_to_string(ARENA_MAP) {
-        Ok(text) => text,
-        Err(err) => {
-            error!("character editor: cannot read {ARENA_MAP}: {err}");
-            return;
-        }
-    };
-    match ron::from_str::<MapFile>(&text) {
-        Ok(map) => {
+    match crate::map::text_format::load_level(ARENA_MAP) {
+        Ok((map, _)) => {
             load_map_mw.write(LoadMap { map });
         }
-        Err(err) => error!("character editor: cannot parse {ARENA_MAP}: {err}"),
+        Err(err) => error!("character editor: {err}"),
     }
 }
 
@@ -237,6 +230,7 @@ fn init_model_list(mut commands: Commands) {
         ui_dirty: true,
         ..Default::default()
     });
+    commands.insert_resource(ActiveFrame::default());
     // Fresh docs every session: `sync_weapon_doc` compares paths, so a stale one from a
     // previous session would suppress the reload of an edited-then-abandoned def.
     commands.insert_resource(EditorDoc::default());

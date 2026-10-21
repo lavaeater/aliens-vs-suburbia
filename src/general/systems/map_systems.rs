@@ -44,17 +44,14 @@ use crate::towers::systems::spawn_tower_sensor;
 use crate::ui::spawn_ui::AddHealthBar;
 
 pub fn load_map_one(mut send_event: MessageWriter<LoadMap>) {
-    let text = match std::fs::read_to_string("assets/maps/level_01.ron") {
-        Ok(text) => text,
-        Err(e) => {
-            bevy::log::error!("assets/maps/level_01.ron not found: {e}");
-            return;
+    // A `level_01.map` next to the `.ron` takes its place.
+    let mut map = match crate::map::text_format::load_level("assets/maps/level_01.ron") {
+        Ok((map, path)) => {
+            bevy::log::info!("Loaded {}", path.display());
+            map
         }
-    };
-    let mut map: crate::general::components::map_components::MapFile = match ron::from_str(&text) {
-        Ok(map) => map,
         Err(e) => {
-            bevy::log::error!("Failed to parse assets/maps/level_01.ron: {e}");
+            bevy::log::error!("{e}");
             return;
         }
     };
@@ -497,10 +494,13 @@ pub fn map_loader(
                 continue;
             };
 
+            // Placements are in the map's own coordinates; the grid above is padded by
+            // one tile of void on every side, so they sit one tile in from it.
+            let (px, py) = (placement.x + 1, placement.y + 1);
             let pos = Vec3::new(
-                tile_defs.tile_width * placement.x as f32,
+                tile_defs.tile_width * px as f32,
                 tile_defs.floor_level + tile_defs.tile_depth,
-                tile_defs.tile_width * placement.y as f32,
+                tile_defs.tile_width * py as f32,
             );
             let rot = Quat::from_rotation_y(
                 f32::from(placement.rotation_steps) * std::f32::consts::FRAC_PI_4,
@@ -510,7 +510,7 @@ pub fn map_loader(
             let scene_handle = asset_server
                 .load(bevy::gltf::GltfAssetLabel::Scene(0).from_asset(def.model_path.clone()));
 
-            let tile_coord = (placement.x as usize, placement.y as usize);
+            let tile_coord = (px as usize, py as usize);
 
             match &def.model_type {
                 ModelType::Terrain(props) => {
@@ -618,10 +618,11 @@ pub fn map_loader(
         }
 
         for dec in &map_file.decorations {
+            // Map coordinates, like placements: one tile in from the padded grid.
             let pos = Vec3::new(
-                tile_defs.tile_width * dec.x as f32,
+                tile_defs.tile_width * (dec.x + 1) as f32,
                 tile_defs.floor_level + tile_defs.tile_depth,
-                tile_defs.tile_width * dec.y as f32,
+                tile_defs.tile_width * (dec.y + 1) as f32,
             );
             // dec.scale is expressed in player units; multiply by player_unit to get world-unit scale
             let world_scale = dec.scale * game_settings.player_unit;

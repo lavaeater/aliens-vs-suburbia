@@ -192,9 +192,15 @@ impl Plugin for StatefulMapPlugin {
             .add_systems(OnEnter(GameState::ModelShowcase), load_map_showcase)
             .add_systems(
                 Update,
-                (update_current_tile_system, map_loader).run_if(
-                    in_state(GameState::InGame).or_else(in_state(GameState::ModelShowcase)),
-                ),
+                (
+                    update_current_tile_system,
+                    map_loader,
+                    crate::map::walls::spawn_walls,
+                    crate::map::map_lights::spawn_map_lights,
+                )
+                    .run_if(
+                        in_state(GameState::InGame).or_else(in_state(GameState::ModelShowcase)),
+                    ),
             );
     }
 }

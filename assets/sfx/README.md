@@ -37,3 +37,18 @@ ffmpeg -i in.wav -c:a pcm_s16le out.wav
 
 Per-category base volume and the concurrent-voice cap live at the top of
 `src/gore/sfx.rs` (`emit_combat_sfx` gains, `MAX_VOICES`).
+
+## Current files
+
+All from the Sonniss #GameAudioGDC bundles (royalty-free, editing and redistribution
+allowed, no attribution required; browsable at https://gamesounds.xyz/). Each was
+downmixed to mono 16-bit 44.1 kHz, trimmed, faded out and peak-normalised.
+
+| File | Source |
+|------|--------|
+| `hit_flesh.wav` | GDC 2015, Timothy McHugh - Gorification: *crunchy flesh impact and blood squirt - hard - 8* |
+| `gib_wet.wav` | GDC 2015, Timothy McHugh - Gorification: *flesh guts gore impact blood squirt wet - hard - 49* |
+| `death_groan.wav` | GDC 2019, Glitchedtones - Zombie: *Zombie Subject B Groan (8)* |
+| `fire_ignite.wav` | GDC 2018, Gregor Quendel - Designed Fire: *Impacts - Large, ignition 03* (first 2 s) |
+| `shoot_pistol.wav` | GDC 2017, Gamemaster Audio - Gun Sound Pack: *gun_revolver_pistol_shot_04* |
+| `heartbeat.wav` | GDC 2018, Airborne Sound - Human: *Heartbeat, Sound Design, Pulse, Throb, Steady, Accelerate, Panic, Fear* (first lub-dub) |

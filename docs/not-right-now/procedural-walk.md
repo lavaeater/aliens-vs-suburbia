@@ -9,7 +9,7 @@ solve that puts the feet on the ground and keeps them there. `F9` toggles it bac
 A/B against the clip's own legs, and nothing needs undoing when it goes off, because the
 animation rewrites those bones from the clip on the very next frame.
 
-Three pieces: `src/player/systems/gait.rs` decides where the feet go, in world space, and
+Three pieces: `../../src/player/systems/gait.rs` decides where the feet go, in world space, and
 knows nothing about the engine. `src/player/systems/leg_ik.rs` finds the leg chains, keeps
 the ground and the hips honest, and calls `arm_ik::solve_elbow` — a leg is the same two-bone
 problem as an arm. The tuning panel is `F10` in the playground, and the "gait targets"
@@ -129,7 +129,7 @@ consistently — the first question the overlay gets asked is which foot you are
 - **Only the knee is constrained.** The hip and ankle have no limits, so the solve will
   happily rotate a thigh further than a hip joint would allow. The knee was first because it
   is the one that decides how far the character can reach, and so how long a stride it can
-  take. See `docs/inverse-kinematics-hardpoints.md` for the same solver's use on arms.
+  take. See `inverse-kinematics-hardpoints.md` for the same solver's use on arms.
 - **Limits live in the gait settings, not on the character.** They are anatomy, so they
   belong in the model's `.ron` def beside `aim_bones` and `hardpoints`. They are here for
   now because here is what has a tuning panel attached to it.

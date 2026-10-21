@@ -29,7 +29,7 @@ impl Score {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LevelState {
     NotStarted,
     InProgress,

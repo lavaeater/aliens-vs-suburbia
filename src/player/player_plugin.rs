@@ -73,6 +73,7 @@ impl Plugin for PlayerPlugin {
                     .run_if(in_state(GameState::InGame)),
             )
             .add_plugins((
+                crate::player::systems::muzzle_flash::MuzzleFlashPlugin,
                 OutlinePlugin::EXTRUDE_VERTEX,
                 AutoGenerateOutlineNormalsPlugin::default(),
             ))
@@ -96,7 +97,16 @@ impl Plugin for PlayerPlugin {
                     choose_respawn_anchor,
                     tick_respawns,
                     check_team_wipe.run_if(crate::character_editor::state::in_normal_game),
+                    crate::player::systems::flashlight::give_flashlights,
                 )
+                    .run_if(in_state(GameState::InGame)),
+            )
+            // After propagation, from where the player really is this frame; the light sets
+            // its own `GlobalTransform` (flashlight.rs).
+            .add_systems(
+                PostUpdate,
+                crate::player::systems::flashlight::update_flashlights
+                    .after(TransformSystems::Propagate)
                     .run_if(in_state(GameState::InGame)),
             )
             .add_systems(

@@ -16,9 +16,7 @@ use bevy::ui_widgets::Activate;
 use crate::animation::animation_plugin::{ANIM_KEYS, AnimationKey, PreviewAnimation};
 use crate::animation::clips::ClipSet;
 use crate::assets::asset_definition::AssetDefinition;
-use crate::character_editor::animation::{
-    AnimationEditor, clip_set, map, resolution_label, unmap,
-};
+use crate::character_editor::animation::{AnimationEditor, clip_set, map, resolution_label, unmap};
 use crate::character_editor::doc::{
     EditorDoc, EditorFocus, PropDoc, SideDocs, Subject, WeaponDoc, subject_doc,
 };
@@ -143,7 +141,10 @@ fn spawn_keys(
     if let Some(rig) = clips.rig {
         note(
             parent,
-            format!("mesh2motion {} rig: unmapped keys use its preset", rig.label()),
+            format!(
+                "mesh2motion {} rig: unmapped keys use its preset",
+                rig.label()
+            ),
             NOTE_COLOR,
         );
     }

@@ -13,6 +13,7 @@ use bevy::render::view::ColorGrading;
 
 use crate::camera::components::GameCamera;
 use crate::general::components::Health;
+use crate::general::systems::lights_systems::LightingPreset;
 use crate::gore::sfx::{PlaySfx, SfxKind};
 use crate::music::game_music_plugin::MusicMoods;
 use crate::player::components::{Player, PlayerDead};
@@ -22,18 +23,17 @@ use crate::player::components::{Player, PlayerDead};
 #[derive(Resource)]
 pub struct DespairSettings {
     pub max_strength: f32,
-    /// Ambient brightness at calm vs. full dread.
-    pub ambient_calm: f32,
-    pub ambient_dread: f32,
+    /// How much of the lighting preset's ambient is left at full dread. The night presets
+    /// have no ambient, so this only shows in daylight.
+    pub ambient_dread_factor: f32,
 }
 
 impl Default for DespairSettings {
     fn default() -> Self {
         Self {
             max_strength: 1.0,
-            // spawn_lights sets 300 at calm; we crush it toward a gloom.
-            ambient_calm: 300.0,
-            ambient_dread: 90.0,
+            // Daylight's 300 crushed toward a gloom of 90.
+            ambient_dread_factor: 0.3,
         }
     }
 }
@@ -52,6 +52,7 @@ pub fn apply_despair(
     settings: Res<DespairSettings>,
     moods: Option<Res<MusicMoods>>,
     ambient: Option<ResMut<GlobalAmbientLight>>,
+    preset: Res<LightingPreset>,
     mut cameras: Query<
         (Entity, Option<&mut ColorGrading>, Option<&mut DistanceFog>),
         With<GameCamera>,
@@ -62,7 +63,7 @@ pub fn apply_despair(
 
     // ── Ambient light: the room dims as dread rises. ──────────────────────────
     if let Some(mut ambient) = ambient {
-        ambient.brightness = lerp(settings.ambient_calm, settings.ambient_dread, d);
+        ambient.brightness = preset.ambient() * lerp(1.0, settings.ambient_dread_factor, d);
     }
 
     // ── Camera color grade + fog. ─────────────────────────────────────────────

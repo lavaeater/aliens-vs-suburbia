@@ -258,9 +258,7 @@ pub fn mesh_points(model_path: &str) -> Option<Vec<Vec3>> {
                 .get("attributes")
                 .and_then(|a| a.get("POSITION"))
                 .and_then(serde_json::Value::as_u64)
-                .and_then(|accessor| {
-                    read_floats::<3>(&doc, &buffers, accessor as usize, "VEC3")
-                })
+                .and_then(|accessor| read_floats::<3>(&doc, &buffers, accessor as usize, "VEC3"))
             else {
                 continue;
             };
@@ -392,8 +390,7 @@ fn read_floats<const N: usize>(
     const FLOAT: u64 = 5126;
     let element_bytes = N.checked_mul(4)?;
     let accessor = doc.get("accessors")?.get(accessor)?;
-    if accessor.get("type")?.as_str()? != kind
-        || accessor.get("componentType")?.as_u64()? != FLOAT
+    if accessor.get("type")?.as_str()? != kind || accessor.get("componentType")?.as_u64()? != FLOAT
     {
         return None;
     }

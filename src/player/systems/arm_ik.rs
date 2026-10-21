@@ -48,7 +48,8 @@ pub struct WeaponArm {
     pub effector_frame: Transform,
     /// The weapon-side hardpoint frame, local to the weapon.
     pub weapon_frame: Transform,
-    /// Which way the elbow bends, in the character's local space.
+    /// Which way the elbow bends, in the character's local space with `x` meaning
+    /// *outward* from the body's midline; `solve_arm` mirrors it to the arm's own side.
     pub pole: Vec3,
 }
 
@@ -64,20 +65,25 @@ pub struct WeaponArms {
 /// Rigs differ in how many bones sit between the hardpoint and the arm — a grip anchored
 /// to a thumb tip is four bones below the shoulder, one anchored to the hand is two — so
 /// the chain is found rather than assumed: the first ancestor that looks like a hand fixes
-/// the wrist, and the two bones above it are the arm.
+/// the wrist, and the two bones above it are the arm. With no hand among the ancestors
+/// (a hardpoint anchored on the hand itself, as the editor's suggestions are) the
+/// effector is the wrist, and the arm is its parent and grandparent.
 ///
 /// `ancestors` is the effector's ancestors, nearest first. Returns `(upper, lower)` as
 /// indices into it.
 pub fn arm_chain(ancestors: &[&str]) -> Option<(usize, usize)> {
-    let hand = ancestors
-        .iter()
-        .position(|name| name.to_ascii_lowercase().contains("hand"))
-        // A hardpoint anchored directly to the hand has no "hand" among its *ancestors*,
-        // so fall back to treating the effector itself as the wrist.
-        .unwrap_or(0);
-    let lower = hand + 1;
-    let upper = hand + 2;
+    let (upper, lower) = match ancestors.iter().position(|name| is_hand(name)) {
+        Some(hand) => (hand + 2, hand + 1),
+        None => (1, 0),
+    };
     (upper < ancestors.len()).then_some((upper, lower))
+}
+
+/// A wrist rather than a finger: mixamo fingers carry "hand" too (`mixamorigRightHandIndex1`).
+fn is_hand(name: &str) -> bool {
+    const FINGERS: [&str; 5] = ["thumb", "index", "middle", "ring", "pinky"];
+    let lower = name.to_ascii_lowercase();
+    lower.contains("hand") && !FINGERS.iter().any(|finger| lower.contains(finger))
 }
 
 /// Where the elbow goes so that a two-bone arm reaches `target`.
@@ -140,9 +146,34 @@ pub fn local_from_world(parent_world: Quat, world: Quat) -> Quat {
     (parent_world.inverse() * world).normalize()
 }
 
-/// Bend the elbows down and back, the neutral rifle stance. Expressed in the character's
-/// own space so it turns with the body rather than pointing a fixed way in the world.
-pub const DEFAULT_POLE: Vec3 = Vec3::new(0.0, -1.0, -1.0);
+/// Bend the elbow down and back, under the gun: the support arm's stance. Poles are in the
+/// character's own space so they turn with the body rather than pointing a fixed way in
+/// the world, with `x` meaning outward (see `WeaponArm::pole`).
+pub const SUPPORT_POLE: Vec3 = Vec3::new(0.0, -1.0, -1.0);
+
+/// The trigger arm's elbow goes out to the side and only somewhat down — a shouldered
+/// rifle. Straight down, the trigger hand sits so close to the chest that the elbow folds
+/// in through the ribs.
+pub const TRIGGER_POLE: Vec3 = Vec3::new(1.0, -0.6, -0.3);
+
+/// The elbow pole for the arm solved onto `role`.
+pub fn pole_for(role: &str) -> Vec3 {
+    if role == crate::player::systems::equip::GRIP_ROLE {
+        TRIGGER_POLE
+    } else {
+        SUPPORT_POLE
+    }
+}
+
+/// `pole` with its outward `x` pointed at the side of the body `shoulder_x` (the shoulder
+/// in the character's space) is on. A shoulder on the midline leaves it as is.
+pub fn mirror_pole(pole: Vec3, shoulder_x: f32) -> Vec3 {
+    if shoulder_x < 0.0 {
+        Vec3::new(-pole.x, pole.y, pole.z)
+    } else {
+        pole
+    }
+}
 
 /// The bones from `stop` (exclusive) down to `effector` (inclusive), in order.
 ///
@@ -271,7 +302,8 @@ fn solve_arm(
         return None;
     }
 
-    let pole = owner.rotation() * arm.pole;
+    let shoulder_in_owner = owner.affine().inverse().transform_point3(shoulder);
+    let pole = owner.rotation() * mirror_pole(arm.pole, shoulder_in_owner.x);
     let wanted_elbow = solve_elbow(shoulder, wanted_hand, upper_len, lower_len, pole);
 
     // Upper arm: swing the shoulder so the elbow lands where the solve wants it.
@@ -464,6 +496,15 @@ mod tests {
         assert!(elbow.is_finite());
     }
 
+    /// The outward component has to follow the arm: a left arm whose "outward" pointed
+    /// right would drive its elbow into the chest, which is the bug this exists for.
+    #[test]
+    fn outward_poles_point_away_from_the_body_on_either_side() {
+        assert!(mirror_pole(TRIGGER_POLE, 0.2).x > 0.0);
+        assert!(mirror_pole(TRIGGER_POLE, -0.2).x < 0.0);
+        assert_eq!(mirror_pole(TRIGGER_POLE, -0.2).yz(), TRIGGER_POLE.yz());
+    }
+
     /// A pole pointing along the arm says nothing about the bend plane; any perpendicular
     /// is a valid answer, but NaN is not.
     #[test]
@@ -511,11 +552,26 @@ mod tests {
         assert_eq!(arm_chain(&ancestors), Some((2, 1)));
     }
 
-    /// A hardpoint on the hand itself has no "hand" ancestor to find.
+    /// A hardpoint on the hand itself has no "hand" ancestor to find: the arm is the
+    /// forearm and upper arm right above it, not the upper arm and the collarbone (which
+    /// solved the shoulder as if it were the elbow and bunched the arms up along the gun).
     #[test]
     fn a_hardpoint_on_the_wrist_uses_the_two_bones_above_it() {
         let ancestors = ["lowerarm_r", "upperarm_r", "clavicle_r"];
-        assert_eq!(arm_chain(&ancestors), Some((2, 1)));
+        assert_eq!(arm_chain(&ancestors), Some((1, 0)));
+    }
+
+    /// Mixamo finger bones carry "hand" in their names; the wrist is the one that is not
+    /// a finger.
+    #[test]
+    fn a_mixamo_finger_is_not_mistaken_for_the_wrist() {
+        let ancestors = [
+            "mixamorigRightHandIndex1",
+            "mixamorigRightHand",
+            "mixamorigRightForeArm",
+            "mixamorigRightArm",
+        ];
+        assert_eq!(arm_chain(&ancestors), Some((3, 2)));
     }
 
     /// The whole point of the clamp: an absolute alignment would wring the neck right
@@ -550,6 +606,7 @@ mod tests {
     #[test]
     fn a_chain_that_runs_out_of_bones_is_refused() {
         assert_eq!(arm_chain(&["hand_r"]), None);
+        assert_eq!(arm_chain(&["lowerarm_r"]), None);
         assert_eq!(arm_chain(&[]), None);
     }
 }

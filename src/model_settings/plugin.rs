@@ -237,12 +237,7 @@ fn build_player_anim_graph(
 
     let def = player_asset_def.as_ref().and_then(|r| r.0.as_ref());
 
-    let def_sig = def.map_or_default(|d| {
-        format!(
-            "{:?}|{:?}",
-            d.animations, d.animation_sources
-        )
-    });
+    let def_sig = def.map_or_default(|d| format!("{:?}|{:?}", d.animations, d.animation_sources));
 
     let sig = format!(
         "{}|{:?}|{}",

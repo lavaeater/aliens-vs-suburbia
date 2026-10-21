@@ -50,6 +50,18 @@ pub struct AnimMapping {
     pub building: String,
     #[serde(default)]
     pub reload: String,
+    #[serde(default)]
+    pub walk_back: String,
+    #[serde(default)]
+    pub walk_back_shoot: String,
+    #[serde(default)]
+    pub strafe_left: String,
+    #[serde(default)]
+    pub strafe_left_shoot: String,
+    #[serde(default)]
+    pub strafe_right: String,
+    #[serde(default)]
+    pub strafe_right_shoot: String,
 }
 
 impl AnimMapping {
@@ -59,6 +71,12 @@ impl AnimMapping {
             AnimationKey::IdleShoot => &self.idle_shoot,
             AnimationKey::Walk => &self.walk,
             AnimationKey::WalkShoot => &self.walk_shoot,
+            AnimationKey::WalkBack => &self.walk_back,
+            AnimationKey::WalkBackShoot => &self.walk_back_shoot,
+            AnimationKey::StrafeLeft => &self.strafe_left,
+            AnimationKey::StrafeLeftShoot => &self.strafe_left_shoot,
+            AnimationKey::StrafeRight => &self.strafe_right,
+            AnimationKey::StrafeRightShoot => &self.strafe_right_shoot,
             AnimationKey::Run => &self.run,
             AnimationKey::RunShoot => &self.run_shoot,
             AnimationKey::RunGun => &self.run_gun,
@@ -84,6 +102,12 @@ impl AnimMapping {
             AnimationKey::IdleShoot => self.idle_shoot = name,
             AnimationKey::Walk => self.walk = name,
             AnimationKey::WalkShoot => self.walk_shoot = name,
+            AnimationKey::WalkBack => self.walk_back = name,
+            AnimationKey::WalkBackShoot => self.walk_back_shoot = name,
+            AnimationKey::StrafeLeft => self.strafe_left = name,
+            AnimationKey::StrafeLeftShoot => self.strafe_left_shoot = name,
+            AnimationKey::StrafeRight => self.strafe_right = name,
+            AnimationKey::StrafeRightShoot => self.strafe_right_shoot = name,
             AnimationKey::Run => self.run = name,
             AnimationKey::RunShoot => self.run_shoot = name,
             AnimationKey::RunGun => self.run_gun = name,

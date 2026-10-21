@@ -17,14 +17,20 @@
 //!
 //! Nothing is written to disk until you Save, from the doc bar.
 
+use bevy::math::EulerRot;
+use bevy::mesh::skinning::SkinnedMesh;
 use bevy::prelude::*;
 
 use crate::assets::asset_definition::{AssetDefinition, Hardpoint};
-use crate::character_editor::doc::{Subject, WeaponDoc};
+use crate::assets::gizmos::{bone_map, joints_under};
+use crate::assets::hardpoint::hardpoint_frame;
+use crate::character_editor::doc::{EditorDoc, PropDoc, Subject, WeaponDoc};
+use crate::character_editor::prop::EditorProp;
 use crate::model_settings::plugin::PlayerAssetDef;
 use crate::player::components::Player;
 use crate::player::systems::equip::{EquippedWeapon, GRIP_ROLE, MUZZLE_ROLE, WeaponModel};
 use crate::player::systems::shoot::Weapon;
+use crate::player::systems::spawn_players::PlayerModelRoot;
 
 /// Roles offered in the panel. Characters really only use `grip`; the rest are here
 /// because a def may carry them and they should be visible and editable if so.
@@ -99,12 +105,36 @@ pub const FINE_TRANSLATION: f32 = 0.002;
 pub const COARSE_ROTATION: f32 = 15.0;
 pub const FINE_ROTATION: f32 = 1.0;
 
+/// Which axes the nudge rows move a hardpoint along. Either way the hardpoint is *stored*
+/// relative to its anchor; this only decides what "move X" means.
+#[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
+pub enum NudgeSpace {
+    /// The model's own axes, the same however the anchor bone is turned: for a character,
+    /// X its left, Y up, Z forward (toward its face).
+    #[default]
+    Model,
+    /// The anchor bone's axes, which is what the stored numbers are in. On a bone like a
+    /// collarbone they point nowhere in particular.
+    Anchor,
+}
+
+impl NudgeSpace {
+    pub const fn toggled(self) -> Self {
+        match self {
+            Self::Model => Self::Anchor,
+            Self::Anchor => Self::Model,
+        }
+    }
+}
+
 #[derive(Resource, Default)]
 pub struct HardpointEditor {
     /// Which def is being edited: the character's or the weapon's.
     pub side: HardpointSide,
     /// Role being edited, if any.
     pub active_role: Option<String>,
+    /// What the nudge rows move along.
+    pub space: NudgeSpace,
     pub ui_dirty: bool,
 }
 
@@ -223,6 +253,171 @@ pub fn wrap_degrees(degrees: f32) -> f32 {
     if half_turn { 180.0 } else { wrapped }
 }
 
+/// Nudge one translation axis of the *model* (see [`NudgeSpace::Model`]). `anchor_in_model`
+/// is the anchor's rotation and uniform scale relative to the model root, so `delta` is in
+/// model units whatever scale the rig bakes into its bones.
+pub fn nudge_translation_in_model(
+    hardpoint: &mut Hardpoint,
+    anchor_in_model: (Quat, f32),
+    axis: usize,
+    delta: f32,
+) {
+    let Some(direction) = Vec3::AXES.get(axis) else {
+        return;
+    };
+    let (rotation, scale) = anchor_in_model;
+    let local = rotation.inverse() * (*direction * delta) / scale.max(1e-6);
+    for (value, step) in hardpoint.translation.iter_mut().zip(local.to_array()) {
+        *value = round_to(*value + step, 1e-5);
+    }
+}
+
+/// Turn a hardpoint about one of the *model's* axes, through its own origin.
+pub fn nudge_rotation_in_model(
+    hardpoint: &mut Hardpoint,
+    anchor_rotation: Quat,
+    axis: usize,
+    delta_degrees: f32,
+) {
+    let Some(direction) = Vec3::AXES.get(axis) else {
+        return;
+    };
+    let turn = Quat::from_axis_angle(*direction, delta_degrees.to_radians());
+    let local = hardpoint_frame(hardpoint).rotation;
+    // Into model space, turn, back out: the anchor's rotation conjugates the turn.
+    let turned = (anchor_rotation.inverse() * turn * anchor_rotation * local).normalize();
+    let (x, y, z) = turned.to_euler(EulerRot::XYZ);
+    hardpoint.rotation_euler_deg = [x, y, z].map(|r| wrap_degrees(round_to(r.to_degrees(), 0.01)));
+}
+
+fn round_to(value: f32, step: f32) -> f32 {
+    (value / step).round() * step
+}
+
+/// Where the selected hardpoint is right now, and which way its anchor and model face:
+/// what [`NudgeSpace::Model`] nudges convert through, and what the axis arrows are
+/// drawn from. Recomputed every frame from the live entities, since the anchor moves with
+/// the animation.
+#[derive(Resource, Default)]
+pub struct ActiveFrame {
+    /// The anchor's rotation and uniform scale relative to the model root.
+    pub anchor_in_model: Option<(Quat, f32)>,
+    /// World position of the hardpoint, and world rotations of the model and the anchor.
+    pub drawn: Option<(Vec3, Quat, Quat)>,
+}
+
+/// Fill [`ActiveFrame`] for the selected role on the side being edited.
+#[allow(clippy::too_many_arguments)]
+pub fn track_active_hardpoint(
+    editor: Res<HardpointEditor>,
+    doc: Res<EditorDoc>,
+    weapon_doc: Res<WeaponDoc>,
+    prop_doc: Res<PropDoc>,
+    players: Query<(Entity, Option<&EquippedWeapon>), With<Player>>,
+    props: Query<Entity, With<EditorProp>>,
+    model_roots: Query<(), With<PlayerModelRoot>>,
+    children_q: Query<&Children>,
+    skinned_q: Query<&SkinnedMesh>,
+    names: Query<&Name>,
+    globals: Query<&GlobalTransform>,
+    mut frame: ResMut<ActiveFrame>,
+) {
+    *frame = ActiveFrame::default();
+    let Some(role) = editor.active_role.as_deref() else {
+        return;
+    };
+    let def = match editor.side {
+        HardpointSide::Character => doc.def.as_ref(),
+        HardpointSide::Weapon => weapon_doc.def.as_ref(),
+        HardpointSide::Prop => prop_doc.def.as_ref(),
+    };
+    let Some(hardpoint) = def.and_then(|def| def.hardpoints.get(role)) else {
+        return;
+    };
+
+    // The entity whose axes are "the model's", and the one the hardpoint is stored against.
+    let bone_under = |root: Entity, bone: &str| {
+        bone_map(&joints_under(root, &children_q, &skinned_q), &names)
+            .get(bone)
+            .copied()
+    };
+    let resolved = match editor.side {
+        HardpointSide::Character => players.iter().next().and_then(|(player, _)| {
+            let model = descendant_with(player, &children_q, &model_roots).unwrap_or(player);
+            let anchor = match &hardpoint.anchor {
+                Some(bone) => bone_under(player, bone)?,
+                None => player,
+            };
+            Some((model, anchor))
+        }),
+        // Weapon frames are relative to the weapon's own origin, so its axes are the model's.
+        HardpointSide::Weapon => players
+            .iter()
+            .find_map(|(_, equipped)| equipped.map(|e| (e.0, e.0))),
+        HardpointSide::Prop => props.iter().next().and_then(|prop| {
+            let anchor = match &hardpoint.anchor {
+                Some(bone) => bone_under(prop, bone)?,
+                None => prop,
+            };
+            Some((prop, anchor))
+        }),
+    };
+    let Some((model, anchor)) = resolved else {
+        return;
+    };
+    let (Ok(model), Ok(anchor)) = (globals.get(model), globals.get(anchor)) else {
+        return;
+    };
+
+    let relative = model.affine().inverse() * anchor.affine();
+    let (scale, rotation, _) = relative.to_scale_rotation_translation();
+    frame.anchor_in_model = Some((rotation, scale.x));
+    frame.drawn = Some((
+        anchor.transform_point(Vec3::from(hardpoint.translation)),
+        model.rotation(),
+        anchor.rotation(),
+    ));
+}
+
+fn descendant_with(
+    root: Entity,
+    children: &Query<&Children>,
+    marker: &Query<(), With<PlayerModelRoot>>,
+) -> Option<Entity> {
+    let mut queue = vec![root];
+    while let Some(entity) = queue.pop() {
+        if marker.contains(entity) {
+            return Some(entity);
+        }
+        if let Ok(kids) = children.get(entity) {
+            queue.extend(kids.iter());
+        }
+    }
+    None
+}
+
+/// Arrows along the axes the nudge rows move the selected hardpoint along, so "move X"
+/// is something you can see before you click it. Drawn whether or not the frame overlay
+/// is on: this is part of editing, not debugging.
+pub fn draw_nudge_axes(editor: Res<HardpointEditor>, frame: Res<ActiveFrame>, mut gizmos: Gizmos) {
+    let Some((at, model, anchor)) = frame.drawn else {
+        return;
+    };
+    let axes = match editor.space {
+        NudgeSpace::Model => model,
+        NudgeSpace::Anchor => anchor,
+    };
+    const LENGTH: f32 = 0.16;
+    let colors = [
+        Color::srgb(1.0, 0.45, 0.45),
+        Color::srgb(0.45, 1.0, 0.45),
+        Color::srgb(0.5, 0.7, 1.0),
+    ];
+    for (direction, color) in Vec3::AXES.iter().zip(colors) {
+        gizmos.arrow(at, at + axes * *direction * LENGTH, color);
+    }
+}
+
 /// Push the edited `grip` into the live weapon so it moves with the gizmo.
 ///
 /// Runs when the def changed, and when a weapon has just been equipped: the equip
@@ -297,6 +492,34 @@ mod tests {
             },
         );
         def
+    }
+
+    /// The collarbone case: a bone turned a quarter round, where "move Y" in its own frame
+    /// would go sideways. In model space it goes up, whatever the bone's turn and scale.
+    #[test]
+    fn a_model_space_nudge_moves_along_the_model_however_the_anchor_is_turned() {
+        let anchor = (Quat::from_rotation_z(std::f32::consts::FRAC_PI_2), 0.5);
+        let mut hardpoint = Hardpoint::default();
+        nudge_translation_in_model(&mut hardpoint, anchor, 1, 0.1);
+        let in_model = anchor.0 * Vec3::from(hardpoint.translation) * anchor.1;
+        assert!(
+            (in_model - Vec3::new(0.0, 0.1, 0.0)).length() < 1e-4,
+            "got {in_model}"
+        );
+    }
+
+    #[test]
+    fn a_model_space_turn_turns_about_the_model_axis() {
+        let anchor = Quat::from_rotation_x(0.7);
+        let mut hardpoint = Hardpoint::default();
+        nudge_rotation_in_model(&mut hardpoint, anchor, 1, 90.0);
+        let world = anchor * hardpoint_frame(&hardpoint).rotation;
+        let wanted = Quat::from_rotation_y(std::f32::consts::FRAC_PI_2) * anchor;
+        assert!(
+            world.angle_between(wanted) < 1e-3,
+            "off by {}",
+            world.angle_between(wanted)
+        );
     }
 
     /// A new role anchored to the model origin would put the gizmo at the character's

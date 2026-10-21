@@ -1,8 +1,8 @@
+use crate::animation::animation_plugin::AnimationKey;
 use crate::general::explosion::ExplosionProps;
 use crate::general::projectiles::ProjectileProps;
 use crate::gore::components::DamageKind;
 use serde::{Deserialize, Serialize};
-use crate::animation::animation_plugin::AnimationKey;
 use std::collections::{BTreeMap, HashMap};
 
 const fn default_scale() -> f32 {
@@ -606,10 +606,14 @@ mod tests {
     #[test]
     fn animations_round_trip_with_enum_keys() {
         use super::{AnimationKey, AssetDefinition};
-        let def: AssetDefinition =
-            ron::from_str(r#"(model_path: "m.glb", animations: { Idle: "Idle_A", Run: "Sprint" })"#)
-                .expect("parses");
-        assert_eq!(def.animations.get(&AnimationKey::Idle).map(String::as_str), Some("Idle_A"));
+        let def: AssetDefinition = ron::from_str(
+            r#"(model_path: "m.glb", animations: { Idle: "Idle_A", Run: "Sprint" })"#,
+        )
+        .expect("parses");
+        assert_eq!(
+            def.animations.get(&AnimationKey::Idle).map(String::as_str),
+            Some("Idle_A")
+        );
         let text = ron::ser::to_string_pretty(&def, ron::ser::PrettyConfig::default()).unwrap();
         let back: AssetDefinition = ron::from_str(&text).expect("round trips");
         assert_eq!(back.animations, def.animations);

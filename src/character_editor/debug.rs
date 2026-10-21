@@ -16,6 +16,7 @@ use bevy::prelude::*;
 
 use crate::assets::gizmos::{bone_map, draw_hardpoints, draw_skeleton, joints_under};
 use crate::character_editor::doc::{PropDoc, WeaponDoc};
+use crate::character_editor::hardpoints::{HardpointEditor, HardpointSide};
 use crate::character_editor::prop::EditorProp;
 use crate::model_settings::plugin::PlayerAssetDef;
 use crate::player::components::Player;
@@ -200,7 +201,15 @@ pub fn draw_player_overlays(
     parents: Query<&ChildOf>,
     prop_def: Res<PropDoc>,
     props: Query<Entity, With<EditorProp>>,
+    editor: Res<HardpointEditor>,
 ) {
+    // The frame being edited is drawn larger, on the side it belongs to.
+    let active_on = |side: HardpointSide| {
+        editor
+            .active_role
+            .as_deref()
+            .filter(|_| editor.side == side)
+    };
     if !debug.skeleton && !debug.hardpoints {
         return;
     }
@@ -218,7 +227,7 @@ pub fn draw_player_overlays(
             draw_hardpoints(
                 &mut gizmos,
                 &def.hardpoints,
-                None,
+                active_on(HardpointSide::Prop),
                 &transforms,
                 |anchor| match anchor {
                     Some(bone) => bones.get(bone).copied(),
@@ -238,9 +247,14 @@ pub fn draw_player_overlays(
         {
             // Weapon hardpoints are authored against the model origin (`anchor: None`),
             // which for a spawned weapon is the weapon entity itself.
-            draw_hardpoints(&mut gizmos, &def.hardpoints, None, &transforms, |anchor| {
-                anchor.is_none().then_some(equipped.0)
-            });
+            let active = active_on(HardpointSide::Weapon);
+            draw_hardpoints(
+                &mut gizmos,
+                &def.hardpoints,
+                active,
+                &transforms,
+                |anchor| anchor.is_none().then_some(equipped.0),
+            );
         }
 
         let joints = joints_under(player, &children_q, &skinned_q);
@@ -257,14 +271,21 @@ pub fn draw_player_overlays(
             && !def.hardpoints.is_empty()
         {
             let bones = bone_map(&joints, &names);
-            draw_hardpoints(&mut gizmos, &def.hardpoints, None, &transforms, |anchor| {
-                match anchor {
-                    Some(bone) => bones.get(bone).copied(),
-                    // A hardpoint with no anchor is relative to the model origin, which
-                    // for a spawned character is the player entity itself.
-                    None => Some(player),
-                }
-            });
+            let active = active_on(HardpointSide::Character);
+            draw_hardpoints(
+                &mut gizmos,
+                &def.hardpoints,
+                active,
+                &transforms,
+                |anchor| {
+                    match anchor {
+                        Some(bone) => bones.get(bone).copied(),
+                        // A hardpoint with no anchor is relative to the model origin, which
+                        // for a spawned character is the player entity itself.
+                        None => Some(player),
+                    }
+                },
+            );
         }
     }
 }

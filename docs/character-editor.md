@@ -44,14 +44,14 @@ them, and we will again. The fix is one editor, one working copy of the def, and
 
 - Map editing (`src/map_editor/` stays separate).
 - Retargeting animations between rigs with different bone names.
-- Two-bone IK authoring (separate work, `docs/inverse-kinematics-hardpoints.md`).
+- Two-bone IK authoring (separate work, `not-right-now/inverse-kinematics-hardpoints.md`).
 - Undo history beyond "revert to saved". A full undo stack is a possible follow-up.
 
 ## Architecture
 
 ### Session, not a new GameState
 
-Keep the playground's decision (see `docs/playground.md`, *The one real architectural
+Keep the playground's decision (see `archive/playground.md`, *The one real architectural
 decision*). The editor runs in `GameState::InGame` with an `EditorSession` resource, so
 every gameplay system works in Live with no extra gating. `PlaygroundSession` becomes
 `EditorSession`. `in_playground` / `in_normal_game` become `in_editor` / `in_normal_game`.
@@ -386,7 +386,7 @@ Live for towers and terrain.
 Remove the Asset Browser and Playground menu entries, `GameState::AssetBrowser`,
 `src/asset_browser/` and anything left in the old playground module. Update `CLAUDE.md`
 (module map, the AssetDefinition section's "authored in the asset browser" mentions) and
-`docs/hardpoints.md`. Archive `docs/playground.md` to `docs/archive/`.
+`docs/hardpoints.md`. Archive `archive/playground.md` to `docs/archive/`.
 
 *Done when:* `grep -ri "asset.browser\|playground" src` is empty, apart from the
 `--playground` alias.
