@@ -15,13 +15,12 @@ We need some sound fx. I think I changed scale of the monsters, should make them
 
 So we fixed some SFX, which is cool, right? 
 
-## Third iteration
-
-### On-Screen Crawls
+## Third iteration - On-Screen Crawls
 
 So, this could be a "dialog" that shows up and then having a crawl that conveys information to the player, like the opening crawl in Star Wars for instance.
 
-I think we need crawls and stuff.
+Remove blood splatter decals - or scale them way down, plus they are painted ontop of everything else.
+
 
 
 ## Thoughts and for later iterations
@@ -29,5 +28,3 @@ the rest is just map stuff, to make the maps more interesting.
 
 We could add a height map in the map-files so that we can describe the entire map as a height field somehow!
 
-OK, so for third iteration, remove blood splatter decals - or scale them way down, plus they are painted ontop of everything else.
-Secondly, in the character editor, we need to 
