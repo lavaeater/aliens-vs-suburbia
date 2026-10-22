@@ -8,6 +8,7 @@
 //! [properties]
 //! name: Backyard
 //! stories: assets/stories/backyard.ron
+//! loot: 1-5 per 20
 //!
 //! [tiles]
 //! wwwwwwww
@@ -38,7 +39,9 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use crate::general::components::map_components::{DecorationItem, MapFile, TilePlacement, WaveDef};
+use crate::general::components::map_components::{
+    DecorationItem, LootSpread, MapFile, TilePlacement, WaveDef,
+};
 use crate::map::{BitFlags, MapFeatures};
 
 /// File extension of the text format.
@@ -220,6 +223,16 @@ fn property(
     match key {
         "name" => map.name = value.to_string(),
         "stories" => map.stories = value.to_string(),
+        "loot" => {
+            let (min, max, per_tiles) = loot_spread(value)?;
+            let spread = map.loot.get_or_insert_with(LootSpread::default);
+            (spread.min, spread.max, spread.per_tiles) = (min, max, per_tiles);
+        }
+        "loot_table" => map.loot.get_or_insert_with(LootSpread::default).table = value.to_string(),
+        "loot_bags" => {
+            map.loot.get_or_insert_with(LootSpread::default).bags =
+                value.split(',').map(|b| b.trim().to_string()).collect();
+        }
         "generated" => map.generated = number(key, value)?,
         "seed" => map.seed = number(key, value)?,
         "width" => size.0 = Some(number(key, value)?),
@@ -294,6 +307,20 @@ impl<'a> Fields<'a> {
             None => Ok(()),
         }
     }
+}
+
+/// `1-5 per 20` (or `3 per 20`): `min`-`max` loot bags for every 20 open tiles.
+fn loot_spread(value: &str) -> Result<(u32, u32, u32), String> {
+    let (count, per) = value
+        .split_once("per")
+        .ok_or_else(|| format!("loot: expected `<min>-<max> per <tiles>`, got `{value}`"))?;
+    let (min, max) = if let Some((min, max)) = count.split_once('-') {
+        (number("loot", min.trim())?, number("loot", max.trim())?)
+    } else {
+        let n = number("loot", count.trim())?;
+        (n, n)
+    };
+    Ok((min, max, number("loot", per.trim())?))
 }
 
 fn number<T: std::str::FromStr>(key: &str, value: &str) -> Result<T, String> {
@@ -408,6 +435,16 @@ pub fn to_text(map: &MapFile) -> Result<String, String> {
     }
     if !map.stories.is_empty() {
         lines.push(format!("stories: {}", map.stories));
+    }
+    if let Some(loot) = &map.loot {
+        lines.push(format!("loot: {}-{} per {}", loot.min, loot.max, loot.per_tiles));
+        let default = LootSpread::default();
+        if loot.table != default.table {
+            lines.push(format!("loot_table: {}", loot.table));
+        }
+        if loot.bags != default.bags {
+            lines.push(format!("loot_bags: {}", loot.bags.join(", ")));
+        }
     }
     if map.generated {
         lines.push("generated: true".into());
@@ -568,6 +605,8 @@ mod tests {
 # A small test yard.
 [properties]
 name: Backyard
+loot: 1-5 per 20
+loot_table: crate
 
 [tiles]
 wwwww
@@ -678,6 +717,25 @@ count: 3
             checked += 1;
         }
         assert!(checked > 0);
+    }
+
+    #[test]
+    fn loot_is_a_count_per_stretch_of_tiles() {
+        let map = parse(EXAMPLE).unwrap();
+        let loot = map.loot.unwrap();
+        assert_eq!((loot.min, loot.max, loot.per_tiles), (1, 5, 20));
+        assert_eq!(loot.table, "crate");
+        assert_eq!(loot.bags, LootSpread::default().bags);
+        let bags = parse("[properties]\nloot: 1 per 9\nloot_bags: a.ron, b c.ron\n")
+            .unwrap()
+            .loot
+            .unwrap()
+            .bags;
+        assert_eq!(bags, vec!["a.ron".to_string(), "b c.ron".to_string()]);
+        let one = parse("[properties]\nloot: 2 per 30\n").unwrap().loot.unwrap();
+        assert_eq!((one.min, one.max, one.per_tiles), (2, 2, 30));
+        assert!(parse("[properties]\nloot: lots\n").is_err());
+        assert!(parse("[properties]\nname: x\n").unwrap().loot.is_none());
     }
 
     #[test]

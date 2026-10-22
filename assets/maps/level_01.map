@@ -2,6 +2,7 @@
 
 [properties]
 stories: assets/stories/level_01.ron
+loot: 1-3 per 40
 
 [tiles]
 wwwwwwwwwwwwwwwwwwww

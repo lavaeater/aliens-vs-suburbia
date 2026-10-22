@@ -167,6 +167,7 @@ const ITEM_KINDS: &[&str] = &[
     "WeaponPickup",
     "Coins",
     "Key",
+    "Loot",
 ];
 
 const fn ability_name(ability: &PlayerAbility) -> &'static str {
@@ -356,6 +357,7 @@ pub fn fields(model_type: &ModelType) -> Vec<Field> {
                 ItemKind::WeaponPickup { .. } => "WeaponPickup",
                 ItemKind::Coins { .. } => "Coins",
                 ItemKind::Key { .. } => "Key",
+                ItemKind::Loot { .. } => "Loot",
             };
             let mut fields = vec![choice("kind", "kind", kind, ITEM_KINDS)];
             match &i.kind {
@@ -373,6 +375,9 @@ pub fn fields(model_type: &ModelType) -> Vec<Field> {
                     fields.push(info("def", "  weapon def", def.clone()))
                 }
                 ItemKind::Key { id } => fields.push(info("id", "  key id", id.clone())),
+                ItemKind::Loot { table } => {
+                    fields.push(info("table", "  loot table", table.clone()));
+                }
                 ItemKind::Decorative => {}
             }
             fields
@@ -535,6 +540,9 @@ pub fn set_choice(model_type: &mut ModelType, id: &str, option: &str) {
                     "WeaponPickup" => ItemKind::WeaponPickup { def: String::new() },
                     "Coins" => ItemKind::Coins { value: 10 },
                     "Key" => ItemKind::Key { id: String::new() },
+                    "Loot" => ItemKind::Loot {
+                        table: crate::loot::DEFAULT_BAG_TABLE.into(),
+                    },
                     _ => ItemKind::Decorative,
                 };
             }

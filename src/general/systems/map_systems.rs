@@ -56,8 +56,10 @@ pub fn load_map_one(mut send_event: MessageWriter<LoadMap>) {
         }
     };
     if map.generated {
+        let loot = map.loot.take();
         map =
             crate::map::map_generator::generate_suburb_map(map.seed, map.map_width, map.map_height);
+        map.loot = loot;
     }
     send_event.write(LoadMap { map });
 }
@@ -497,9 +499,10 @@ pub fn map_loader(
             // Placements are in the map's own coordinates; the grid above is padded by
             // one tile of void on every side, so they sit one tile in from it.
             let (px, py) = (placement.x + 1, placement.y + 1);
+            // Raised by the def's lift, for a model whose origin is not at its base.
             let pos = Vec3::new(
                 tile_defs.tile_width * px as f32,
-                tile_defs.floor_level + tile_defs.tile_depth,
+                tile_defs.floor_level + tile_defs.tile_depth + def.lift_world(),
                 tile_defs.tile_width * py as f32,
             );
             let rot = Quat::from_rotation_y(
