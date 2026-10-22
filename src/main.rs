@@ -32,6 +32,7 @@ mod constants;
 mod control;
 pub(crate) mod crawl;
 pub(crate) mod facts;
+pub(crate) mod fx;
 pub(crate) mod game_state;
 pub(crate) mod general;
 pub(crate) mod gore;
@@ -252,6 +253,7 @@ fn main() -> std::process::ExitCode {
         // .add_plugins(SkeinPlugin::default())
         .add_plugins(PhysicsPlugins::default())
         .add_plugins(PhysicsDebugPlugin)
+        .add_plugins(fx::FxPlugin)
         .insert_gizmo_config(
             PhysicsGizmos::default(),
             GizmoConfig {

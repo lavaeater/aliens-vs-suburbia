@@ -15,7 +15,8 @@ use crate::assets::asset_definition::{AmmoKind, Hardpoint, WeaponProps};
 use crate::control::components::{CharacterControl, ControlCommand};
 use crate::game_state::score_keeper::GameTrackingEvent;
 use crate::general::components::CollisionLayer;
-use crate::general::damage::ApplyDamage;
+use crate::fx::{FxKind, SpawnFx};
+use crate::general::damage::{ApplyDamage, Faction};
 use crate::general::projectiles::{self, ProjectileProps};
 use crate::gore::components::{DamageKind, Ephemeral};
 use crate::player::ammo::AmmoPouch;
@@ -241,6 +242,8 @@ pub fn shoot_weapons(
     mut damage_mw: MessageWriter<ApplyDamage>,
     mut reload_mw: MessageWriter<ReloadRequest>,
     mut flash_mw: MessageWriter<MuzzleFlash>,
+    mut fx_mw: MessageWriter<SpawnFx>,
+    factions: Query<&Faction>,
     mut rng_seed: Local<u32>,
 ) {
     let dt = time.delta_secs();
@@ -291,6 +294,7 @@ pub fn shoot_weapons(
                 .as_ref()
                 .map(|m| (equipped.0, Vec3::from(m.translation))),
             at: origin,
+            dir: aim_dir,
         });
 
         game_mw.write(GameTrackingEvent::ShotFired(player));
@@ -328,6 +332,17 @@ pub fn shoot_weapons(
                         .from(player)
                         .along(-dir),
                 );
+                // Flesh bleeds (`gore::blood`); anything else throws sparks, kicked
+                // out halfway between the surface normal and the ricochet.
+                let flesh = matches!(
+                    factions.get(hit.entity),
+                    Ok(Faction::Alien | Faction::Player)
+                );
+                if !flesh {
+                    fx_mw.write(SpawnFx::at(FxKind::ImpactSparks, point).along(
+                        ricochet(dir, hit.normal) + hit.normal,
+                    ));
+                }
                 point
             } else {
                 origin + dir * weapon.range
@@ -336,6 +351,11 @@ pub fn shoot_weapons(
             spawn_tracer(&mut commands, &mut meshes, &mut materials, origin, end);
         }
     }
+}
+
+/// `dir` bounced off a surface with normal `normal`.
+fn ricochet(dir: Vec3, normal: Vec3) -> Vec3 {
+    dir - 2.0 * dir.dot(normal) * normal
 }
 
 /// A brief thin bright streak from muzzle to impact.
@@ -370,7 +390,14 @@ fn spawn_tracer(
 
 #[cfg(test)]
 mod tests {
-    use super::Weapon;
+    use super::{Weapon, ricochet};
+    use bevy::prelude::Vec3;
+
+    #[test]
+    fn a_ricochet_mirrors_off_the_surface() {
+        let bounced = ricochet(Vec3::new(1.0, 0.0, -1.0), Vec3::Z);
+        assert!(bounced.distance(Vec3::new(1.0, 0.0, 1.0)) < 1e-6);
+    }
     use crate::assets::asset_definition::WeaponProps;
 
     #[test]

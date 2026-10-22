@@ -128,6 +128,7 @@ dependencies = [
  "bevy_mod_outline",
  "bevy_seedling",
  "bevy_skein",
+ "bevy_sprinkles",
  "bevy_wind_waker_shader",
  "crossterm",
  "dotenvy",
@@ -137,7 +138,7 @@ dependencies = [
  "leafwing-input-manager",
  "pathfinding",
  "ratatui",
- "ron",
+ "ron 0.12.2",
  "rusty_music",
  "serde",
  "serde_json",
@@ -636,7 +637,7 @@ dependencies = [
  "downcast-rs 2.0.2",
  "either",
  "petgraph 0.8.3",
- "ron",
+ "ron 0.12.2",
  "serde",
  "smallvec",
  "thiserror 2.0.21",
@@ -732,7 +733,7 @@ dependencies = [
  "futures-lite",
  "futures-util",
  "js-sys",
- "ron",
+ "ron 0.12.2",
  "serde",
  "stackfuture",
  "thiserror 2.0.21",
@@ -900,7 +901,7 @@ dependencies = [
  "bevy_ui_render",
  "bevy_utils",
  "bevy_window",
- "ron",
+ "ron 0.12.2",
  "serde",
  "thiserror 2.0.21",
  "tracing",
@@ -1850,6 +1851,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_sprinkles"
+version = "0.3.0"
+source = "git+https://github.com/doceazedo/sprinkles?rev=0e978f5a9afc6b456b3693c8761e73a6c7e155bd#0e978f5a9afc6b456b3693c8761e73a6c7e155bd"
+dependencies = [
+ "bevy",
+ "bitflags 2.13.2",
+ "bytemuck",
+ "paste",
+ "ron 0.10.1",
+ "serde",
+ "thiserror 2.0.21",
+ "web-time",
+]
+
+[[package]]
 name = "bevy_sprite"
 version = "0.19.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2210,7 +2226,7 @@ dependencies = [
  "bevy_transform",
  "bevy_utils",
  "derive_more",
- "ron",
+ "ron 0.12.2",
  "serde",
  "thiserror 2.0.21",
  "uuid",
@@ -6863,6 +6879,19 @@ dependencies = [
 
 [[package]]
 name = "ron"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "beceb6f7bf81c73e73aeef6dd1356d9a1b2b4909e1f0fc3e59b034f9572d7b7f"
+dependencies = [
+ "base64 0.22.1",
+ "bitflags 2.13.2",
+ "serde",
+ "serde_derive",
+ "unicode-ident",
+]
+
+[[package]]
+name = "ron"
 version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81116b9531d61eabc41aeb228e4b6b2435bcca3233b98cf3b3077d4e6e9debb3"
@@ -8194,7 +8223,7 @@ name = "turbofacts"
 version = "0.1.0"
 dependencies = [
  "bevy",
- "ron",
+ "ron 0.12.2",
  "serde",
 ]
 

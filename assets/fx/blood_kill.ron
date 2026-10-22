@@ -1,0 +1,105 @@
+// Blood kill. Spawned by `gore::blood` through `fx::SpawnFx`, +Y along the spray. Droplets land on the
+// floor collider and shrink away; the mist is a quick puff at the wound.
+// Edit with the sprinkles editor (`cargo install bevy_sprinkles_editor`) or by hand;
+// `every_fx_in_assets_parses` checks the file.
+(
+    sprinkles_version: "0.3",
+    name: "Blood kill",
+    dimension: D3,
+    despawn_on_finish: true,
+    emitters: [
+        (
+            name: "Droplets",
+            time: (
+                lifetime: 1.4,
+                lifetime_randomness: 0.4,
+                one_shot: true,
+                explosiveness: 1.0,
+            ),
+            draw_pass: (
+                mesh: Sphere(radius: 0.5, segments: 6, rings: 4),
+                material: Standard((
+                    base_color: (0.3, 0.01, 0.01, 1.0),
+                    emissive: (0.0, 0.0, 0.0, 1.0),
+                    alpha_mode: Opaque,
+                    unlit: true,
+                )),
+                shadow_caster: false,
+            ),
+            emission: (
+                shape: Sphere(radius: 0.04),
+                particles_amount: 28,
+            ),
+            scale: (
+                range: (min: 0.035, max: 0.08),
+                scale_over_lifetime: Some((
+                    x: (
+                        points: [
+                            (position: 0.0, value: 1.0),
+                            (position: 0.75, value: 1.0),
+                            (position: 1.0, value: 0.0),
+                        ],
+                        range: (min: 0.0, max: 1.0),
+                    ),
+                )),
+            ),
+            velocities: (
+                initial_direction: (0.0, 1.0, 0.0),
+                spread: 55.0,
+                initial_velocity: (min: 1.8, max: 4.5),
+            ),
+            accelerations: (
+                gravity: (0.0, -9.8, 0.0),
+            ),
+            collision: (
+                mode: Some(Rigid(friction: 1.0, bounce: 0.0)),
+                use_scale: true,
+                base_size: 1.0,
+            ),
+        ),
+        (
+            name: "Mist",
+            time: (
+                lifetime: 0.3,
+                lifetime_randomness: 0.3,
+                one_shot: true,
+                explosiveness: 1.0,
+            ),
+            draw_pass: (
+                mesh: Sphere(radius: 0.5, segments: 6, rings: 4),
+                material: Standard((
+                    base_color: (0.55, 0.03, 0.03, 1.0),
+                    emissive: (0.0, 0.0, 0.0, 1.0),
+                    alpha_mode: Opaque,
+                    unlit: true,
+                )),
+                shadow_caster: false,
+            ),
+            emission: (
+                shape: Sphere(radius: 0.05),
+                particles_amount: 10,
+            ),
+            scale: (
+                range: (min: 0.06, max: 0.12),
+                scale_over_lifetime: Some((
+                    x: (
+                        points: [
+                            (position: 0.0, value: 0.6),
+                            (position: 0.3, value: 1.0),
+                            (position: 1.0, value: 0.0),
+                        ],
+                        range: (min: 0.0, max: 1.0),
+                    ),
+                )),
+            ),
+            velocities: (
+                initial_direction: (0.0, 1.0, 0.0),
+                spread: 70.0,
+                initial_velocity: (min: 0.6, max: 1.6),
+            ),
+            accelerations: (
+                gravity: (0.0, -1.5, 0.0),
+            ),
+        ),
+    ],
+)

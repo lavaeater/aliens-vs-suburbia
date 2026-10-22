@@ -1,0 +1,106 @@
+// Impact sparks. A bullet hitting a wall or a structure, +Y along the bounce.
+// Sparks skitter off the floor; a little grit hangs for a moment.
+// Edit with the sprinkles editor (`cargo install bevy_sprinkles_editor`) or by hand;
+// `every_fx_in_assets_parses` checks the file.
+(
+    sprinkles_version: "0.3",
+    name: "Impact sparks",
+    dimension: D3,
+    despawn_on_finish: true,
+    emitters: [
+        (
+            name: "Sparks",
+            time: (
+                lifetime: 0.35,
+                lifetime_randomness: 0.5,
+                one_shot: true,
+                explosiveness: 1.0,
+            ),
+            draw_pass: (
+                mesh: Cuboid(half_size: (0.15, 1.0, 0.15)),
+                material: Standard((
+                    base_color: (1.0, 0.8, 0.35, 1.0),
+                    emissive: (4.0, 2.2, 0.6, 1.0),
+                    alpha_mode: Opaque,
+                    unlit: true,
+                )),
+                shadow_caster: false,
+                transform_align: Some(YToVelocity),
+            ),
+            emission: (
+                shape: Point,
+                particles_amount: 8,
+            ),
+            scale: (
+                range: (min: 0.01, max: 0.02),
+                scale_over_lifetime: Some((
+                    x: (
+                        points: [
+                            (position: 0.0, value: 1.0),
+                            (position: 0.7, value: 1.0),
+                            (position: 1.0, value: 0.0),
+                        ],
+                        range: (min: 0.0, max: 1.0),
+                    ),
+                )),
+            ),
+            velocities: (
+                initial_direction: (0.0, 1.0, 0.0),
+                spread: 55.0,
+                initial_velocity: (min: 2.0, max: 5.0),
+            ),
+            accelerations: (
+                gravity: (0.0, -9.8, 0.0),
+            ),
+            collision: (
+                mode: Some(Rigid(friction: 0.2, bounce: 0.4)),
+                use_scale: true,
+                base_size: 1.0,
+            ),
+        ),
+        (
+            name: "Grit",
+            time: (
+                lifetime: 0.45,
+                lifetime_randomness: 0.3,
+                one_shot: true,
+                explosiveness: 1.0,
+            ),
+            draw_pass: (
+                mesh: Sphere(radius: 0.5, segments: 6, rings: 4),
+                material: Standard((
+                    base_color: (0.42, 0.4, 0.37, 1.0),
+                    emissive: (0.0, 0.0, 0.0, 1.0),
+                    alpha_mode: Opaque,
+                    unlit: true,
+                )),
+                shadow_caster: false,
+            ),
+            emission: (
+                shape: Point,
+                particles_amount: 4,
+            ),
+            scale: (
+                range: (min: 0.03, max: 0.06),
+                scale_over_lifetime: Some((
+                    x: (
+                        points: [
+                            (position: 0.0, value: 0.5),
+                            (position: 0.3, value: 1.0),
+                            (position: 1.0, value: 0.0),
+                        ],
+                        range: (min: 0.0, max: 1.0),
+                    ),
+                )),
+            ),
+            velocities: (
+                initial_direction: (0.0, 1.0, 0.0),
+                spread: 60.0,
+                initial_velocity: (min: 0.3, max: 0.9),
+            ),
+            accelerations: (
+                gravity: (0.0, -1.0, 0.0),
+            ),
+        ),
+    ],
+)

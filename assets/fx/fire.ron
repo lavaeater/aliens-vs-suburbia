@@ -1,0 +1,107 @@
+// Fire. Loops for as long as a `gore::fire::FireField` burns; scaled in X/Z
+// to the field's radius. Not one-shot: `fx::StopFx` stops it and despawns it when the
+// last flame is gone.
+// Edit with the sprinkles editor (`cargo install bevy_sprinkles_editor`) or by hand;
+// `every_fx_in_assets_parses` checks the file.
+(
+    sprinkles_version: "0.3",
+    name: "Fire",
+    dimension: D3,
+    despawn_on_finish: false,
+    emitters: [
+        (
+            name: "Flames",
+            time: (
+                lifetime: 0.7,
+                lifetime_randomness: 0.3,
+            ),
+            draw_pass: (
+                mesh: Sphere(radius: 0.5, segments: 6, rings: 4),
+                material: Standard((
+                    base_color: (1.0, 1.0, 1.0, 1.0),
+                    emissive: (2.5, 1.0, 0.2, 1.0),
+                    alpha_mode: Opaque,
+                    unlit: true,
+                )),
+                shadow_caster: false,
+            ),
+            emission: (
+                shape: Box(extents: (0.7, 0.05, 0.7)),
+                particles_amount: 26,
+            ),
+            scale: (
+                range: (min: 0.15, max: 0.32),
+                scale_over_lifetime: Some((
+                    x: (
+                        points: [
+                            (position: 0.0, value: 0.5),
+                            (position: 0.3, value: 1.0),
+                            (position: 1.0, value: 0.0),
+                        ],
+                        range: (min: 0.0, max: 1.0),
+                    ),
+                )),
+            ),
+            colors: (
+                color_over_lifetime: (
+                    stops: [
+                        (color: (1.0, 0.95, 0.7, 1.0), position: 0.0),
+                        (color: (1.0, 0.55, 0.15, 1.0), position: 0.35),
+                        (color: (0.6, 0.12, 0.05, 1.0), position: 1.0),
+                    ],
+                ),
+            ),
+            velocities: (
+                initial_direction: (0.0, 1.0, 0.0),
+                spread: 15.0,
+                initial_velocity: (min: 0.5, max: 1.1),
+            ),
+            accelerations: (
+                gravity: (0.0, 1.2, 0.0),
+            ),
+        ),
+        (
+            name: "Embers",
+            time: (
+                lifetime: 1.1,
+                lifetime_randomness: 0.5,
+            ),
+            draw_pass: (
+                mesh: Cuboid(half_size: (0.15, 1.0, 0.15)),
+                material: Standard((
+                    base_color: (1.0, 0.8, 0.35, 1.0),
+                    emissive: (4.0, 2.2, 0.6, 1.0),
+                    alpha_mode: Opaque,
+                    unlit: true,
+                )),
+                shadow_caster: false,
+                transform_align: Some(YToVelocity),
+            ),
+            emission: (
+                shape: Box(extents: (0.6, 0.05, 0.6)),
+                particles_amount: 8,
+            ),
+            scale: (
+                range: (min: 0.008, max: 0.016),
+                scale_over_lifetime: Some((
+                    x: (
+                        points: [
+                            (position: 0.0, value: 1.0),
+                            (position: 0.7, value: 1.0),
+                            (position: 1.0, value: 0.0),
+                        ],
+                        range: (min: 0.0, max: 1.0),
+                    ),
+                )),
+            ),
+            velocities: (
+                initial_direction: (0.0, 1.0, 0.0),
+                spread: 25.0,
+                initial_velocity: (min: 1.0, max: 2.5),
+            ),
+            accelerations: (
+                gravity: (0.0, 0.5, 0.0),
+            ),
+        ),
+    ],
+)

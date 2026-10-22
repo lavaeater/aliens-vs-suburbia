@@ -1,0 +1,100 @@
+// Muzzle sparks. Every shot, at the muzzle, +Y along the aim. The light is
+// `muzzle_flash.rs`'s own; this is what you see of it.
+// Edit with the sprinkles editor (`cargo install bevy_sprinkles_editor`) or by hand;
+// `every_fx_in_assets_parses` checks the file.
+(
+    sprinkles_version: "0.3",
+    name: "Muzzle sparks",
+    dimension: D3,
+    despawn_on_finish: true,
+    emitters: [
+        (
+            name: "Sparks",
+            time: (
+                lifetime: 0.14,
+                lifetime_randomness: 0.3,
+                one_shot: true,
+                explosiveness: 1.0,
+            ),
+            draw_pass: (
+                mesh: Cuboid(half_size: (0.15, 1.0, 0.15)),
+                material: Standard((
+                    base_color: (1.0, 0.8, 0.35, 1.0),
+                    emissive: (4.0, 2.2, 0.6, 1.0),
+                    alpha_mode: Opaque,
+                    unlit: true,
+                )),
+                shadow_caster: false,
+                transform_align: Some(YToVelocity),
+            ),
+            emission: (
+                shape: Point,
+                particles_amount: 6,
+            ),
+            scale: (
+                range: (min: 0.012, max: 0.025),
+                scale_over_lifetime: Some((
+                    x: (
+                        points: [
+                            (position: 0.0, value: 1.0),
+                            (position: 0.7, value: 1.0),
+                            (position: 1.0, value: 0.0),
+                        ],
+                        range: (min: 0.0, max: 1.0),
+                    ),
+                )),
+            ),
+            velocities: (
+                initial_direction: (0.0, 1.0, 0.0),
+                spread: 14.0,
+                initial_velocity: (min: 5.0, max: 9.0),
+            ),
+            accelerations: (
+                gravity: (0.0, -3.0, 0.0),
+            ),
+        ),
+        (
+            name: "Flash",
+            time: (
+                lifetime: 0.05,
+                lifetime_randomness: 0.2,
+                one_shot: true,
+                explosiveness: 1.0,
+            ),
+            draw_pass: (
+                mesh: Sphere(radius: 0.5, segments: 6, rings: 4),
+                material: Standard((
+                    base_color: (1.0, 0.9, 0.55, 1.0),
+                    emissive: (5.0, 3.5, 1.2, 1.0),
+                    alpha_mode: Opaque,
+                    unlit: true,
+                )),
+                shadow_caster: false,
+            ),
+            emission: (
+                shape: Point,
+                particles_amount: 3,
+            ),
+            scale: (
+                range: (min: 0.05, max: 0.09),
+                scale_over_lifetime: Some((
+                    x: (
+                        points: [
+                            (position: 0.0, value: 1.0),
+                            (position: 1.0, value: 0.2),
+                        ],
+                        range: (min: 0.0, max: 1.0),
+                    ),
+                )),
+            ),
+            velocities: (
+                initial_direction: (0.0, 1.0, 0.0),
+                spread: 10.0,
+                initial_velocity: (min: 0.3, max: 1.2),
+            ),
+            accelerations: (
+                gravity: (0.0, 0.0, 0.0),
+            ),
+        ),
+    ],
+)

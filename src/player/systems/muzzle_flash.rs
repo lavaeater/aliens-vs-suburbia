@@ -1,11 +1,12 @@
 //! Muzzle flashes. `shoot_weapons` only reports a shot ([`MuzzleFlash`]); what that
 //! looks like is decided here, by [`MuzzleFlashSettings::style`]:
 //!
-//! - **Light** (default): a warm point light at the muzzle hardpoint that blinks on at full
+//! - **Light**: a warm point light at the muzzle hardpoint that blinks on at full
 //!   strength and dies away in a few hundredths of a second, lighting the shooter, the
 //!   floor and the walls around them. Nothing is drawn; you see what it lights.
-//! - **Puff**: the original effect, a small unlit sphere that swells and fades.
-//! - **Both**: the light, with the puff as its visible core.
+//! - **Sparks**: a particle burst out of the barrel along the aim
+//!   (`assets/fx/muzzle_sparks.ron`, through `crate::fx`).
+//! - **Both** (default): the light, with the sparks as its visible core.
 //!
 //! `Ctrl+M` cycles them in game for comparison.
 //!
@@ -14,7 +15,7 @@
 
 use bevy::prelude::*;
 
-use crate::gore::components::Ephemeral;
+use crate::fx::{FxKind, SpawnFx};
 
 /// A shot was fired: flash at the muzzle.
 #[derive(Message, Clone, Copy, Debug)]
@@ -22,23 +23,25 @@ pub struct MuzzleFlash {
     /// The weapon entity and the muzzle in its local frame, when the gun has a muzzle
     /// hardpoint. The light is parented there.
     pub weapon: Option<(Entity, Vec3)>,
-    /// The muzzle in world space, for the puff and for guns without a hardpoint.
+    /// The muzzle in world space, for the sparks and for guns without a hardpoint.
     pub at: Vec3,
+    /// Which way the shot went, for the sparks.
+    pub dir: Vec3,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum MuzzleFlashStyle {
-    #[default]
     Light,
-    Puff,
+    Sparks,
+    #[default]
     Both,
 }
 
 impl MuzzleFlashStyle {
     pub const fn next(self) -> Self {
         match self {
-            Self::Light => Self::Puff,
-            Self::Puff => Self::Both,
+            Self::Light => Self::Sparks,
+            Self::Sparks => Self::Both,
             Self::Both => Self::Light,
         }
     }
@@ -47,8 +50,8 @@ impl MuzzleFlashStyle {
         matches!(self, Self::Light | Self::Both)
     }
 
-    pub const fn puff(self) -> bool {
-        matches!(self, Self::Puff | Self::Both)
+    pub const fn sparks(self) -> bool {
+        matches!(self, Self::Sparks | Self::Both)
     }
 }
 
@@ -124,8 +127,7 @@ fn spawn_muzzle_flashes(
     mut flashes: MessageReader<MuzzleFlash>,
     settings: Res<MuzzleFlashSettings>,
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut fx: MessageWriter<SpawnFx>,
 ) {
     for flash in flashes.read() {
         if settings.style.light() {
@@ -153,8 +155,8 @@ fn spawn_muzzle_flashes(
                 }
             }
         }
-        if settings.style.puff() {
-            spawn_puff(&mut commands, &mut meshes, &mut materials, flash.at);
+        if settings.style.sparks() {
+            fx.write(SpawnFx::at(FxKind::MuzzleSparks, flash.at).along(flash.dir));
         }
     }
 }
@@ -174,27 +176,6 @@ fn fade_muzzle_flash_lights(
     }
 }
 
-/// The original flash: a tiny bright puff at the muzzle that swells and fades.
-pub fn spawn_puff(
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    at: Vec3,
-) {
-    let mat = materials.add(StandardMaterial {
-        base_color: Color::srgb(1.0, 0.85, 0.4),
-        alpha_mode: AlphaMode::Blend,
-        unlit: true,
-        ..default()
-    });
-    commands.spawn((
-        Mesh3d(meshes.add(Sphere::new(0.06))),
-        MeshMaterial3d(mat),
-        Transform::from_translation(at),
-        Ephemeral::new(0.06).with_grow(1.8).base_scale(Vec3::ONE),
-    ));
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -209,10 +190,10 @@ mod tests {
     #[test]
     fn styles_cycle_and_say_what_they_draw() {
         let s = MuzzleFlashStyle::default();
-        assert_eq!(s, MuzzleFlashStyle::Light);
-        assert!(s.light() && !s.puff());
-        assert!(s.next().puff() && !s.next().light());
-        assert!(s.next().next().light() && s.next().next().puff());
+        assert_eq!(s, MuzzleFlashStyle::Both);
+        assert!(s.light() && s.sparks());
+        assert!(s.next().light() && !s.next().sparks());
+        assert!(s.next().next().sparks() && !s.next().next().light());
         assert_eq!(s.next().next().next(), s);
     }
 

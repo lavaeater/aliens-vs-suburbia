@@ -58,8 +58,9 @@ Most gameplay systems use `.run_if(in_state(InGame))`. Physics runs on a fixed t
 | `src/camera/` | Isometric camera tracking with wall occlusion fading. |
 | `src/items/` | `Item(ItemKind)` + `Pickup` on the ground: med-kits, ammo, guns, coins, keys. `SpawnItem` builds a visual (guns use their def's model); `pickup_items` applies the effect (`apply_pickup`, pure) and emits `ItemPickedUp` for the HUD toast. Coins are items with a `Coin` marker for GoldDigger. |
 | `src/loot/` | Weighted drop tables from `assets/loot/*.ron` (`Nothing` / `Item` / nested `Table`, `always` entries). Anything with `LootDrop(name)` rolls its table the frame its health hits zero (`spawn_loot_on_death`, ordered before the despawn systems). |
+| `src/fx/` | Particle effects (`bevy_sprinkles`, `FxPlugin` adds `SprinklesPlugin`). Write a `SpawnFx::at(FxKind, pos).along(dir)` (an effect emits along its +Y); `spawn_fx` spawns a `Particles3d` from `FxAssets`. Effects are RON in `assets/fx/`: `blood_hit`/`blood_kill` (`gore::blood`; `Faction::Structure` targets don't bleed), `muzzle_sparks` (`muzzle_flash.rs`), `impact_sparks` (`shoot_weapons`, any ray hit that isn't an alien/player), `explosion`, `dust_burst` (`gore::terrain`), and the looping `fire` (`gore::fire` spawns one per `FireField`, ends it with `StopFx::after`). One-shots must set `despawn_on_finish` (`every_fx_in_assets_parses`). Particles only collide with sprinkles colliders: `FloorParticleCollider` is one box under the map (32 allowed in total, so no walls). |
 | `src/general/damage.rs` | The one damage sink - see *Damage pipeline* below. |
-| `src/general/explosion.rs` | `Explode` message -> radial `ApplyDamage` with quadratic falloff, wall shielding, velocity shove, flash/debris, optional fire, `CameraShake`. `ExplodesOnDeath` for barrels. |
+| `src/general/explosion.rs` | `Explode` message -> radial `ApplyDamage` with quadratic falloff, wall shielding, velocity shove, the `explosion` particle effect, optional fire, `CameraShake`. `ExplodesOnDeath` for barrels. |
 | `src/general/projectiles.rs` | Physics projectiles for grenades, molotovs and launcher guns: one `Projectile` with an `Impact` (Damage / Explode / Fire) and optional fuse. `throw_special` (G / L1) lobs from the `AmmoPouch`. |
 | `src/player/ammo.rs`, `src/player/systems/loadout.rs` | `AmmoPouch` (per `AmmoKind`, capped) and `Weapons` (carried guns; switching despawns the held gun and queues a fresh `PendingEquip`, magazine carried over). |
 | `src/player/systems/death_revive.rs` | Downed -> revive (Interact, E / Circle) or bleed out -> drop kit, spend a life, `RespawnQueue` -> `SpawnPlayer { slot, lives }`. Team wipe fails the level. |
@@ -123,7 +124,7 @@ switches it, and it is off while downed. Light levels are in lumens, tuned again
 exposure; all the constants sit at the top of `map_lights.rs` (`lumens`) and `flashlight.rs`.
 Muzzle flashes: `shoot_weapons` only writes a `MuzzleFlash` message; `player/systems/muzzle_flash.rs`
 (`MuzzleFlashPlugin`, `MuzzleFlashSettings`) draws it as a brief point light parented to the
-weapon at its `muzzle` hardpoint (default), the original swelling puff (`spawn_puff`), or both;
+weapon at its `muzzle` hardpoint, a burst of particle sparks along the aim, or both (default);
 **Ctrl+M** cycles the style.
 The global flat toon shader (`bevy_wind_waker_shader`, submodule) is configured in `main.rs`
 with `dark_level` (below it a surface bands down to black instead of resting at the 50% shadow
@@ -194,6 +195,7 @@ Each behavior has its own submodule under `src/ai/`. When aliens can't find a pa
 - `bevy_mod_outline 0.13` — entity outlines
 - `bevy-inspector-egui 0.37` — runtime debug inspector
 - `leafwing-input-manager 0.21` — input actions and maps (0.22 is the Bevy 0.20 release; see `docs/bevy-0.20-upgrade.md`)
+- `bevy_sprinkles` — GPU particles, git dep pinned to a `main` rev (its Bevy 0.19 branch); used through `src/fx/`
 - `lava_ui_builder` — local UI helper crate used throughout for panels and buttons
 - `rusty_music` — local submodule (path dep, excluded from the workspace): generative music plugin built on `bevy_seedling 0.8` (pinned to a git rev; no 0.19 crates.io release yet)
 - `ron` — serialization for all `.ron` files

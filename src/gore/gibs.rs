@@ -101,7 +101,7 @@ pub fn spawn_gibs_on_death(
                     LinearVelocity(dir * speed),
                     AngularVelocity(Vec3::new(rng.signed(), rng.signed(), rng.signed()) * 12.0),
                     // No fade (opaque chunks) — just linger, then vanish.
-                    Ephemeral::new(GIB_LIFETIME).no_fade().base_scale(scale),
+                    Ephemeral::new(GIB_LIFETIME).no_fade(),
                 ))
                 .id();
 
