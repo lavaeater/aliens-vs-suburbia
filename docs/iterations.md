@@ -21,6 +21,8 @@ So, this could be a "dialog" that shows up and then having a crawl that conveys 
 
 Remove blood splatter decals - or scale them way down, plus they are painted ontop of everything else.
 
+## 4th Iteration - Trashbag Pickups
+
 
 
 ## Thoughts and for later iterations
