@@ -1,4 +1,5 @@
 use crate::facts::StoryEffect;
+use lava_ui_builder::crawl::CrawlQueue;
 use crate::game_state::GameState;
 use crate::ui::spawn_ui::GotoState;
 use bevy::app::{App, Plugin, Update};
@@ -166,11 +167,13 @@ pub fn game_tracking_event_system(
 /// Drives [`LevelState`] from the facts engine instead of computing win/lose inline. The
 /// level-flow stories (`crate::facts::stories`) own the verdict and surface it as named
 /// [`StoryEffect`]s; this system just maps those effects onto the tracker's state and runs
-/// the brief end-screen delay. See `docs/turbofacts.md` section 5.
+/// the brief end-screen delay. See `docs/turbofacts.md` section 5. The delay only starts
+/// once every story crawl (say, a level outro) has played out.
 pub fn level_state_system(
     mut level_tracker: ResMut<LevelTracker>,
     mut goto_state_mw: MessageWriter<GotoState>,
     mut story_effects: MessageReader<StoryEffect>,
+    crawls: Option<Res<CrawlQueue>>,
     time: Res<Time>,
 ) {
     for StoryEffect { effect } in story_effects.read() {
@@ -188,10 +191,13 @@ pub fn level_state_system(
     }
 
     // Brief delay before transitioning so the game doesn't snap away instantly.
-    if matches!(
-        level_tracker.level_state,
-        LevelState::Completed | LevelState::Failed
-    ) {
+    let crawling = crawls.is_some_and(|queue| queue.is_busy());
+    if !crawling
+        && matches!(
+            level_tracker.level_state,
+            LevelState::Completed | LevelState::Failed
+        )
+    {
         level_tracker.end_delay += time.delta_secs();
         if level_tracker.end_delay >= 2.0 {
             goto_state_mw.write(GotoState {

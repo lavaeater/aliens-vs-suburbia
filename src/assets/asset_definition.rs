@@ -199,7 +199,7 @@ pub enum ItemKind {
     Coins {
         value: u32,
     },
-    /// Objective token for maps/stories; no runtime effect yet beyond a fact.
+    /// Story item / objective token: picking it up sets the `ItemFound.<id>` fact.
     Key {
         id: String,
     },

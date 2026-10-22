@@ -1,28 +1,35 @@
-//! Blood: a fast bright *puff* at the moment of impact, plus a persistent *decal*
-//! stain dropped on the ground that dirties up the map. Both subscribe to
-//! [`DamageDealt`]; the decal is budget-capped via [`GoreBudget`].
+//! Blood: a particle *spray* at the moment of impact (`crate::fx`, the effects are
+//! `assets/fx/blood_*.ron`), plus a persistent *decal* stain dropped on the ground that
+//! dirties up the map. Both subscribe to [`DamageDealt`]; the decal is budget-capped
+//! via [`GoreBudget`]. Structures don't bleed: a shot that hits one throws sparks
+//! (`shoot_weapons`).
 //!
-//! The splat texture is generated procedurally at startup, so this has no art
+//! The splat texture is generated procedurally at startup, so the decal has no art
 //! dependency — irregular crimson blob with a soft edge and a scatter of droplets.
+//!
+//! The stains are alpha-*masked*, not blended. Blended, they went into the transparent
+//! pass, which sorts by distance only, so a stain sorted after a translucent wall or a
+//! faded mesh painted straight over it. Masked, they draw in the opaque pass with a
+//! real depth test.
 
 use bevy::asset::RenderAssetUsages;
 use bevy::image::Image;
+use bevy::light::NotShadowCaster;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
+use crate::fx::{FxKind, SpawnFx};
+use crate::general::damage::Faction;
 use crate::general::systems::map_systems::TileDefinitions;
-use crate::gore::components::{DECAL_LIFT, DamageDealt, DamageKind, Ephemeral, GoreBudget};
+use crate::gore::components::{DECAL_LIFT, DamageDealt, DamageKind, GoreBudget};
 
-/// Shared, pre-built blood art. Materials are shared where they can be (opaque
-/// ground decals) and cloned where the puff needs its own fading alpha.
+/// Shared, pre-built blood art.
 #[derive(Resource)]
 pub struct BloodAssets {
     /// Flat quad facing +Y, one world unit across, for ground decals.
     decal_mesh: Handle<Mesh>,
-    /// Shared decal material — every stain reuses it, so they batch.
+    /// Shared decal material (alpha-masked) — every stain reuses it, so they batch.
     decal_material: Handle<StandardMaterial>,
-    /// The splat texture, reused by cloned puff materials.
-    texture: Handle<Image>,
 }
 
 const TEX_SIZE: u32 = 64;
@@ -121,7 +128,7 @@ pub fn setup_blood_assets(
     let decal_material = materials.add(StandardMaterial {
         base_color: Color::srgb(0.5, 0.5, 0.5),
         base_color_texture: Some(texture.clone()),
-        alpha_mode: AlphaMode::Blend,
+        alpha_mode: AlphaMode::Mask(0.5),
         unlit: true,
         // Push decals in front of the floor to avoid z-fighting.
         depth_bias: 1.0,
@@ -131,18 +138,17 @@ pub fn setup_blood_assets(
     commands.insert_resource(BloodAssets {
         decal_mesh,
         decal_material,
-        texture,
     });
 }
 
-/// Spawn blood on every non-fire hit: a bright short-lived puff at the impact and a
-/// lasting stain on the ground below it.
+/// Spawn blood on every non-fire hit: a particle spray at the impact and a lasting
+/// stain on the ground below it.
 pub fn spawn_blood_on_damage(
     mut damage: MessageReader<DamageDealt>,
     mut commands: Commands,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut meshes: ResMut<Assets<Mesh>>,
     mut budget: ResMut<GoreBudget>,
+    mut fx: MessageWriter<SpawnFx>,
+    factions: Query<&Faction>,
     blood: Option<Res<BloodAssets>>,
     tile_defs: Res<TileDefinitions>,
 ) {
@@ -153,48 +159,45 @@ pub fn spawn_blood_on_damage(
         if hit.kind == DamageKind::Fire {
             continue;
         }
+        if factions.get(hit.target) == Ok(&Faction::Structure) {
+            continue;
+        }
         // Bigger hits bleed more; a killing blow really lets go.
         let mut mag = ((hit.amount as f32) / 10.0).clamp(0.5, 3.0);
         if hit.lethal {
             mag *= 1.8;
         }
 
-        // ── Impact puff: bright, grows and fades fast. Own material so the fade in
-        //    tick_ephemeral doesn't touch every other puff. ──────────────────────
-        let puff_mat = materials.add(StandardMaterial {
-            base_color: Color::srgb(0.7, 0.05, 0.05),
-            base_color_texture: Some(blood.texture.clone()),
-            alpha_mode: AlphaMode::Blend,
-            unlit: true,
-            ..default()
-        });
-        let puff_size = 0.18 * mag;
-        commands.spawn((
-            Mesh3d(meshes.add(Mesh::from(Plane3d::new(
-                hit.normal.normalize_or(Vec3::Y),
-                Vec2::splat(0.5),
-            )))),
-            MeshMaterial3d(puff_mat),
-            Transform::from_translation(hit.position + hit.normal.normalize_or(Vec3::Y) * 0.05)
-                .with_scale(Vec3::splat(puff_size)),
-            Ephemeral::new(0.28)
-                .with_grow(2.6)
-                .base_scale(Vec3::splat(puff_size)),
-        ));
+        // ── Impact spray: the effect emits along its +Y, so turn that to the spray
+        //    direction, tipped upwards so the droplets arc before they land. ───────
+        let spray = hit.normal.normalize_or(Vec3::Y) + Vec3::Y * 0.6;
+        let kind = if hit.lethal {
+            FxKind::BloodKill
+        } else {
+            FxKind::BloodHit
+        };
+        fx.write(SpawnFx::at(kind, hit.position).along(spray));
 
         // ── Ground stain: persistent, budget-capped. Flat quad just above the floor,
         //    directly under the hit (maps are flat, so the floor plane works without a
         //    raycast -- but that plane is `floor_level`, not 0). ───────────────────────
         let yaw = (hit.position.x * 12.9898 + hit.position.z * 78.233).sin() * 43_758.547;
         let yaw = (yaw - yaw.floor()) * std::f32::consts::TAU;
-        let size = (0.6 + mag * 0.5) * (0.8 + 0.4 * (yaw / std::f32::consts::TAU));
+        // Tiles are one unit wide: a normal hit leaves a stain under half a tile, a
+        // killing blow about a tile.
+        let jitter = yaw / std::f32::consts::TAU;
+        let size = (0.25 + mag * 0.15) * (0.8 + 0.4 * jitter);
+        // Masked stains write depth, so two at the same height z-fight where they
+        // overlap; stagger them by a hair.
+        let lift = DECAL_LIFT + jitter * 0.004;
         let decal = commands
             .spawn((
                 Mesh3d(blood.decal_mesh.clone()),
                 MeshMaterial3d(blood.decal_material.clone()),
+                NotShadowCaster,
                 Transform::from_xyz(
                     hit.position.x,
-                    tile_defs.floor_level + DECAL_LIFT,
+                    tile_defs.floor_level + lift,
                     hit.position.z,
                 )
                 .with_rotation(Quat::from_rotation_y(yaw))
@@ -206,3 +209,4 @@ pub fn spawn_blood_on_damage(
         }
     }
 }
+

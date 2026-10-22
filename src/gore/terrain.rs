@@ -11,18 +11,19 @@
 use avian3d::prelude::{AngularVelocity, Collider, CollisionLayers, LinearVelocity, RigidBody};
 use bevy::prelude::*;
 
+use crate::fx::{FxKind, SpawnFx};
 use crate::general::components::map_components::CurrentTile;
 use crate::general::components::{CollisionLayer, Health, Indestructible};
 use crate::general::resources::map_resources::MapGraph;
 use crate::gore::components::{Ephemeral, GoreBudget};
 use crate::player::components::IsObstacle;
 
-/// Shared rubble/dust art, built once at startup.
+/// Shared rubble art, built once at startup. The dust is a particle effect
+/// (`assets/fx/dust_burst.ron`).
 #[derive(Resource)]
 pub struct DebrisAssets {
     chunk_mesh: Handle<Mesh>,
     chunk_material: Handle<StandardMaterial>,
-    dust_mesh: Handle<Mesh>,
 }
 
 const CHUNK_COUNT: u32 = 7;
@@ -39,11 +40,9 @@ pub fn setup_debris_assets(
         perceptual_roughness: 0.95,
         ..default()
     });
-    let dust_mesh = meshes.add(Mesh::from(Sphere::new(0.5)));
     commands.insert_resource(DebrisAssets {
         chunk_mesh,
         chunk_material,
-        dust_mesh,
     });
 }
 
@@ -71,7 +70,7 @@ pub fn destroy_damaged_terrain(
     mut commands: Commands,
     mut map_graph: ResMut<MapGraph>,
     mut budget: ResMut<GoreBudget>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut fx: MessageWriter<SpawnFx>,
     debris: Option<Res<DebrisAssets>>,
     structures: Query<
         (Entity, &Health, Option<&CurrentTile>, &Transform),
@@ -91,47 +90,27 @@ pub fn destroy_damaged_terrain(
             map_graph.path_reopened = true;
         }
 
-        // The visual burst needs the shared debris art; skip it if not ready yet.
+        fx.write(SpawnFx::at(
+            FxKind::DustBurst,
+            transform.translation + Vec3::Y * 0.3,
+        ));
+        // The rubble needs the shared debris art; skip it if not ready yet.
         if let Some(debris) = debris.as_ref() {
-            spawn_debris(
-                &mut commands,
-                &mut materials,
-                &mut budget,
-                debris,
-                transform,
-            );
+            spawn_debris(&mut commands, &mut budget, debris, transform);
         }
         commands.entity(entity).despawn();
     }
 }
 
-/// A puff of dust and a scatter of rubble chunks where a structure stood.
+/// A scatter of rubble chunks where a structure stood.
 fn spawn_debris(
     commands: &mut Commands,
-    materials: &mut Assets<StandardMaterial>,
     budget: &mut GoreBudget,
     debris: &DebrisAssets,
     transform: &Transform,
 ) {
     let origin = transform.translation;
     let mut rng = Rng((origin.x * 73.0 + origin.z * 179.0) as i32 as u32 ^ 0xDEB1);
-
-    // Dust: a grey cloud that swells and fades. Own material so the fade is isolated.
-    let dust_mat = materials.add(StandardMaterial {
-        base_color: Color::srgba(0.55, 0.52, 0.48, 0.85),
-        alpha_mode: AlphaMode::Blend,
-        unlit: true,
-        ..default()
-    });
-    let dust_size = 0.6;
-    commands.spawn((
-        Mesh3d(debris.dust_mesh.clone()),
-        MeshMaterial3d(dust_mat),
-        Transform::from_translation(origin + Vec3::Y * 0.3).with_scale(Vec3::splat(dust_size)),
-        Ephemeral::new(0.7)
-            .with_grow(2.8)
-            .base_scale(Vec3::splat(dust_size)),
-    ));
 
     // Rubble: grey physics chunks thrown up and out.
     for _ in 0..CHUNK_COUNT {
@@ -160,7 +139,7 @@ fn spawn_debris(
                 ),
                 LinearVelocity(dir * speed),
                 AngularVelocity(Vec3::new(rng.signed(), rng.signed(), rng.signed()) * 9.0),
-                Ephemeral::new(CHUNK_LIFETIME).no_fade().base_scale(scale),
+                Ephemeral::new(CHUNK_LIFETIME).no_fade(),
             ))
             .id();
 
@@ -173,6 +152,7 @@ fn spawn_debris(
 #[cfg(test)]
 mod tests {
     use super::destroy_damaged_terrain;
+    use crate::fx::SpawnFx;
     use crate::general::components::Health;
     use crate::general::components::map_components::CurrentTile;
     use crate::general::resources::map_resources::MapGraph;
@@ -184,8 +164,8 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.init_resource::<Assets<StandardMaterial>>();
         app.init_resource::<GoreBudget>();
+        app.add_message::<SpawnFx>();
         app.insert_resource(MapGraph {
             path_finding_grid: Grid::new(8, 8),
             occupied_tiles: HashSet::new(),

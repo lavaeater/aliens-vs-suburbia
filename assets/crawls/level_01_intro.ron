@@ -1,0 +1,25 @@
+// A story crawl. Shown by a story consequence `Emit(effect: "crawl:level_01_intro")`
+// (the id is the file name). Every field is optional; see `lava_ui_builder::crawl::CrawlSpec`.
+//   style:        Scroll(tilt: 1.0)  rolls up the screen (0 = flat credits, up to 4)
+//                 Typewriter         a dialog box, one page per line
+//   speed:        Scroll: pixels per second. Typewriter: characters per second.
+//   backdrop:     0 = see-through .. 1 = black
+//   modal:        true pauses the match until it is done (default)
+//   skippable:    a scroll can be cut short (default true)
+//   auto_advance: Typewriter: seconds before a finished page turns by itself (0 = wait)
+//   hint:         Typewriter: prompt shown once a page is typed
+// Plain ASCII only: the game's font has nothing else.
+(
+    title: "EPISODE I: THE LAWN MENACE",
+    lines: [
+        "It is a quiet Tuesday on Maple Drive.",
+        "The sprinklers hiss. The barbecues smoke. Nobody has noticed the strange lights over the cul-de-sac.",
+        "",
+        "Nobody except YOU, the last line of defence of the Homeowners' Association, armed with a garden hose and a deep distrust of anything green that is not a lawn.",
+        "",
+        "Hold the street. Do not let them reach the end of the road...",
+    ],
+    style: Scroll(tilt: 1.2),
+    speed: 55.0,
+    backdrop: 0.85,
+)

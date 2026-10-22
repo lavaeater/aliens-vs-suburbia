@@ -558,7 +558,11 @@ one row top-left. Lives (step 2) wait for *Death*.
 
 ## On-Screen Crawls
 
-**Status: missing.**
+**Status: implemented, not playtested** - `lava_ui_builder::crawl` + `src/crawl/`, see
+`docs/crawls.md`. Triggered by turbofacts stories (`Emit(effect: "crawl:<name>")`) rather
+than a `ShowCrawl(name)` call; level stories come from `MapFile::stories`. Step 4's
+campaign hook (`intro_crawl`/`outro_crawl`) is covered by level stories on
+`LevelStarted` / `LevelComplete` instead. Original plan below.
 
 **Steps**
 

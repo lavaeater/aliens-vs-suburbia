@@ -7,6 +7,7 @@
 //! ```text
 //! [properties]
 //! name: Backyard
+//! stories: assets/stories/backyard.ron
 //!
 //! [tiles]
 //! wwwwwwww
@@ -218,6 +219,7 @@ fn property(
     let (key, value) = (key.trim(), value.trim());
     match key {
         "name" => map.name = value.to_string(),
+        "stories" => map.stories = value.to_string(),
         "generated" => map.generated = number(key, value)?,
         "seed" => map.seed = number(key, value)?,
         "width" => size.0 = Some(number(key, value)?),
@@ -404,6 +406,9 @@ pub fn to_text(map: &MapFile) -> Result<String, String> {
     if !map.name.is_empty() {
         lines.push(format!("name: {}", map.name));
     }
+    if !map.stories.is_empty() {
+        lines.push(format!("stories: {}", map.stories));
+    }
     if map.generated {
         lines.push("generated: true".into());
         lines.push(format!("width: {}", map.map_width));
@@ -586,7 +591,10 @@ count: 3
 ";
 
     #[test]
-    #[allow(clippy::float_cmp, reason = "the values are parsed from exact literals")]
+    #[allow(
+        clippy::float_cmp,
+        reason = "the values are parsed from exact literals"
+    )]
     fn the_example_parses() {
         let map = parse(EXAMPLE).unwrap();
         assert_eq!(map.name, "Backyard");

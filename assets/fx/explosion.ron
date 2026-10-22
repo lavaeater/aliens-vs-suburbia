@@ -1,0 +1,209 @@
+// Explosion. Every `general::explosion::Explode` (grenades, barrels, launchers).
+// Fireball, flying sparks, debris that lands, smoke that rises after.
+// Edit with the sprinkles editor (`cargo install bevy_sprinkles_editor`) or by hand;
+// `every_fx_in_assets_parses` checks the file.
+(
+    sprinkles_version: "0.3",
+    name: "Explosion",
+    dimension: D3,
+    despawn_on_finish: true,
+    emitters: [
+        (
+            name: "Fireball",
+            time: (
+                lifetime: 0.45,
+                lifetime_randomness: 0.3,
+                one_shot: true,
+                explosiveness: 1.0,
+            ),
+            draw_pass: (
+                mesh: Sphere(radius: 0.5, segments: 6, rings: 4),
+                material: Standard((
+                    base_color: (1.0, 1.0, 1.0, 1.0),
+                    emissive: (3.5, 1.6, 0.4, 1.0),
+                    alpha_mode: Opaque,
+                    unlit: true,
+                )),
+                shadow_caster: false,
+            ),
+            emission: (
+                shape: Sphere(radius: 0.3),
+                particles_amount: 14,
+            ),
+            scale: (
+                range: (min: 0.5, max: 0.9),
+                scale_over_lifetime: Some((
+                    x: (
+                        points: [
+                            (position: 0.0, value: 0.3),
+                            (position: 0.25, value: 1.0),
+                            (position: 1.0, value: 0.0),
+                        ],
+                        range: (min: 0.0, max: 1.0),
+                    ),
+                )),
+            ),
+            colors: (
+                color_over_lifetime: (
+                    stops: [
+                        (color: (1.0, 0.95, 0.7, 1.0), position: 0.0),
+                        (color: (1.0, 0.55, 0.15, 1.0), position: 0.35),
+                        (color: (0.6, 0.12, 0.05, 1.0), position: 1.0),
+                    ],
+                ),
+            ),
+            velocities: (
+                initial_direction: (0.0, 1.0, 0.0),
+                spread: 180.0,
+                initial_velocity: (min: 1.5, max: 3.5),
+            ),
+            accelerations: (
+                gravity: (0.0, 1.5, 0.0),
+            ),
+        ),
+        (
+            name: "Sparks",
+            time: (
+                lifetime: 0.8,
+                lifetime_randomness: 0.5,
+                one_shot: true,
+                explosiveness: 1.0,
+            ),
+            draw_pass: (
+                mesh: Cuboid(half_size: (0.15, 1.0, 0.15)),
+                material: Standard((
+                    base_color: (1.0, 0.8, 0.35, 1.0),
+                    emissive: (4.0, 2.2, 0.6, 1.0),
+                    alpha_mode: Opaque,
+                    unlit: true,
+                )),
+                shadow_caster: false,
+                transform_align: Some(YToVelocity),
+            ),
+            emission: (
+                shape: Point,
+                particles_amount: 30,
+            ),
+            scale: (
+                range: (min: 0.015, max: 0.03),
+                scale_over_lifetime: Some((
+                    x: (
+                        points: [
+                            (position: 0.0, value: 1.0),
+                            (position: 0.7, value: 1.0),
+                            (position: 1.0, value: 0.0),
+                        ],
+                        range: (min: 0.0, max: 1.0),
+                    ),
+                )),
+            ),
+            velocities: (
+                initial_direction: (0.0, 1.0, 0.0),
+                spread: 100.0,
+                initial_velocity: (min: 6.0, max: 12.0),
+            ),
+            accelerations: (
+                gravity: (0.0, -9.8, 0.0),
+            ),
+            collision: (
+                mode: Some(Rigid(friction: 0.3, bounce: 0.3)),
+                use_scale: true,
+                base_size: 1.0,
+            ),
+        ),
+        (
+            name: "Debris",
+            time: (
+                lifetime: 1.6,
+                lifetime_randomness: 0.3,
+                one_shot: true,
+                explosiveness: 1.0,
+            ),
+            draw_pass: (
+                mesh: Cuboid(half_size: (0.5, 0.5, 0.5)),
+                material: Standard((
+                    base_color: (0.22, 0.18, 0.14, 1.0),
+                    emissive: (0.8, 0.3, 0.05, 1.0),
+                    alpha_mode: Opaque,
+                    unlit: true,
+                )),
+                shadow_caster: false,
+            ),
+            emission: (
+                shape: Sphere(radius: 0.2),
+                particles_amount: 10,
+            ),
+            scale: (
+                range: (min: 0.06, max: 0.12),
+                scale_over_lifetime: Some((
+                    x: (
+                        points: [
+                            (position: 0.0, value: 1.0),
+                            (position: 0.85, value: 1.0),
+                            (position: 1.0, value: 0.0),
+                        ],
+                        range: (min: 0.0, max: 1.0),
+                    ),
+                )),
+            ),
+            velocities: (
+                initial_direction: (0.0, 1.0, 0.0),
+                spread: 70.0,
+                initial_velocity: (min: 3.0, max: 7.0),
+            ),
+            accelerations: (
+                gravity: (0.0, -9.8, 0.0),
+            ),
+            collision: (
+                mode: Some(Rigid(friction: 0.8, bounce: 0.2)),
+                use_scale: true,
+                base_size: 1.0,
+            ),
+        ),
+        (
+            name: "Smoke",
+            time: (
+                lifetime: 1.6,
+                lifetime_randomness: 0.3,
+                delay: 0.08,
+                one_shot: true,
+                explosiveness: 1.0,
+            ),
+            draw_pass: (
+                mesh: Sphere(radius: 0.5, segments: 6, rings: 4),
+                material: Standard((
+                    base_color: (0.16, 0.15, 0.14, 1.0),
+                    emissive: (0.0, 0.0, 0.0, 1.0),
+                    alpha_mode: Opaque,
+                    unlit: true,
+                )),
+                shadow_caster: false,
+            ),
+            emission: (
+                shape: Sphere(radius: 0.4),
+                particles_amount: 10,
+            ),
+            scale: (
+                range: (min: 0.4, max: 0.8),
+                scale_over_lifetime: Some((
+                    x: (
+                        points: [
+                            (position: 0.0, value: 0.4),
+                            (position: 0.4, value: 1.0),
+                            (position: 1.0, value: 0.0),
+                        ],
+                        range: (min: 0.0, max: 1.0),
+                    ),
+                )),
+            ),
+            velocities: (
+                initial_direction: (0.0, 1.0, 0.0),
+                spread: 60.0,
+                initial_velocity: (min: 0.6, max: 1.6),
+            ),
+            accelerations: (
+                gravity: (0.0, 0.8, 0.0),
+            ),
+        ),
+    ],
+)

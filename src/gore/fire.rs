@@ -1,5 +1,6 @@
 //! Fire fields: a patch of burning ground that damages creatures standing in it over
-//! time, throws up flickering flames, and leaves a scorch mark when it burns out.
+//! time, throws up flames (a looping particle effect, `assets/fx/fire.ron`), and leaves
+//! a scorch mark when it burns out.
 //!
 //! Driven by the [`SpawnFire`] message so any source can start one — the Molotov
 //! ability now, thrown molotovs/other incendiaries later. Damage is emitted as
@@ -8,12 +9,14 @@
 
 use avian3d::prelude::Position;
 use bevy::prelude::*;
+use bevy_sprinkles::prelude::Particles3d;
 
 use crate::alien::components::general::Alien;
+use crate::fx::{FxAssets, StopFx};
 use crate::general::components::Health;
 use crate::general::damage::ApplyDamage;
 use crate::general::systems::map_systems::TileDefinitions;
-use crate::gore::components::{DECAL_LIFT, DamageKind, Ephemeral, GoreBudget};
+use crate::gore::components::{DECAL_LIFT, DamageKind, GoreBudget};
 use crate::player::components::Player;
 
 /// Start a fire field. Position is on the ground; radius/duration/dps shape it.
@@ -31,25 +34,27 @@ pub struct FireField {
     life: Timer,
     /// Applies damage on each fire of this timer (repeating).
     damage_tick: Timer,
-    /// Spawns a flame puff on each fire (repeating).
-    flame_tick: Timer,
     dps: f32,
     radius: f32,
+    /// The flames' particle system, its own entity so it can outlive the field by
+    /// the time its last flames take to die out.
+    flames: Option<Entity>,
 }
 
 impl FireField {
     /// How often the field applies damage (also the window each tick's damage covers).
     const DAMAGE_INTERVAL: f32 = 0.25;
-    /// How often a flame puff spawns.
-    const FLAME_INTERVAL: f32 = 0.08;
+    /// How long the flames keep going after the field burns out: the longest particle
+    /// lifetime in `fire.ron` (embers).
+    const FLAME_LINGER: f32 = 1.2;
 
     pub fn new(duration: f32, dps: f32, radius: f32) -> Self {
         Self {
             life: Timer::from_seconds(duration, TimerMode::Once),
             damage_tick: Timer::from_seconds(Self::DAMAGE_INTERVAL, TimerMode::Repeating),
-            flame_tick: Timer::from_seconds(Self::FLAME_INTERVAL, TimerMode::Repeating),
             dps,
             radius,
+            flames: None,
         }
     }
 }
@@ -57,7 +62,6 @@ impl FireField {
 /// Shared fire art.
 #[derive(Resource)]
 pub struct FireAssets {
-    flame_mesh: Handle<Mesh>,
     scorch_mesh: Handle<Mesh>,
     scorch_material: Handle<StandardMaterial>,
 }
@@ -67,7 +71,6 @@ pub fn setup_fire_assets(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let flame_mesh = meshes.add(Mesh::from(Sphere::new(0.5)));
     let scorch_mesh = meshes.add(Mesh::from(Plane3d::new(Vec3::Y, Vec2::splat(0.5))));
     let scorch_material = materials.add(StandardMaterial {
         base_color: Color::srgba(0.05, 0.04, 0.03, 0.9),
@@ -77,20 +80,32 @@ pub fn setup_fire_assets(
         ..default()
     });
     commands.insert_resource(FireAssets {
-        flame_mesh,
         scorch_mesh,
         scorch_material,
     });
 }
 
-/// Spawn a `FireField` entity for each `SpawnFire`, with a glowing base blob.
+/// Spawn a `FireField` entity for each `SpawnFire`, with a glowing base blob and the
+/// flames, stretched in X/Z to the field's radius.
 pub fn spawn_fire_fields(
     mut msgs: MessageReader<SpawnFire>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    fx: Option<Res<FxAssets>>,
 ) {
     for fire in msgs.read() {
+        let mut field = FireField::new(fire.duration, fire.dps, fire.radius);
+        field.flames = fx.as_ref().map(|fx| {
+            commands
+                .spawn((
+                    Name::new("Flames"),
+                    Particles3d(fx.fire.clone()),
+                    Transform::from_translation(fire.position)
+                        .with_scale(Vec3::new(fire.radius, 1.0, fire.radius)),
+                ))
+                .id()
+        });
         let base_mat = materials.add(StandardMaterial {
             base_color: Color::srgba(1.0, 0.35, 0.05, 0.5),
             emissive: LinearRgba::new(5.0, 1.6, 0.2, 1.0),
@@ -99,7 +114,7 @@ pub fn spawn_fire_fields(
             ..default()
         });
         commands.spawn((
-            FireField::new(fire.duration, fire.dps, fire.radius),
+            field,
             Mesh3d(meshes.add(Mesh::from(Sphere::new(0.5)))),
             MeshMaterial3d(base_mat),
             Transform::from_translation(fire.position + Vec3::Y * 0.15)
@@ -108,45 +123,22 @@ pub fn spawn_fire_fields(
     }
 }
 
-/// xorshift32 for flame jitter.
-struct Rng(u32);
-impl Rng {
-    fn next(&mut self) -> u32 {
-        let mut x = self.0.max(1);
-        x ^= x << 13;
-        x ^= x >> 17;
-        x ^= x << 5;
-        self.0 = x;
-        x
-    }
-    fn signed(&mut self) -> f32 {
-        (self.next() >> 8) as f32 / (1u32 << 23) as f32 - 1.0
-    }
-    fn unit(&mut self) -> f32 {
-        (self.next() >> 8) as f32 / (1u32 << 24) as f32
-    }
-}
-
-/// Burn things in the fire, flicker the flames, and scorch the ground on burnout.
+/// Burn things in the fire, and on burnout scorch the ground and let the flames die.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn tick_fire_fields(
     time: Res<Time>,
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     mut budget: ResMut<GoreBudget>,
     fire_assets: Option<Res<FireAssets>>,
     mut fields: Query<(Entity, &mut FireField, &Transform)>,
     targets: Query<(Entity, &Position, Has<Alien>, Has<Player>), With<Health>>,
     mut damage_mw: MessageWriter<ApplyDamage>,
-    mut rng_seed: Local<u32>,
     tile_defs: Res<TileDefinitions>,
 ) {
     let dt = time.delta();
     for (entity, mut field, transform) in fields.iter_mut() {
         field.life.tick(dt);
         field.damage_tick.tick(dt);
-        field.flame_tick.tick(dt);
 
         let center = transform.translation;
 
@@ -171,37 +163,13 @@ pub fn tick_fire_fields(
             }
         }
 
-        // ── Flame puffs: small rising, fading emissive blobs. ──────────────────
-        if field.flame_tick.just_finished() {
-            *rng_seed = rng_seed.wrapping_add(0x9E37_79B9);
-            let mut rng = Rng(*rng_seed ^ entity.to_bits() as u32);
-            let off = Vec3::new(rng.signed(), 0.0, rng.signed()) * field.radius * 0.7;
-            let size = 0.25 + rng.unit() * 0.35;
-            let mat = materials.add(StandardMaterial {
-                base_color: Color::srgba(1.0, 0.5, 0.1, 0.9),
-                emissive: LinearRgba::new(6.0, 2.2, 0.3, 1.0),
-                alpha_mode: AlphaMode::Blend,
-                unlit: true,
-                ..default()
-            });
-            let fa = fire_assets.as_ref();
-            let mesh = fa.map_or_else(
-                || meshes.add(Mesh::from(Sphere::new(0.5))),
-                |a| a.flame_mesh.clone(),
-            );
-            commands.spawn((
-                Mesh3d(mesh),
-                MeshMaterial3d(mat),
-                Transform::from_translation(center + off + Vec3::Y * 0.2)
-                    .with_scale(Vec3::splat(size)),
-                Ephemeral::new(0.35)
-                    .with_grow(1.8)
-                    .base_scale(Vec3::splat(size)),
-            ));
-        }
-
         // ── Burn out: scorch the ground, then despawn. ─────────────────────────
         if field.life.is_finished() {
+            if let Some(flames) = field.flames {
+                commands
+                    .entity(flames)
+                    .insert(StopFx::after(FireField::FLAME_LINGER));
+            }
             if let Some(fa) = fire_assets.as_ref() {
                 let scorch = commands
                     .spawn((
@@ -252,11 +220,9 @@ mod tests {
         app.init_resource::<Caught>();
         app.init_resource::<Time>();
         app.init_resource::<GoreBudget>();
-        app.init_resource::<Assets<Mesh>>();
-        app.init_resource::<Assets<StandardMaterial>>();
         // Scorch marks are placed on the floor plane, so the tile metrics have to exist.
         app.insert_resource(TileDefinitions::new(1.0, 32.0, 9.5, 1.0));
-        // No FireAssets resource -> flame puffs use the mesh fallback; fine for a test.
+        // No FireAssets / FxAssets -> no scorch, no flames; the burning is what's tested.
         app.add_systems(Update, (tick_fire_fields, apply_damage, catch).chain());
 
         // Fire at the origin: radius 2, 40 dps.

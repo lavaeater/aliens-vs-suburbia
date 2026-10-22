@@ -36,3 +36,41 @@ pub const COINS: &str = "Coins";
 pub const MAP_START_MESSAGE: &str = "MapStartMessage";
 pub const MAP_SUCCESS_MESSAGE: &str = "MapSuccessMessage";
 pub const MAP_FAIL_MESSAGE: &str = "MapFailMessage";
+
+/// Prefix of a [`StoryEffect`](crate::messages::StoryEffect) that shows a story crawl:
+/// `Emit(effect: "crawl:level_01_intro")` shows `assets/crawls/level_01_intro.ron`.
+pub const CRAWL_EFFECT_PREFIX: &str = "crawl:";
+/// True while a crawl is on screen or queued.
+pub const CRAWL_SHOWING: &str = "CrawlShowing";
+
+/// Set true once crawl `id` has run to its end (or been skipped), so a story can follow
+/// on from it.
+pub fn crawl_finished(id: &str) -> String {
+    format!("CrawlFinished.{id}")
+}
+
+/// Set true when a player picks up a story item (`ItemKind::Key { id }`).
+pub fn item_found(id: &str) -> String {
+    format!("ItemFound.{id}")
+}
+
+/// The crawl a story effect asks for, if it is a crawl effect: `"crawl:intro"` -> `"intro"`.
+pub fn crawl_effect(effect: &str) -> Option<&str> {
+    effect
+        .strip_prefix(CRAWL_EFFECT_PREFIX)
+        .map(str::trim)
+        .filter(|id| !id.is_empty())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn crawl_effects_name_their_crawl() {
+        assert_eq!(crawl_effect("crawl:intro"), Some("intro"));
+        assert_eq!(crawl_effect("crawl: intro "), Some("intro"));
+        assert_eq!(crawl_effect("crawl:"), None);
+        assert_eq!(crawl_effect("level_complete"), None);
+    }
+}

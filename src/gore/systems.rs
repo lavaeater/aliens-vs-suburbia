@@ -4,29 +4,20 @@ use bevy::prelude::*;
 
 use crate::gore::components::{DamageDealt, Ephemeral, LastHit};
 
-/// Grow/fade every [`Ephemeral`] toward the end of its life, then despawn it.
+/// Fade every [`Ephemeral`] toward the end of its life, then despawn it.
 pub fn tick_ephemeral(
     time: Res<Time>,
     mut commands: Commands,
     mut query: Query<(
         Entity,
         &mut Ephemeral,
-        &mut Transform,
         Option<&MeshMaterial3d<StandardMaterial>>,
     )>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    for (entity, mut eph, mut transform, material) in query.iter_mut() {
+    for (entity, mut eph, material) in query.iter_mut() {
         eph.timer.tick(time.delta());
         let t = eph.timer.fraction();
-
-        // 1.0 is the "no growth" sentinel, written literally, never computed.
-        #[allow(clippy::float_cmp)]
-        let grows = eph.grow_to != 1.0;
-        if grows {
-            let s = 1.0 + (eph.grow_to - 1.0) * t;
-            transform.scale = eph.base_scale * s;
-        }
 
         if eph.fade
             && let Some(mat_handle) = material

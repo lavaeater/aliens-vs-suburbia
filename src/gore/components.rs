@@ -62,20 +62,14 @@ pub struct LastHit {
     pub kind: DamageKind,
 }
 
-/// A short-lived visual entity that grows and/or fades, then despawns. Generalises
-/// the old bespoke `DeathEffect` tick so every FX (blood puff, dust, muzzle flash)
-/// shares one system.
+/// A short-lived visual entity that fades, then despawns: tracers, gibs, rubble.
+/// Puffs, sparks and flames are particle effects (`crate::fx`) and despawn themselves.
 #[derive(Component)]
 pub struct Ephemeral {
     pub timer: Timer,
     /// Fade `base_color` alpha linearly to 0 across the lifetime (needs a
     /// `MeshMaterial3d<StandardMaterial>`).
     pub fade: bool,
-    /// Uniform scale reached at end of life, as a multiple of `base_scale`
-    /// (1.0 = no growth).
-    pub grow_to: f32,
-    /// Scale at spawn; the grow animation is relative to this.
-    pub base_scale: Vec3,
 }
 
 impl Ephemeral {
@@ -83,22 +77,9 @@ impl Ephemeral {
         Self {
             timer: Timer::from_seconds(secs, TimerMode::Once),
             fade: true,
-            grow_to: 1.0,
-            base_scale: Vec3::ONE,
         }
     }
 
-    pub const fn with_grow(mut self, grow_to: f32) -> Self {
-        self.grow_to = grow_to;
-        self
-    }
-
-    pub const fn base_scale(mut self, base_scale: Vec3) -> Self {
-        self.base_scale = base_scale;
-        self
-    }
-
-    #[allow(dead_code)]
     pub const fn no_fade(mut self) -> Self {
         self.fade = false;
         self
