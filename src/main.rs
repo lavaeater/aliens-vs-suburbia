@@ -16,6 +16,7 @@ use bevy::prelude::*;
 use bevy::{DefaultPlugins, log};
 use bevy_skein::SkeinPlugin;
 use bevy_wind_waker_shader::flat::{FlatShaderBuilder, FlatShaderPlugin};
+use bevy_wind_waker_shader::pixelate::{PixelShaderPlugin};
 use camera::components::CameraOffset;
 use control::components::CharacterControl;
 
@@ -263,12 +264,12 @@ fn main() -> std::process::ExitCode {
         )
         // Lit by lamps and flashlights rather than ambient light (`lights_systems`), so
         // unlit ground has to be allowed to go dark, and coloured lights to tint.
-        // .add_plugins(FlatShaderPlugin::global_with(
+        //.add_plugins(FlatShaderPlugin::global_with(
         //     FlatShaderBuilder::default()
         //         .dark_level(0.25)
         //         .light_tint(0.8)
         //         .build(),
-        // ))
+        //))
         // .add_plugins(PixelShaderPlugin::default())
         .add_plugins(GamePlugin);
 
