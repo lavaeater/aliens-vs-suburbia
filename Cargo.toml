@@ -77,7 +77,7 @@ pathfinding = "4.6"
 itertools = "0.15.0"
 bevy_mod_outline = "0.13.0"
 bevy-inspector-egui = "0.37.0"
-lava_ui_builder = { path = "lava_ui_builder" }
+lava_ui_builder = { path = "lava_ui_builder", features = ["serde"] }
 turbofacts = { path = "turbofacts" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

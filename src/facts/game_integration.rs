@@ -1,13 +1,17 @@
 //! Wires the facts engine into the live game (turbofacts steps 7-8): activates the base
-//! stories on entering [`GameState::InGame`], mirrors ECS world state into facts each frame
-//! (the analog of Kotlin's `FactSystem`), and logs story effects so the signal path is
-//! observable. The facts here are groundwork — they run alongside the existing
-//! `LevelTracker` flow without replacing it.
+//! stories on entering [`GameState::InGame`] plus the loaded map's own (`MapFile::stories`),
+//! mirrors ECS world state into facts each frame (the analog of Kotlin's `FactSystem`),
+//! records story items picked up (`ItemFound.<id>`), and logs story effects so the signal
+//! path is observable. Story crawls hang off the effects (`crate::crawl`).
 
 use bevy::app::{App, Plugin};
 use bevy::prelude::{
     IntoScheduleConfigs, MessageReader, OnEnter, Query, Res, ResMut, Update, With, in_state,
 };
+
+use crate::assets::asset_definition::ItemKind;
+use crate::general::events::map_events::LoadMap;
+use crate::items::ItemPickedUp;
 
 use crate::alien::components::general::Alien;
 use crate::alien::wave_manager::WaveManager;
@@ -20,8 +24,10 @@ use crate::player::components::Player;
 use turbofacts::facts_resource::Facts;
 use turbofacts::keys;
 use turbofacts::messages::StoryEffect;
+use turbofacts::persistence::load_stories;
 use turbofacts::stories;
 use turbofacts::story::StoryStore;
+use turbofacts::systems::check_stories;
 
 /// Registers story activation, the derived-fact systems, and effect logging.
 pub struct FactsGameIntegrationPlugin;
@@ -31,17 +37,63 @@ impl Plugin for FactsGameIntegrationPlugin {
         app.add_systems(OnEnter(GameState::InGame), activate_stories)
             .add_systems(
                 Update,
-                (derive_world_facts, log_story_effects).run_if(in_state(GameState::InGame)),
+                (
+                    // Before the first check, so a map story sees the level start like
+                    // the base ones do.
+                    load_map_stories.before(check_stories),
+                    derive_world_facts,
+                    story_item_facts,
+                    log_story_effects,
+                )
+                    .run_if(in_state(GameState::InGame)),
             );
     }
 }
 
 /// Loads the built-in stories into the store and activates it (seeding their init facts).
+/// Starts from a fresh set each match, so the previous level's own stories do not linger.
 fn activate_stories(mut store: ResMut<StoryStore>, mut facts: ResMut<Facts>) {
-    if store.stories.is_empty() {
-        store.add_all(stories::base_stories());
-    }
+    store.stories.clear();
+    store.add_all(stories::base_stories());
     store.activate(&mut facts);
+}
+
+/// Adds the loaded map's own stories (`MapFile::stories`) to the base set.
+fn load_map_stories(
+    mut loads: MessageReader<LoadMap>,
+    mut store: ResMut<StoryStore>,
+    mut facts: ResMut<Facts>,
+) {
+    for LoadMap { map } in loads.read() {
+        if map.stories.is_empty() {
+            continue;
+        }
+        match load_stories(&map.stories) {
+            Ok(level_stories) if level_stories.is_empty() => {
+                bevy::log::warn!("map stories '{}' are missing or empty", map.stories);
+            }
+            Ok(level_stories) => {
+                bevy::log::info!("{} stories from {}", level_stories.len(), map.stories);
+                // Initialize only the new ones: `activate` would also re-arm a base story
+                // that already fired (Level Start) if the map loaded a frame late.
+                for mut story in level_stories {
+                    story.initialize(&mut facts);
+                    store.add(story);
+                }
+                store.needs_checking = true;
+            }
+            Err(e) => bevy::log::error!("map stories '{}': {e}", map.stories),
+        }
+    }
+}
+
+/// Story items (`ItemKind::Key`) become `ItemFound.<id>` facts for stories to react to.
+fn story_item_facts(mut picked: MessageReader<ItemPickedUp>, mut facts: ResMut<Facts>) {
+    for pickup in picked.read() {
+        if let ItemKind::Key { id } = &pickup.kind {
+            facts.set_bool(&keys::item_found(id), true);
+        }
+    }
 }
 
 /// Mirrors ECS world state into facts each frame and derives the win/lose **condition**

@@ -19,11 +19,13 @@ pub enum GameState {
 
 /// Whether a match is paused, only present in `InGame`. `Paused` freezes `Time<Virtual>`
 /// (so physics, animation and wave timers stop) and closes every player's input; the
-/// pause menu (`ui::pause_menu`) lives in it.
+/// pause menu (`ui::pause_menu`) lives in it. `Cutscene` does the same for a modal story
+/// crawl (`crawl`), without the menu.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, SubStates, Default)]
 #[source(GameState = GameState::InGame)]
 pub enum PauseState {
     #[default]
     Running,
     Paused,
+    Cutscene,
 }

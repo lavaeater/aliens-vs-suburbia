@@ -94,6 +94,7 @@ impl Plugin for GamePlugin {
                 CharacterEditorPlugin,
                 FactsPlugin,
                 FactsGameIntegrationPlugin,
+                crate::crawl::CrawlsPlugin,
                 GameMusicPlugin,
                 GorePlugin,
                 crate::ui::pause_menu::PauseMenuPlugin,

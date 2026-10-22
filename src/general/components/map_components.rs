@@ -83,6 +83,11 @@ pub struct MapFile {
     /// Wave definitions for the level.
     #[serde(default)]
     pub waves: Vec<WaveDef>,
+    /// The level's own turbofacts stories (a RON list of `Story`), e.g.
+    /// `"assets/stories/level_01.ron"`. Loaded on top of the base level-flow stories when
+    /// the map loads. Empty = none.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub stories: String,
 }
 
 #[derive(Component, Default, Reflect)]

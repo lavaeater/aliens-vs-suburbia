@@ -114,7 +114,8 @@ pub fn gate_player_input(
     block: Option<Res<GameInputBlock>>,
     mut players: Query<(&mut ActionState<PlayerAction>, Has<InputKeyboard>), With<Player>>,
 ) {
-    let paused = pause.is_some_and(|p| *p.get() == PauseState::Paused);
+    // Paused or in a cutscene: either way nobody plays.
+    let paused = pause.is_some_and(|p| *p.get() != PauseState::Running);
     for (mut actions, keyboard) in players.iter_mut() {
         let gate = input_gate(keyboard, paused, block.as_deref().copied());
         match gate {

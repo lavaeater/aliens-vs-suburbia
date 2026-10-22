@@ -47,6 +47,7 @@ count: 20 | rate: 30
 | key | meaning |
 |-----|---------|
 | `name` | display name (optional) |
+| `stories` | the level's turbofacts story file, e.g. `assets/stories/level_01.ron` (optional; see `docs/crawls.md`) |
 | `seed` | random seed (optional) |
 | `generated` | `true` = ignore `[tiles]` and generate the map from `seed` |
 | `width`, `height` | size of a *generated* map only. A hand-made map's size comes from `[tiles]`: the longest row and the number of rows. |

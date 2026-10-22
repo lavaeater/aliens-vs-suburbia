@@ -1,0 +1,16 @@
+// A non-modal typewriter: the match keeps running behind it, pages turn by themselves,
+// and Interact (E / Circle) or Enter hurries them along.
+(
+    title: "A crumpled letter",
+    lines: [
+        "Dear resident of number 12,",
+        "Your hedges are in breach of Association bylaw 4b. Also, we have reason to believe your garden gnomes are not of this world.",
+        "Please report to the community centre. Come alone. Bring snacks.",
+    ],
+    style: Typewriter,
+    speed: 45.0,
+    backdrop: 0.0,
+    modal: false,
+    auto_advance: 2.5,
+    hint: "E / Circle",
+)

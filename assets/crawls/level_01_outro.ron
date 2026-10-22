@@ -1,0 +1,12 @@
+(
+    title: "MAPLE DRIVE IS SAFE",
+    lines: [
+        "The last of the invaders lies flattened in a flowerbed.",
+        "The neighbours peek out from behind their curtains. Somebody starts a barbecue.",
+        "",
+        "But the lights in the sky have not gone away. They have only moved one street over...",
+    ],
+    style: Scroll(tilt: 1.2),
+    speed: 55.0,
+    backdrop: 0.85,
+)

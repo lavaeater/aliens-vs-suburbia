@@ -1,6 +1,7 @@
 # Tiles: v void, f floor, w wall, e enemy spawn, p player spawn, x goal (enemy exit), g grass, m mud, s snow, r rock, ~ water
 
 [properties]
+stories: assets/stories/level_01.ron
 
 [tiles]
 wwwwwwwwwwwwwwwwwwww
@@ -29,6 +30,7 @@ wwwwwwwwwwwwwwwwwww
 
 [placements]
 # at: x, y | def: <def .ron path> | rotation: <degrees, steps of 45>
+at: 7, 10 | def: assets/defs/story_letter.ron | rotation: 0
 
 [waves]
 # enemy: <enemy def path, omit for the built-in alien> | count: <n> | rate: <per minute>

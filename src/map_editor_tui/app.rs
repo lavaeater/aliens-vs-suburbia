@@ -97,6 +97,7 @@ impl App {
             decorations: vec![],
             placements: vec![],
             waves: vec![],
+            stories: String::new(),
         }
     }
 

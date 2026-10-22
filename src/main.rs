@@ -30,6 +30,7 @@ pub(crate) mod camera;
 pub(crate) mod character_editor;
 mod constants;
 mod control;
+pub(crate) mod crawl;
 pub(crate) mod facts;
 pub(crate) mod game_state;
 pub(crate) mod general;
@@ -250,14 +251,14 @@ fn main() -> std::process::ExitCode {
         }))
         // .add_plugins(SkeinPlugin::default())
         .add_plugins(PhysicsPlugins::default())
-        // .add_plugins(PhysicsDebugPlugin)
-        // .insert_gizmo_config(
-        //     PhysicsGizmos::default(),
-        //     GizmoConfig {
-        //         enabled: false,
-        //         ..Default::default()
-        //     },
-        // )
+        .add_plugins(PhysicsDebugPlugin)
+        .insert_gizmo_config(
+            PhysicsGizmos::default(),
+            GizmoConfig {
+                enabled: false,
+                ..Default::default()
+            },
+        )
         // Lit by lamps and flashlights rather than ambient light (`lights_systems`), so
         // unlit ground has to be allowed to go dark, and coloured lights to tint.
         // .add_plugins(FlatShaderPlugin::global_with(

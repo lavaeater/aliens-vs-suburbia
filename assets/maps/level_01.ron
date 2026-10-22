@@ -536,4 +536,5 @@
     decorations: [],
     placements: [],
     waves: [],
+    stories: "assets/stories/level_01.ron",
 )
