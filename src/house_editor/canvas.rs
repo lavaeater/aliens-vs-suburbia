@@ -159,7 +159,11 @@ pub fn draw_canvas(
     if let (Some(&first), Some(&last)) = (world.first(), world.last())
         && world.len() >= 3
     {
-        let color = if state.resolved.is_some() { EDGE } else { PREVIEW };
+        let color = if state.resolved.is_some() {
+            EDGE
+        } else {
+            PREVIEW
+        };
         gizmos.line_2d(last, first, color);
     }
     for (i, &at) in world.iter().enumerate() {
@@ -232,7 +236,10 @@ mod tests {
         // Grid y grows downwards, world y upwards.
         assert!(grid_to_world(0.0, 1.0).y < 0.0);
         // A click near a corner lands on it.
-        assert_eq!(world_to_grid(Vec2::new(UNIT_PX * 0.4, -UNIT_PX * 1.6)), (0, 2));
+        assert_eq!(
+            world_to_grid(Vec2::new(UNIT_PX * 0.4, -UNIT_PX * 1.6)),
+            (0, 2)
+        );
     }
 
     #[test]

@@ -1,4 +1,3 @@
-use crate::assets::asset_definition::{AssetDefinition, ModelType};
 use crate::map::house::{self, HOUSE_DIR, HouseDef};
 use crate::map::procgen::{HouseResolveResult, resolve_house};
 use bevy::prelude::Resource;
@@ -37,7 +36,7 @@ impl Default for HouseEditorState {
             points: Vec::new(),
             resolved: None,
             house: HouseDef::default(),
-            wall_def: scan_wall_def().unwrap_or_default(),
+            wall_def: house::default_wall_def().unwrap_or_default(),
             path: None,
             saved: None,
             status: String::new(),
@@ -214,34 +213,6 @@ impl HouseEditorState {
             Err(e) => self.status = e,
         }
     }
-}
-
-/// Same "prefer a def named wall, else first Terrain def" heuristic as
-/// `map_editor::state::scan_wall_def`.
-fn scan_wall_def() -> Option<String> {
-    let dir = std::path::Path::new("assets/defs");
-    let entries = std::fs::read_dir(dir).ok()?;
-    let mut terrain_defs: Vec<String> = entries
-        .flatten()
-        .filter_map(|e| {
-            let p = e.path();
-            if p.extension()?.to_str()? != "ron" {
-                return None;
-            }
-            let text = std::fs::read_to_string(&p).ok()?;
-            let def: AssetDefinition = ron::from_str(&text).ok()?;
-            if !matches!(def.model_type, ModelType::Terrain(_)) {
-                return None;
-            }
-            Some(p.to_string_lossy().replace('\\', "/"))
-        })
-        .collect();
-    terrain_defs.sort();
-    terrain_defs
-        .iter()
-        .find(|p| p.to_lowercase().contains("wall"))
-        .cloned()
-        .or_else(|| terrain_defs.into_iter().next())
 }
 
 #[cfg(test)]

@@ -1,7 +1,11 @@
 use crate::assets::asset_definition::{AssetDefinition, ModelType};
-use crate::general::components::map_components::{MapFile, TilePlacement, WaveDef};
+use crate::general::components::map_components::{
+    HousePlacement, MapFile, TilePlacement, WaveDef,
+};
 use crate::map::MapFeatures;
-use crate::map::procgen::{HouseSpec, Polygon, apply_house, resolve_house};
+use crate::map::house::{self, HouseDef};
+use crate::map::procgen::{HouseResolveResult, HouseSpec, Polygon, apply_house, resolve_house};
+use std::collections::BTreeMap;
 use crate::map::text_format;
 use crate::map_editor::modal::{History, Mode};
 use bevy::prelude::Resource;
@@ -25,6 +29,7 @@ pub enum PaletteTab {
     Tower,
     Item,
     Enemy,
+    House,
     Special,
 }
 
@@ -35,6 +40,7 @@ impl PaletteTab {
             Self::Tower,
             Self::Item,
             Self::Enemy,
+            Self::House,
             Self::Special,
         ]
     }
@@ -46,7 +52,8 @@ impl PaletteTab {
             Self::Tower => 1,
             Self::Item => 2,
             Self::Enemy => 3,
-            Self::Special => 4,
+            Self::House => 4,
+            Self::Special => 5,
         }
     }
 
@@ -56,6 +63,7 @@ impl PaletteTab {
             Self::Tower => "Tower",
             Self::Item => "Item",
             Self::Enemy => "Enemy",
+            Self::House => "House",
             Self::Special => "Special",
         }
     }
@@ -70,12 +78,14 @@ pub enum PaletteItem {
         label: &'static str,
         tile_value: u64,
     },
+    /// A house from `assets/houses`, by name.
+    House { name: String },
 }
 
 impl PaletteItem {
     pub fn display_name(&self) -> &str {
         match self {
-            Self::Def { name, .. } => name,
+            Self::Def { name, .. } | Self::House { name } => name,
             Self::Special { label, .. } => label,
         }
     }
@@ -95,6 +105,10 @@ pub struct MapEditorState {
     pub tiles: Vec<Vec<u64>>,
     /// Editor placements.
     pub placements: Vec<TilePlacement>,
+    /// Houses standing in the map. Kept whole here; the game stamps them into the tiles.
+    pub houses: Vec<HousePlacement>,
+    /// Every house in `assets/houses` by name, read once with the catalog.
+    pub house_library: BTreeMap<String, HouseDef>,
     /// Wave definitions.
     pub waves: Vec<WaveDef>,
     /// Currently selected palette tab.
@@ -106,7 +120,7 @@ pub struct MapEditorState {
     pub palette_items: Vec<PaletteItem>,
     pub selected_palette: usize,
     /// The selection each tab had when last left, so cycling tabs comes back to it.
-    pub tab_selection: [usize; 5],
+    pub tab_selection: [usize; 6],
     /// The brush before the current one, for the swap key.
     pub previous_brush: Option<(PaletteTab, usize)>,
     /// Brush rotation in 45° steps.
@@ -151,6 +165,7 @@ impl Default for MapEditorState {
     fn default() -> Self {
         let width = 20;
         let height = 24;
+        let house_library = house::house_library();
         let mut state = Self {
             map_name: "new_map".to_string(),
             stories: String::new(),
@@ -159,12 +174,14 @@ impl Default for MapEditorState {
             height,
             tiles: vec![vec![TILE_SPECIAL_FLOOR; width]; height],
             placements: Vec::new(),
+            houses: Vec::new(),
+            catalog: scan_catalog(&house_library),
+            house_library,
             waves: Vec::new(),
             active_tab: PaletteTab::Special,
-            catalog: scan_catalog(),
             palette_items: Vec::new(),
             selected_palette: 0,
-            tab_selection: [0; 5],
+            tab_selection: [0; 6],
             previous_brush: None,
             rotation_steps: 0,
             palette_dirty: true,
@@ -185,7 +202,7 @@ impl Default for MapEditorState {
             stroke_open: false,
             status: String::new(),
             house_points: Vec::new(),
-            house_wall_def: scan_wall_def().unwrap_or_default(),
+            house_wall_def: house::default_wall_def().unwrap_or_default(),
         };
         state.refresh_palette();
         state
@@ -203,6 +220,16 @@ impl MapEditorState {
         let remembered = self.remembered(self.active_tab);
         self.selected_palette = remembered.min(self.palette_items.len().saturating_sub(1));
         self.palette_dirty = true;
+    }
+
+    /// Read `assets/houses` again and rebuild the House tab from it.
+    pub fn reload_houses(&mut self) {
+        self.house_library = house::house_library();
+        if let Some(tab) = self.catalog.get_mut(PaletteTab::House.index()) {
+            *tab = house_items(&self.house_library);
+        }
+        self.refresh_palette();
+        self.grid_dirty = true;
     }
 
     pub fn set_tab(&mut self, tab: PaletteTab) {
@@ -260,13 +287,15 @@ impl MapEditorState {
     /// Start an undo step of its own for a one-off edit (a house, a generated map).
     pub fn checkpoint(&mut self) {
         self.stroke_open = false;
-        self.history.checkpoint(&self.tiles, &self.placements);
+        self.history
+            .checkpoint(&self.tiles, &self.placements, &self.houses);
     }
 
     /// Start an undo step unless one is already open for this stroke.
     pub fn begin_stroke(&mut self) {
         if !self.stroke_open {
-            self.history.checkpoint(&self.tiles, &self.placements);
+            self.history
+                .checkpoint(&self.tiles, &self.placements, &self.houses);
             self.stroke_open = true;
         }
     }
@@ -284,7 +313,10 @@ impl MapEditorState {
 
     pub fn undo(&mut self) {
         self.stroke_open = false;
-        if self.history.undo(&mut self.tiles, &mut self.placements) {
+        if self
+            .history
+            .undo(&mut self.tiles, &mut self.placements, &mut self.houses)
+        {
             self.after_restore();
             self.status = "undo".into();
         } else {
@@ -294,7 +326,10 @@ impl MapEditorState {
 
     pub fn redo(&mut self) {
         self.stroke_open = false;
-        if self.history.redo(&mut self.tiles, &mut self.placements) {
+        if self
+            .history
+            .redo(&mut self.tiles, &mut self.placements, &mut self.houses)
+        {
             self.after_restore();
             self.status = "redo".into();
         } else {
@@ -304,13 +339,21 @@ impl MapEditorState {
 }
 
 /// Every tab's brushes, in `PaletteTab::all` order.
-fn scan_catalog() -> Vec<Vec<PaletteItem>> {
+fn scan_catalog(houses: &BTreeMap<String, HouseDef>) -> Vec<Vec<PaletteItem>> {
     PaletteTab::all()
         .iter()
         .map(|tab| match tab {
             PaletteTab::Special => special_items(),
+            PaletteTab::House => house_items(houses),
             _ => scan_defs_for_tab(tab),
         })
+        .collect()
+}
+
+fn house_items(houses: &BTreeMap<String, HouseDef>) -> Vec<PaletteItem> {
+    houses
+        .keys()
+        .map(|name| PaletteItem::House { name: name.clone() })
         .collect()
 }
 
@@ -362,6 +405,11 @@ impl MapEditorState {
         let action = match self.palette_items.get(self.selected_palette) {
             Some(PaletteItem::Special { tile_value, .. }) => Some((*tile_value, None::<String>)),
             Some(PaletteItem::Def { path, .. }) => Some((TILE_SPECIAL_FLOOR, Some(path.clone()))),
+            Some(PaletteItem::House { name }) => {
+                let name = name.clone();
+                self.place_house(name, x, y);
+                return;
+            }
             None => None,
         };
 
@@ -398,7 +446,82 @@ impl MapEditorState {
             *cell = 0;
         }
         self.placements.retain(|p| !(p.x == x && p.y == y));
+        self.remove_houses_where(|cells| cells.contains(&(x, y)));
         self.grid_dirty = true;
+    }
+
+    /// The house brush's quarter turns: the brush rotation, in 90 degree steps.
+    pub const fn house_turns(&self) -> u8 {
+        self.rotation_steps / 2
+    }
+
+    /// The house `placement` as it stands in the map: walls, doors, windows and floor.
+    /// `None` when the house is not in `assets/houses`.
+    pub fn resolve_placed(&self, placement: &HousePlacement) -> Option<HouseResolveResult> {
+        self.house_library
+            .get(&placement.house)
+            .map(|def| def.resolve_placed(placement, &self.house_wall_def))
+    }
+
+    /// Every tile `placement` covers.
+    pub fn house_cells(&self, placement: &HousePlacement) -> Vec<(i32, i32)> {
+        self.resolve_placed(placement).map_or_else(Vec::new, |r| {
+            r.floor_cells
+                .into_iter()
+                .chain(r.wall_cells.iter().map(|c| (c.x, c.y)))
+                .collect()
+        })
+    }
+
+    /// The house the brush would place with its top-left tile at `(x, y)`.
+    pub fn house_brush_at(&self, x: i32, y: i32) -> Option<HousePlacement> {
+        match self.selected_item()? {
+            PaletteItem::House { name } => Some(HousePlacement {
+                house: name.clone(),
+                x,
+                y,
+                turns: self.house_turns(),
+            }),
+            _ => None,
+        }
+    }
+
+    /// Put a house with its top-left tile at `(x, y)`, replacing any it overlaps (so a
+    /// drag with the house brush moves it along).
+    fn place_house(&mut self, name: String, x: i32, y: i32) {
+        let placement = HousePlacement {
+            house: name,
+            x,
+            y,
+            turns: self.house_turns(),
+        };
+        if self.houses.contains(&placement) {
+            return;
+        }
+        let cells = self.house_cells(&placement);
+        self.remove_houses_where(|other| other.iter().any(|c| cells.contains(c)));
+        self.status = format!("placed house {}", placement.house);
+        self.houses.push(placement);
+        self.grid_dirty = true;
+    }
+
+    /// Drop every house whose tiles match `pred`.
+    fn remove_houses_where(&mut self, pred: impl Fn(&[(i32, i32)]) -> bool) {
+        let keep: Vec<bool> = self
+            .houses
+            .iter()
+            .map(|h| !pred(&self.house_cells(h)))
+            .collect();
+        let mut keep = keep.into_iter();
+        self.houses.retain(|_| keep.next().unwrap_or(true));
+    }
+
+    /// The house covering `(x, y)`, the latest placed first.
+    pub fn house_at(&self, x: i32, y: i32) -> Option<&HousePlacement> {
+        self.houses
+            .iter()
+            .rev()
+            .find(|h| self.house_cells(h).contains(&(x, y)))
     }
 
     pub fn add_wave(&mut self) {
@@ -478,12 +601,17 @@ impl MapEditorState {
         self.house_points.clear();
     }
 
-    /// Rotate the brush by one 45 degree step, backwards with `back`.
-    pub const fn rotate_brush(&mut self, back: bool) {
-        self.rotation_steps = if back {
-            (self.rotation_steps + 7) % 8
+    /// Rotate the brush by one 45 degree step (90 for a house), backwards with `back`.
+    pub fn rotate_brush(&mut self, back: bool) {
+        let step = if matches!(self.selected_item(), Some(PaletteItem::House { .. })) {
+            2
         } else {
-            (self.rotation_steps + 1) % 8
+            1
+        };
+        self.rotation_steps = if back {
+            (self.rotation_steps + 8 - step) % 8
+        } else {
+            (self.rotation_steps + step) % 8
         };
         self.palette_dirty = true; // refresh label with new rotation angle
     }
@@ -498,6 +626,7 @@ impl MapEditorState {
             tiles: self.tiles.clone(),
             decorations: Vec::new(),
             placements: self.placements.clone(),
+            houses: self.houses.clone(),
             waves: self.waves.clone(),
             stories: self.stories.clone(),
             loot: self.loot.clone(),
@@ -539,6 +668,7 @@ impl MapEditorState {
         self.height = map.map_height;
         self.tiles = map.tiles;
         self.placements = map.placements;
+        self.houses = map.houses;
         self.waves = map.waves;
         self.stories = map.stories;
         self.loot = map.loot;
@@ -577,34 +707,6 @@ pub fn scan_enemy_defs() -> Vec<(String, String)> {
     items
 }
 
-/// Finds a reasonable default wall def for the House tool: prefers a Terrain def whose
-/// name contains "wall", falls back to the first Terrain def found.
-fn scan_wall_def() -> Option<String> {
-    let dir = std::path::Path::new("assets/defs");
-    let entries = std::fs::read_dir(dir).ok()?;
-    let mut terrain_defs: Vec<String> = entries
-        .flatten()
-        .filter_map(|e| {
-            let p = e.path();
-            if p.extension()?.to_str()? != "ron" {
-                return None;
-            }
-            let text = std::fs::read_to_string(&p).ok()?;
-            let def: AssetDefinition = ron::from_str(&text).ok()?;
-            if !matches!(def.model_type, ModelType::Terrain(_)) {
-                return None;
-            }
-            Some(p.to_string_lossy().replace('\\', "/"))
-        })
-        .collect();
-    terrain_defs.sort();
-    terrain_defs
-        .iter()
-        .find(|p| p.to_lowercase().contains("wall"))
-        .cloned()
-        .or_else(|| terrain_defs.into_iter().next())
-}
-
 fn scan_defs_for_tab(tab: &PaletteTab) -> Vec<PaletteItem> {
     let dir = std::path::Path::new("assets/defs");
     let Ok(entries) = std::fs::read_dir(dir) else {
@@ -624,7 +726,7 @@ fn scan_defs_for_tab(tab: &PaletteTab) -> Vec<PaletteItem> {
                 PaletteTab::Tower => matches!(def.model_type, ModelType::Tower(_)),
                 PaletteTab::Item => matches!(def.model_type, ModelType::Item(_)),
                 PaletteTab::Enemy => matches!(def.model_type, ModelType::Enemy(_)),
-                PaletteTab::Special => false,
+                PaletteTab::House | PaletteTab::Special => false,
             };
             if !matches {
                 return None;

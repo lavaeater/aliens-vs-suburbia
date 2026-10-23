@@ -15,6 +15,21 @@ pub struct TilePlacement {
     pub rotation_steps: u8,
 }
 
+/// A house from `assets/houses/<house>.ron` standing in a map. The game stamps it into
+/// the tiles when the level loads (`map::house::bake_houses`); the map editor keeps it
+/// whole, so it can be moved or removed.
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
+pub struct HousePlacement {
+    /// The house's name: its file stem under `assets/houses`.
+    pub house: String,
+    /// The top-left tile of the house's footprint.
+    pub x: i32,
+    pub y: i32,
+    /// Clockwise quarter turns, 0-3.
+    #[serde(default)]
+    pub turns: u8,
+}
+
 /// One wave definition: what enemy, how many, at what rate.
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct WaveDef {
@@ -120,6 +135,9 @@ pub struct MapFile {
     /// Items placed by the map editor (def-driven models on specific tiles).
     #[serde(default)]
     pub placements: Vec<TilePlacement>,
+    /// Houses placed in the map (`assets/houses`), stamped into `tiles` on load.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub houses: Vec<HousePlacement>,
     /// Wave definitions for the level.
     #[serde(default)]
     pub waves: Vec<WaveDef>,

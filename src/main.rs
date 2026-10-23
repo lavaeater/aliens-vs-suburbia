@@ -16,7 +16,7 @@ use bevy::prelude::*;
 use bevy::{DefaultPlugins, log};
 use bevy_skein::SkeinPlugin;
 use bevy_wind_waker_shader::flat::{FlatShaderBuilder, FlatShaderPlugin};
-use bevy_wind_waker_shader::pixelate::{PixelShaderPlugin};
+use bevy_wind_waker_shader::pixelate::PixelShaderPlugin;
 use camera::components::CameraOffset;
 use control::components::CharacterControl;
 

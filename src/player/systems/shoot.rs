@@ -13,9 +13,9 @@ use bevy::prelude::*;
 use crate::animation::animation_plugin::{AnimationEvent, AnimationEventType, AnimationKey};
 use crate::assets::asset_definition::{AmmoKind, Hardpoint, WeaponProps};
 use crate::control::components::{CharacterControl, ControlCommand};
+use crate::fx::{FxKind, SpawnFx};
 use crate::game_state::score_keeper::GameTrackingEvent;
 use crate::general::components::CollisionLayer;
-use crate::fx::{FxKind, SpawnFx};
 use crate::general::damage::{ApplyDamage, Faction};
 use crate::general::projectiles::{self, ProjectileProps};
 use crate::gore::components::{DamageKind, Ephemeral};
@@ -339,9 +339,10 @@ pub fn shoot_weapons(
                     Ok(Faction::Alien | Faction::Player)
                 );
                 if !flesh {
-                    fx_mw.write(SpawnFx::at(FxKind::ImpactSparks, point).along(
-                        ricochet(dir, hit.normal) + hit.normal,
-                    ));
+                    fx_mw.write(
+                        SpawnFx::at(FxKind::ImpactSparks, point)
+                            .along(ricochet(dir, hit.normal) + hit.normal),
+                    );
                 }
                 point
             } else {

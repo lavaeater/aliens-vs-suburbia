@@ -1,4 +1,6 @@
+use crate::general::components::map_components::HousePlacement;
 use crate::map::MapFeatures;
+use crate::map::procgen::{HouseResolveResult, WallCellKind};
 use crate::map_editor::modal::Mode;
 use crate::map_editor::state::MapEditorState;
 use crate::ui::spawn_ui::StateMarker;
@@ -155,6 +157,109 @@ pub fn rebuild_grid(
                 TextFont::default().with_font_size(10.0),
                 TextColor(Color::WHITE),
             ));
+    }
+
+    // Houses over the tiles: what the game will stamp there when the level loads.
+    for placement in &state.houses {
+        let Some(resolved) = state.resolve_placed(placement) else {
+            continue;
+        };
+        for (x, y, color) in house_cell_colors(&resolved, 0.9) {
+            if !state.in_bounds(x, y) {
+                continue;
+            }
+            commands.spawn((
+                GridCellMarker {
+                    x: x as usize,
+                    y: y as usize,
+                },
+                StateMarker,
+                Node {
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(grid_left + x as f32 * CELL_SIZE),
+                    top: Val::Px(grid_top + y as f32 * CELL_SIZE),
+                    width: Val::Px(CELL_SIZE - 1.0),
+                    height: Val::Px(CELL_SIZE - 1.0),
+                    ..Default::default()
+                },
+                BackgroundColor(color),
+            ));
+        }
+    }
+}
+
+/// A house's tiles coloured like the house editor draws them: floor, wall, door, window.
+fn house_cell_colors(
+    resolved: &HouseResolveResult,
+    alpha: f32,
+) -> impl Iterator<Item = (i32, i32, Color)> + '_ {
+    let floor = Color::srgba(0.20, 0.22, 0.20, alpha);
+    resolved
+        .floor_cells
+        .iter()
+        .map(move |&(x, y)| (x, y, floor))
+        .chain(resolved.wall_cells.iter().map(move |c| {
+            let color = match c.kind {
+                WallCellKind::Wall => Color::srgba(0.55, 0.42, 0.28, alpha),
+                WallCellKind::Door => Color::srgba(0.25, 0.65, 0.30, alpha),
+                WallCellKind::Window => Color::srgba(0.30, 0.55, 0.80, alpha),
+            };
+            (c.x, c.y, color)
+        }))
+}
+
+/// One tile of the house brush's footprint under the cursor.
+#[derive(Component)]
+pub struct HouseGhost;
+
+/// Show where the house brush would put its house: its footprint at the cursor, rebuilt
+/// only when the cursor, the brush, its turn or the window changes.
+pub fn update_house_ghost(
+    state: Res<MapEditorState>,
+    mut commands: Commands,
+    windows: Query<&Window, With<PrimaryWindow>>,
+    ghosts: Query<Entity, With<HouseGhost>>,
+    mut shown: Local<Option<(HousePlacement, Vec2)>>,
+) {
+    let Ok(window) = windows.single() else { return };
+    let brush = match state.mode {
+        Mode::Normal | Mode::Paint => state.house_brush_at(state.cursor.0, state.cursor.1),
+        _ => None,
+    };
+    let wanted = brush.map(|b| (b, window.size()));
+    if *shown == wanted {
+        return;
+    }
+    for e in ghosts.iter() {
+        commands.entity(e).despawn();
+    }
+    *shown = wanted;
+    let Some((placement, _)) = shown.as_ref() else {
+        return;
+    };
+    let Some(resolved) = state.resolve_placed(placement) else {
+        return;
+    };
+    let grid_left = (window.width() * 0.5 - state.width as f32 * CELL_SIZE * 0.5).round();
+    let grid_top = (window.height() * 0.5 - state.height as f32 * CELL_SIZE * 0.5).round();
+    for (x, y, color) in house_cell_colors(&resolved, 0.5) {
+        if !state.in_bounds(x, y) {
+            continue;
+        }
+        commands.spawn((
+            HouseGhost,
+            StateMarker,
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(grid_left + x as f32 * CELL_SIZE),
+                top: Val::Px(grid_top + y as f32 * CELL_SIZE),
+                width: Val::Px(CELL_SIZE - 1.0),
+                height: Val::Px(CELL_SIZE - 1.0),
+                ..Default::default()
+            },
+            BackgroundColor(color),
+            GlobalZIndex(8),
+        ));
     }
 }
 

@@ -97,7 +97,11 @@ pub fn rebuild_info_label(
         return;
     };
 
-    let name = format!("{}{}", state.name(), if state.is_dirty() { " *" } else { "" });
+    let name = format!(
+        "{}{}",
+        state.name(),
+        if state.is_dirty() { " *" } else { "" }
+    );
     let shape_line = match (&state.resolved, state.points.len()) {
         (_, 0) => "No outline yet.".to_string(),
         (Some(_), n) => format!("Closed outline, {n} corners"),
@@ -184,12 +188,10 @@ pub fn rebuild_house_panel(
 
         heading(parent, "FILE");
         strip(parent).with_children(|line| {
-            row(line, "New".to_string(), false, BUTTON).observe(
-                |_: On<Activate>, mut s: ResMut<HouseEditorState>| s.new_house(),
-            );
-            row(line, "Save".to_string(), false, BUTTON).observe(
-                |_: On<Activate>, mut s: ResMut<HouseEditorState>| s.save(),
-            );
+            row(line, "New".to_string(), false, BUTTON)
+                .observe(|_: On<Activate>, mut s: ResMut<HouseEditorState>| s.new_house());
+            row(line, "Save".to_string(), false, BUTTON)
+                .observe(|_: On<Activate>, mut s: ResMut<HouseEditorState>| s.save());
         });
         heading(parent, "OPEN");
         if files.is_empty() {
@@ -202,9 +204,8 @@ pub fn rebuild_house_panel(
         for path in files {
             let selected = open.as_deref() == Some(path.as_str());
             let label = house::house_name(&path);
-            row(parent, label, selected, BUTTON).observe(
-                move |_: On<Activate>, mut s: ResMut<HouseEditorState>| s.open(&path),
-            );
+            row(parent, label, selected, BUTTON)
+                .observe(move |_: On<Activate>, mut s: ResMut<HouseEditorState>| s.open(&path));
         }
     });
 }

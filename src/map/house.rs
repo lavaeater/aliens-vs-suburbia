@@ -13,7 +13,11 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::map::procgen::{HouseSpec, Polygon, WindowRule};
+use crate::assets::asset_definition::{AssetDefinition, ModelType};
+use crate::general::components::map_components::{HousePlacement, MapFile};
+use crate::map::procgen::{
+    HouseResolveResult, HouseSpec, Polygon, WindowRule, apply_house_to_map, resolve_house,
+};
 
 /// Where house files live.
 pub const HOUSE_DIR: &str = "assets/houses";
@@ -159,6 +163,28 @@ impl HouseDef {
         spec
     }
 
+    /// The outline turned `turns` clockwise quarter turns (on the map, where y grows
+    /// down) and moved so its bounding box starts at `at`.
+    pub fn placed_outline(&self, at: (i32, i32), turns: u8) -> Vec<(i32, i32)> {
+        let turned: Vec<(i32, i32)> = self
+            .outline
+            .iter()
+            .map(|&p| (0..turns % 4).fold(p, |(x, y), _| (-y, x)))
+            .collect();
+        let min_x = turned.iter().map(|p| p.0).min().unwrap_or(0);
+        let min_y = turned.iter().map(|p| p.1).min().unwrap_or(0);
+        turned
+            .into_iter()
+            .map(|(x, y)| (x - min_x + at.0, y - min_y + at.1))
+            .collect()
+    }
+
+    /// The house resolved where `placement` puts it.
+    pub fn resolve_placed(&self, placement: &HousePlacement, wall_def: &str) -> HouseResolveResult {
+        let points = self.placed_outline((placement.x, placement.y), placement.turns);
+        resolve_house(&Polygon { points }, &self.spec(wall_def))
+    }
+
     pub fn load(path: &str) -> Result<Self, String> {
         let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
         ron::from_str(&text).map_err(|e| format!("{path}: {e}"))
@@ -193,9 +219,75 @@ pub fn free_house_path(dir: &str) -> String {
     // Bounded by the first free name, and by u32::MAX regardless.
     #[allow(clippy::maybe_infinite_iter)]
     let n = (1u32..)
-        .find(|n| !std::path::Path::new(dir).join(format!("house_{n}.ron")).exists())
+        .find(|n| {
+            !std::path::Path::new(dir)
+                .join(format!("house_{n}.ron"))
+                .exists()
+        })
         .unwrap_or(1);
     format!("{dir}/house_{n}.ron")
+}
+
+/// The file of the house called `name`.
+pub fn house_path(name: &str) -> String {
+    format!("{HOUSE_DIR}/{name}.ron")
+}
+
+/// Every house in [`HOUSE_DIR`] by name. Files that do not parse are left out.
+pub fn house_library() -> std::collections::BTreeMap<String, HouseDef> {
+    house_files(HOUSE_DIR)
+        .into_iter()
+        .filter_map(|path| Some((house_name(&path), HouseDef::load(&path).ok()?)))
+        .collect()
+}
+
+/// Stamp every house placed in `map` into its tiles and placements, as the game plays
+/// it: walls block, doors are floor, each wall tile gets `wall_def`'s model. Where houses
+/// overlap the later one wins. `load` reads a house by name; the ones it cannot read are
+/// skipped and returned as errors.
+pub fn bake_houses(
+    map: &mut MapFile,
+    wall_def: &str,
+    mut load: impl FnMut(&str) -> Result<HouseDef, String>,
+) -> Vec<String> {
+    let mut errors = Vec::new();
+    for placement in std::mem::take(&mut map.houses) {
+        match load(&placement.house) {
+            Ok(house) => {
+                let spec = house.spec(wall_def);
+                apply_house_to_map(&house.resolve_placed(&placement, wall_def), &spec, map);
+            }
+            Err(e) => errors.push(e),
+        }
+    }
+    errors
+}
+
+/// The def drawn for each wall tile until houses get their own mesh: a Terrain def named
+/// like a wall, else the first Terrain def.
+pub fn default_wall_def() -> Option<String> {
+    let entries = std::fs::read_dir("assets/defs").ok()?;
+    let mut terrain_defs: Vec<String> = entries
+        .flatten()
+        .filter_map(|e| {
+            let p = e.path();
+            if p.extension()?.to_str()? != "ron" {
+                return None;
+            }
+            let text = std::fs::read_to_string(&p).ok()?;
+            let def: AssetDefinition = ron::from_str(&text).ok()?;
+            if !matches!(def.model_type, ModelType::Terrain(_)) {
+                return None;
+            }
+            Some(p.to_string_lossy().replace('\\', "/"))
+        })
+        .collect();
+    terrain_defs.sort();
+    terrain_defs
+        .iter()
+        .find(|p| p.to_lowercase().contains("wall"))
+        .cloned()
+        .or_else(|| terrain_defs.into_iter().next())
 }
 
 /// The file stem: a house's name.
@@ -233,7 +325,11 @@ const fn material_name(material: WallMaterial) -> &'static str {
 /// The house's properties, in panel order. Panel direction only shows for wood.
 pub fn fields(house: &HouseDef) -> Vec<HouseField> {
     let mut out = vec![
-        field("wall_height", "wall height", format!("{:.1} m", house.walls.height)),
+        field(
+            "wall_height",
+            "wall height",
+            format!("{:.1} m", house.walls.height),
+        ),
         field("material", "walls", material_name(house.walls.material)),
     ];
     if let WallMaterial::WoodPanel(direction) = house.walls.material {
@@ -309,7 +405,11 @@ fn cycle<T: Copy + PartialEq>(options: &[T], current: T, forward: bool) -> T {
         return options.first().copied().unwrap_or(current);
     };
     let n = options.len();
-    let next = if forward { (i + 1) % n } else { (i + n - 1) % n };
+    let next = if forward {
+        (i + 1) % n
+    } else {
+        (i + n - 1) % n
+    };
     options.get(next).copied().unwrap_or(current)
 }
 
@@ -347,7 +447,11 @@ pub fn step(house: &mut HouseDef, id: &str, forward: bool) {
             }
         }
         "corners" => {
-            house.walls.corners = cycle(&[Corners::Flat, Corners::Planked], house.walls.corners, forward);
+            house.walls.corners = cycle(
+                &[Corners::Flat, Corners::Planked],
+                house.walls.corners,
+                forward,
+            );
         }
         "doors" => {
             house.doors.count = if forward {
@@ -366,7 +470,11 @@ pub fn step(house: &mut HouseDef, id: &str, forward: bool) {
             house.windows.width = nudge(house.windows.width, 0.1 * sign, 0.4, 3.0);
         }
         "roof" => {
-            house.roof.style = cycle(&[RoofStyle::Saddle, RoofStyle::Flat], house.roof.style, forward);
+            house.roof.style = cycle(
+                &[RoofStyle::Saddle, RoofStyle::Flat],
+                house.roof.style,
+                forward,
+            );
         }
         "pitch" => house.roof.pitch_deg = nudge(house.roof.pitch_deg, 5.0 * sign, 10.0, 60.0),
         "roof_material" => {
@@ -384,16 +492,115 @@ pub fn step(house: &mut HouseDef, id: &str, forward: bool) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::map::procgen::resolve_house;
+    use crate::map::MapFeatures;
+    use crate::map::procgen::WallCellKind;
 
     #[test]
     fn every_house_in_assets_parses_and_closes() {
         let files = house_files(HOUSE_DIR);
-        assert!(!files.is_empty(), "expected at least one house in {HOUSE_DIR}");
+        assert!(
+            !files.is_empty(),
+            "expected at least one house in {HOUSE_DIR}"
+        );
         for path in files {
             let house = HouseDef::load(&path).unwrap_or_else(|e| panic!("{e}"));
-            assert!(house.outline.len() >= 3, "{path}: an outline needs 3 corners");
+            assert!(
+                house.outline.len() >= 3,
+                "{path}: an outline needs 3 corners"
+            );
         }
+    }
+
+    #[test]
+    fn a_placed_outline_turns_clockwise_and_starts_at_its_tile() {
+        let house = HouseDef {
+            // 4 wide, 2 deep, with a notch.
+            outline: vec![(0, 0), (4, 0), (4, 2), (1, 2), (1, 1), (0, 1)],
+            ..HouseDef::default()
+        };
+        assert_eq!(house.placed_outline((3, 5), 0)[1], (7, 5));
+        let turned = house.placed_outline((3, 5), 1);
+        let max = |f: fn(&(i32, i32)) -> i32| turned.iter().map(f).max().unwrap();
+        let min = |f: fn(&(i32, i32)) -> i32| turned.iter().map(f).min().unwrap();
+        assert_eq!((min(|p| p.0), min(|p| p.1)), (3, 5));
+        assert_eq!((max(|p| p.0), max(|p| p.1)), (5, 9), "2 wide, 4 deep");
+        // The first edge ran east; a clockwise quarter turn sends it south.
+        let (a, b) = (turned[0], turned[1]);
+        assert_eq!((b.0 - a.0, b.1 - a.1), (0, 4));
+        assert_eq!(
+            house.placed_outline((0, 0), 4),
+            house.placed_outline((0, 0), 0)
+        );
+    }
+
+    #[test]
+    fn baking_stamps_each_house_and_reports_the_missing() {
+        let mut map = MapFile {
+            map_width: 12,
+            map_height: 8,
+            tiles: vec![vec![0; 12]; 8],
+            houses: vec![
+                HousePlacement {
+                    house: "box".into(),
+                    x: 2,
+                    y: 1,
+                    turns: 1,
+                },
+                HousePlacement {
+                    house: "gone".into(),
+                    ..HousePlacement::default()
+                },
+            ],
+            ..MapFile::default()
+        };
+        let boxy = HouseDef {
+            outline: vec![(0, 0), (6, 0), (6, 4), (0, 4)],
+            ..HouseDef::default()
+        };
+        let errors = bake_houses(&mut map, "wall.ron", |name| {
+            if name == "box" {
+                Ok(boxy.clone())
+            } else {
+                Err(format!("no house {name}"))
+            }
+        });
+        assert_eq!(errors, vec!["no house gone".to_string()]);
+        assert!(map.houses.is_empty(), "baked into the tiles");
+
+        let resolved = boxy.resolve_placed(
+            &HousePlacement {
+                house: "box".into(),
+                x: 2,
+                y: 1,
+                turns: 1,
+            },
+            "wall.ron",
+        );
+        // Turned: 4 wide from x 2, 6 deep from y 1.
+        assert!(
+            resolved
+                .wall_cells
+                .iter()
+                .all(|c| (2..6).contains(&c.x) && (1..7).contains(&c.y))
+        );
+        let walls = resolved
+            .wall_cells
+            .iter()
+            .filter(|c| c.kind != WallCellKind::Door)
+            .count();
+        assert_eq!(
+            map.placements.len(),
+            walls,
+            "a model on every wall and window tile"
+        );
+        let blocked = map
+            .tiles
+            .iter()
+            .flatten()
+            .filter(|&&t| t & MapFeatures::ImpassableForPlayers as u64 != 0)
+            .count();
+        assert_eq!(blocked, walls);
+        assert_eq!(map.tiles[0][0], 0, "outside the house is untouched");
     }
 
     #[test]
@@ -432,7 +639,10 @@ mod tests {
         step(&mut house, "material", false);
         step(&mut house, "material", false);
         assert!(matches!(house.walls.material, WallMaterial::WoodPanel(_)));
-        assert!(fields(&house).iter().any(|f| f.id == "panels"), "wood shows panels");
+        assert!(
+            fields(&house).iter().any(|f| f.id == "panels"),
+            "wood shows panels"
+        );
         step(&mut house, "panels", true);
         assert_eq!(
             house.walls.material,
@@ -448,10 +658,17 @@ mod tests {
         }
         assert!((house.walls.height - 10.0).abs() < 1e-4);
         step(&mut house, "wall_height", false);
-        assert!((house.walls.height - 9.9).abs() < 1e-4, "no float drift: {}", house.walls.height);
+        assert!(
+            (house.walls.height - 9.9).abs() < 1e-4,
+            "no float drift: {}",
+            house.walls.height
+        );
 
         step(&mut house, "roof", true);
-        assert!(!fields(&house).iter().any(|f| f.id == "pitch"), "a flat roof has no pitch");
+        assert!(
+            !fields(&house).iter().any(|f| f.id == "pitch"),
+            "a flat roof has no pitch"
+        );
         let chimney = house.roof.chimney;
         step(&mut house, "chimney", false);
         assert_ne!(house.roof.chimney, chimney);

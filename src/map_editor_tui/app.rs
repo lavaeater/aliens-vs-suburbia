@@ -96,6 +96,7 @@ impl App {
             tiles: vec![vec![TILE_VOID as u64; width]; height],
             decorations: vec![],
             placements: vec![],
+            houses: vec![],
             waves: vec![],
             stories: String::new(),
             loot: None,
