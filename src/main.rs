@@ -179,6 +179,7 @@ fn print_help() {
     );
     println!("                                             (--playground still works as an alias)");
     println!("  cargo run -- --asset-browser               Launch straight into the asset browser");
+    println!("  cargo run -- --house-editor                Launch straight into the house editor");
     println!("  cargo run -- --play                        Launch straight into a match (level 1)");
     println!("  cargo run --features map-editor -- --map-editor [--file <path>]");
     println!("                                             Launch the map editor TUI");
@@ -235,6 +236,7 @@ fn main() -> std::process::ExitCode {
     let straight_to_editor = args.iter().any(|a| a == "--editor" || a == "--playground");
     // Same idea for the asset browser: it is a tool screen you open, tweak in, and reload.
     let straight_to_asset_browser = args.iter().any(|a| a == "--asset-browser");
+    let straight_to_house_editor = args.iter().any(|a| a == "--house-editor");
     // And into a match, skipping the menu and the player setup (one keyboard player, with a
     // connected pad handed to them by `assign_gamepads`' fallback).
     let straight_to_game = args.iter().any(|a| a == "--play");
@@ -278,6 +280,15 @@ fn main() -> std::process::ExitCode {
             Startup,
             |mut next: ResMut<NextState<game_state::GameState>>| {
                 next.set(game_state::GameState::AssetBrowser);
+            },
+        );
+    }
+
+    if straight_to_house_editor {
+        app.add_systems(
+            Startup,
+            |mut next: ResMut<NextState<game_state::GameState>>| {
+                next.set(game_state::GameState::HouseEditor);
             },
         );
     }
