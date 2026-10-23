@@ -1,0 +1,15 @@
+// A trash bag: random loot, anything at all (`ItemKind::Loot`, `MapFile::loot`).
+// Rolled once when a player walks into the bag; a third of the time it is just trash.
+(
+    rolls: 1,
+    entries: [
+        Nothing(weight: 30.0),
+        Table(weight: 25.0, table: "small_ammo"),
+        Item(weight: 15.0, kind: HealthPickup(amount: 25.0), count: 1),
+        Item(weight: 5.0, kind: HealthPickup(amount: 50.0), count: 1),
+        Item(weight: 8.0, kind: Coins(value: 5), count: 2),
+        Item(weight: 4.0, kind: AmmoPickup(kind: Grenade, rounds: 1), count: 1),
+        Item(weight: 2.0, kind: AmmoPickup(kind: Molotov, rounds: 1), count: 1),
+        Table(weight: 11.0, table: "trash_gun"),
+    ],
+)

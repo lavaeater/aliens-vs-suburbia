@@ -95,6 +95,8 @@ pub struct AssetBrowserState {
     pub hardpoints: std::collections::HashMap<String, Hardpoint>,
     /// Torso-twist chain from the def. No browser UI yet; kept so export round-trips it.
     pub aim_bones: Vec<crate::assets::asset_definition::AimBone>,
+    /// Carried through like `aim_bones`: set in the character editor, not here.
+    pub lift: f32,
     /// The role currently being edited by the nudge controls.
     pub active_hardpoint_role: Option<String>,
     pub hardpoints_ui_dirty: bool,
@@ -173,6 +175,7 @@ impl Default for AssetBrowserState {
             attachment_ui_dirty: false,
             hardpoints: HashMap::new(),
             aim_bones: Vec::new(),
+            lift: 0.0,
             active_hardpoint_role: None,
             hardpoints_ui_dirty: false,
             show_hardpoints: true,
@@ -577,6 +580,7 @@ impl AssetBrowserState {
             // Not authored in the browser (yet) — carried through so re-exporting a def
             // doesn't drop a hand-written torso-twist chain.
             aim_bones: self.aim_bones.clone(),
+            lift: self.lift,
         };
         def.save();
     }
@@ -602,6 +606,7 @@ impl AssetBrowserState {
             self.attachments = def.attachments;
             self.hardpoints = def.hardpoints;
             self.aim_bones = def.aim_bones;
+            self.lift = def.lift;
             // Strip a stray "assets/" prefix on attachment model paths, same as sources.
             for a in &mut self.attachments {
                 if let Some(stripped) = a.model_path.strip_prefix("assets/") {

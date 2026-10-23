@@ -1,0 +1,12 @@
+// The gun found in a trash bag (`trash_bag.ron`). One you carry already turns into a
+// magazine of its ammo instead (`items::apply_pickup`).
+(
+    rolls: 1,
+    entries: [
+        Item(weight: 35.0, kind: WeaponPickup(def: "assets/defs/Pistol.ron"), count: 1),
+        Item(weight: 25.0, kind: WeaponPickup(def: "assets/defs/SMG.ron"), count: 1),
+        Item(weight: 20.0, kind: WeaponPickup(def: "assets/defs/Shotgun.ron"), count: 1),
+        Item(weight: 15.0, kind: WeaponPickup(def: "assets/defs/Assault Rifle.ron"), count: 1),
+        Item(weight: 5.0, kind: WeaponPickup(def: "assets/defs/Grenade Launcher.ron"), count: 1),
+    ],
+)

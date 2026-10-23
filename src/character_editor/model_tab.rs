@@ -8,6 +8,9 @@
 //!   A character is the exception: in game it is sized by the model panel (F2), and its
 //!   def's scale is not read, so the tab says so rather than offering a control that does
 //!   nothing.
+//! - **Floor**: the def's `lift`, for a model whose origin is not at its base: "sit on
+//!   floor" sets it from the lowest vertex in the file, nudges move it by centimetres.
+//!   Not for characters, which stand on their collider.
 //! - **Hidden nodes**: every mesh node in the file, click to hide or show it. A character
 //!   respawns to show the change (`doc::needs_respawn`); a prop updates in place
 //!   ([`apply_prop_hidden_nodes`]).
@@ -51,6 +54,16 @@ const SCALE_STEPS: [(&str, f32); 6] = [
 
 /// Heights offered as targets, metres.
 const TARGET_HEIGHTS: [f32; 7] = [0.25, 0.5, 1.0, 1.5, 1.8, 2.0, 3.0];
+
+/// Lift nudges offered as buttons, metres.
+const LIFT_STEPS: [(&str, f32); 4] = [("-5cm", -0.05), ("-1cm", -0.01), ("+1cm", 0.01), ("+5cm", 0.05)];
+
+/// Raise `def` by `metres` in the world; the lift itself is kept in model units.
+pub fn nudge_lift(def: &mut AssetDefinition, metres: f32) {
+    if def.scale > 0.0 {
+        def.lift += metres / def.scale;
+    }
+}
 
 /// Measurements below this are noise from a model still loading.
 const MIN_HEIGHT: f32 = 1e-3;
@@ -235,6 +248,9 @@ pub fn rebuild_model_tab(
         }
 
         spawn_size(parent, &def, subject, measure_height, at_scale);
+        if scale_is_used(subject) {
+            spawn_floor(parent, &def, subject);
+        }
         spawn_hidden_nodes(parent, &def, info.as_ref(), subject);
     });
 }
@@ -320,6 +336,48 @@ fn spawn_size(
     });
 }
 
+fn spawn_floor(parent: &mut ChildSpawnerCommands, def: &AssetDefinition, subject: Subject) {
+    heading(parent, "FLOOR");
+    text(
+        parent,
+        format!("lift {:.3} m  ({:.4} model units)", def.lift_world(), def.lift),
+        12.0,
+        INFO,
+    );
+    strip(parent).with_children(|strip| {
+        row(strip, "sit on floor".to_string(), false, BUTTON).observe(
+            |_: On<Activate>, focus: Res<EditorFocus>, mut docs: SideDocs| {
+                if let Some(def) = docs.subject_mut(focus.subject) {
+                    if let Some(lift) = gltf_info::floor_lift(&def.model_path) {
+                        def.lift = lift;
+                    } else {
+                        warn!("cannot read {} to find its base", def.model_path);
+                    }
+                }
+            },
+        );
+        for (label, metres) in LIFT_STEPS {
+            row(strip, label.to_string(), false, BUTTON).observe(
+                move |_: On<Activate>, focus: Res<EditorFocus>, mut docs: SideDocs| {
+                    if let Some(def) = docs.subject_mut(focus.subject) {
+                        nudge_lift(def, metres);
+                    }
+                },
+            );
+        }
+        row(strip, "reset".to_string(), false, BUTTON).observe(
+            |_: On<Activate>, focus: Res<EditorFocus>, mut docs: SideDocs| {
+                if let Some(def) = docs.subject_mut(focus.subject) {
+                    def.lift = 0.0;
+                }
+            },
+        );
+    });
+    if subject == Subject::Weapon {
+        text(parent, "used when the gun lies on the ground", 10.0, NOTE);
+    }
+}
+
 fn spawn_hidden_nodes(
     parent: &mut ChildSpawnerCommands,
     def: &AssetDefinition,
@@ -375,6 +433,17 @@ mod tests {
         assert_eq!(scale_for_height(1.0, 2.0, 1.0), Some(0.5));
         // Measured at scale 0.5 standing 1 m: 3 m wants 1.5.
         assert_eq!(scale_for_height(0.5, 1.0, 3.0), Some(1.5));
+    }
+
+    #[test]
+    fn a_lift_nudge_is_metres_whatever_the_scale() {
+        let mut def = AssetDefinition {
+            scale: 0.5,
+            ..Default::default()
+        };
+        nudge_lift(&mut def, 0.05);
+        assert!((def.lift - 0.1).abs() < 1e-6, "model units: {}", def.lift);
+        assert!((def.lift_world() - 0.05).abs() < 1e-6);
     }
 
     #[test]

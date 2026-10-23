@@ -87,6 +87,8 @@ pub struct MapEditorState {
     /// The loaded map's story file (`MapFile::stories`); not editable here, but kept so a
     /// save does not drop it.
     pub stories: String,
+    /// The loaded map's random loot (`MapFile::loot`); kept like `stories`.
+    pub loot: Option<crate::general::components::map_components::LootSpread>,
     pub width: usize,
     pub height: usize,
     /// Row-major tile grid; each cell is a `BitFlags<MapFeatures>` stored as u64.
@@ -152,6 +154,7 @@ impl Default for MapEditorState {
         let mut state = Self {
             map_name: "new_map".to_string(),
             stories: String::new(),
+            loot: None,
             width,
             height,
             tiles: vec![vec![TILE_SPECIAL_FLOOR; width]; height],
@@ -497,6 +500,7 @@ impl MapEditorState {
             placements: self.placements.clone(),
             waves: self.waves.clone(),
             stories: self.stories.clone(),
+            loot: self.loot.clone(),
         }
     }
 
@@ -537,6 +541,7 @@ impl MapEditorState {
         self.placements = map.placements;
         self.waves = map.waves;
         self.stories = map.stories;
+        self.loot = map.loot;
         self.cursor = (
             self.cursor.0.clamp(0, self.width as i32 - 1),
             self.cursor.1.clamp(0, self.height as i32 - 1),

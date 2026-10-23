@@ -203,6 +203,11 @@ pub enum ItemKind {
     Key {
         id: String,
     },
+    /// A bag of something: walking into it rolls the loot table (`assets/loot/<table>.ron`)
+    /// and spills what comes out around it. The random loot of a map (`MapFile::loot`).
+    Loot {
+        table: String,
+    },
 }
 
 impl ItemKind {
@@ -217,6 +222,7 @@ impl ItemKind {
                 .map_or_else(|| "weapon".into(), |s| s.to_string_lossy().into_owned()),
             Self::Coins { value } => format!("{value} coins"),
             Self::Key { id } => format!("key {id}"),
+            Self::Loot { table } => format!("loot ({table})"),
         }
     }
 
@@ -508,6 +514,14 @@ pub struct AssetDefinition {
     /// Empty = use the default mixamo-style spine chain.
     #[serde(default)]
     pub aim_bones: Vec<AimBone>,
+    /// How far to raise the model so it stands on the floor, in the model's own units
+    /// (so it scales with `scale`; [`Self::lift_world`] is the distance in metres). For
+    /// models whose origin is not at their base, such as a bag centred on its middle.
+    /// Applied wherever the model is put on the ground: map placements, random loot
+    /// bags, item drops and the character editor's prop. The editor's Model tab can set
+    /// it from the mesh ("sit on floor").
+    #[serde(default)]
+    pub lift: f32,
 }
 
 /// One link in the torso-twist chain: a bone name and its share of the twist.
@@ -530,11 +544,17 @@ impl Default for AssetDefinition {
             attachments: Vec::new(),
             hardpoints: HashMap::new(),
             aim_bones: Vec::new(),
+            lift: 0.0,
         }
     }
 }
 
 impl AssetDefinition {
+    /// [`Self::lift`] in metres, at the def's scale.
+    pub fn lift_world(&self) -> f32 {
+        self.lift * self.scale
+    }
+
     pub fn def_path(model_path: &str) -> std::path::PathBuf {
         let stem = std::path::Path::new(model_path)
             .file_stem()

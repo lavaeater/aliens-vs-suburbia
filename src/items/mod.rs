@@ -4,7 +4,9 @@
 //! three places: map placements (`map_systems` tags `Item`-typed defs), loot drops and
 //! dropped inventory (both via [`SpawnItem`], which builds a visual for the kind). Players
 //! collect within their `PickupRange`; what a pickup *does* is one `match` in
-//! [`pickup_items`], and [`ItemPickedUp`] lets the HUD/SFX react.
+//! [`apply_pickup`], and [`ItemPickedUp`] lets the HUD/SFX react. A loot bag
+//! (`ItemKind::Loot`) is the one item that turns into others: [`pickup_items`] rolls its
+//! table and spills the drops around where it lay.
 
 use avian3d::prelude::Position;
 use bevy::prelude::*;
@@ -12,7 +14,9 @@ use bevy::prelude::*;
 use crate::assets::asset_definition::{AssetDefinition, ItemKind, ModelType};
 use crate::game_state::GameState;
 use crate::general::components::Health;
+use crate::general::components::map_components::default_loot_bags;
 use crate::general::systems::coin_system::{Coin, PickupRange, TeamWallet};
+use crate::loot::{LootTables, scatter, unit_random};
 use crate::player::ammo::AmmoPouch;
 use crate::player::components::{Player, PlayerDead};
 use crate::player::systems::loadout::{SwitchWeapon, WeaponSelect, Weapons};
@@ -58,8 +62,9 @@ const BOB_HEIGHT: f32 = 0.08;
 const BOB_HZ: f32 = 1.2;
 const SPIN_RADS_PER_SEC: f32 = 1.5;
 
-/// Build the entity for a [`SpawnItem`]: a gun uses its own def's model, everything else
-/// gets a small coloured primitive so it still reads without art.
+/// Build the entity for a [`SpawnItem`]: a gun uses its own def's model and a loot bag
+/// the default bag's, everything else gets a small coloured primitive so it still reads
+/// without art.
 pub fn spawn_items(
     mut requests: MessageReader<SpawnItem>,
     mut commands: Commands,
@@ -78,18 +83,27 @@ pub fn spawn_items(
             Transform::from_translation(req.position + Vec3::Y * 0.25),
         );
 
-        let weapon_def = match &req.kind {
+        let model_def = match &req.kind {
             ItemKind::WeaponPickup { def } => AssetDefinition::load_from_def_path(def)
                 .filter(|d| matches!(d.model_type, ModelType::Weapon(_))),
+            ItemKind::Loot { .. } => default_loot_bags()
+                .first()
+                .and_then(|bag| AssetDefinition::load_from_def_path(bag)),
             _ => None,
         };
-        if let Some(def) = weapon_def {
+        if let Some(def) = model_def {
             let scene = asset_server
                 .load(bevy::gltf::GltfAssetLabel::Scene(0).from_asset(def.model_path.clone()));
+            // A bag lies on the ground; a gun hovers like the other pickups.
+            let hover = if matches!(req.kind, ItemKind::Loot { .. }) {
+                0.0
+            } else {
+                0.25
+            };
             commands
                 .spawn((base, bevy::world_serialization::WorldAssetRoot(scene)))
                 .insert(
-                    Transform::from_translation(req.position + Vec3::Y * 0.25)
+                    Transform::from_translation(req.position + Vec3::Y * (hover + def.lift_world()))
                         .with_scale(Vec3::splat(def.scale)),
                 );
             continue;
@@ -132,6 +146,7 @@ fn primitive_for(kind: &ItemKind, meshes: &mut Assets<Mesh>) -> (Color, Handle<M
             Color::srgb(0.6, 0.6, 0.6),
             meshes.add(Cuboid::new(0.2, 0.2, 0.2)),
         ),
+        ItemKind::Loot { .. } => (Color::srgb(0.15, 0.15, 0.17), meshes.add(Sphere::new(0.2))),
     }
 }
 
@@ -180,6 +195,7 @@ pub fn apply_pickup(
             PickupOutcome::Consumed
         }
         ItemKind::Key { .. } => PickupOutcome::Consumed,
+        ItemKind::Loot { .. } => PickupOutcome::Opened,
     }
 }
 
@@ -190,9 +206,11 @@ pub enum PickupOutcome {
     Consumed,
     /// Consumed and the gun went into this loadout slot; switch to it.
     NewWeapon(usize),
+    /// A loot bag: gone, and its table is rolled and spilled where it lay.
+    Opened,
 }
 
-#[allow(clippy::type_complexity)]
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn pickup_items(
     mut commands: Commands,
     mut wallet: ResMut<TeamWallet>,
@@ -210,7 +228,10 @@ pub fn pickup_items(
     items: Query<(Entity, &GlobalTransform, &Item), With<Pickup>>,
     mut picked_mw: MessageWriter<ItemPickedUp>,
     mut switch_mw: MessageWriter<SwitchWeapon>,
+    mut spawn_mw: MessageWriter<SpawnItem>,
+    tables: Option<Res<LootTables>>,
     mut taken: Local<Vec<Entity>>,
+    mut seed: Local<u32>,
 ) {
     taken.clear();
     for (player, pos, range, mut health, mut pouch, mut loadout) in players.iter_mut() {
@@ -231,6 +252,13 @@ pub fn pickup_items(
                     select: WeaponSelect::Slot(slot),
                 });
             }
+            if let (ItemKind::Loot { table }, Some(tables)) = (&item.0, tables.as_deref()) {
+                let drops = tables.roll(table, &mut || unit_random(&mut seed));
+                // On the floor under the bag, not at the bag's (lifted) origin.
+                let mut at = item_gt.translation();
+                at.y = pos.0.y.min(at.y);
+                spawn_mw.write_batch(scatter(at, drops, 0));
+            }
             taken.push(item_entity);
             commands.entity(item_entity).despawn();
             picked_mw.write(ItemPickedUp {
@@ -241,11 +269,14 @@ pub fn pickup_items(
     }
 }
 
-/// Spin and bob so pickups read as collectable.
-pub fn bob_pickups(time: Res<Time>, mut pickups: Query<(&Pickup, &mut Transform), With<Item>>) {
+/// Spin and bob so pickups read as collectable. Loot bags just lie there.
+pub fn bob_pickups(time: Res<Time>, mut pickups: Query<(&Pickup, &Item, &mut Transform)>) {
     let t = time.elapsed_secs();
     let dt = time.delta_secs();
-    for (pickup, mut transform) in pickups.iter_mut() {
+    for (pickup, item, mut transform) in pickups.iter_mut() {
+        if matches!(item.0, ItemKind::Loot { .. }) {
+            continue;
+        }
         transform.rotate_y(SPIN_RADS_PER_SEC * dt);
         let target_offset =
             ((t * BOB_HZ * std::f32::consts::TAU) + pickup.phase).sin() * BOB_HEIGHT;
@@ -343,6 +374,7 @@ mod tests {
         app.init_resource::<TeamWallet>();
         app.add_message::<ItemPickedUp>();
         app.add_message::<SwitchWeapon>();
+        app.add_message::<SpawnItem>();
         app.add_systems(Update, pickup_items);
         app.world_mut().spawn((
             Player,

@@ -1,12 +1,14 @@
 //! A model opened on its own — an enemy, a tower, a barrel — standing in the arena.
 //!
 //! The character stays in the world but is hidden and held still (Studio is forced on for
-//! a prop, see `doc::Docs::open`), and the prop is spawned where its feet were. Keeping
+//! a prop, see `doc::Docs::open`), and the prop is spawned under it, on the map's floor
+//! (raised by the def's `lift`). Keeping
 //! the character means coming back to it is instant and keeps its position, and it is the
 //! same entity every system already knows how to handle.
 //!
 //! The prop is a bare scene: no physics, no AI, no animation graph. It is there to be
-//! looked at, sized and given hardpoints. Respawned whenever its model or scale changes.
+//! looked at, sized and given hardpoints. Respawned whenever its model, scale or lift
+//! changes.
 
 use bevy::camera::primitives::Aabb;
 use bevy::prelude::*;
@@ -14,6 +16,7 @@ use bevy::world_serialization::WorldAssetRoot;
 
 use crate::character_editor::debug::EditorOverlays;
 use crate::character_editor::doc::{EditorFocus, PropDoc, Subject};
+use crate::general::systems::map_systems::TileDefinitions;
 use crate::player::components::Player;
 
 /// The spawned prop. Carries what it was spawned from, so a change can be spotted.
@@ -21,10 +24,9 @@ use crate::player::components::Player;
 pub struct EditorProp {
     pub model_path: String,
     pub scale: f32,
+    /// The def's lift in metres, so standing it on the floor shows at once.
+    pub lift: f32,
 }
-
-/// Half the player's collider height: from its body centre down to its feet.
-const PLAYER_HALF_HEIGHT: f32 = 0.5;
 
 /// What should be standing in the arena: the prop doc's model, while a prop is the subject.
 pub fn wanted_prop(focus: &EditorFocus, doc: &PropDoc) -> Option<EditorProp> {
@@ -35,6 +37,7 @@ pub fn wanted_prop(focus: &EditorFocus, doc: &PropDoc) -> Option<EditorProp> {
     Some(EditorProp {
         model_path: def.model_path.clone(),
         scale: def.scale,
+        lift: def.lift_world(),
     })
 }
 
@@ -46,6 +49,7 @@ pub fn sync_prop(
     asset_server: Res<AssetServer>,
     props: Query<(Entity, &EditorProp)>,
     players: Query<&GlobalTransform, With<Player>>,
+    tile_defs: Option<Res<TileDefinitions>>,
 ) {
     let wanted = wanted_prop(&focus, &doc);
     let current = props.iter().next();
@@ -59,13 +63,19 @@ pub fn sync_prop(
         return;
     };
 
-    let feet = players.iter().next().map_or(Vec3::ZERO, |player| {
-        player.translation() - Vec3::Y * PLAYER_HALF_HEIGHT
-    });
+    // Beside the player, on the floor at the height map placements stand on, so what
+    // looks right here looks right in a level.
+    let mut feet = players
+        .iter()
+        .next()
+        .map_or(Vec3::ZERO, GlobalTransform::translation);
+    if let Some(tiles) = tile_defs {
+        feet.y = tiles.floor_level + tiles.tile_depth;
+    }
     let scene = asset_server.load(GltfAssetLabel::Scene(0).from_asset(prop.model_path.clone()));
     commands.spawn((
         WorldAssetRoot(scene),
-        Transform::from_translation(feet).with_scale(Vec3::splat(prop.scale)),
+        Transform::from_translation(feet + Vec3::Y * prop.lift).with_scale(Vec3::splat(prop.scale)),
         prop,
     ));
 }
@@ -179,6 +189,7 @@ mod tests {
             Some(EditorProp {
                 model_path: "packs/x/Alien.glb".to_string(),
                 scale: 0.5,
+                lift: 0.0,
             })
         );
         focus.subject = Subject::Character;
@@ -197,5 +208,17 @@ mod tests {
         let before = wanted_prop(&focus, &doc);
         doc.def.as_mut().unwrap().scale = 1.0;
         assert_ne!(wanted_prop(&focus, &doc), before);
+    }
+
+    /// Same for the lift: it stands higher at once, in metres at the def's scale.
+    #[test]
+    fn a_lift_edit_raises_the_prop() {
+        let mut doc = enemy_doc();
+        let focus = EditorFocus {
+            subject: Subject::Prop,
+            ..Default::default()
+        };
+        doc.def.as_mut().unwrap().lift = 2.0;
+        assert_eq!(wanted_prop(&focus, &doc).map(|p| p.lift), Some(1.0));
     }
 }

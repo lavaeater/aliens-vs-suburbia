@@ -1,0 +1,16 @@
+(
+    model_path: "packs/post-apocalypse/Trash Bags.glb",
+    scale: 0.4432624,
+    model_type: Item((
+        kind: Loot(
+            table: "trash_bag",
+        ),
+    )),
+    hidden_nodes: [],
+    animations: {},
+    animation_sources: [],
+    attachments: [],
+    hardpoints: {},
+    aim_bones: [],
+    lift: 0.0,
+)

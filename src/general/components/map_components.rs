@@ -45,6 +45,46 @@ pub struct DecorationItem {
     pub scale: f32,
 }
 
+/// Random loot bags scattered over the open floor when the map loads
+/// (`loot::bags`): `min..=max` bags for every `per_tiles` open tiles, each rolling
+/// `table` when opened. Written `loot: 1-5 per 20` in a `.map`.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct LootSpread {
+    pub min: u32,
+    pub max: u32,
+    pub per_tiles: u32,
+    /// The loot table each bag rolls (`assets/loot/<table>.ron`).
+    #[serde(default = "default_loot_table")]
+    pub table: String,
+    /// The defs a bag is drawn with, one picked at random per bag (Item defs; their own
+    /// kind is ignored).
+    #[serde(default = "default_loot_bags")]
+    pub bags: Vec<String>,
+}
+
+pub fn default_loot_table() -> String {
+    crate::loot::DEFAULT_BAG_TABLE.into()
+}
+
+pub fn default_loot_bags() -> Vec<String> {
+    vec![
+        "assets/defs/Trash Bag.ron".into(),
+        "assets/defs/Trash Bags.ron".into(),
+    ]
+}
+
+impl Default for LootSpread {
+    fn default() -> Self {
+        Self {
+            min: 1,
+            max: 3,
+            per_tiles: 50,
+            table: default_loot_table(),
+            bags: default_loot_bags(),
+        }
+    }
+}
+
 const fn default_scale() -> f32 {
     1.0
 }
@@ -88,6 +128,9 @@ pub struct MapFile {
     /// the map loads. Empty = none.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub stories: String,
+    /// Random loot bags on the floor. `None` = none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub loot: Option<LootSpread>,
 }
 
 #[derive(Component, Default, Reflect)]

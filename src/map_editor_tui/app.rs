@@ -98,6 +98,7 @@ impl App {
             placements: vec![],
             waves: vec![],
             stories: String::new(),
+            loot: None,
         }
     }
 

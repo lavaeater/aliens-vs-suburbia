@@ -8,6 +8,10 @@
 //!
 //! An entity drops loot by carrying [`LootDrop`] naming its table; [`spawn_loot_on_death`]
 //! rolls it the frame its `Health` hits zero and asks `items` to place the results.
+//! A loot bag (`ItemKind::Loot`) rolls its table when a player walks into it; [`bags`]
+//! scatters them over a map.
+
+pub mod bags;
 
 use std::collections::HashMap;
 
@@ -71,6 +75,9 @@ impl Default for LootTable {
         }
     }
 }
+
+/// The table a loot bag rolls unless it names another: anything at all.
+pub const DEFAULT_BAG_TABLE: &str = "trash_bag";
 
 /// Every table found under `assets/loot`, by file stem.
 #[derive(Resource, Debug, Default)]
@@ -182,7 +189,11 @@ impl Plugin for LootPlugin {
         // `spawn_loot_on_death` is scheduled by `GamePlugin`, where it can be ordered
         // against the death/despawn systems; adding it here too would make the
         // ordering ambiguous.
-        app.insert_resource(LootTables::load_dir("assets/loot"));
+        app.insert_resource(LootTables::load_dir("assets/loot"))
+            .add_systems(
+                Update,
+                bags::spawn_loot_bags.run_if(in_state(crate::game_state::GameState::InGame)),
+            );
     }
 }
 
@@ -214,23 +225,33 @@ pub fn spawn_loot_on_death(
             .map(|p| p.0)
             .or_else(|| transform.map(|t| t.translation))
             .unwrap_or(Vec3::ZERO);
-        let mut rng = || {
-            *seed = xorshift(seed.wrapping_add(0x9E37_79B9));
-            (*seed >> 8) as f32 / (1u32 << 24) as f32
-        };
-        let drops = tables.roll(&drop.0, &mut rng);
-        for (i, (kind, count)) in drops.into_iter().enumerate() {
-            for j in 0..count {
-                let n = i * 3 + j as usize;
-                let angle = n as f32 * 2.4;
-                let radius = if n == 0 { 0.0 } else { 0.35 + 0.1 * n as f32 };
-                spawn_mw.write(SpawnItem {
-                    kind: kind.clone(),
-                    position: origin + Vec3::new(angle.cos() * radius, 0.0, angle.sin() * radius),
-                });
-            }
+        let drops = tables.roll(&drop.0, &mut || unit_random(&mut seed));
+        spawn_mw.write_batch(scatter(origin, drops, 0));
+    }
+}
+
+/// Lay rolled drops out around `origin` on a widening spiral so a pile does not stack.
+/// The first `skip` spots are left free (the middle, for a bag that is still there).
+pub fn scatter(origin: Vec3, drops: Vec<(ItemKind, u32)>, skip: usize) -> Vec<SpawnItem> {
+    let mut out = Vec::new();
+    for (i, (kind, count)) in drops.into_iter().enumerate() {
+        for j in 0..count {
+            let n = i * 3 + j as usize + skip;
+            let angle = n as f32 * 2.4;
+            let radius = if n == 0 { 0.0 } else { 0.35 + 0.1 * n as f32 };
+            out.push(SpawnItem {
+                kind: kind.clone(),
+                position: origin + Vec3::new(angle.cos() * radius, 0.0, angle.sin() * radius),
+            });
         }
     }
+    out
+}
+
+/// The next number in `0..1` from a xorshift stream kept in `seed`.
+pub fn unit_random(seed: &mut u32) -> f32 {
+    *seed = xorshift(seed.wrapping_add(0x9E37_79B9));
+    (*seed >> 8) as f32 / (1u32 << 24) as f32
 }
 
 fn xorshift(mut x: u32) -> u32 {
@@ -343,12 +364,25 @@ mod tests {
     }
 
     #[test]
+    fn a_scattered_pile_does_not_stack_and_can_leave_the_middle_free() {
+        let drops = vec![(ItemKind::Coins { value: 1 }, 2)];
+        let all = scatter(Vec3::ZERO, drops.clone(), 0);
+        assert_eq!(all.len(), 2);
+        assert_eq!(all[0].position, Vec3::ZERO);
+        assert!(all[1].position.length() > 0.3);
+        let around = scatter(Vec3::ZERO, drops, 1);
+        assert!(around.iter().all(|s| s.position.length() > 0.3));
+    }
+
+    #[test]
     fn the_shipped_tables_parse() {
         let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/loot");
         let tables = LootTables::load_dir(dir);
-        assert!(
-            tables.0.contains_key("alien"),
-            "assets/loot/alien.ron must exist and parse"
-        );
+        for name in ["alien", DEFAULT_BAG_TABLE] {
+            assert!(
+                tables.0.contains_key(name),
+                "assets/loot/{name}.ron must exist and parse"
+            );
+        }
     }
 }

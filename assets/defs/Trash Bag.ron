@@ -2,7 +2,9 @@
     model_path: "packs/post-apocalypse/Trash Bag.glb",
     scale: 0.4432624,
     model_type: Item((
-        kind: Decorative,
+        kind: Loot(
+            table: "trash_bag",
+        ),
     )),
     hidden_nodes: [],
     animations: {},
@@ -10,4 +12,5 @@
     attachments: [],
     hardpoints: {},
     aim_bones: [],
+    lift: 0.0,
 )

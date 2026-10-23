@@ -272,6 +272,17 @@ pub fn mesh_points(model_path: &str) -> Option<Vec<Vec3>> {
     Some(points)
 }
 
+/// How far the model must rise for its lowest vertex to touch the floor, in model units:
+/// the value for `AssetDefinition::lift`. Negative for a model that starts above its
+/// origin (it is lowered onto the floor).
+pub fn floor_lift(model_path: &str) -> Option<f32> {
+    let lowest = mesh_points(model_path)?
+        .into_iter()
+        .map(|p| p.y)
+        .reduce(f32::min)?;
+    Some(-lowest)
+}
+
 /// The parsed document and its buffers, for a model path as stored in a def.
 fn read_document(model_path: &str) -> Option<(serde_json::Value, Vec<Vec<u8>>)> {
     let path = Path::new(ASSET_ROOT).join(model_path);
@@ -674,5 +685,21 @@ mod tests {
             left.z.abs() < 10.0 && right.z.abs() < 10.0,
             "{left} / {right}"
         );
+    }
+
+    /// The bag that motivated `lift`: its origin is in its middle, so it needs raising
+    /// by about half its height to sit on the floor.
+    #[test]
+    fn the_trash_bag_is_lifted_onto_the_floor() {
+        let lift = floor_lift("packs/post-apocalypse/Trash Bag.glb").expect("the bag is tracked");
+        let top = mesh_points("packs/post-apocalypse/Trash Bag.glb")
+            .unwrap()
+            .into_iter()
+            .map(|p| p.y)
+            .reduce(f32::max)
+            .unwrap();
+        assert!(lift > 0.0, "hangs below its origin: {lift}");
+        assert!(top + lift > 0.0, "and is above the floor once lifted");
+        println!("trash bag lift {lift}, height {}", top + lift);
     }
 }
