@@ -103,8 +103,10 @@ pub fn spawn_items(
             commands
                 .spawn((base, bevy::world_serialization::WorldAssetRoot(scene)))
                 .insert(
-                    Transform::from_translation(req.position + Vec3::Y * (hover + def.lift_world()))
-                        .with_scale(Vec3::splat(def.scale)),
+                    Transform::from_translation(
+                        req.position + Vec3::Y * (hover + def.lift_world()),
+                    )
+                    .with_scale(Vec3::splat(def.scale)),
                 );
             continue;
         }

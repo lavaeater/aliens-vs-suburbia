@@ -1,7 +1,7 @@
 use crate::game_state::GameState;
 use crate::map_editor::grid::{
-    follow_mouse, handle_grid_click, rebuild_grid, spawn_grid_camera, update_house_preview,
-    update_hover_highlight,
+    follow_mouse, handle_grid_click, rebuild_grid, spawn_grid_camera, update_house_ghost,
+    update_house_preview, update_hover_highlight,
 };
 use crate::map_editor::state::MapEditorState;
 use crate::map_editor::ui::{
@@ -10,7 +10,12 @@ use crate::map_editor::ui::{
 };
 use crate::ui::spawn_ui::cleanup_state;
 use bevy::app::{App, Plugin, Update};
-use bevy::prelude::{IntoScheduleConfigs, OnEnter, OnExit, in_state};
+use bevy::prelude::{IntoScheduleConfigs, OnEnter, OnExit, ResMut, in_state};
+
+/// Houses saved in the house editor since the last visit show up in the House tab.
+fn reload_houses(mut state: ResMut<MapEditorState>) {
+    state.reload_houses();
+}
 
 pub struct MapEditorPlugin;
 
@@ -19,7 +24,7 @@ impl Plugin for MapEditorPlugin {
         app.init_resource::<MapEditorState>()
             .add_systems(
                 OnEnter(GameState::MapEditor),
-                (spawn_map_editor_ui, spawn_grid_camera),
+                (spawn_map_editor_ui, spawn_grid_camera, reload_houses),
             )
             .add_systems(OnExit(GameState::MapEditor), cleanup_state)
             .add_systems(
@@ -30,6 +35,7 @@ impl Plugin for MapEditorPlugin {
                     handle_grid_click,
                     update_hover_highlight,
                     update_house_preview,
+                    update_house_ghost,
                     rebuild_grid,
                     rebuild_palette,
                     rebuild_wave_list,

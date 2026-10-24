@@ -29,10 +29,10 @@ use lava_ui_builder::crawl::{
 };
 
 use crate::control::bindings::{ControlBindings, PlayerAction};
-use crate::game_state::{GameState, PauseState};
 use crate::facts::facts_resource::Facts;
 use crate::facts::keys;
 use crate::facts::messages::StoryEffect;
+use crate::game_state::{GameState, PauseState};
 
 /// Where the crawl files live.
 pub const CRAWL_DIR: &str = "assets/crawls";
@@ -264,7 +264,11 @@ mod tests {
         assert_eq!(spec.id, "letter");
         assert_eq!(spec.style, CrawlStyle::Typewriter);
         assert!(!spec.modal);
-        assert_eq!(spec.speed, CrawlSpec::default().speed, "defaults fill the rest");
+        assert_eq!(
+            spec.speed,
+            CrawlSpec::default().speed,
+            "defaults fill the rest"
+        );
     }
 
     #[test]

@@ -1,6 +1,8 @@
 #### Generating a Map
 What about drawing a map as a 2D image, a classic, and using that to algorithmically construct the map? Or rather, why not have a data-driven map? Basically the user could draw polygons on some kind of 2D plane. These polygons can then be imbued with properties or components if you will, that define the settings to create the 3D model for the object on the map that the polygon represents. The map definition can then be saved as a ron- or json-file.
+
 ##### Example - the House
+
 A house is a polygon that defines the base or foundation of the house. To construct the house we use this polygon to create the walls. Walls are simply the foundation / base of the house plus height - in the simplest case. Variation on the walls is accomplished by applying rules and parameters to it, controlling number and size of windows, for example.
 Top level house parameters could be a material, indicators on wether the corners of the house are flat (as in a stone house) or have wind protective planks on the outside. If the material for walls is wood panel it could be defined wether the panels are horizontal or vertical. Top level is then also number of doors going into the house (at least one, normally).
 Then going from top down, wall definitions would be their height and then how many windows, size of windows - so the number of windows would then vary so that we define it as the wall having 1 window per 4 meters, max, so a short 4-metre wall would have 0-1 windows, the long side of the house would probably have 2-4 windows plus one of the required doors.
@@ -23,7 +25,7 @@ This is a plan for turning the sketch above into something buildable, grounded i
 
 ### Why not throw out the tile grid
 
-`MapFile` (`../../src/general/components/map_components.rs`) is tile-based: a `Vec<Vec<u64>>` of `BitFlags<MapFeatures>` for pathfinding/collision, plus `placements: Vec<TilePlacement>` for def-driven models on tiles, plus free-floating `decorations`. `map_editor/` already has a working grid painter (palette tabs, brush rotation, `place_at`/`erase_at`, save/load) and `map/map_generator.rs` + `map/scatter.rs` already do seeded procedural generation and prop scattering onto that grid.
+`MapFile` (`../src/general/components/map_components.rs`) is tile-based: a `Vec<Vec<u64>>` of `BitFlags<MapFeatures>` for pathfinding/collision, plus `placements: Vec<TilePlacement>` for def-driven models on tiles, plus free-floating `decorations`. `map_editor/` already has a working grid painter (palette tabs, brush rotation, `place_at`/`erase_at`, save/load) and `map/map_generator.rs` + `map/scatter.rs` already do seeded procedural generation and prop scattering onto that grid.
 
 The polygon idea shouldn't replace this — it should sit **above** it as an authoring layer. A polygon-defined house is a generator that resolves down to ordinary `TilePlacement`s (for the footprint/walls, snapped to the grid) plus free-form decorations/meshes (for roofs, trim, windows) that get baked into a `MapFile`. That keeps the runtime (`map_loader`, pathfinding, `MapGraph`) completely untouched — it only ever sees tiles and placements, same as today.
 
@@ -63,20 +65,3 @@ Given the codebase already has both a working tile editor and a two-pane live-pr
 4. Add roof/chimney as decorations.
 5. Add `ZoneSpec` + zone-scoped scatter, reusing `scatter.rs`'s prop tables.
 6. Only then consider the standalone polygon-canvas editor, if the in-place brush proves too limiting.
-
----
-
-## Thoughts: Styling the Game and Shaders
-
-The doc's instinct (flatten materials, keep shadows but make them starker, cut the palette) is already mostly *available* today, not hypothetical — `bevy_wind_waker_shader` (vendored submodule, already a dependency in `../../Cargo.toml` and wired up in `src/main.rs` via `FlatShaderPlugin`) ships exactly this:
-
-- `FlatShaderBuilder::shadow_darkness(0.0)` — pushes shadow areas toward pure black without touching lit-area color, which is precisely "keep shadows, make them entirely black."
-- `FlatShaderBuilder::highlight_tint(Color::WHITE)` (the default) already avoids adding any highlight tint on top of the base texture — "remove highlights entirely" is close to free; if any residual specular pop is visible it's coming from Bevy's underlying PBR `StandardMaterial` still contributing specular highlights *before* the flat shader's shadow/highlight mix is applied, since the flat shader multiplies onto the lit result rather than replacing the lighting model. Worth checking whether PBR's specular term needs zeroing (e.g. forcing `perceptual_roughness` high / `metallic` 0 on materials the shader touches) to fully kill specular pop, separate from the toon banding.
-- `FlatShaderBuilder::color_levels(n)` — this *is* the palette reduction / posterization knob already ("6.0 gives a 216-color palette... lower values give a more extreme poster-art look"). Dropping this from the default 16 down to 4-6 is a one-line experiment (`FlatShaderPlugin::global_with(FlatShaderBuilder::default().color_levels(4.0).shadow_darkness(0.0).build())` in `main.rs`) that directly tests both ideas in the doc at once, with no new shader code.
-- There's a second, unused-so-far option in the same crate: `WindWakerShaderBuilder` (`time_of_day` x `weather` hardcoded palettes, plus a rim-light term) — a heavier stylization than the flat shader, probably not what's wanted here since the doc explicitly wants *less* stylized lighting, not Wind-Waker's painterly rim/palette replacement. And `PixelShaderBuilder` (pixelate + color_levels) is a third, orthogonal lever — a retro *resolution* cut rather than a palette cut, stackable with the flat shader's palette cut if a stronger retro look is wanted later.
-
-Suggested next steps, cheapest first:
-1. Tune the existing `FlatShaderPlugin::global()` call in `main.rs` with `shadow_darkness` near 0 and `color_levels` in the 4-8 range; look at it in-game against a few different packs (the doc's "reduce the palette... more retro look" is exactly `color_levels`).
-2. If specular pop is still visible on lit surfaces, check whether it's coming from `StandardMaterial` PBR terms feeding into the flat shader's lit branch, and consider clamping `perceptual_roughness`/`metallic` on affected materials (either globally in the shader-application system, or per-`AssetDefinition`).
-3. Only reach for `WindWakerShaderBuilder` or `PixelShaderBuilder` if the flat-shader tuning alone doesn't get far enough — they're bigger stylistic swings (full palette replacement, resolution downsample) rather than the "flatten what's there" ask in the doc.
-4. Since the map generator (`scatter.rs`) already leans into an "ultraviolent suburb" look via its own asset choices, a palette cut should be evaluated together with that scatter content, not in isolation — cutting `color_levels` too far may make blood/debris decals unreadable against posterized floors.

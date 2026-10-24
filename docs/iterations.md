@@ -23,6 +23,11 @@ Remove blood splatter decals - or scale them way down, plus they are painted ont
 
 ## 4th Iteration - Trashbag Pickups
 
+Worked like a charm, bro.
+
+## 5th iteration
+
+What about that house editor?
 
 
 ## Thoughts and for later iterations

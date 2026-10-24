@@ -195,13 +195,9 @@ pub fn spawn_blood_on_damage(
                 Mesh3d(blood.decal_mesh.clone()),
                 MeshMaterial3d(blood.decal_material.clone()),
                 NotShadowCaster,
-                Transform::from_xyz(
-                    hit.position.x,
-                    tile_defs.floor_level + lift,
-                    hit.position.z,
-                )
-                .with_rotation(Quat::from_rotation_y(yaw))
-                .with_scale(Vec3::splat(size)),
+                Transform::from_xyz(hit.position.x, tile_defs.floor_level + lift, hit.position.z)
+                    .with_rotation(Quat::from_rotation_y(yaw))
+                    .with_scale(Vec3::splat(size)),
             ))
             .id();
         if let Some(evicted) = budget.push_decal(decal) {
@@ -209,4 +205,3 @@ pub fn spawn_blood_on_damage(
         }
     }
 }
-

@@ -101,8 +101,11 @@ pub fn spawn_fire_fields(
                 .spawn((
                     Name::new("Flames"),
                     Particles3d(fx.fire.clone()),
-                    Transform::from_translation(fire.position)
-                        .with_scale(Vec3::new(fire.radius, 1.0, fire.radius)),
+                    Transform::from_translation(fire.position).with_scale(Vec3::new(
+                        fire.radius,
+                        1.0,
+                        fire.radius,
+                    )),
                 ))
                 .id()
         });

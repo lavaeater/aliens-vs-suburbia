@@ -306,12 +306,14 @@ pub fn resolve_house(polygon: &Polygon, spec: &HouseSpec) -> HouseResolveResult 
             (len as f32 / spec.window_rule.max_per_wall_len).floor() as usize
         };
 
+        // Doors are what was asked for (as many as the wall has cells); they take the
+        // place of windows, not the other way round.
         let doors_here = if Some(idx) == longest_run_idx {
-            (spec.door_count as usize).min(capacity)
+            (spec.door_count as usize).min(len)
         } else {
             0
         };
-        let windows_here = capacity - doors_here;
+        let windows_here = capacity.saturating_sub(doors_here);
 
         let feature_slots = evenly_spaced_indices(len, doors_here + windows_here);
         for (slot_i, &cell_idx) in feature_slots.iter().enumerate() {

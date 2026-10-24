@@ -1,8 +1,10 @@
 use crate::game_state::GameState;
-use crate::house_editor::canvas::{handle_canvas_click, redraw_canvas, spawn_house_editor_camera};
+use crate::house_editor::canvas::{
+    draw_canvas, handle_canvas_click, redraw_cells, spawn_house_editor_camera,
+};
 use crate::house_editor::state::HouseEditorState;
 use crate::house_editor::ui::{
-    handle_house_editor_keys, rebuild_info_label, spawn_house_editor_ui,
+    handle_house_editor_keys, rebuild_house_panel, rebuild_info_label, spawn_house_editor_ui,
 };
 use crate::ui::spawn_ui::cleanup_state;
 use bevy::app::{App, Plugin, Update};
@@ -23,8 +25,10 @@ impl Plugin for HouseEditorPlugin {
                 (
                     handle_house_editor_keys,
                     handle_canvas_click,
-                    redraw_canvas,
+                    draw_canvas,
+                    redraw_cells,
                     rebuild_info_label,
+                    rebuild_house_panel,
                 )
                     .run_if(in_state(GameState::HouseEditor)),
             );

@@ -1,5 +1,4 @@
 use crate::facts::StoryEffect;
-use lava_ui_builder::crawl::CrawlQueue;
 use crate::game_state::GameState;
 use crate::ui::spawn_ui::GotoState;
 use bevy::app::{App, Plugin, Update};
@@ -8,6 +7,7 @@ use bevy::prelude::{
     ResMut, Resource, in_state,
 };
 use bevy::time::Time;
+use lava_ui_builder::crawl::CrawlQueue;
 
 #[allow(dead_code)]
 #[derive(Debug, Component)]

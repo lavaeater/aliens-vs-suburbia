@@ -18,10 +18,17 @@
 //! brush before. R / Shift+R rotates. U or Ctrl+Z undoes, Ctrl+Y (or Ctrl+Shift+Z) redoes,
 //! Ctrl+S saves, Ctrl+Q quits; Esc never leaves the editor.
 //!
+//! The House tab's brushes are the houses saved in the house editor (`assets/houses`).
+//! Stamping one puts the whole house with its top-left tile at the cursor, replacing any
+//! house it overlaps (so painting with it drags the house along); it turns in quarters
+//! with R; erasing any of its tiles removes all of it, and I picks it up. Houses are kept
+//! whole in the map (`MapFile::houses`); the game stamps them into the tiles on load. (H,
+//! the House mode, is the older tool that stamps a drawn outline straight into the tiles.)
+//!
 //! Pure: keys arrive as [`EditorKey`], already translated from Bevy's input by
 //! `ui::handle_editor_keys`, so all of it is testable without an app.
 
-use crate::general::components::map_components::TilePlacement;
+use crate::general::components::map_components::{HousePlacement, TilePlacement};
 use crate::map_editor::state::{MapEditorState, PaletteItem, PaletteTab};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -131,9 +138,10 @@ const UNDO_LIMIT: usize = 200;
 struct Snapshot {
     tiles: Vec<Vec<u64>>,
     placements: Vec<TilePlacement>,
+    houses: Vec<HousePlacement>,
 }
 
-/// Undo / redo of the tiles and placements (the waves are edited in their own panel and
+/// Undo / redo of the tiles, placements and houses (the waves are edited in their own panel and
 /// are not part of it).
 #[derive(Default, Debug)]
 pub struct History {
@@ -143,10 +151,16 @@ pub struct History {
 
 impl History {
     /// Remember the map as it is, before an edit.
-    pub fn checkpoint(&mut self, tiles: &[Vec<u64>], placements: &[TilePlacement]) {
+    pub fn checkpoint(
+        &mut self,
+        tiles: &[Vec<u64>],
+        placements: &[TilePlacement],
+        houses: &[HousePlacement],
+    ) {
         let snapshot = Snapshot {
             tiles: tiles.to_vec(),
             placements: placements.to_vec(),
+            houses: houses.to_vec(),
         };
         if self.undo.last() != Some(&snapshot) {
             self.undo.push(snapshot);
@@ -158,12 +172,22 @@ impl History {
     }
 
     /// Step back. `false` when there is nothing that differs from the map as it is.
-    pub fn undo(&mut self, tiles: &mut Vec<Vec<u64>>, placements: &mut Vec<TilePlacement>) -> bool {
-        Self::step(&mut self.undo, &mut self.redo, tiles, placements)
+    pub fn undo(
+        &mut self,
+        tiles: &mut Vec<Vec<u64>>,
+        placements: &mut Vec<TilePlacement>,
+        houses: &mut Vec<HousePlacement>,
+    ) -> bool {
+        Self::step(&mut self.undo, &mut self.redo, tiles, placements, houses)
     }
 
-    pub fn redo(&mut self, tiles: &mut Vec<Vec<u64>>, placements: &mut Vec<TilePlacement>) -> bool {
-        Self::step(&mut self.redo, &mut self.undo, tiles, placements)
+    pub fn redo(
+        &mut self,
+        tiles: &mut Vec<Vec<u64>>,
+        placements: &mut Vec<TilePlacement>,
+        houses: &mut Vec<HousePlacement>,
+    ) -> bool {
+        Self::step(&mut self.redo, &mut self.undo, tiles, placements, houses)
     }
 
     fn step(
@@ -171,10 +195,12 @@ impl History {
         to: &mut Vec<Snapshot>,
         tiles: &mut Vec<Vec<u64>>,
         placements: &mut Vec<TilePlacement>,
+        houses: &mut Vec<HousePlacement>,
     ) -> bool {
         let current = Snapshot {
             tiles: tiles.clone(),
             placements: placements.clone(),
+            houses: houses.clone(),
         };
         // A step that changed nothing (an edit that put back what was there) is skipped,
         // so undo always visibly does something.
@@ -182,6 +208,7 @@ impl History {
             if snapshot != current {
                 *tiles = snapshot.tiles;
                 *placements = snapshot.placements;
+                *houses = snapshot.houses;
                 to.push(current);
                 return true;
             }
@@ -471,7 +498,7 @@ impl MapEditorState {
                 .iter()
                 .position(|item| match item {
                     PaletteItem::Def { path, .. } => path == def_path || stem(path) == wanted,
-                    PaletteItem::Special { .. } => false,
+                    PaletteItem::Special { .. } | PaletteItem::House { .. } => false,
                 })
                 .map(|index| (tab, index))
         })
@@ -481,6 +508,20 @@ impl MapEditorState {
     /// has one, else the special tile that paints its value.
     fn eyedrop(&mut self) {
         let (x, y) = self.cursor;
+        if let Some(placed) = self.house_at(x, y).cloned() {
+            let found = self.tab_items(PaletteTab::House).iter().position(
+                |item| matches!(item, PaletteItem::House { name } if *name == placed.house),
+            );
+            match found {
+                Some(index) => {
+                    self.select_brush(PaletteTab::House, index);
+                    self.rotation_steps = placed.turns.saturating_mul(2) % 8;
+                    self.palette_dirty = true;
+                }
+                None => self.status = format!("house {} is not in the palette", placed.house),
+            }
+            return;
+        }
         if let Some(placement) = self
             .placements
             .iter()
@@ -625,8 +666,19 @@ mod tests {
             vec![def("cannon")],
             vec![def("medkit")],
             vec![def("golem")],
+            vec![PaletteItem::House {
+                name: "box".into(),
+            }],
             s.catalog[PaletteTab::Special.index()].clone(),
         ];
+        s.house_library = [(
+            "box".to_string(),
+            crate::map::house::HouseDef {
+                outline: vec![(0, 0), (3, 0), (3, 2), (0, 2)],
+                ..Default::default()
+            },
+        )]
+        .into();
         s.width = 8;
         s.height = 6;
         s.tiles = vec![vec![TILE_SPECIAL_FLOOR; 8]; 6];
@@ -816,6 +868,49 @@ mod tests {
         assert_eq!(match_score("brick-wall", "bw"), Some(2));
         assert_eq!(match_score("brick-wall", "wb"), None);
         assert_eq!(match_score("Alien Spawn", "SPAWN"), Some(1));
+    }
+
+    #[test]
+    fn a_house_brush_places_moves_turns_and_erases_whole_houses() {
+        let mut s = editor();
+        s.select_brush(PaletteTab::House, 0);
+        s.cursor = (1, 1);
+        press(&mut s, &[Space]);
+        assert_eq!(s.houses.len(), 1);
+        assert_eq!(s.house_cells(&s.houses[0]).len(), 6, "3 x 2");
+        assert_eq!(s.tiles[1][1], TILE_SPECIAL_FLOOR, "the tiles stay as painted");
+
+        // Overlapping the first replaces it: a drag moves the house along.
+        s.cursor = (2, 1);
+        press(&mut s, &[Space]);
+        assert_eq!(s.houses.len(), 1);
+        assert_eq!((s.houses[0].x, s.houses[0].y), (2, 1));
+
+        // A house turns in quarters.
+        s.handle_key(Char('r'), NONE);
+        assert_eq!(s.house_turns(), 1);
+        s.cursor = (6, 3);
+        press(&mut s, &[Space]);
+        assert_eq!(s.houses.len(), 2, "no overlap, both stay");
+        assert!(s.house_cells(&s.houses[1]).contains(&(7, 5)), "2 wide, 3 deep");
+
+        // Erasing any tile of a house removes all of it; undo brings it back.
+        s.cursor = (4, 2);
+        press(&mut s, &[EditorKey::Delete]);
+        assert_eq!(s.houses.len(), 1);
+        press(&mut s, &[Char('u')]);
+        assert_eq!(s.houses.len(), 2);
+
+        // The eyedropper picks a house and its turn.
+        s.select_brush(PaletteTab::Terrain, 0);
+        s.rotation_steps = 0;
+        s.cursor = (7, 5);
+        s.handle_key(Char('i'), NONE);
+        assert_eq!(s.active_tab, PaletteTab::House);
+        assert_eq!(s.house_turns(), 1);
+
+        let map = s.to_map_file();
+        assert_eq!(map.houses, s.houses, "saved with the map");
     }
 
     #[test]

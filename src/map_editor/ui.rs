@@ -158,22 +158,13 @@ pub fn spawn_map_editor_ui(
                 .flex_wrap()
                 .gap_px(3.0)
                 .modify_node(|mut n| n.align_self = AlignSelf::Stretch);
-            for tab in PaletteTab::all() {
-                let label = tab.label();
+            for &tab in PaletteTab::all() {
                 tabs.add_button_observe(
-                    label,
+                    tab.label(),
                     |b| {
                         b.font_size(10.0).width(px(56.0)).height(px(22.0));
                     },
-                    move |_: On<Activate>, mut s: ResMut<MapEditorState>| {
-                        s.set_tab(match label {
-                            "Terrain" => PaletteTab::Terrain,
-                            "Tower" => PaletteTab::Tower,
-                            "Item" => PaletteTab::Item,
-                            "Enemy" => PaletteTab::Enemy,
-                            _ => PaletteTab::Special,
-                        });
-                    },
+                    move |_: On<Activate>, mut s: ResMut<MapEditorState>| s.set_tab(tab),
                 );
             }
         });

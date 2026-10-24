@@ -14,8 +14,8 @@
 
 use bevy::prelude::*;
 use bevy_sprinkles::prelude::{
-    EmitterEntity, EmitterRuntime, ParticlesAsset, ParticlesCollider3D,
-    ParticlesColliderShape3D, Particles3d, SprinklesPlugin,
+    EmitterEntity, EmitterRuntime, Particles3d, ParticlesAsset, ParticlesCollider3D,
+    ParticlesColliderShape3D, SprinklesPlugin,
 };
 
 use crate::general::systems::map_systems::TileDefinitions;
@@ -197,8 +197,8 @@ mod tests {
             let path = entry.expect("readable dir entry").path();
             if path.extension().is_some_and(|e| e == "ron") {
                 let text = std::fs::read_to_string(&path).expect("readable fx file");
-                let asset: ParticlesAsset = ron::from_str(&text)
-                    .unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+                let asset: ParticlesAsset =
+                    ron::from_str(&text).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
                 if asset.emitters.iter().all(|e| e.time.one_shot) {
                     assert!(
                         asset.despawn_on_finish,
@@ -209,7 +209,10 @@ mod tests {
                 checked += 1;
             }
         }
-        assert!(checked >= 7, "expected every effect in assets/fx, found {checked}");
+        assert!(
+            checked >= 7,
+            "expected every effect in assets/fx, found {checked}"
+        );
     }
 
     #[test]

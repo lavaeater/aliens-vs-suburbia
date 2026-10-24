@@ -56,7 +56,12 @@ const SCALE_STEPS: [(&str, f32); 6] = [
 const TARGET_HEIGHTS: [f32; 7] = [0.25, 0.5, 1.0, 1.5, 1.8, 2.0, 3.0];
 
 /// Lift nudges offered as buttons, metres.
-const LIFT_STEPS: [(&str, f32); 4] = [("-5cm", -0.05), ("-1cm", -0.01), ("+1cm", 0.01), ("+5cm", 0.05)];
+const LIFT_STEPS: [(&str, f32); 4] = [
+    ("-5cm", -0.05),
+    ("-1cm", -0.01),
+    ("+1cm", 0.01),
+    ("+5cm", 0.05),
+];
 
 /// Raise `def` by `metres` in the world; the lift itself is kept in model units.
 pub fn nudge_lift(def: &mut AssetDefinition, metres: f32) {
@@ -340,7 +345,11 @@ fn spawn_floor(parent: &mut ChildSpawnerCommands, def: &AssetDefinition, subject
     heading(parent, "FLOOR");
     text(
         parent,
-        format!("lift {:.3} m  ({:.4} model units)", def.lift_world(), def.lift),
+        format!(
+            "lift {:.3} m  ({:.4} model units)",
+            def.lift_world(),
+            def.lift
+        ),
         12.0,
         INFO,
     );

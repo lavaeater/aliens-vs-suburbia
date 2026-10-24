@@ -40,9 +40,9 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use crate::general::components::map_components::{
-    DecorationItem, LootSpread, MapFile, TilePlacement, WaveDef,
+    DecorationItem, HousePlacement, LootSpread, MapFile, TilePlacement, WaveDef,
 };
-use crate::map::{BitFlags, MapFeatures};
+use crate::map::{BitFlags, MapFeatures, house};
 
 /// File extension of the text format.
 pub const EXTENSION: &str = "map";
@@ -100,6 +100,7 @@ enum Section {
     Legend,
     Decorations,
     Placements,
+    Houses,
     Waves,
 }
 
@@ -111,6 +112,7 @@ impl Section {
             "legend" => Self::Legend,
             "decorations" => Self::Decorations,
             "placements" => Self::Placements,
+            "houses" => Self::Houses,
             "waves" => Self::Waves,
             _ => return None,
         })
@@ -161,6 +163,7 @@ pub fn parse(text: &str) -> Result<MapFile, String> {
             }),
             Some(Section::Decorations) => decoration(line).map(|d| map.decorations.push(d)),
             Some(Section::Placements) => placement(line).map(|p| map.placements.push(p)),
+            Some(Section::Houses) => house(line).map(|h| map.houses.push(h)),
             Some(Section::Waves) => wave(line).map(|w| map.waves.push(w)),
         };
         result.map_err(|e| at_line(line_no, e))?;
@@ -374,6 +377,27 @@ fn placement(line: &str) -> Result<TilePlacement, String> {
     })
 }
 
+fn house(line: &str) -> Result<HousePlacement, String> {
+    let mut fields = Fields::parse(line)?;
+    let house = fields.require("house")?.to_string();
+    let (x, y) = coordinates(fields.require("at")?)?;
+    let turns = match fields.take("rotation") {
+        Some(value) => {
+            let degrees: i32 = number("rotation", value)?;
+            let degrees = degrees.rem_euclid(360);
+            if degrees % 90 != 0 {
+                return Err(format!(
+                    "rotation: houses turn in steps of 90 degrees, got {degrees}"
+                ));
+            }
+            u8::try_from(degrees / 90).map_err(|e| e.to_string())?
+        }
+        None => 0,
+    };
+    fields.finish()?;
+    Ok(HousePlacement { house, x, y, turns })
+}
+
 /// Placements turn in 45 degree steps; the file says degrees.
 fn rotation_steps(degrees: i32) -> Result<u8, String> {
     let degrees = degrees.rem_euclid(360);
@@ -437,7 +461,10 @@ pub fn to_text(map: &MapFile) -> Result<String, String> {
         lines.push(format!("stories: {}", map.stories));
     }
     if let Some(loot) = &map.loot {
-        lines.push(format!("loot: {}-{} per {}", loot.min, loot.max, loot.per_tiles));
+        lines.push(format!(
+            "loot: {}-{} per {}",
+            loot.min, loot.max, loot.per_tiles
+        ));
         let default = LootSpread::default();
         if loot.table != default.table {
             lines.push(format!("loot_table: {}", loot.table));
@@ -497,6 +524,22 @@ pub fn to_text(map: &MapFile) -> Result<String, String> {
         if p.rotation_steps != 0 {
             let degrees = u32::from(p.rotation_steps).saturating_mul(45);
             line = format!("{line} | rotation: {degrees}");
+        }
+        lines.push(line);
+    }
+
+    // Only maps with houses get the section, so older maps write back unchanged.
+    if !map.houses.is_empty() {
+        lines.extend([
+            String::new(),
+            "[houses]".into(),
+            "# house: <name in assets/houses> | at: <top-left tile x, y> | rotation: <degrees clockwise, steps of 90>".into(),
+        ]);
+    }
+    for h in &map.houses {
+        let mut line = format!("house: {} | at: {}, {}", field_value(&h.house)?, h.x, h.y);
+        if h.turns % 4 != 0 {
+            line = format!("{line} | rotation: {}", u32::from(h.turns % 4) * 90);
         }
         lines.push(line);
     }
@@ -577,6 +620,9 @@ pub fn write_map_file(path: impl AsRef<Path>, map: &MapFile) -> Result<(), Strin
 /// Load a level the game asks for by its `.ron` path. A `.map` with the same stem next to
 /// it wins, so a level can be reworked as text without touching the code that names it.
 /// Returns the file actually read.
+///
+/// The map comes back as the game plays it: its houses are stamped into the tiles
+/// (`house::bake_houses`).
 pub fn load_level(path: impl AsRef<Path>) -> Result<(MapFile, PathBuf), String> {
     let path = path.as_ref();
     let text_sibling = path.with_extension(EXTENSION);
@@ -585,7 +631,16 @@ pub fn load_level(path: impl AsRef<Path>) -> Result<(MapFile, PathBuf), String> 
     } else {
         path.to_path_buf()
     };
-    read_map_file(&chosen).map(|map| (map, chosen))
+    let mut map = read_map_file(&chosen)?;
+    if !map.houses.is_empty() {
+        let wall_def = house::default_wall_def().unwrap_or_default();
+        for error in house::bake_houses(&mut map, &wall_def, |name| {
+            house::HouseDef::load(&house::house_path(name))
+        }) {
+            bevy::log::warn!("{}: house skipped: {error}", chosen.display());
+        }
+    }
+    Ok((map, chosen))
 }
 
 /// The other format's path for `path`: `foo.ron` <-> `foo.map`.
@@ -732,10 +787,53 @@ count: 3
             .unwrap()
             .bags;
         assert_eq!(bags, vec!["a.ron".to_string(), "b c.ron".to_string()]);
-        let one = parse("[properties]\nloot: 2 per 30\n").unwrap().loot.unwrap();
+        let one = parse("[properties]\nloot: 2 per 30\n")
+            .unwrap()
+            .loot
+            .unwrap();
         assert_eq!((one.min, one.max, one.per_tiles), (2, 2, 30));
         assert!(parse("[properties]\nloot: lots\n").is_err());
         assert!(parse("[properties]\nname: x\n").unwrap().loot.is_none());
+    }
+
+    #[test]
+    fn houses_are_named_placed_and_turned_in_quarters() {
+        let map = parse("[houses]\nhouse: bungalow | at: 3, 4 | rotation: -90\nhouse: shed | at: 0, 0\n").unwrap();
+        assert_eq!(
+            map.houses,
+            vec![
+                HousePlacement { house: "bungalow".into(), x: 3, y: 4, turns: 3 },
+                HousePlacement { house: "shed".into(), x: 0, y: 0, turns: 0 },
+            ]
+        );
+        assert!(parse("[houses]\nhouse: shed | at: 0, 0 | rotation: 45\n").is_err());
+        assert!(parse("[houses]\nat: 0, 0\n").is_err());
+        let text = to_text(&map).unwrap();
+        assert!(text.contains("house: bungalow | at: 3, 4 | rotation: 270"), "{text}");
+        assert_eq!(parse(&text).unwrap().houses, map.houses);
+        assert!(!to_text(&MapFile::default()).unwrap().contains("[houses]"));
+    }
+
+    #[test]
+    fn a_level_loads_with_its_houses_stamped_in() {
+        let dir = std::env::temp_dir().join(format!("avs-level-houses-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("yard.map");
+        let row = "f".repeat(14);
+        let tiles = vec![row; 10].join("\n");
+        std::fs::write(
+            &path,
+            format!("[tiles]\n{tiles}\n[houses]\nhouse: bungalow | at: 2, 2\nhouse: no_such_house | at: 0, 0\n"),
+        )
+        .unwrap();
+        let (map, _) = load_level(&path).unwrap();
+        let _ = std::fs::remove_dir_all(&dir);
+        assert!(map.houses.is_empty());
+        let wall = (MapFeatures::ImpassableForPlayers as u64) | (MapFeatures::ImpassableForEnemies as u64);
+        let blocked = map.tiles.iter().flatten().filter(|&&t| t & wall == wall).count();
+        assert!(blocked > 10, "the bungalow's walls block: {blocked}");
+        assert_eq!(map.placements.len(), blocked, "a wall model on each");
+        assert_eq!(map.tiles[0][0] & wall, 0, "the missing house is skipped");
     }
 
     #[test]

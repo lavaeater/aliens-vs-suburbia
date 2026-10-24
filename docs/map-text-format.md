@@ -37,6 +37,9 @@ at: 3, 1 | model: packs/nature/Pine.glb | rotation: 90 | scale: 1.2
 [placements]
 at: 2, 2 | def: assets/defs/door.ron | rotation: 45
 
+[houses]
+house: bungalow | at: 4, 6 | rotation: 90
+
 [waves]
 enemy: assets/defs/Alien.ron | count: 5 | rate: 10
 count: 20 | rate: 30
@@ -79,7 +82,7 @@ raw tile number (`A: 261`). Flags: `nothing`, `water`, `grass`, `floor`, `mud`, 
 Converting a RON map writes one of these for every tile value that has no built-in
 letter.
 
-### `[decorations]`, `[placements]`, `[waves]`
+### `[decorations]`, `[placements]`, `[houses]`, `[waves]`
 
 One entry per line: `key: value` fields separated by `|`, in any order. Values can
 contain spaces (paths often do) but not `|`. An unknown key is an error.
@@ -88,6 +91,7 @@ contain spaces (paths often do) but not `|`. An unknown key is an error.
 |---------|--------|
 | decorations | `at: x, y` + `model:` (path under `assets/`), optional `rotation:` (degrees) and `scale:` (default 1) |
 | placements | `at: x, y` + `def:` (a def `.ron`), optional `rotation:` (degrees, multiples of 45) |
+| houses | `house:` (a name in `assets/houses/`, made in the house editor) + `at: x, y` (the top-left tile of its footprint), optional `rotation:` (degrees clockwise, multiples of 90). The game stamps the house into the tiles when the level loads: walls block everyone, doors are floor, and anything under it is replaced. Only written when the map has houses. |
 | waves | optional `enemy:` (enemy def; omitted = the built-in alien), `count:` (default 10), `rate:` (spawns per minute, default 20) |
 
 `x` is the column and `y` the row, both counted from 0 at the top left of `[tiles]`.

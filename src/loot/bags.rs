@@ -126,7 +126,12 @@ pub fn spawn_loot_bags(
             .map
             .placements
             .iter()
-            .filter_map(|p| Some((usize::try_from(p.x + 1).ok()?, usize::try_from(p.y + 1).ok()?)))
+            .filter_map(|p| {
+                Some((
+                    usize::try_from(p.x + 1).ok()?,
+                    usize::try_from(p.y + 1).ok()?,
+                ))
+            })
             .collect();
         let plan = plan_bags(&padded_tiles(&load.map), &taken, spread, &mut rng);
 
@@ -188,10 +193,7 @@ mod tests {
             | MapFeatures::ImpassableForPlayers as u64
             | MapFeatures::ImpassableForEnemies as u64;
         let spawn = FLOOR | MapFeatures::PlayerSpawn as u64;
-        let tiles = vec![
-            vec![0, wall, spawn],
-            vec![FLOOR, FLOOR, FLOOR],
-        ];
+        let tiles = vec![vec![0, wall, spawn], vec![FLOOR, FLOOR, FLOOR]];
         let taken = HashSet::from([(2, 1)]);
         let mut n = 0.0;
         let mut rng = || {
