@@ -32,34 +32,39 @@
     animation_sources: [],
     attachments: [],
     hardpoints: {
+        "grip": (
+            anchor: Some("hand_r"),
+            translation: (-0.01411, 0.06958, 0.04166),
+            rotation_euler_deg: (-0.0, 90.0, 86.8),
+        ),
         "foregrip": (
-            anchor: Some("index_02_l"),
-            translation: (0.0, 0.0, 0.0),
-            rotation_euler_deg: (0.0, 0.0, 0.0),
+            anchor: Some("hand_l"),
+            translation: (-0.00649, 0.09066, 0.06175),
+            rotation_euler_deg: (-180.0, 90.0, -86.9),
         ),
         "stock": (
-            anchor: Some("upperarm_r"),
-            translation: (0.0, 0.0, 0.0),
-            rotation_euler_deg: (0.0, 0.0, 0.0),
+            anchor: Some("clavicle_r"),
+            translation: (-0.07017, 0.0978, 0.01422),
+            rotation_euler_deg: (-92.0, -42.3, 178.6),
         ),
-        "grip": (
-            anchor: Some("thumb_02_r"),
-            translation: (0.0, 0.0, 0.0),
-            rotation_euler_deg: (225.0, 110.0, 0.0),
+        "sight": (
+            anchor: Some("head"),
+            translation: (-0.02201, 0.06413, 0.06062),
+            rotation_euler_deg: (-5.0, -90.0, -0.0),
         ),
     },
     aim_bones: [
         (
             bone: "spine_01",
-            weight: 0.2,
+            weight: 0.17,
         ),
         (
             bone: "spine_02",
-            weight: 0.35,
+            weight: 0.33,
         ),
         (
             bone: "spine_03",
-            weight: 0.45,
+            weight: 0.5,
         ),
     ],
 )

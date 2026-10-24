@@ -15,23 +15,23 @@
     hardpoints: {
         "grip": (
             anchor: Some("hand_r"),
-            translation: (-0.033, 0.0847, -0.0),
-            rotation_euler_deg: (-0.8, 90.0, 86.8),
-        ),
-        "sight": (
-            anchor: Some("head"),
-            translation: (-0.0282, 0.0824, 0.0779),
-            rotation_euler_deg: (-5.0, -90.0, -0.0),
-        ),
-        "stock": (
-            anchor: Some("clavicle_r"),
-            translation: (-0.0032, 0.0849, -0.0266),
-            rotation_euler_deg: (-92.2, -42.3, 178.6),
+            translation: (-0.0137, 0.06757, 0.040459998),
+            rotation_euler_deg: (-0.0, 90.0, 86.8),
         ),
         "foregrip": (
             anchor: Some("hand_l"),
-            translation: (0.033, 0.0847, -0.0),
-            rotation_euler_deg: (179.2, 90.0, -86.8),
+            translation: (-0.0063, 0.088039994, 0.05997),
+            rotation_euler_deg: (-180.0, 90.0, -86.9),
+        ),
+        "stock": (
+            anchor: Some("clavicle_r"),
+            translation: (-0.08754, 0.12201, 0.01774),
+            rotation_euler_deg: (-92.0, -42.3, 178.6),
+        ),
+        "sight": (
+            anchor: Some("head"),
+            translation: (-0.02746, 0.08001, 0.07564),
+            rotation_euler_deg: (-5.0, -90.0, -0.0),
         ),
     },
     aim_bones: [

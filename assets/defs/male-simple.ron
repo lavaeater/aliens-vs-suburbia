@@ -27,22 +27,22 @@
     hardpoints: {
         "grip": (
             anchor: Some("hand_r"),
-            translation: (-0.02, 0.06, 0.0),
-            rotation_euler_deg: (180.0, 90.0, -90.0),
+            translation: (-0.0137, 0.06757, 0.040459998),
+            rotation_euler_deg: (-0.0, 90.0, 86.8),
         ),
         "foregrip": (
             anchor: Some("hand_l"),
-            translation: (0.0345, 0.0887, -0.0),
-            rotation_euler_deg: (178.4, 90.0, -86.9),
+            translation: (-0.0063, 0.088039994, 0.05997),
+            rotation_euler_deg: (-180.0, 90.0, -86.9),
         ),
         "stock": (
             anchor: Some("clavicle_r"),
-            translation: (-0.0035, 0.08, -0.0189),
-            rotation_euler_deg: (-98.2, -42.2, 178.6),
+            translation: (-0.09841, 0.13716, 0.01994),
+            rotation_euler_deg: (-92.0, -42.3, 178.6),
         ),
         "sight": (
             anchor: Some("head"),
-            translation: (-0.0296, 0.0862, 0.0815),
+            translation: (-0.03087, 0.08994, 0.08503),
             rotation_euler_deg: (-5.0, -90.0, -0.0),
         ),
     },

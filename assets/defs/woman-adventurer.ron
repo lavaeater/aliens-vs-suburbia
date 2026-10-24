@@ -4,28 +4,47 @@
     model_type: Player((
         ability: Bombardment,
         throw_rate_per_minute: 60.0,
-        weapon: None,
+        weapon: Some("assets/defs/Assault Rifle.ron"),
+        starting_ammo: [(Rifle, 120)],
     )),
     hidden_nodes: [],
     animations: {},
     animation_sources: [],
     attachments: [],
     hardpoints: {
+        "grip": (
+            anchor: Some("hand_r"),
+            translation: (-0.00445, 0.02196, 0.01315),
+            rotation_euler_deg: (-0.0, 90.0, 86.8),
+        ),
         "foregrip": (
-            anchor: Some("ball_l"),
-            translation: (0.0, 0.0, 0.0),
-            rotation_euler_deg: (0.0, 0.0, 0.0),
+            anchor: Some("hand_l"),
+            translation: (-0.00205, 0.02861, 0.01949),
+            rotation_euler_deg: (-180.0, 90.0, -86.9),
         ),
         "stock": (
-            anchor: Some("ball_l"),
-            translation: (0.0, 0.0, 0.0),
-            rotation_euler_deg: (0.0, 0.0, 0.0),
+            anchor: Some("clavicle_r"),
+            translation: (-0.07728, 0.10771, 0.01566),
+            rotation_euler_deg: (-92.0, -42.3, 178.6),
         ),
-        "grip": (
-            anchor: Some("ball_l"),
-            translation: (0.0, 0.0, 0.0),
-            rotation_euler_deg: (0.0, 0.0, 0.0),
+        "sight": (
+            anchor: Some("head"),
+            translation: (-0.02424, 0.07062, 0.06677),
+            rotation_euler_deg: (-5.0, -90.0, -0.0),
         ),
     },
-    aim_bones: [],
+    aim_bones: [
+        (
+            bone: "spine_01",
+            weight: 0.17,
+        ),
+        (
+            bone: "spine_02",
+            weight: 0.33,
+        ),
+        (
+            bone: "spine_03",
+            weight: 0.5,
+        ),
+    ],
 )
