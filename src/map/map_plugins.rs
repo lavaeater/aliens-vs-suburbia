@@ -7,10 +7,10 @@ use crate::general::components::map_components::{
 use crate::general::events::map_events::{LoadMap, SpawnAlien, SpawnPlayer};
 use crate::general::resources::map_resources::MapGraph;
 use crate::general::systems::map_systems::{
-    TileDefinitions, load_map_one, load_map_showcase, map_loader, update_current_tile_system,
+    TileDefinitions, load_map_showcase, map_loader, update_current_tile_system,
 };
 use avian3d::prelude::{LayerMask, RigidBody};
-use bevy::app::{App, Plugin, Startup, Update};
+use bevy::app::{App, Plugin, Update};
 use bevy::ecs::schedule::SystemCondition;
 use bevy::prelude::{IntoScheduleConfigs, OnEnter, in_state};
 use pathfinding::grid::Grid;
@@ -185,10 +185,7 @@ pub struct StatefulMapPlugin;
 impl Plugin for StatefulMapPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(NonStateMapStuff)
-            .add_systems(
-                OnEnter(GameState::InGame),
-                load_map_one.run_if(crate::character_editor::state::in_normal_game),
-            )
+            // A match's map comes from the campaign (`campaign::start_level`).
             .add_systems(OnEnter(GameState::ModelShowcase), load_map_showcase)
             .add_systems(
                 Update,
@@ -210,7 +207,6 @@ pub struct MapPlugin;
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(NonStateMapStuff)
-            .add_systems(Startup, (load_map_one,))
             .add_systems(Update, (update_current_tile_system, map_loader));
     }
 }

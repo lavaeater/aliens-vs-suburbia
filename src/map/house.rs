@@ -242,7 +242,8 @@ pub fn house_library() -> std::collections::BTreeMap<String, HouseDef> {
 }
 
 /// Stamp every house placed in `map` into its tiles and placements, as the game plays
-/// it: walls block, doors are floor, each wall tile gets `wall_def`'s model. Where houses
+/// it: walls block, doors are floor, each wall tile gets `wall_def`'s model, placements
+/// inside the house are kept and those under its walls dropped. Where houses
 /// overlap the later one wins. `load` reads a house by name; the ones it cannot read are
 /// skipped and returned as errors.
 pub fn bake_houses(
@@ -255,7 +256,17 @@ pub fn bake_houses(
         match load(&placement.house) {
             Ok(house) => {
                 let spec = house.spec(wall_def);
-                apply_house_to_map(&house.resolve_placed(&placement, wall_def), &spec, map);
+                let resolved = house.resolve_placed(&placement, wall_def);
+                // Whatever stands inside (a story item, a barrel) stays; only the walls
+                // replace what was under them.
+                let inside: Vec<_> = map
+                    .placements
+                    .iter()
+                    .filter(|p| resolved.floor_cells.contains(&(p.x, p.y)))
+                    .cloned()
+                    .collect();
+                apply_house_to_map(&resolved, &spec, map);
+                map.placements.extend(inside);
             }
             Err(e) => errors.push(e),
         }
@@ -492,6 +503,7 @@ pub fn step(house: &mut HouseDef, id: &str, forward: bool) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::general::components::map_components::TilePlacement;
     use crate::map::MapFeatures;
     use crate::map::procgen::WallCellKind;
 
@@ -557,6 +569,21 @@ mod tests {
             outline: vec![(0, 0), (6, 0), (6, 4), (0, 4)],
             ..HouseDef::default()
         };
+        // A barrel inside the turned house (x 2..6, y 1..7) and one under its wall.
+        map.placements = vec![
+            TilePlacement {
+                x: 3,
+                y: 3,
+                def_path: "barrel.ron".into(),
+                rotation_steps: 0,
+            },
+            TilePlacement {
+                x: 2,
+                y: 3,
+                def_path: "barrel.ron".into(),
+                rotation_steps: 0,
+            },
+        ];
         let errors = bake_houses(&mut map, "wall.ron", |name| {
             if name == "box" {
                 Ok(boxy.clone())
@@ -590,9 +617,10 @@ mod tests {
             .count();
         assert_eq!(
             map.placements.len(),
-            walls,
-            "a model on every wall and window tile"
+            walls + 1,
+            "a model on every wall and window tile, and the barrel inside"
         );
+        assert!(map.placements.iter().any(|p| (p.x, p.y, p.def_path.as_str()) == (3, 3, "barrel.ron")));
         let blocked = map
             .tiles
             .iter()

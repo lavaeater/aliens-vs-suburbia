@@ -1,0 +1,13 @@
+(
+    title: "DAWN",
+    lines: [
+        "The sun comes up over a street full of rubble and very surprised garden gnomes.",
+        "",
+        "Then a shadow falls over the whole suburb.",
+        "",
+        "Something enormous is landing on the playing fields.",
+    ],
+    style: Scroll(tilt: 1.2),
+    speed: 55.0,
+    backdrop: 0.85,
+)

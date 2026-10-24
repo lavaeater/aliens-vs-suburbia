@@ -1,0 +1,13 @@
+(
+    title: "THE FLEECE HAS FALLEN",
+    lines: [
+        "With a sound like a deflating bouncy castle, the Alpaking Evolved topples into the crater.",
+        "",
+        "The mothership's engines cough, sputter, and lift it away into the night, a lot faster than it came.",
+        "",
+        "Maple Drive is quiet again. Somewhere, a sprinkler hisses.",
+    ],
+    style: Scroll(tilt: 1.2),
+    speed: 55.0,
+    backdrop: 0.85,
+)

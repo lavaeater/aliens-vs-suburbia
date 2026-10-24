@@ -1,0 +1,42 @@
+# Tiles: v void, f floor, w wall, e enemy spawn, p player spawn, x goal (enemy exit), g grass, m mud, s snow, r rock, ~ water
+
+[properties]
+name: Snow Day
+stories: assets/stories/level_03.ron
+weapons: assets/defs/Snowball.ron
+coins: 250
+escape_limit: 8
+
+[tiles]
+wwwwwwwwwwwwwwwwwwwwwwwwwwww
+wsessssssssssppsssssssssrrrw
+wssssssssssssppsssssssssrrrw
+wsssssssssssssssssssssssrrrw
+wwwwwwwwwwwwwwwwwwwwwwwssssw
+wssssssssssssssssssssssssssw
+wssssssssssssssssssssssssssw
+wssssssssssssssssssssssssssw
+wsssswwwwwwwwwwwwwwwwwwwwwww
+wssssssssssssssssssssssssssw
+wssssssssssssssssssssssssssw
+wssssssssssssssssssssssssssw
+wwwwwwwwwwwwwwwwwwwwwwwssssw
+wssssssssssssssssssssssssssw
+wssssssssssssssssssssssssssw
+wssssssssssssssssssssssssssw
+wsssswwwwwwwwwwwwwwwwwwwwwww
+wssssssssssssssssssssssssssw
+wssssssssssssssssssssssssssw
+wssssssssssssssssssssssssxsw
+wwwwwwwwwwwwwwwwwwwwwwwwwwww
+
+[placements]
+# at: x, y | def: <def .ron path> | rotation: <degrees, steps of 45>
+
+[waves]
+# enemy: <enemy def path, omit for the built-in alien> | count: <n> | rate: <per minute>
+enemy: assets/defs/Bunny.ron | count: 12 | rate: 12
+count: 10 | rate: 10
+enemy: assets/defs/Bunny.ron | count: 20 | rate: 24
+count: 12 | rate: 12
+enemy: assets/defs/Alpaking.ron | count: 5 | rate: 8

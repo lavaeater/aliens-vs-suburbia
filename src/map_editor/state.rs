@@ -99,6 +99,8 @@ pub struct MapEditorState {
     pub stories: String,
     /// The loaded map's random loot (`MapFile::loot`); kept like `stories`.
     pub loot: Option<crate::general::components::map_components::LootSpread>,
+    /// The loaded map's level rules (`escape_limit`, `weapons`, `coins`); kept like `stories`.
+    pub level_rules: (Option<u32>, Vec<String>, Option<u32>),
     pub width: usize,
     pub height: usize,
     /// Row-major tile grid; each cell is a `BitFlags<MapFeatures>` stored as u64.
@@ -170,6 +172,7 @@ impl Default for MapEditorState {
             map_name: "new_map".to_string(),
             stories: String::new(),
             loot: None,
+            level_rules: (None, Vec::new(), None),
             width,
             height,
             tiles: vec![vec![TILE_SPECIAL_FLOOR; width]; height],
@@ -630,6 +633,9 @@ impl MapEditorState {
             waves: self.waves.clone(),
             stories: self.stories.clone(),
             loot: self.loot.clone(),
+            escape_limit: self.level_rules.0,
+            weapons: self.level_rules.1.clone(),
+            coins: self.level_rules.2,
         }
     }
 
@@ -672,6 +678,7 @@ impl MapEditorState {
         self.waves = map.waves;
         self.stories = map.stories;
         self.loot = map.loot;
+        self.level_rules = (map.escape_limit, map.weapons, map.coins);
         self.cursor = (
             self.cursor.0.clamp(0, self.width as i32 - 1),
             self.cursor.1.clamp(0, self.height as i32 - 1),

@@ -28,6 +28,7 @@ mod assets;
 pub mod behavior;
 mod building;
 pub(crate) mod camera;
+pub(crate) mod campaign;
 pub(crate) mod character_editor;
 mod constants;
 mod control;
@@ -180,7 +181,7 @@ fn print_help() {
     println!("                                             (--playground still works as an alias)");
     println!("  cargo run -- --asset-browser               Launch straight into the asset browser");
     println!("  cargo run -- --house-editor                Launch straight into the house editor");
-    println!("  cargo run -- --play                        Launch straight into a match (level 1)");
+    println!("  cargo run -- --play [--level N]            Launch straight into a match (level 1, or N)");
     println!("  cargo run --features map-editor -- --map-editor [--file <path>]");
     println!("                                             Launch the map editor TUI");
     println!("  cargo run -- --create-map [OPTIONS]        Generate a map file");
@@ -240,6 +241,12 @@ fn main() -> std::process::ExitCode {
     // And into a match, skipping the menu and the player setup (one keyboard player, with a
     // connected pad handed to them by `assign_gamepads`' fallback).
     let straight_to_game = args.iter().any(|a| a == "--play");
+    // `--play --level N` starts the campaign at level N (Start Game always begins at 1).
+    let start_level: Option<usize> = args
+        .iter()
+        .skip_while(|a| *a != "--level")
+        .nth(1)
+        .and_then(|n| n.parse().ok());
 
     let mut app = App::new();
     app.register_type::<CameraOffset>()
@@ -291,6 +298,12 @@ fn main() -> std::process::ExitCode {
                 next.set(game_state::GameState::HouseEditor);
             },
         );
+    }
+
+    if let Some(number) = start_level {
+        app.add_systems(Startup, move |mut campaign: ResMut<campaign::Campaign>| {
+            campaign.go_to(number);
+        });
     }
 
     if straight_to_game && !straight_to_editor {

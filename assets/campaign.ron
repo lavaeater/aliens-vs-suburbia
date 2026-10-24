@@ -1,0 +1,42 @@
+// The campaign: the levels in the order they are played (`src/campaign`). Start Game
+// begins at the first; `cargo run -- --play --level N` jumps to level N.
+//   map:     the level's map (`.map` text or `.ron`; a `.map` next to a `.ron` wins)
+//   title:   shown on the card before the level
+//   tagline: one line under the title
+// The victory screen after the last level shows `victory_title` and `victory_lines`.
+// Plain ASCII only: the game's font has nothing else.
+(
+    levels: [
+        (
+            map: "assets/maps/level_01.ron",
+            title: "Maple Drive",
+            tagline: "Something has landed in the cul-de-sac.",
+        ),
+        (
+            map: "assets/maps/level_02.map",
+            title: "The Community Centre",
+            tagline: "Get the floodlights back on.",
+        ),
+        (
+            map: "assets/maps/level_03.map",
+            title: "Snow Day",
+            tagline: "No guns. Only snowballs.",
+        ),
+        (
+            map: "assets/maps/level_04.map",
+            title: "Night of the Golems",
+            tagline: "Survive until dawn.",
+        ),
+        (
+            map: "assets/maps/level_05.map",
+            title: "The Mothership",
+            tagline: "This is it.",
+        ),
+    ],
+    victory_title: "THE SUBURBS ARE SAFE",
+    victory_lines: [
+        "The mothership is gone. The lawns are green again (the right kind of green).",
+        "The Homeowners' Association thanks you for your service.",
+        "Your hedges are still in breach of bylaw 4b.",
+    ],
+)

@@ -59,6 +59,7 @@ pub fn spawn_players(
     mut player_added_mw: MessageWriter<GameTrackingEvent>,
     settings: Res<GameSettings>,
     mut respawn_queue: ResMut<RespawnQueue>,
+    level_loadout: Option<Res<crate::campaign::LevelLoadout>>,
 ) {
     let max_players = roster.as_ref().map_or(1, |r| r.def_paths.len().max(1));
     let occupied: Vec<usize> = existing_players.iter().map(|s| s.0).collect();
@@ -106,9 +107,14 @@ pub fn spawn_players(
         );
 
         // Everything this character carries; the first is snapped onto the `grip`
-        // hardpoint now, the rest wait in the loadout for a switch.
+        // hardpoint now, the rest wait in the loadout for a switch. A level can hand
+        // everyone the same weapons instead (`MapFile::weapons`).
         let roster_def_path = roster.as_ref().and_then(|r| r.def_paths.get(slot)).cloned();
+        let level_weapons = level_loadout.as_ref().map_or(&[][..], |l| l.0.as_slice());
         let loadout = match (player_props.as_ref(), roster_def_path.as_ref()) {
+            (Some(_), Some(def_path)) if !level_weapons.is_empty() => {
+                Weapons::new(def_path.clone(), level_weapons.iter().cloned())
+            }
             (Some(props), Some(def_path)) => Weapons::new(
                 def_path.clone(),
                 props

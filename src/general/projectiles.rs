@@ -165,7 +165,7 @@ pub fn launch(
     props: &ProjectileProps,
 ) -> Entity {
     let color = match props.impact {
-        Impact::Damage(_) => Color::srgb(0.9, 0.9, 0.6),
+        Impact::Damage(_) => Color::srgb(0.95, 0.97, 1.0),
         Impact::Explode(_) => Color::srgb(0.25, 0.3, 0.25),
         Impact::Fire(_) => Color::srgb(0.8, 0.4, 0.1),
     };

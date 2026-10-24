@@ -100,6 +100,9 @@ impl App {
             waves: vec![],
             stories: String::new(),
             loot: None,
+            escape_limit: None,
+            weapons: vec![],
+            coins: None,
         }
     }
 

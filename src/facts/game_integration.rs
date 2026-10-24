@@ -51,8 +51,10 @@ impl Plugin for FactsGameIntegrationPlugin {
 }
 
 /// Loads the built-in stories into the store and activates it (seeding their init facts).
-/// Starts from a fresh set each match, so the previous level's own stories do not linger.
+/// Starts from a fresh set each match, and fresh facts: the previous level's stories,
+/// items found and objectives must not linger into the next one (or a retry).
 fn activate_stories(mut store: ResMut<StoryStore>, mut facts: ResMut<Facts>) {
+    *facts = Facts::default();
     store.stories.clear();
     store.add_all(stories::base_stories());
     store.activate(&mut facts);
@@ -167,12 +169,24 @@ fn derive_world_facts(
 
     set_if_changed(&mut facts, keys::COINS, i64::from(wallet.coins));
 
+    // The level's own objectives: done when every `Objective.*` bool is true.
+    let objectives_done = objectives_done(&facts);
+    set_bool_if_changed(&mut facts, keys::OBJECTIVES_DONE, objectives_done);
+
     // Wave progression.
     if let Some(wm) = wave_manager {
         set_if_changed(&mut facts, keys::CURRENT_WAVE, wm.current_wave as i64);
         set_if_changed(&mut facts, keys::WAVE_COUNT, wm.waves.len() as i64);
         set_bool_if_changed(&mut facts, keys::ALL_WAVES_DONE, !wm.waves_remaining());
     }
+}
+
+/// Every `Objective.*` bool fact is true; vacuously so on a level without objectives.
+fn objectives_done(facts: &Facts) -> bool {
+    facts
+        .query(&format!("{}*", keys::OBJECTIVE_PREFIX))
+        .filter_map(|(_, v)| v.as_bool())
+        .all(|done| done)
 }
 
 /// Writes an int fact only when it actually changed, so we don't dirty the store (and
@@ -194,5 +208,21 @@ fn set_bool_if_changed(facts: &mut Facts, key: &str, value: bool) {
 fn log_story_effects(mut reader: MessageReader<StoryEffect>) {
     for effect in reader.read() {
         bevy::log::info!("story effect: {}", effect.effect);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn objectives_are_done_when_every_one_is_true_or_there_are_none() {
+        let mut facts = Facts::default();
+        assert!(objectives_done(&facts));
+        facts.set_bool("Objective.gnome_1", true);
+        facts.set_bool("Objective.gnome_2", false);
+        assert!(!objectives_done(&facts));
+        facts.set_bool("Objective.gnome_2", true);
+        assert!(objectives_done(&facts));
     }
 }

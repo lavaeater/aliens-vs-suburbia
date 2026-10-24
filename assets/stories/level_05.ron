@@ -1,0 +1,45 @@
+// Level 5's stories: the mothership has landed. The fifth wave is the boss.
+[
+    (
+        name: "Level 5 intro",
+        repeat: false,
+        init_facts: [
+            ("ObjectiveText", Text("Defend the landing site. Let 5 through and it is all over")),
+        ],
+        rules: [
+            (name: "started", criteria: [BoolIs(key: "LevelStarted", expected: true)]),
+        ],
+        consequences: [Emit(effect: "crawl:level_05_intro")],
+    ),
+    (
+        name: "The boss arrives",
+        repeat: false,
+        rules: [(name: "boss wave", criteria: [IntCmp(key: "CurrentWave", op: Eq, value: 4)])],
+        consequences: [
+            Emit(effect: "crawl:level_05_boss"),
+            SetFact(key: "ObjectiveText", value: Text("Bring down the Alpaking Evolved!")),
+        ],
+    ),
+    (
+        name: "Mop up",
+        repeat: false,
+        rules: [(name: "last wave", criteria: [IntCmp(key: "CurrentWave", op: Eq, value: 5)])],
+        consequences: [
+            SetFact(key: "ObjectiveText", value: Text("The last of the crew are fleeing - finish them")),
+        ],
+    ),
+    (
+        name: "Level 5 outro",
+        repeat: false,
+        rules: [
+            (
+                name: "won",
+                criteria: [
+                    BoolIs(key: "LevelComplete", expected: true),
+                    BoolIs(key: "LevelFailed", expected: false),
+                ],
+            ),
+        ],
+        consequences: [Emit(effect: "crawl:level_05_outro")],
+    ),
+]

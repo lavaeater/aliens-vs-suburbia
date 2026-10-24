@@ -1,0 +1,13 @@
+(
+    model_path: "packs/city/Box.glb",
+    scale: 2.0,
+    model_type: Item((
+        kind: Key(id: "parts"),
+    )),
+    hidden_nodes: [],
+    animations: {},
+    animation_sources: [],
+    attachments: [],
+    hardpoints: {},
+    aim_bones: [],
+)

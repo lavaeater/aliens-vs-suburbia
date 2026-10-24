@@ -1,0 +1,13 @@
+(
+    title: "THE LIGHTS ARE ON",
+    lines: [
+        "In the glare of the floodlights the last invader shrivels like a slug in salt.",
+        "",
+        "On the community notice board, between the bake sale and the lost cat, someone has pinned a new flyer:",
+        "",
+        "SNOW DAY TOMORROW. SCHOOL IS CLOSED. THE ALIENS ARE NOT.",
+    ],
+    style: Scroll(tilt: 1.2),
+    speed: 55.0,
+    backdrop: 0.85,
+)

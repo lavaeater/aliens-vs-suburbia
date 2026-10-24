@@ -24,6 +24,7 @@ pub fn level_start_story() -> Story {
         .init_bool(keys::ALL_ALIENS_DEAD, false)
         .init_bool(keys::ALL_PLAYERS_DEAD, false)
         .init_bool(keys::TOO_MANY_ALIENS_ESCAPED, false)
+        .init_bool(keys::OBJECTIVES_DONE, true)
         .rule("not yet started", |r| {
             r.is_false(keys::LEVEL_STARTED);
         })
@@ -34,13 +35,15 @@ pub fn level_start_story() -> Story {
         .build()
 }
 
-/// Win condition: the level is running and every spawned alien is dead with no waves left.
+/// Win condition: the level is running, every spawned alien is dead with no waves left,
+/// and the level's own objectives (`Objective.*`, see [`keys::OBJECTIVES_DONE`]) are done.
 /// Sets `LevelComplete`, which the `level_complete_story` then turns into `GotoNextLevel`.
 pub fn aliens_cleared_story() -> Story {
     story("Aliens Cleared")
         .rule("all aliens dead", |r| {
             r.is_true(keys::LEVEL_STARTED)
-                .is_true(keys::ALL_ALIENS_DEAD);
+                .is_true(keys::ALL_ALIENS_DEAD)
+                .is_true(keys::OBJECTIVES_DONE);
         })
         .set_true(keys::LEVEL_COMPLETE)
         .build()

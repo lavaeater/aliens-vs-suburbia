@@ -1,0 +1,14 @@
+(
+    title: "EPISODE II: LIGHTS OUT AT THE COMMUNITY CENTRE",
+    lines: [
+        "The letter said to come to the community centre. Alone. With snacks.",
+        "You brought your friends instead. And no snacks.",
+        "",
+        "The floodlights are dead, the car park is dark, and something is moving between the bungalows.",
+        "",
+        "Find FUEL, SPARE PARTS and FUSES to get the lights back on - then clear the street.",
+    ],
+    style: Scroll(tilt: 1.2),
+    speed: 55.0,
+    backdrop: 0.85,
+)

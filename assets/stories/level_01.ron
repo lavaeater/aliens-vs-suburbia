@@ -6,6 +6,9 @@
     (
         name: "Level 1 intro",
         repeat: false,
+        init_facts: [
+            ("ObjectiveText", Text("Hold Maple Drive. Do not let 10 of them reach the end of the road")),
+        ],
         rules: [
             (name: "started", criteria: [BoolIs(key: "LevelStarted", expected: true)]),
         ],
@@ -17,7 +20,10 @@
         rules: [
             (name: "found it", criteria: [BoolIs(key: "ItemFound.letter", expected: true)]),
         ],
-        consequences: [Emit(effect: "crawl:strange_letter")],
+        consequences: [
+            Emit(effect: "crawl:strange_letter"),
+            SetFact(key: "ObjectiveText", value: Text("Hold Maple Drive - then off to the community centre")),
+        ],
     ),
     (
         name: "Level 1 outro",

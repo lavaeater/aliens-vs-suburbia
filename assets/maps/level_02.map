@@ -1,0 +1,51 @@
+# Tiles: v void, f floor, w wall, e enemy spawn, p player spawn, x goal (enemy exit), g grass, m mud, s snow, r rock, ~ water
+
+[properties]
+name: The Community Centre
+stories: assets/stories/level_02.ron
+loot: 1-2 per 40
+escape_limit: 10
+
+[tiles]
+wwwwwwwwwwwwwwwwwwwwwwwwww
+wrrrgggggggffgggggggggfefw
+wrrrgggggggffgggggggggfffw
+wggggggggggffggggggggggggw
+wggggggggggffggggggggggggw
+wggggggggggffggggggggggggw
+wggggggggggffggggggggggggw
+wggggggggggffppggggggggggw
+wggggggggggffppggggggggggw
+wffffffffffffffffffffffffw
+wffffffffffffffffffffffffw
+wggggggggggffggggggggggggw
+wggggggggggffgggffffffffgw
+wggggggggggffgggffffffffgw
+wggggggggggffgggffffffffgw
+wggggggggggffgggffffffffgw
+wggggggggggffgggffffffffgw
+wfffgggggggffgggffffffffgw
+wxffgggggggffggggggggggggw
+wwwwwwwwwwwwwwwwwwwwwwwwww
+
+[placements]
+# at: x, y | def: <def .ron path> | rotation: <degrees, steps of 45>
+at: 6, 4 | def: assets/defs/story_fuel.ron
+at: 7, 15 | def: assets/defs/story_parts.ron
+at: 22, 16 | def: assets/defs/story_fuses.ron
+at: 18, 13 | def: assets/defs/Barrier Large.ron
+at: 21, 13 | def: assets/defs/Barrier Large.ron
+at: 15, 6 | def: assets/defs/Barrel.ron
+
+[houses]
+# house: <name in assets/houses> | at: <top-left tile x, y> | rotation: <degrees clockwise, steps of 90>
+house: bungalow | at: 2, 2
+house: bungalow | at: 2, 12
+house: bungalow | at: 15, 1 | rotation: 90
+
+[waves]
+# enemy: <enemy def path, omit for the built-in alien> | count: <n> | rate: <per minute>
+count: 6 | rate: 8
+enemy: assets/defs/Bunny.ron | count: 10 | rate: 14
+count: 8 | rate: 10
+enemy: assets/defs/Blue Demon.ron | count: 3 | rate: 4

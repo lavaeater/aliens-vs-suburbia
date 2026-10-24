@@ -1,0 +1,49 @@
+# Tiles: v void, f floor, w wall, e enemy spawn, p player spawn, x goal (enemy exit), g grass, m mud, s snow, r rock, ~ water
+
+[properties]
+name: The Mothership
+stories: assets/stories/level_05.ron
+loot: 2-3 per 60
+escape_limit: 5
+
+[tiles]
+wwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+wfffrrrrrrrrrrrrrrrrrrrrrrfffw
+wfefrrrrrrrrrrrrrrrrrrrrrrfefw
+wffffffffffffffffffffffffffffw
+wrrffffffffffffffffffffffffrrw
+wrrffffffffffffffffffffffffrrw
+wrrfffwwffffffffffffffwwfffrrw
+wrrfffwwffffffffffffffwwfffrrw
+wrrffffffffffffffffffffffffrrw
+wrrfffffffffvvvvvvfffffffffrrw
+wrrfffffffffvvvvvvfffffffffrrw
+wrrfffffffffvvvvvvfffffffffrrw
+wrrfffffffffvvvvvvfffffffffrrw
+wrrfffffffffvvvvvvfffffffffrrw
+wrrfffffffffvvvvvvfffffffffrrw
+wrrffffffffffffffffffffffffrrw
+wrrfffwwffffffffffffffwwfffrrw
+wrrfffwwffffffppffffffwwfffrrw
+wrrfffffffffffppfffffffffffrrw
+wrrffffffffffffffffffffffffrrw
+wrrffffffffffffffffffffffffrrw
+wrrrrrrrrrrrrffffrrrrrrrrrrrrw
+wrrrrrrrrrrrrfxffrrrrrrrrrrrrw
+wwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+
+[placements]
+# at: x, y | def: <def .ron path> | rotation: <degrees, steps of 45>
+at: 10, 6 | def: assets/defs/Barrel.ron
+at: 19, 6 | def: assets/defs/Barrel.ron
+at: 10, 17 | def: assets/defs/Barrel.ron
+at: 19, 17 | def: assets/defs/Barrel.ron
+
+[waves]
+# enemy: <enemy def path, omit for the built-in alien> | count: <n> | rate: <per minute>
+count: 12 | rate: 12
+enemy: assets/defs/Blue Demon.ron | count: 6 | rate: 6
+enemy: assets/defs/Demon-LnfIziKv4o.ron | count: 2 | rate: 2
+enemy: assets/defs/Alpaking.ron | count: 10 | rate: 12
+enemy: assets/defs/Alpaking Evolved.ron | count: 1 | rate: 1
+count: 10 | rate: 10

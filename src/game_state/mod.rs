@@ -15,6 +15,9 @@ pub enum GameState {
     AssetBrowser,
     MapEditor,
     HouseEditor,
+    /// Between levels: the next level's card, a retry, or the victory screen
+    /// (`campaign`).
+    Intermission,
 }
 
 /// Whether a match is paused, only present in `InGame`. `Paused` freezes `Time<Virtual>`

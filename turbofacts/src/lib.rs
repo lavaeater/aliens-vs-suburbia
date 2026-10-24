@@ -600,6 +600,13 @@ mod tests {
         assert!(!s.check_and_apply(&mut facts, &mut effects));
 
         facts.set_bool(keys::ALL_ALIENS_DEAD, true);
+        facts.set_bool(keys::OBJECTIVES_DONE, false);
+        assert!(
+            !s.check_and_apply(&mut facts, &mut effects),
+            "objectives left -> no win"
+        );
+
+        facts.set_bool(keys::OBJECTIVES_DONE, true);
         assert!(s.check_and_apply(&mut facts, &mut effects));
         assert!(facts.bool(keys::LEVEL_COMPLETE));
     }

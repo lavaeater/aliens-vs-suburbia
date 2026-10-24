@@ -98,6 +98,7 @@ impl Plugin for GamePlugin {
                 GameMusicPlugin,
                 GorePlugin,
                 crate::ui::pause_menu::PauseMenuPlugin,
+                crate::campaign::CampaignPlugin,
             ))
             .init_resource::<LightingPreset>()
             .add_systems(OnEnter(GameState::InGame), spawn_lights)

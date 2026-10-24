@@ -1,0 +1,50 @@
+// Level 4's stories: the golems come at night. The radio chatter is driven by the waves.
+[
+    (
+        name: "Level 4 intro",
+        repeat: false,
+        init_facts: [
+            ("ObjectiveText", Text("Survive the night. Shoot the barrels when the golems come close")),
+        ],
+        rules: [
+            (name: "started", criteria: [BoolIs(key: "LevelStarted", expected: true)]),
+        ],
+        consequences: [Emit(effect: "crawl:level_04_intro")],
+    ),
+    (
+        name: "Golems sighted",
+        repeat: false,
+        rules: [(name: "second wave", criteria: [IntCmp(key: "CurrentWave", op: Eq, value: 1)])],
+        consequences: [Emit(effect: "crawl:level_04_radio")],
+    ),
+    (
+        name: "Halfway through the night",
+        repeat: false,
+        rules: [(name: "fourth wave", criteria: [IntCmp(key: "CurrentWave", op: Eq, value: 3)])],
+        consequences: [
+            SetFact(key: "ObjectiveText", value: Text("Halfway to dawn. Check the trash bags for supplies")),
+        ],
+    ),
+    (
+        name: "Almost dawn",
+        repeat: false,
+        rules: [(name: "last wave", criteria: [IntCmp(key: "CurrentWave", op: Eq, value: 5)])],
+        consequences: [
+            SetFact(key: "ObjectiveText", value: Text("Almost dawn - one more push!")),
+        ],
+    ),
+    (
+        name: "Level 4 outro",
+        repeat: false,
+        rules: [
+            (
+                name: "won",
+                criteria: [
+                    BoolIs(key: "LevelComplete", expected: true),
+                    BoolIs(key: "LevelFailed", expected: false),
+                ],
+            ),
+        ],
+        consequences: [Emit(effect: "crawl:level_04_outro")],
+    ),
+]

@@ -1,0 +1,13 @@
+(
+    title: "EPISODE III: SNOW DAY",
+    lines: [
+        "Overnight the whole street turned white. School is cancelled. The guns are confiscated - Mom found them.",
+        "",
+        "All you have left is snow, and the coins in your piggy bank.",
+        "",
+        "Throw snowballs. Build towers along the path (B). Do not let more than EIGHT of them reach the end of the road.",
+    ],
+    style: Scroll(tilt: 1.2),
+    speed: 55.0,
+    backdrop: 0.85,
+)

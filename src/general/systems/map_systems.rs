@@ -43,27 +43,6 @@ use crate::player::events::building_events::{AddTile, RemoveTile};
 use crate::towers::systems::spawn_tower_sensor;
 use crate::ui::spawn_ui::AddHealthBar;
 
-pub fn load_map_one(mut send_event: MessageWriter<LoadMap>) {
-    // A `level_01.map` next to the `.ron` takes its place.
-    let mut map = match crate::map::text_format::load_level("assets/maps/level_01.ron") {
-        Ok((map, path)) => {
-            bevy::log::info!("Loaded {}", path.display());
-            map
-        }
-        Err(e) => {
-            bevy::log::error!("{e}");
-            return;
-        }
-    };
-    if map.generated {
-        let loot = map.loot.take();
-        map =
-            crate::map::map_generator::generate_suburb_map(map.seed, map.map_width, map.map_height);
-        map.loot = loot;
-    }
-    send_event.write(LoadMap { map });
-}
-
 pub fn load_map_showcase(mut send_event: MessageWriter<LoadMap>) {
     let map = crate::map::map_generator::generate_showcase_map(42);
     send_event.write(LoadMap { map });

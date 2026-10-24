@@ -1,0 +1,14 @@
+// A non-modal typewriter: the match keeps running behind it.
+(
+    title: "Mom, from the porch",
+    lines: [
+        "Kids! Dinner is at six!",
+        "And whoever let the alpacas into the garden is cleaning that up.",
+    ],
+    style: Typewriter,
+    speed: 45.0,
+    backdrop: 0.0,
+    modal: false,
+    auto_advance: 2.5,
+    hint: "E / Circle",
+)

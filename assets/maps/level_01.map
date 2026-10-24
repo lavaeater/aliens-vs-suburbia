@@ -1,8 +1,10 @@
 # Tiles: v void, f floor, w wall, e enemy spawn, p player spawn, x goal (enemy exit), g grass, m mud, s snow, r rock, ~ water
 
 [properties]
+name: Maple Drive
 stories: assets/stories/level_01.ron
 loot: 1-3 per 40
+escape_limit: 10
 
 [tiles]
 wwwwwwwwwwwwwwwwwwww
@@ -35,4 +37,5 @@ at: 7, 10 | def: assets/defs/story_letter.ron | rotation: 0
 
 [waves]
 # enemy: <enemy def path, omit for the built-in alien> | count: <n> | rate: <per minute>
-enemy: | count: 5 | rate: 5
+count: 5 | rate: 5
+enemy: assets/defs/Bunny.ron | count: 8 | rate: 10

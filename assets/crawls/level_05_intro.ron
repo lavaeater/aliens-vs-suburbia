@@ -1,0 +1,13 @@
+(
+    title: "EPISODE V: THE MOTHERSHIP",
+    lines: [
+        "It is the size of a shopping centre and it has parked across three football pitches.",
+        "",
+        "Its crew is pouring out of the hatches. Their leader has not shown itself yet.",
+        "",
+        "This is it. Hold the landing site. If FIVE of them get past you, the suburbs belong to them.",
+    ],
+    style: Scroll(tilt: 1.2),
+    speed: 55.0,
+    backdrop: 0.85,
+)

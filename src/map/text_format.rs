@@ -236,6 +236,15 @@ fn property(
             map.loot.get_or_insert_with(LootSpread::default).bags =
                 value.split(',').map(|b| b.trim().to_string()).collect();
         }
+        "escape_limit" => map.escape_limit = Some(number(key, value)?),
+        "weapons" => {
+            map.weapons = value
+                .split(',')
+                .map(|w| w.trim().to_string())
+                .filter(|w| !w.is_empty())
+                .collect();
+        }
+        "coins" => map.coins = Some(number(key, value)?),
         "generated" => map.generated = number(key, value)?,
         "seed" => map.seed = number(key, value)?,
         "width" => size.0 = Some(number(key, value)?),
@@ -472,6 +481,15 @@ pub fn to_text(map: &MapFile) -> Result<String, String> {
         if loot.bags != default.bags {
             lines.push(format!("loot_bags: {}", loot.bags.join(", ")));
         }
+    }
+    if let Some(limit) = map.escape_limit {
+        lines.push(format!("escape_limit: {limit}"));
+    }
+    if !map.weapons.is_empty() {
+        lines.push(format!("weapons: {}", map.weapons.join(", ")));
+    }
+    if let Some(coins) = map.coins {
+        lines.push(format!("coins: {coins}"));
     }
     if map.generated {
         lines.push("generated: true".into());
@@ -794,6 +812,19 @@ count: 3
         assert_eq!((one.min, one.max, one.per_tiles), (2, 2, 30));
         assert!(parse("[properties]\nloot: lots\n").is_err());
         assert!(parse("[properties]\nname: x\n").unwrap().loot.is_none());
+    }
+
+    #[test]
+    fn level_rules_are_properties() {
+        let map = parse(
+            "[properties]\nescape_limit: 3\nweapons: assets/defs/Snowball.ron, assets/defs/Pistol.ron\ncoins: 200\n",
+        )
+        .unwrap();
+        assert_eq!(map.escape_limit, Some(3));
+        assert_eq!(map.weapons, vec!["assets/defs/Snowball.ron", "assets/defs/Pistol.ron"]);
+        assert_eq!(map.coins, Some(200));
+        let again = parse(&to_text(&map).unwrap()).unwrap();
+        assert_eq!((again.escape_limit, again.weapons, again.coins), (map.escape_limit, map.weapons, map.coins));
     }
 
     #[test]

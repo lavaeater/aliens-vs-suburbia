@@ -1,0 +1,13 @@
+(
+    title: "EPISODE IV: NIGHT OF THE GOLEMS",
+    lines: [
+        "Something big is digging up the back yards.",
+        "",
+        "The aliens have woken the stone golems that sleep under every suburb. Bullets barely scratch them.",
+        "",
+        "But they do not like explosions. Lead them past the barrels, then shoot the barrels. Survive until dawn.",
+    ],
+    style: Scroll(tilt: 1.2),
+    speed: 55.0,
+    backdrop: 0.85,
+)

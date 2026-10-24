@@ -1,0 +1,103 @@
+// Level 2's stories (`MapFile::stories`): the community centre's floodlights are out.
+// Three story items (Key ids fuel / parts / fuses) are the level's objectives: each is an
+// `Objective.<name>` fact, false until found, and clearing the aliens only wins once all
+// of them are true (`ObjectivesDone`). `ObjectiveText` is the line on the HUD.
+[
+    (
+        name: "Level 2 intro",
+        repeat: false,
+        init_facts: [
+            ("Objective.fuel", Bool(false)),
+            ("Objective.parts", Bool(false)),
+            ("Objective.fuses", Bool(false)),
+            ("PowerFound", Int(0)),
+            ("ObjectiveText", Text("Find fuel, spare parts and fuses for the floodlights (0/3)")),
+        ],
+        rules: [
+            (name: "started", criteria: [BoolIs(key: "LevelStarted", expected: true)]),
+        ],
+        consequences: [Emit(effect: "crawl:level_02_intro")],
+    ),
+    (
+        name: "Found the fuel",
+        repeat: false,
+        rules: [(name: "picked up", criteria: [BoolIs(key: "ItemFound.fuel", expected: true)])],
+        consequences: [
+            SetFact(key: "Objective.fuel", value: Bool(true)),
+            AddInt(key: "PowerFound", delta: 1),
+        ],
+    ),
+    (
+        name: "Found the parts",
+        repeat: false,
+        rules: [(name: "picked up", criteria: [BoolIs(key: "ItemFound.parts", expected: true)])],
+        consequences: [
+            SetFact(key: "Objective.parts", value: Bool(true)),
+            AddInt(key: "PowerFound", delta: 1),
+        ],
+    ),
+    (
+        name: "Found the fuses",
+        repeat: false,
+        rules: [(name: "picked up", criteria: [BoolIs(key: "ItemFound.fuses", expected: true)])],
+        consequences: [
+            SetFact(key: "Objective.fuses", value: Bool(true)),
+            AddInt(key: "PowerFound", delta: 1),
+        ],
+    ),
+    (
+        name: "One of three",
+        repeat: false,
+        rules: [(name: "one", criteria: [IntCmp(key: "PowerFound", op: Eq, value: 1)])],
+        consequences: [
+            SetFact(key: "ObjectiveText", value: Text("Find fuel, spare parts and fuses for the floodlights (1/3)")),
+        ],
+    ),
+    (
+        name: "Two of three",
+        repeat: false,
+        rules: [(name: "two", criteria: [IntCmp(key: "PowerFound", op: Eq, value: 2)])],
+        consequences: [
+            SetFact(key: "ObjectiveText", value: Text("Find fuel, spare parts and fuses for the floodlights (2/3)")),
+        ],
+    ),
+    (
+        name: "Power restored",
+        repeat: false,
+        rules: [(name: "all three", criteria: [IntCmp(key: "PowerFound", op: Eq, value: 3)])],
+        consequences: [
+            SetFact(key: "ObjectiveText", value: Text("Floodlights on! Clear out the last of them")),
+            Emit(effect: "crawl:level_02_power"),
+        ],
+    ),
+    (
+        name: "Aliens gone, power still out",
+        repeat: false,
+        rules: [
+            (
+                name: "cleared without the objectives",
+                criteria: [
+                    BoolIs(key: "AllAliensDead", expected: true),
+                    BoolIs(key: "ObjectivesDone", expected: false),
+                ],
+            ),
+        ],
+        consequences: [
+            SetFact(key: "ObjectiveText", value: Text("The street is clear - but the floodlights still need fixing")),
+        ],
+    ),
+    (
+        name: "Level 2 outro",
+        repeat: false,
+        rules: [
+            (
+                name: "won",
+                criteria: [
+                    BoolIs(key: "LevelComplete", expected: true),
+                    BoolIs(key: "LevelFailed", expected: false),
+                ],
+            ),
+        ],
+        consequences: [Emit(effect: "crawl:level_02_outro")],
+    ),
+]

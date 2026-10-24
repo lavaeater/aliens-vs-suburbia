@@ -54,6 +54,9 @@ count: 20 | rate: 30
 | `loot` | random loot bags on the open floor: `1-5 per 20` = 1 to 5 bags for every 20 open tiles (`3 per 20` for an exact count). A fresh spread every time the level loads; never on spawns, goals, water, walls or placements (optional) |
 | `loot_table` | the loot table the bags roll, a file stem in `assets/loot/` (default `trash_bag`) |
 | `loot_bags` | the defs the bags are drawn with, comma separated, one picked per bag (default `assets/defs/Trash Bag.ron, assets/defs/Trash Bags.ron`) |
+| `escape_limit` | how many aliens may reach the goal before the level is lost (default 10) |
+| `weapons` | weapon defs every player carries on this level instead of their own, comma separated, the first one held (e.g. `assets/defs/Snowball.ron` for a snowballs-only level) |
+| `coins` | the team starts the level with at least this many coins (for towers) |
 | `seed` | random seed (optional) |
 | `generated` | `true` = ignore `[tiles]` and generate the map from `seed` |
 | `width`, `height` | size of a *generated* map only. A hand-made map's size comes from `[tiles]`: the longest row and the number of rows. |

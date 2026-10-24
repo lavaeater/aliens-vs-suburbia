@@ -1,0 +1,13 @@
+(
+    title: "THE SNOWMEN STAND GUARD",
+    lines: [
+        "The last alien is a lumpy snowman now. It looks happier that way.",
+        "",
+        "Dinner was meatloaf. Nobody talks about the meatloaf.",
+        "",
+        "As the sun goes down, the ground on Maple Drive begins to rumble...",
+    ],
+    style: Scroll(tilt: 1.2),
+    speed: 55.0,
+    backdrop: 0.85,
+)

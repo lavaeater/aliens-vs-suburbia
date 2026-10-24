@@ -149,6 +149,17 @@ pub struct MapFile {
     /// Random loot bags on the floor. `None` = none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub loot: Option<LootSpread>,
+    /// How many aliens may reach the goal before the level is lost. `None` = the default
+    /// (`LevelTracker`'s 10).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub escape_limit: Option<u32>,
+    /// Weapon defs every player carries on this level instead of their own (the first is
+    /// held). Empty = each character's own loadout.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub weapons: Vec<String>,
+    /// The team starts the level with at least this many coins (for towers).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub coins: Option<u32>,
 }
 
 #[derive(Component, Default, Reflect)]

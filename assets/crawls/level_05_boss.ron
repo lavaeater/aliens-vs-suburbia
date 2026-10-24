@@ -1,0 +1,14 @@
+// A non-modal typewriter: the match keeps running behind it.
+(
+    title: "Something huge, through a loudspeaker",
+    lines: [
+        "PEOPLE OF THE SUBURB. I AM THE ALPAKING EVOLVED.",
+        "YOUR LAWNS ARE NOW MY LAWNS. KNEEL BEFORE MY GLORIOUS FLEECE.",
+    ],
+    style: Typewriter,
+    speed: 45.0,
+    backdrop: 0.0,
+    modal: false,
+    auto_advance: 2.5,
+    hint: "E / Circle",
+)
