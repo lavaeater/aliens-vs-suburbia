@@ -195,6 +195,15 @@ pub struct ControlBindings {
     /// action uses Bevy's own press threshold.
     #[serde(default = "default_trigger_threshold")]
     pub trigger_threshold: f32,
+    /// How fast a pad player's aim turns toward the right stick, per second (higher is
+    /// snappier, 0 snaps). Smooths out the jitter of a worn or cheap stick.
+    #[serde(default = "default_aim_smoothing")]
+    pub aim_smoothing: f32,
+    /// The right stick only sets a new aim direction past this deflection (0..1, after
+    /// the dead zone). Below it the last aim holds, so the stick springing back to the
+    /// centre doesn't flick the aim to wherever it happens to pass through.
+    #[serde(default = "default_aim_hold")]
+    pub aim_hold: f32,
 }
 
 const fn default_stick_dead_zone() -> f32 {
@@ -202,6 +211,12 @@ const fn default_stick_dead_zone() -> f32 {
 }
 const fn default_trigger_threshold() -> f32 {
     0.3
+}
+const fn default_aim_smoothing() -> f32 {
+    18.0
+}
+const fn default_aim_hold() -> f32 {
+    0.35
 }
 
 /// The shipped layout. DualShock names in the comments.
@@ -257,6 +272,8 @@ impl Default for ControlBindings {
                 .collect(),
             stick_dead_zone: default_stick_dead_zone(),
             trigger_threshold: default_trigger_threshold(),
+            aim_smoothing: default_aim_smoothing(),
+            aim_hold: default_aim_hold(),
         }
     }
 }

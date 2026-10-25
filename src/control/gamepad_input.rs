@@ -5,6 +5,8 @@
 //! pads to players (`assign_gamepads`) and holds the stick-to-world maths both schemes
 //! share.
 
+use std::f32::consts::{PI, TAU};
+
 use bevy::app::{App, Plugin, PreUpdate};
 use bevy::input::gamepad::Gamepad;
 use bevy::prelude::*;
@@ -102,10 +104,48 @@ pub fn stick_to_world(stick: Vec2, camera_yaw_degrees: f32) -> Vec3 {
     Quat::from_rotation_y(camera_yaw_degrees.to_radians()) * Vec3::new(stick.x, 0.0, -stick.y)
 }
 
+/// Turns the aim `current` toward `target` (both on the ground plane) by the shorter way,
+/// covering `1 - e^(-rate * dt)` of the angle: an exponential ease that is frame-rate
+/// independent and soaks up a jittery stick. `rate <= 0` (or no aim yet) snaps.
+pub fn steer_aim(current: Vec3, target: Vec3, rate: f32, dt: f32) -> Vec3 {
+    if rate <= 0.0 || current.xz().length_squared() < 1e-6 {
+        return target;
+    }
+    let yaw = |v: Vec3| v.x.atan2(v.z);
+    let from = yaw(current);
+    let delta = (yaw(target) - from + PI).rem_euclid(TAU) - PI;
+    let turned = from + delta * (1.0 - (-rate * dt).exp());
+    Vec3::new(turned.sin(), 0.0, turned.cos())
+}
+
 #[cfg(test)]
 mod tests {
-    use super::stick_to_world;
+    use super::{steer_aim, stick_to_world};
     use bevy::prelude::*;
+
+    #[test]
+    fn the_aim_eases_toward_the_stick_the_short_way_round() {
+        let east = Vec3::X;
+        // 170 degrees clockwise from +Z vs 170 counter-clockwise: 20 degrees apart via -Z.
+        let a = Vec3::new(10f32.to_radians().sin(), 0.0, -10f32.to_radians().cos());
+        let b = Vec3::new(-10f32.to_radians().sin(), 0.0, -10f32.to_radians().cos());
+        let step = steer_aim(a, b, 10.0, 1.0 / 60.0);
+        assert!(step.x < a.x && step.x > b.x, "turned through -Z, not +Z: {step}");
+        assert!(step.z < -0.9);
+        // Unit length, on the ground, and it gets there.
+        assert!((step.length() - 1.0).abs() < 1e-5 && step.y == 0.0);
+        let mut aim = east;
+        for _ in 0..60 {
+            aim = steer_aim(aim, Vec3::Z, 18.0, 1.0 / 60.0);
+        }
+        assert!(aim.distance(Vec3::Z) < 1e-3, "settled in a second: {aim}");
+    }
+
+    #[test]
+    fn no_smoothing_or_no_previous_aim_snaps() {
+        assert_eq!(steer_aim(Vec3::X, Vec3::Z, 0.0, 0.016), Vec3::Z);
+        assert_eq!(steer_aim(Vec3::ZERO, Vec3::Z, 18.0, 0.016), Vec3::Z);
+    }
 
     #[test]
     fn stick_up_walks_away_from_the_camera() {

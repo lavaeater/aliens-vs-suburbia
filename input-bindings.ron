@@ -32,4 +32,6 @@
     },
     stick_dead_zone: 0.2,
     trigger_threshold: 0.3,
+    aim_smoothing: 18.0,
+    aim_hold: 0.35,
 )
