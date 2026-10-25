@@ -34,6 +34,7 @@ mod constants;
 mod control;
 pub(crate) mod crawl;
 pub(crate) mod facts;
+pub(crate) mod fullscreen;
 pub(crate) mod fx;
 pub(crate) mod game_state;
 pub(crate) mod general;
@@ -182,6 +183,7 @@ fn print_help() {
     println!("  cargo run -- --asset-browser               Launch straight into the asset browser");
     println!("  cargo run -- --house-editor                Launch straight into the house editor");
     println!("  cargo run -- --play [--level N]            Launch straight into a match (level 1, or N)");
+    println!("  cargo run -- --fullscreen                  1920x1080 fullscreen (combines with the others)");
     println!("  cargo run --features map-editor -- --map-editor [--file <path>]");
     println!("                                             Launch the map editor TUI");
     println!("  cargo run -- --create-map [OPTIONS]        Generate a map file");
@@ -248,6 +250,9 @@ fn main() -> std::process::ExitCode {
         .nth(1)
         .and_then(|n| n.parse().ok());
 
+    // 1920x1080 fullscreen on the primary monitor (`fullscreen.rs`).
+    let fullscreen = args.iter().any(|a| a == "--fullscreen");
+
     let mut app = App::new();
     app.register_type::<CameraOffset>()
         .register_type::<CurrentTile>()
@@ -255,11 +260,21 @@ fn main() -> std::process::ExitCode {
         .register_type::<Health>()
         .register_type::<AvoidWallsData>()
         .register_type::<ApproachAndAttackPlayerData>()
-        .add_plugins(DefaultPlugins.set(LogPlugin {
-            filter: "wgpu_core=warn,wgpu_hal=warn".into(),
-            level: log::Level::INFO,
-            ..Default::default()
-        }))
+        .add_plugins({
+            let plugins = DefaultPlugins.set(LogPlugin {
+                filter: "wgpu_core=warn,wgpu_hal=warn".into(),
+                level: log::Level::INFO,
+                ..Default::default()
+            });
+            if fullscreen {
+                plugins.set(WindowPlugin {
+                    primary_window: Some(fullscreen::window()),
+                    ..Default::default()
+                })
+            } else {
+                plugins
+            }
+        })
         // .add_plugins(SkeinPlugin::default())
         .add_plugins(PhysicsPlugins::default())
         .add_plugins(PhysicsDebugPlugin)
@@ -281,6 +296,10 @@ fn main() -> std::process::ExitCode {
         //))
         // .add_plugins(PixelShaderPlugin::default())
         .add_plugins(GamePlugin);
+
+    if fullscreen {
+        app.add_plugins(fullscreen::FullscreenPlugin);
+    }
 
     if straight_to_asset_browser {
         app.add_systems(

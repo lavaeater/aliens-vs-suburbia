@@ -242,7 +242,8 @@ pub fn house_library() -> std::collections::BTreeMap<String, HouseDef> {
 }
 
 /// Stamp every house placed in `map` into its tiles and placements, as the game plays
-/// it: walls block, doors are floor, each wall tile gets `wall_def`'s model, placements
+/// it: walls block, doors are floor, each wall tile gets `wall_def`'s model (none for
+/// an empty `wall_def`, as `text_format::load_level` bakes them), placements
 /// inside the house are kept and those under its walls dropped. Where houses
 /// overlap the later one wins. `load` reads a house by name; the ones it cannot read are
 /// skipped and returned as errors.

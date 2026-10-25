@@ -6,7 +6,7 @@
 
 use bevy::app::{App, Plugin};
 use bevy::prelude::{
-    IntoScheduleConfigs, MessageReader, OnEnter, Query, Res, ResMut, Update, With, in_state,
+    Has, IntoScheduleConfigs, MessageReader, OnEnter, Query, Res, ResMut, Update, With, in_state,
 };
 
 use crate::assets::asset_definition::ItemKind;
@@ -19,7 +19,8 @@ use crate::game_state::GameState;
 use crate::game_state::score_keeper::{LevelTracker, Score};
 use crate::general::components::Health;
 use crate::general::systems::coin_system::TeamWallet;
-use crate::player::components::Player;
+use crate::player::components::{Player, PlayerDead};
+use crate::player::systems::death_revive::RespawnQueue;
 
 use turbofacts::facts_resource::Facts;
 use turbofacts::keys;
@@ -103,25 +104,27 @@ fn story_item_facts(mut picked: MessageReader<ItemPickedUp>, mut facts: ResMut<F
 /// resource/query state in, the small set of facts stories evaluate out. Everything uses
 /// `set_if_changed`/`set_bool_if_changed` so unchanging values never dirty the store (and so
 /// never re-trigger a story check). The stories own the verdict — see `stories.rs`.
+#[allow(clippy::too_many_arguments)]
 fn derive_world_facts(
     mut facts: ResMut<Facts>,
-    players: Query<&Health, With<Player>>,
+    players: Query<(&Health, Has<PlayerDead>), With<Player>>,
+    respawns: Option<Res<RespawnQueue>>,
     scores: Query<&Score, With<Player>>,
     aliens: Query<(), With<Alien>>,
     level_tracker: Res<LevelTracker>,
     wallet: Res<TeamWallet>,
     wave_manager: Option<Res<WaveManager>>,
 ) {
-    // Player liveness.
-    let player_count = players.iter().count();
-    let living = players.iter().filter(|h| h.health > 0).count() as i64;
+    // Player liveness. Downed is not dead: a downed player can be revived, or bleeds out
+    // into a respawn while lives last, so the loss is the team wipe (`team_wiped`), not
+    // "nobody standing" - which was every time a solo player went down.
+    let living = players
+        .iter()
+        .filter(|(h, downed)| h.health > 0 && !downed)
+        .count() as i64;
     set_if_changed(&mut facts, keys::LIVING_PLAYER_COUNT, living);
-    // Only a loss once at least one player has spawned (the old inline non-empty guard).
-    set_bool_if_changed(
-        &mut facts,
-        keys::ALL_PLAYERS_DEAD,
-        player_count > 0 && living == 0,
-    );
+    let wiped = respawns.is_some_and(|queue| queue.team_wiped(!players.is_empty()));
+    set_bool_if_changed(&mut facts, keys::ALL_PLAYERS_DEAD, wiped);
 
     // Aliens: live count + kill total + the "all spawned aliens cleared" win condition.
     set_if_changed(&mut facts, keys::ENEMY_COUNT, aliens.iter().count() as i64);

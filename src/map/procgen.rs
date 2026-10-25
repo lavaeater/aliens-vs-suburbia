@@ -395,7 +395,8 @@ pub fn apply_house(
             _ => TILE_WALL_ALL,
         };
 
-        if let Some(def_path) = def_path {
+        // An empty def: the tile is left to the map's own wall mesh.
+        if let Some(def_path) = def_path.filter(|path| !path.is_empty()) {
             placements.push(TilePlacement {
                 x: cell.x,
                 y: cell.y,

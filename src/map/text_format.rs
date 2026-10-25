@@ -651,8 +651,10 @@ pub fn load_level(path: impl AsRef<Path>) -> Result<(MapFile, PathBuf), String> 
     };
     let mut map = read_map_file(&chosen)?;
     if !map.houses.is_empty() {
-        let wall_def = house::default_wall_def().unwrap_or_default();
-        for error in house::bake_houses(&mut map, &wall_def, |name| {
+        // No wall model: the walls are drawn with the rest of the map's (`spawn_walls`,
+        // one merged mesh), until houses get their own. A model per wall tile was both
+        // slow and, with a mis-scaled def, a wall of giants.
+        for error in house::bake_houses(&mut map, "", |name| {
             house::HouseDef::load(&house::house_path(name))
         }) {
             bevy::log::warn!("{}: house skipped: {error}", chosen.display());
@@ -863,7 +865,7 @@ count: 3
         let wall = (MapFeatures::ImpassableForPlayers as u64) | (MapFeatures::ImpassableForEnemies as u64);
         let blocked = map.tiles.iter().flatten().filter(|&&t| t & wall == wall).count();
         assert!(blocked > 10, "the bungalow's walls block: {blocked}");
-        assert_eq!(map.placements.len(), blocked, "a wall model on each");
+        assert!(map.placements.is_empty(), "no wall models: the wall mesh draws them");
         assert_eq!(map.tiles[0][0] & wall, 0, "the missing house is skipped");
     }
 

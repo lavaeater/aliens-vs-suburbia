@@ -71,6 +71,12 @@ impl RespawnQueue {
     pub fn is_out(&self, slot: usize) -> bool {
         self.out.contains(&slot)
     }
+
+    /// The team is wiped: someone played, no player body is left (downed ones still count,
+    /// they can be revived or bleed out into a respawn) and nobody is waiting to respawn.
+    pub fn team_wiped(&self, any_player_left: bool) -> bool {
+        self.started && !any_player_left && self.pending.is_empty()
+    }
 }
 
 /// When a player's health reaches 0, mark them as downed instead of letting
@@ -413,7 +419,7 @@ pub fn check_team_wipe(
     let Some(tracker) = tracker.as_mut() else {
         return;
     };
-    if !queue.started || !players.is_empty() || !queue.pending.is_empty() {
+    if !queue.team_wiped(!players.is_empty()) {
         return;
     }
     if matches!(tracker.level_state, LevelState::InProgress) {
@@ -429,6 +435,25 @@ pub fn reset_respawn_queue(mut queue: ResMut<RespawnQueue>) {
 mod tests {
     use super::*;
     use crate::assets::asset_definition::AmmoKind;
+
+    #[test]
+    fn only_nobody_left_and_nobody_coming_back_is_a_wipe() {
+        let mut queue = RespawnQueue::default();
+        assert!(!queue.team_wiped(false), "nobody has spawned yet");
+        queue.started = true;
+        assert!(!queue.team_wiped(true), "a downed player is still a body");
+        queue.pending.push(Respawning {
+            slot: 0,
+            lives_left: 2,
+            timer: Timer::from_seconds(3.0, TimerMode::Once),
+            death_position: Vec3::ZERO,
+            anchor: None,
+        });
+        assert!(!queue.team_wiped(false), "bled out but respawning");
+        queue.pending.clear();
+        queue.out.push(0);
+        assert!(queue.team_wiped(false));
+    }
 
     #[test]
     fn anchor_cycles_through_fell_here_and_each_living_player() {
