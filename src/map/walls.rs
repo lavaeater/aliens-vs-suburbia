@@ -37,6 +37,34 @@ pub fn padded_tiles(map: &MapFile) -> Vec<Vec<u64>> {
     padded
 }
 
+/// Void tiles walled in by the map, map coordinates `(x, y)`. Void only belongs at the edge
+/// of the world: inside the map it shows as a hole into the background, so levels fill it
+/// with walls instead. A void counts as the edge if void connects it to the outside.
+#[cfg(test)]
+pub fn enclosed_voids(map: &MapFile) -> Vec<(usize, usize)> {
+    let padded = padded_tiles(map);
+    let is_void = |x: usize, y: usize| padded.get(y).and_then(|row| row.get(x)) == Some(&0);
+    let mut outside = HashSet::from([(0, 0)]);
+    let mut todo = vec![(0usize, 0usize)];
+    while let Some((x, y)) = todo.pop() {
+        let around = [(x + 1, y), (x.wrapping_sub(1), y), (x, y + 1), (x, y.wrapping_sub(1))];
+        for next in around {
+            if is_void(next.0, next.1) && outside.insert(next) {
+                todo.push(next);
+            }
+        }
+    }
+    let mut enclosed = Vec::new();
+    for (y, row) in map.tiles.iter().enumerate() {
+        for (x, &raw) in row.iter().enumerate() {
+            if raw == 0 && !outside.contains(&(x + 1, y + 1)) {
+                enclosed.push((x, y));
+            }
+        }
+    }
+    enclosed
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum WallKind {
     Solid,
@@ -214,6 +242,21 @@ mod tests {
         assert_eq!(p[0], vec![0; 4]);
         assert_eq!(p[1], vec![0, 1, 2, 0]);
         assert_eq!(p[2][2], 4);
+    }
+
+    #[test]
+    fn only_void_cut_off_from_the_edge_is_enclosed() {
+        // A hole in the middle, a notch open to the edge, and a short row.
+        let map = MapFile {
+            tiles: vec![
+                vec![9, 9, 9, 9, 9],
+                vec![9, 0, 9, 9, 0],
+                vec![9, 9, 9, 0, 0],
+                vec![9, 9, 9],
+            ],
+            ..default()
+        };
+        assert_eq!(enclosed_voids(&map), vec![(1, 1)]);
     }
 
     #[test]

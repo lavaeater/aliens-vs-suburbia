@@ -503,6 +503,8 @@ mod tests {
             assert!(has(crate::map::MapFeatures::EnemySpawn), "{}: enemy spawn", level.map);
             assert!(has(crate::map::MapFeatures::EnemyExit), "{}: goal", level.map);
             assert!(!map.waves.is_empty(), "{}: waves", level.map);
+            let holes = crate::map::walls::enclosed_voids(&map);
+            assert!(holes.is_empty(), "{}: void inside the map at {holes:?}", level.map);
             assert!(
                 goal_reachable(&map.tiles),
                 "{}: an enemy spawn cannot reach the goal",

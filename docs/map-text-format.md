@@ -69,7 +69,7 @@ line things up); rows shorter than the longest are padded with void. Everything 
 
 | letter | tile |
 |--------|------|
-| `v` | void (nothing) |
+| `v` | void (nothing; only outside the walls - a hole inside the map shows the background, so fill it with `w`) |
 | `f` | floor |
 | `w` | wall (floor, blocks everyone) |
 | `e` | enemy spawn |
