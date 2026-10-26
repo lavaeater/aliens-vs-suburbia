@@ -12,7 +12,6 @@ use crate::player::ammo::AmmoPouch;
 use crate::player::bundle::PlayerBundle;
 pub use crate::player::components::WeaponsHidden;
 use crate::player::components::{Lives, PlayerSlot};
-use crate::player::systems::death_revive::RespawnQueue;
 use crate::player::systems::equip::PendingEquip;
 use crate::player::systems::leg_ik::PendingLegs;
 use crate::player::systems::loadout::Weapons;
@@ -58,7 +57,6 @@ pub fn spawn_players(
     mut add_health_bar_mw: MessageWriter<AddHealthBar>,
     mut player_added_mw: MessageWriter<GameTrackingEvent>,
     settings: Res<GameSettings>,
-    mut respawn_queue: ResMut<RespawnQueue>,
     level_loadout: Option<Res<crate::campaign::LevelLoadout>>,
 ) {
     let max_players = roster.as_ref().map_or(1, |r| r.def_paths.len().max(1));
@@ -67,7 +65,6 @@ pub fn spawn_players(
     let assignments = assign_spawns(&requests, &occupied, max_players);
 
     for (slot, spawn_player) in assignments {
-        respawn_queue.started = true;
         let pos = Transform::from_xyz(
             spawn_player.position.x,
             spawn_player.position.y,

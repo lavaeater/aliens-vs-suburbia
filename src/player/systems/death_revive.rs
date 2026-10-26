@@ -55,7 +55,10 @@ pub struct Respawning {
 pub struct RespawnQueue {
     pub pending: Vec<Respawning>,
     pub out: Vec<usize>,
-    /// Set once any player has spawned this level, so an empty map is not a team wipe.
+    /// Set once a player entity has been seen this level (by `check_team_wipe`), so an
+    /// empty map is not a team wipe. Not when the spawn is requested: the entity only
+    /// exists once the commands apply, and a check in between saw "someone played, nobody
+    /// is here" - a wipe at the very start of the level.
     pub started: bool,
 }
 
@@ -412,10 +415,13 @@ pub fn respawn_position(death: Vec3, walkable: &[Vec3], aliens: &[Vec3]) -> Vec3
 
 /// Fail the level once nobody is alive, nobody is coming back, and someone did play.
 pub fn check_team_wipe(
-    queue: Res<RespawnQueue>,
+    mut queue: ResMut<RespawnQueue>,
     players: Query<(), With<Player>>,
     mut tracker: Option<ResMut<LevelTracker>>,
 ) {
+    if !players.is_empty() && !queue.started {
+        queue.started = true;
+    }
     let Some(tracker) = tracker.as_mut() else {
         return;
     };

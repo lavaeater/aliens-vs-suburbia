@@ -123,7 +123,7 @@ fn derive_world_facts(
         .filter(|(h, downed)| h.health > 0 && !downed)
         .count() as i64;
     set_if_changed(&mut facts, keys::LIVING_PLAYER_COUNT, living);
-    let wiped = respawns.is_some_and(|queue| queue.team_wiped(!players.is_empty()));
+    let wiped = respawns.as_ref().is_some_and(|queue| queue.team_wiped(!players.is_empty()));
     set_bool_if_changed(&mut facts, keys::ALL_PLAYERS_DEAD, wiped);
 
     // Aliens: live count + kill total + the "all spawned aliens cleared" win condition.
