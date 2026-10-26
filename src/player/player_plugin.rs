@@ -105,9 +105,19 @@ impl Plugin for PlayerPlugin {
             // its own `GlobalTransform` (flashlight.rs).
             .add_systems(
                 PostUpdate,
-                crate::player::systems::flashlight::update_flashlights
+                (
+                    crate::player::systems::flashlight::update_flashlights,
+                    crate::player::systems::player_ring::update_rings,
+                )
                     .after(TransformSystems::Propagate)
                     .run_if(in_state(GameState::InGame)),
+            )
+            // Not in the character editor, where it would sit in the way of the model.
+            .add_systems(
+                Update,
+                crate::player::systems::player_ring::give_rings
+                    .run_if(in_state(GameState::InGame))
+                    .run_if(crate::character_editor::state::in_normal_game),
             )
             .add_systems(
                 Update,
