@@ -161,7 +161,10 @@ pub fn spawn_players(
                     ),
                     WorldAssetRoot(scene),
                     pos,
-                    Collider::cuboid(0.5, 0.5, 0.45),
+                    // Round, not a box: the body turns with the walk, and a box's corners
+                    // and bottom edges snagged on wall corners and on the seams between
+                    // floor slabs, stopping the player dead for a moment. Same 0.5 height.
+                    Collider::capsule(0.23, 0.04),
                     // Physics ticks at 20 Hz; without easing the body (and the camera that
                     // follows it) visibly steps between ticks.
                     TransformInterpolation,

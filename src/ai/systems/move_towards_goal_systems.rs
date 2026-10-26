@@ -33,7 +33,7 @@ pub fn move_towards_goal_system(
     goal_query: Query<(), With<AlienGoal>>,
 ) {
     if goal_query.is_empty() {
-        info!("Has no goal");
+        trace!("Has no goal");
         return;
     }
 
@@ -48,16 +48,16 @@ pub fn move_towards_goal_system(
     ) in alien_query.iter_mut()
     {
         // if move_towards_goal_data.path.is_some() && linear_velocity.0.length() < 0.001 {
-        //     info!("this little alien is standing still, i.e. has no path to goal right now.");
+        //     trace!("this little alien is standing still, i.e. has no path to goal right now.");
         //     move_towards_goal_data.path = None;
         //     continue;
         // }
 
-        // info!("This little alien is supposed to be moving!");
+        // trace!("This little alien is supposed to be moving!");
 
         match &move_towards_goal_data.path.clone() {
             None => {
-                info!("We have no path!");
+                trace!("We have no path!");
                 let astar_result = astar(
                     &alien_current_tile.tile,
                     |t| {
@@ -72,11 +72,11 @@ pub fn move_towards_goal_system(
                 );
                 match astar_result {
                     None => {
-                        info!("Could not find a path right now");
+                        trace!("Could not find a path right now");
                         cant_find_path_mw.write(AgentCannotFindPath(entity));
                     }
                     Some(path) => {
-                        info!("Found path! {:?}", &path);
+                        trace!("Found path! {:?}", &path);
                         let Some((_, rest)) = path.0.split_first() else {
                             return;
                         };
@@ -85,16 +85,16 @@ pub fn move_towards_goal_system(
                 }
             }
             Some(path) => {
-                info!("Alien has path!");
+                trace!("Alien has path!");
                 if path.is_empty() {
-                    info!("Path is empty");
+                    trace!("Path is empty");
                     move_towards_goal_data.path = None;
                     alien_reached_goal_mw.write(AgentReachedGoal(entity));
                 } else {
-                    info!("Path has some steps left!");
+                    trace!("Path has some steps left!");
                     if let Some(next_tile) = path.first() {
                         if map_graph.path_finding_grid.has_vertex(*next_tile) {
-                            info!("Found the next tile");
+                            trace!("Found the next tile");
                             let next_tile_position =
                                 next_tile.to_world_coords(&tile_definitions).xz();
                             let alien_position_vector2 = alien_position.0.xz();
@@ -106,7 +106,7 @@ pub fn move_towards_goal_system(
                             if distance < 0.5
                                 && let Some((_, rest)) = path.split_first()
                             {
-                                info!("Distance was sooo short, lets move to next!");
+                                trace!("Distance was sooo short, lets move to next!");
                                 move_towards_goal_data.path = Some(rest.to_vec());
                                 continue;
                             }
@@ -114,7 +114,7 @@ pub fn move_towards_goal_system(
                             let angle = alien_direction_vector2
                                 .angle_to(alien_to_goal_direction)
                                 .to_degrees();
-                            info!(
+                            trace!(
                                 "Steering: alien_pos={:.2?} tile_pos={:.2?} facing={:.2?} to_goal={:.2?} angle={:.1}deg dist={:.2}",
                                 alien_position.0.xz(),
                                 next_tile_position,
@@ -141,11 +141,11 @@ pub fn move_towards_goal_system(
                                 }
                             }
                             if angle.abs() < angle_forward_value {
-                                info!("We can move forward!");
+                                trace!("We can move forward!");
                                 controller.directions.insert(ControlDirection::Forward);
                             }
                         } else {
-                            info!("Couldn't find next tile on map!");
+                            trace!("Couldn't find next tile on map!");
                             move_towards_goal_data.path = None;
                         }
                     }
@@ -162,7 +162,7 @@ pub fn agent_reached_goal_handler(
     mut game_tracking_mw: MessageWriter<GameTrackingEvent>,
 ) {
     for AgentReachedGoal(alien) in reached_goal_mr.read() {
-        info!("this little alien reached its goal");
+        trace!("this little alien reached its goal");
         alien_counter.count = alien_counter.count.saturating_sub(1);
         commands.entity(*alien).despawn();
         game_tracking_mw.write(GameTrackingEvent::AlienReachedGoal);

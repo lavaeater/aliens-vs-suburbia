@@ -1,34 +1,93 @@
-// Controls for every player. Edited in game from the pause menu (Esc / Start ->
-// Controls), which rewrites this file. Delete it to get the defaults back; actions
-// left out are filled in from the defaults.
-//
-// keys: (primary, alternate), each Some(Key(<KeyCode>)) / Some(Mouse(<MouseButton>)) / None.
-// pad: a Bevy GamepadButton (layout neutral: South = Cross / A, East = Circle / B,
-// West = Square / X, North = Triangle / Y). Movement and aim on the pad are the sticks.
 (
     actions: {
-        MoveUp: (keys: (Some(Key(KeyW)), None), pad: None),
-        MoveDown: (keys: (Some(Key(KeyS)), None), pad: None),
-        MoveLeft: (keys: (Some(Key(KeyA)), None), pad: None),
-        MoveRight: (keys: (Some(Key(KeyD)), None), pad: None),
-        Fire: (keys: (Some(Mouse(Left)), Some(Key(Space))), pad: Some(RightTrigger2)),
-        Reload: (keys: (Some(Key(KeyR)), None), pad: Some(RightTrigger)),
-        NextWeapon: (keys: (Some(Key(Tab)), None), pad: Some(DPadUp)),
-        PrevWeapon: (keys: (None, None), pad: Some(DPadDown)),
-        Weapon1: (keys: (Some(Key(Digit1)), None), pad: None),
-        Weapon2: (keys: (Some(Key(Digit2)), None), pad: None),
-        Weapon3: (keys: (Some(Key(Digit3)), None), pad: None),
-        Weapon4: (keys: (Some(Key(Digit4)), None), pad: None),
-        ThrowSpecial: (keys: (Some(Key(KeyG)), None), pad: Some(LeftTrigger)),
-        Ability: (keys: (Some(Key(KeyQ)), None), pad: Some(North)),
-        Interact: (keys: (Some(Key(KeyE)), None), pad: Some(East)),
-        Flashlight: (keys: (Some(Key(KeyF)), None), pad: Some(LeftThumb)),
-        BuildMode: (keys: (Some(Key(KeyB)), None), pad: Some(West)),
-        PlaceBuild: (keys: (Some(Mouse(Left)), Some(Key(Space))), pad: Some(South)),
-        CancelBuild: (keys: (Some(Key(Escape)), Some(Mouse(Right))), pad: Some(East)),
-        NextBuildItem: (keys: (Some(Key(ArrowRight)), None), pad: Some(DPadRight)),
-        PrevBuildItem: (keys: (Some(Key(ArrowLeft)), None), pad: Some(DPadLeft)),
-        Pause: (keys: (Some(Key(Escape)), None), pad: Some(Start)),
+        MoveUp: (
+            keys: (Some(Key(KeyW)), None),
+            pad: None,
+        ),
+        MoveDown: (
+            keys: (Some(Key(KeyS)), None),
+            pad: None,
+        ),
+        MoveLeft: (
+            keys: (Some(Key(KeyA)), None),
+            pad: None,
+        ),
+        MoveRight: (
+            keys: (Some(Key(KeyD)), None),
+            pad: None,
+        ),
+        Fire: (
+            keys: (Some(Mouse(Left)), Some(Key(Space))),
+            pad: Some(RightTrigger2),
+        ),
+        Reload: (
+            keys: (Some(Key(KeyR)), Some(Mouse(Middle))),
+            pad: Some(RightTrigger),
+        ),
+        NextWeapon: (
+            keys: (Some(Key(Tab)), None),
+            pad: Some(DPadUp),
+        ),
+        PrevWeapon: (
+            keys: (None, None),
+            pad: Some(DPadDown),
+        ),
+        Weapon1: (
+            keys: (Some(Key(Digit1)), None),
+            pad: None,
+        ),
+        Weapon2: (
+            keys: (Some(Key(Digit2)), None),
+            pad: None,
+        ),
+        Weapon3: (
+            keys: (Some(Key(Digit3)), None),
+            pad: None,
+        ),
+        Weapon4: (
+            keys: (Some(Key(Digit4)), None),
+            pad: None,
+        ),
+        ThrowSpecial: (
+            keys: (Some(Key(KeyG)), None),
+            pad: Some(LeftTrigger),
+        ),
+        Ability: (
+            keys: (Some(Key(KeyQ)), None),
+            pad: Some(North),
+        ),
+        Interact: (
+            keys: (Some(Key(KeyE)), None),
+            pad: Some(East),
+        ),
+        Flashlight: (
+            keys: (Some(Key(KeyF)), None),
+            pad: Some(LeftThumb),
+        ),
+        BuildMode: (
+            keys: (Some(Key(KeyB)), None),
+            pad: Some(West),
+        ),
+        PlaceBuild: (
+            keys: (Some(Mouse(Left)), Some(Key(Space))),
+            pad: Some(South),
+        ),
+        CancelBuild: (
+            keys: (Some(Key(Escape)), Some(Mouse(Right))),
+            pad: Some(East),
+        ),
+        NextBuildItem: (
+            keys: (Some(Key(ArrowRight)), None),
+            pad: Some(DPadRight),
+        ),
+        PrevBuildItem: (
+            keys: (Some(Key(ArrowLeft)), None),
+            pad: Some(DPadLeft),
+        ),
+        Pause: (
+            keys: (Some(Key(Escape)), None),
+            pad: Some(Start),
+        ),
     },
     stick_dead_zone: 0.2,
     trigger_threshold: 0.3,
