@@ -622,6 +622,53 @@ mod tests {
         assert!(checked > 0, "no defs found under {root}");
     }
 
+    /// A prop's `scale` times its model (node transforms included) must come out a sane
+    /// size. Defs scaled by an old browser that ignored a GLB's own node scale came out 100x
+    /// too big: a barrier 240 m wide, its collider lifting the player into the sky.
+    #[test]
+    fn every_prop_def_is_a_sane_size() {
+        const MAX_METRES: f32 = 12.0;
+        let root = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/defs");
+        let mut checked = 0;
+        for entry in std::fs::read_dir(root).expect("assets/defs exists").flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("ron") {
+                continue;
+            }
+            let Ok(def) = ron::from_str::<super::AssetDefinition>(
+                &std::fs::read_to_string(&path).unwrap(),
+            ) else {
+                continue;
+            };
+            // Characters are sized in game (F2), not by their def scale.
+            if matches!(
+                def.model_type,
+                super::ModelType::Player(_) | super::ModelType::Enemy(_)
+            ) {
+                continue;
+            }
+            let Some(points) = crate::assets::gltf_info::mesh_points(&def.model_path) else {
+                continue;
+            };
+            let Some((lo, hi)) = points
+                .iter()
+                .fold(None, |acc: Option<(bevy::math::Vec3, bevy::math::Vec3)>, p| {
+                    Some(acc.map_or((*p, *p), |(lo, hi)| (lo.min(*p), hi.max(*p))))
+                })
+            else {
+                continue;
+            };
+            let size = (hi - lo) * def.scale;
+            assert!(
+                size.max_element() <= MAX_METRES,
+                "{} comes out {size} m: is its scale ignoring the model's own node scale?",
+                path.display()
+            );
+            checked += 1;
+        }
+        assert!(checked > 0, "no prop defs measured under {root}");
+    }
+
     /// `animations` is keyed by the enum, written as bare variant names (`Idle: "..."`).
     #[test]
     fn animations_round_trip_with_enum_keys() {
