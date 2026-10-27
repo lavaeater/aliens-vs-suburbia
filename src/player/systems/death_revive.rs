@@ -114,12 +114,13 @@ pub fn detect_player_death(
                     Color::srgb(0.2, 0.6, 1.0),
                     Color::srgba(0.0, 0.0, 0.0, 0.6),
                 ),
-                Node {
-                    position_type: PositionType::Absolute,
-                    ..default()
-                },
             ))
             .id();
+        // `progress_bar` brings its own `Node`; a second one in the bundle panics.
+        commands
+            .entity(bar)
+            .entry::<Node>()
+            .and_modify(|mut n| n.position_type = PositionType::Absolute);
 
         commands.entity(entity).insert(PlayerDead {
             revive_progress: 0.0,
@@ -441,6 +442,27 @@ pub fn reset_respawn_queue(mut queue: ResMut<RespawnQueue>) {
 mod tests {
     use super::*;
     use crate::assets::asset_definition::AmmoKind;
+
+    #[test]
+    fn going_down_spawns_a_revive_bar() {
+        let mut app = App::new();
+        app.insert_resource(GameSettings::default())
+            .add_message::<AnimationEvent>()
+            .add_systems(Update, detect_player_death);
+        let player = app
+            .world_mut()
+            .spawn((
+                Player,
+                Health { health: 0, max_health: 100 },
+                LinearVelocity(Vec3::X),
+            ))
+            .id();
+        app.update();
+        let downed = app.world().get::<PlayerDead>(player).expect("downed");
+        let bar = downed.revive_bar.expect("a revive bar");
+        let node = app.world().get::<Node>(bar).expect("the bar is a UI node");
+        assert_eq!(node.position_type, PositionType::Absolute);
+    }
 
     #[test]
     fn only_nobody_left_and_nobody_coming_back_is_a_wipe() {
