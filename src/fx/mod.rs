@@ -12,6 +12,7 @@
 //! [`FloorParticleCollider`], a box under the whole map whose top is the floor plane
 //! (sprinkles allows 32 in the scene, so no per-wall colliders).
 
+use crate::game_state::clear_game_entities_plugin::Persistent;
 use bevy::prelude::*;
 use bevy_sprinkles::prelude::{
     EmitterEntity, EmitterRuntime, Particles3d, ParticlesAsset, ParticlesCollider3D,
@@ -131,6 +132,7 @@ fn spawn_floor_particle_collider(mut commands: Commands, tile_defs: Option<Res<T
     let Some(tile_defs) = tile_defs else { return };
     commands.spawn((
         Name::new("Particle floor"),
+        Persistent,
         FloorParticleCollider,
         ParticlesCollider3D {
             enabled: true,

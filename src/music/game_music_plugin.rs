@@ -17,6 +17,7 @@ use crate::alien::components::general::AlienCounter;
 use crate::alien::wave_manager::WaveManager;
 use crate::camera::components::CameraFocus;
 use crate::game_state::GameState;
+use crate::game_state::clear_game_entities_plugin::Persistent;
 use crate::game_state::score_keeper::{GameTrackingEvent, LevelState, LevelTracker};
 use crate::general::components::Health;
 use crate::general::components::map_components::AlienSpawnPoint;
@@ -96,6 +97,7 @@ fn setup_band(mut commands: Commands, mixer: Res<Mixer>, asset_server: Res<Asset
     let load = |p: &str| -> Handle<AudioSample> { asset_server.load(p.to_string()) };
 
     commands.spawn((
+        Persistent,
         Name::new("Music ear"),
         MusicEar,
         MusicListener,
@@ -105,6 +107,7 @@ fn setup_band(mut commands: Commands, mixer: Res<Mixer>, asset_server: Res<Asset
     // ── Core, always on: acid bass walking the changes, voice-led pads ───────
     let (node, config) = synth(SynthPatch::acid_bass(), -12.0);
     commands.spawn((
+        Persistent,
         synth_musician("Bass", WalkingBass::new(1), -24.0, node, config),
         Section::Bass,
         Responds::default()
@@ -113,6 +116,7 @@ fn setup_band(mut commands: Commands, mixer: Res<Mixer>, asset_server: Res<Asset
     ));
     let (node, config) = synth(SynthPatch::pad(), -8.0);
     commands.spawn((
+        Persistent,
         synth_musician("Pad", VoiceLedPad::new(2).voices(3), -12.0, node, config),
         Section::Harmony,
         Responds::default()
@@ -124,6 +128,7 @@ fn setup_band(mut commands: Commands, mixer: Res<Mixer>, asset_server: Res<Asset
     // 8-bit chime arpeggios: the suburban calm, even in the menu.
     let (node, config) = synth(SynthPatch::chip(), -22.0);
     commands.spawn((
+        Persistent,
         synth_musician("Arp", ChimeArp::new(3), 0.0, node, config),
         Section::Harmony,
         Responds::default().cutoff(Dim::Tension, 600.0, 4_000.0),
@@ -152,12 +157,16 @@ fn setup_band(mut commands: Commands, mixer: Res<Mixer>, asset_server: Res<Asset
         kit,
         pump,
     );
-    commands
-        .entity(drums)
-        .insert((Section::Drums, Layer::above(Dim::Intensity, 0.3), Muted));
+    commands.entity(drums).insert((
+        Persistent,
+        Section::Drums,
+        Layer::above(Dim::Intensity, 0.3),
+        Muted,
+    ));
 
     // Surf-spy sample stabs on the backbeat: the suburbia in the sci-fi.
     commands.spawn((
+        Persistent,
         Musician::new(
             "Stabs".into(),
             ChordStabs {
@@ -176,6 +185,7 @@ fn setup_band(mut commands: Commands, mixer: Res<Mixer>, asset_server: Res<Asset
 
     let (node, config) = synth(SynthPatch::glide_lead(), -16.0);
     commands.spawn((
+        Persistent,
         synth_musician("Lead", MotifSoloist::new(4), 0.0, node, config),
         Section::Lead,
         Responds::default().cutoff(Dim::Tension, 800.0, 4_500.0),
@@ -186,6 +196,7 @@ fn setup_band(mut commands: Commands, mixer: Res<Mixer>, asset_server: Res<Asset
     // The aliens' own voice: a theremin that wails as the danger rises, its
     // vibrato getting faster and wider (knobs 0 = rate, 1 = wobble).
     commands.spawn((
+        Persistent,
         glicol_musician(
             "Theremin",
             MotifSoloist::new(7),
@@ -207,6 +218,7 @@ fn setup_band(mut commands: Commands, mixer: Res<Mixer>, asset_server: Res<Asset
         let (node, config) = synth(patch, db);
         commands
             .spawn((
+                Persistent,
                 synth_musician(name, StingerOnly, transpose, node, config),
                 Section::Fx,
                 Muted,
@@ -226,7 +238,11 @@ fn setup_band(mut commands: Commands, mixer: Res<Mixer>, asset_server: Res<Asset
 fn hum_spawn_points(mut commands: Commands, spawn_points: Query<Entity, Added<AlienSpawnPoint>>) {
     for entity in &spawn_points {
         let (node, config) = synth(SynthPatch::saw_lead().named("hum"), -60.0);
-        commands.entity(entity).insert((
+        // A child, not on the spawn point itself: the sweep between matches spares audio
+        // nodes, and the child goes with its parent.
+        commands.spawn((
+            ChildOf(entity),
+            Transform::default(),
             synth_musician(
                 "Portal hum",
                 Drone { interval: -12 },

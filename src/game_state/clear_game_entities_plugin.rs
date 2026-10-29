@@ -6,8 +6,9 @@ use bevy::ecs::resource::IsResource;
 use bevy::ecs::system::SystemIdMarker;
 use bevy::input::gamepad::Gamepad;
 use bevy::picking::pointer::PointerId;
-use bevy::prelude::{Commands, Entity, OnExit, Query, Window, With, Without};
+use bevy::prelude::{Commands, Component, Entity, OnExit, Query, Window, With, Without};
 use bevy::window::Monitor;
+use bevy_seedling::prelude::FirewheelNode;
 
 pub struct ClearGameEntitiesPlugin;
 
@@ -18,12 +19,20 @@ impl Plugin for ClearGameEntitiesPlugin {
     }
 }
 
+/// An entity that lives for the whole app, spawned once at startup: the sweep leaves it
+/// (and so its children) alone.
+#[derive(Component)]
+pub struct Persistent;
+
 /// Entities that belong to the engine and plugins rather than to a match, and that must
 /// survive the sweep. Since Bevy 0.19 resources are entities too (`IsResource`):
 /// despawning one runs its discard hook, which queues a command on the entity it was just
 /// removed from and panics. Observers, registered systems, gamepads, monitors and picking
 /// pointers are entities the app needs for the rest of its life (no pointers means no
-/// clicks in the menu, no `Gamepad` means no pads).
+/// clicks in the menu, no `Gamepad` means no pads). The audio graph is too: seedling and
+/// rusty_music build their buses and pools once at startup, and despawning a node takes it
+/// out of the graph for good (no music or sound in the next match). A match's own audio
+/// nodes hang off its entities as children, so they still go with their parent.
 type EngineOwned = (
     Without<Window>,
     Without<IsResource>,
@@ -32,6 +41,8 @@ type EngineOwned = (
     Without<Gamepad>,
     Without<Monitor>,
     Without<PointerId>,
+    Without<FirewheelNode>,
+    Without<Persistent>,
 );
 
 pub fn clear_game_entities(
