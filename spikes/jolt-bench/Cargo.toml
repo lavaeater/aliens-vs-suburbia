@@ -1,0 +1,17 @@
+[package]
+name = "jolt-bench"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Spike: the same game-shaped scene stepped by Avian and by Jolt (oxijolt) in a headless Bevy app"
+
+# Its own workspace: the spike never touches the game's build, lockfile or lints.
+[workspace]
+
+[dependencies]
+bevy = { version = "0.19", default-features = false, features = ["multi_threaded"] }
+avian3d = { version = "0.7.0", default-features = false, features = ["3d", "f32", "parry-f32", "simd", "parallel", "bevy_diagnostic"] }
+oxijolt = { version = "1.4", features = ["glam032"] }
+
+[profile.release]
+debug = 1
