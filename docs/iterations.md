@@ -27,7 +27,7 @@ Worked like a charm, bro.
 
 ## 5th iteration
 
-What about that house editor?
+What about that house editor? <- not entirely clear
 
 ## 6th iteration
 
@@ -38,5 +38,11 @@ the rest is just map stuff, to make the maps more interesting.
 
 We could add a height map in the map-files so that we can describe the entire map as a height field somehow!
 
-Terrain, more beautiful textures for floor tiles and stuff.
+Terrain, more beautiful textures for floor tiles and stuff, hooow?
+
+VFX on screen, like CRT and stuff, much needed.
+
+Other game mode, like a part of the suburb being invaded by aliens / zombies going house to house and killing folks, we have got to stop that.
+
+Behavior trees, my man, that's the trick, for cooler alien behavior. Or is it really necessary?
 
