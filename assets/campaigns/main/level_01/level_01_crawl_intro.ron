@@ -1,4 +1,4 @@
-// A story crawl. Shown by a story consequence `Emit(effect: "crawl:level_01_intro")`
+// A story crawl. Shown by a story consequence `Emit(effect: "crawl:level_01_crawl_intro")`
 // (the id is the file name). Every field is optional; see `lava_ui_builder::crawl::CrawlSpec`.
 //   style:        Scroll(tilt: 1.0)  rolls up the screen (0 = flat credits, up to 4)
 //                 Typewriter         a dialog box, one page per line

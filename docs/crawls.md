@@ -13,13 +13,15 @@ facts engine. Two halves:
 
 ```
 fact changes -> story rules pass -> Emit(effect: "crawl:<name>")
-             -> assets/crawls/<name>.ron queued -> shown
+             -> crawl file <name>.ron queued -> shown
              -> on finish: fact CrawlFinished.<name> = true
 ```
 
-1. Write the crawl: `assets/crawls/<name>.ron` (a `CrawlSpec`; every field optional, the
-   id is the file name). The header of `assets/crawls/level_01_intro.ron` lists the fields.
-   Plain ASCII only.
+1. Write the crawl next to the level's map: `assets/campaigns/main/level_0N/level_0N_crawl_<what>.ron`
+   (a `CrawlSpec`; every field optional). Its id, `<name>` above, is the whole file stem
+   (`level_01_crawl_intro`), so ids are unique across levels (`--validate` errors on a
+   clash). A crawl no level owns goes in `assets/crawls/`. The header of
+   `level_01/level_01_crawl_intro.ron` lists the fields. Plain ASCII only.
 2. Write a story that emits it, usually in the level's story file (below):
    `consequences: [Emit(effect: "crawl:<name>")]`.
 3. Chain off the end with `BoolIs(key: "CrawlFinished.<name>", expected: true)`.
@@ -28,8 +30,9 @@ fact changes -> story rules pass -> Emit(effect: "crawl:<name>")
 
 ## Level stories
 
-A map names its own story file: `stories: stories/level_01.ron` under `[properties]` in
-the `.map` (`stories: "stories/level_01.ron"` in a `.ron`). It is a RON
+A map names its own story file, which sits next to it:
+`stories: campaigns/main/level_01/level_01_story.ron` under `[properties]` in the `.map`
+(quoted in a `.ron`; paths are from `assets/`). It is a RON
 list of `Story` (format: `turbofacts/assets/stories/example.ron`), loaded on top of the
 base level-flow stories when the map loads. Useful keys: `LevelStarted`,
 `LevelComplete`, `LevelFailed`, `EnemyKillCount`, `CurrentWave`, ... (`turbofacts/src/keys.rs`).
@@ -52,7 +55,7 @@ so an outro on `LevelComplete` plays before the game returns to the menu.
 
 ## Level 1 sample
 
-`assets/stories/level_01.ron`: an intro scroll on `LevelStarted`, a non-modal
+`assets/campaigns/main/level_01/level_01_story.ron`: an intro scroll on `LevelStarted`, a non-modal
 typewriter letter when `ItemFound.letter` (the papers placed at 7,10), an outro scroll on
 `LevelComplete` (and not `LevelFailed`).
 

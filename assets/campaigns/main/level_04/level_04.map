@@ -2,7 +2,7 @@
 
 [properties]
 name: Night of the Golems
-stories: stories/level_04.ron
+stories: campaigns/main/level_04/level_04_story.ron
 loot: 2-4 per 50
 escape_limit: 6
 

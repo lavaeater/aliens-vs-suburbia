@@ -2,7 +2,7 @@
 
 [properties]
 name: The Mothership
-stories: stories/level_05.ron
+stories: campaigns/main/level_05/level_05_story.ron
 loot: 2-3 per 60
 escape_limit: 5
 

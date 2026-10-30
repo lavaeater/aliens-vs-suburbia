@@ -139,8 +139,8 @@ pub struct MapFile {
     #[serde(default)]
     pub waves: Vec<WaveDef>,
     /// The level's own turbofacts stories (a RON list of `Story`), e.g.
-    /// `"stories/level_01.ron"`. Loaded on top of the base level-flow stories when
-    /// the map loads. Empty = none.
+    /// `"campaigns/main/level_01/level_01_story.ron"` (next to the map; `assets::content`).
+    /// Loaded on top of the base level-flow stories when the map loads. Empty = none.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub stories: String,
     /// Random loot bags on the floor. `None` = none.

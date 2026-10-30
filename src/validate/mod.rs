@@ -20,9 +20,7 @@ use std::path::Path;
 
 pub const ASSETS: &str = "assets";
 pub const DEFS: &str = "assets/defs";
-pub const MAPS: &str = "assets/maps";
 pub const LOOT: &str = "assets/loot";
-pub const STORIES: &str = "assets/stories";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Severity {
@@ -136,6 +134,11 @@ pub fn files_in(dir: &str, ext: &str) -> Vec<String> {
         .unwrap_or_default();
     files.sort();
     files
+}
+
+/// A path as the report names it: from the project root, forward slashes.
+pub fn display(path: &Path) -> String {
+    path.to_string_lossy().replace('\\', "/")
 }
 
 /// A model path as stored in content (inside `assets/`, maybe with a `#Scene0` label).

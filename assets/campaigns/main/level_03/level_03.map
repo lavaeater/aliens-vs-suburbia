@@ -2,7 +2,7 @@
 
 [properties]
 name: Snow Day
-stories: stories/level_03.ron
+stories: campaigns/main/level_03/level_03_story.ron
 weapons: defs/Snowball.ron
 coins: 250
 escape_limit: 8

@@ -1,25 +1,25 @@
 //! The campaign, maps (`.ron` and `.map`), houses, particle effects and the model
-//! palettes written into the code.
+//! palettes written into the code. Maps and stories are found by `assets::content`.
 
 use std::collections::BTreeSet;
 use std::path::Path;
 
 use super::defs::{self, Defs, Kind, Tables};
-use super::{MAPS, Report, STORIES, asset_exists, did_you_mean, files_in, stories};
+use super::{Report, asset_exists, did_you_mean, display, files_in, stories};
 use crate::assets::asset_definition::{ItemKind, ModelType};
+use crate::assets::content::{self, CAMPAIGNS, ContentKind};
 use crate::assets::paths::{content_ref, disk_path};
 use crate::campaign::{CAMPAIGN_FILE, CampaignFile};
 use crate::general::components::map_components::MapFile;
 use crate::map::house::{self, HOUSE_DIR, HouseDef};
 use crate::map::text_format;
 
-/// The campaign, then every map in `assets/maps`, then the story files no map uses.
+/// The campaign, then every map (the levels' and `assets/maps`), then the story files no
+/// map uses and anything in a campaign folder that is none of these.
 pub fn check_all(report: &mut Report, defs: &Defs, tables: &Tables) {
     check_campaign(report);
 
-    let mut maps = files_in(MAPS, "ron");
-    maps.extend(files_in(MAPS, "map"));
-    maps.sort();
+    let maps: Vec<String> = content::map_files().iter().map(|p| display(p)).collect();
     let mut stories_used = BTreeSet::new();
     for path in &maps {
         report.checked += 1;
@@ -47,7 +47,7 @@ pub fn check_all(report: &mut Report, defs: &Defs, tables: &Tables) {
         }
     }
 
-    for path in files_in(STORIES, "ron") {
+    for path in content::story_files().iter().map(|p| display(p)) {
         if !stories_used.contains(&content_ref(&path)) {
             report.checked += 1;
             report.warn(
@@ -56,6 +56,16 @@ pub fn check_all(report: &mut Report, defs: &Defs, tables: &Tables) {
             );
             stories::check_unused_file(report, &path);
         }
+    }
+
+    for path in content::campaign_files(ContentKind::Other) {
+        report.warn(
+            display(&path),
+            format!(
+                "not a map, story or crawl; in {CAMPAIGNS} a file says what it is by its name \
+                 (<level>.map, <level>_story.ron, <level>_crawl_<name>.ron, campaign.ron)"
+            ),
+        );
     }
 }
 
@@ -74,11 +84,7 @@ fn check_campaign(report: &mut Report) {
     if file.levels.is_empty() {
         report.error(CAMPAIGN_FILE, "lists no levels");
     }
-    let maps = {
-        let mut maps = files_in(MAPS, "ron");
-        maps.extend(files_in(MAPS, "map"));
-        maps
-    };
+    let maps: Vec<String> = content::map_files().iter().map(|p| display(p)).collect();
     for (i, level) in file.levels.iter().enumerate() {
         let what = format!("level {} ('{}')", i + 1, level.title);
         let path = disk_path(&level.map);

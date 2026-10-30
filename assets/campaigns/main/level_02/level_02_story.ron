@@ -16,7 +16,7 @@
         rules: [
             (name: "started", criteria: [BoolIs(key: "LevelStarted", expected: true)]),
         ],
-        consequences: [Emit(effect: "crawl:level_02_intro")],
+        consequences: [Emit(effect: "crawl:level_02_crawl_intro")],
     ),
     (
         name: "Found the fuel",
@@ -67,7 +67,7 @@
         rules: [(name: "all three", criteria: [IntCmp(key: "PowerFound", op: Eq, value: 3)])],
         consequences: [
             SetFact(key: "ObjectiveText", value: Text("Floodlights on! Clear out the last of them")),
-            Emit(effect: "crawl:level_02_power"),
+            Emit(effect: "crawl:level_02_crawl_power"),
         ],
     ),
     (
@@ -98,6 +98,6 @@
                 ],
             ),
         ],
-        consequences: [Emit(effect: "crawl:level_02_outro")],
+        consequences: [Emit(effect: "crawl:level_02_crawl_outro")],
     ),
 ]

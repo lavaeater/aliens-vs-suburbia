@@ -1,4 +1,5 @@
-//! The campaign: the levels in order (`assets/campaign.ron`), what happens between them,
+//! The campaign: the levels in order (`assets/campaigns/main/campaign.ron`; the folder
+//! layout is `assets::content`), what happens between them,
 //! and the end.
 //!
 //! Start Game begins at the first level. When a level's stories call it (`level_complete`
@@ -30,7 +31,7 @@ use crate::ui::spawn_ui::{StateMarker, cleanup_state};
 use crate::ui::ui_plugin::spawn_ui_camera;
 
 /// The campaign file.
-pub const CAMPAIGN_FILE: &str = "assets/campaign.ron";
+pub const CAMPAIGN_FILE: &str = "assets/campaigns/main/campaign.ron";
 
 /// Seconds an intermission card ignores input, so a held fire button does not skip it.
 const INPUT_GRACE: f32 = 0.8;
@@ -38,8 +39,8 @@ const INPUT_GRACE: f32 = 0.8;
 /// One level of the campaign.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct CampaignLevel {
-    /// The map, inside `assets/` (`"maps/level_01.map"`; `assets::paths`). Given a `.ron`,
-    /// a `.map` next to it wins (`text_format::load_level`).
+    /// The map, inside `assets/` (`"campaigns/main/level_01/level_01.map"`; `assets::paths`).
+    /// Given a `.ron`, a `.map` next to it wins (`text_format::load_level`).
     pub map: String,
     /// Shown on the card before the level.
     pub title: String,
@@ -48,7 +49,7 @@ pub struct CampaignLevel {
     pub tagline: String,
 }
 
-/// `assets/campaign.ron`.
+/// [`CAMPAIGN_FILE`].
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct CampaignFile {
     pub levels: Vec<CampaignLevel>,
@@ -67,7 +68,7 @@ impl Default for CampaignFile {
     fn default() -> Self {
         Self {
             levels: vec![CampaignLevel {
-                map: "maps/level_01.map".into(),
+                map: "campaigns/main/level_01/level_01.map".into(),
                 title: "Level 1".into(),
                 tagline: String::new(),
             }],
@@ -430,7 +431,7 @@ mod tests {
             file: CampaignFile {
                 levels: (1..=levels)
                     .map(|n| CampaignLevel {
-                        map: format!("assets/maps/level_{n:02}.map"),
+                        map: format!("campaigns/main/level_{n:02}/level_{n:02}.map"),
                         title: format!("Level {n}"),
                         tagline: String::new(),
                     })

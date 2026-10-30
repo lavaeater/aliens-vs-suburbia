@@ -12,8 +12,8 @@ prefix: `defs/Barrel.ron`, like a def's `model_path`. Older maps wrote
 
 ## Using it
 
-- **Convert:** `cargo run -- --convert-map assets/maps/level_01.map` writes
-  `assets/maps/level_01.ron` (and the other way round for a `.ron`). Pass an output path
+- **Convert:** `cargo run -- --convert-map assets/campaigns/main/level_01/level_01.map`
+  writes `level_01.ron` next to it (and the other way round for a `.ron`). Pass an output path
   as a second argument to put it elsewhere. Existing files are never overwritten without
   `--force`. Conversion is lossless both ways.
 - **Drop-in:** when the game loads a level by its `.ron` path (`level_01`, the editor's
@@ -57,7 +57,7 @@ count: 20 | rate: 30
 | key | meaning |
 |-----|---------|
 | `name` | display name (optional) |
-| `stories` | the level's turbofacts story file, e.g. `stories/level_01.ron` (optional; see `docs/crawls.md`) |
+| `stories` | the level's turbofacts story file, next to the map, e.g. `campaigns/main/level_01/level_01_story.ron` (optional; see `docs/crawls.md`) |
 | `loot` | random loot bags on the open floor: `1-5 per 20` = 1 to 5 bags for every 20 open tiles (`3 per 20` for an exact count). A fresh spread every time the level loads; never on spawns, goals, water, walls or placements (optional) |
 | `loot_table` | the loot table the bags roll, a file stem in `assets/loot/` (default `trash_bag`) |
 | `loot_bags` | the defs the bags are drawn with, comma separated, one picked per bag (default `defs/Trash Bag.ron, defs/Trash Bags.ron`) |

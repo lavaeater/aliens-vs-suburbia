@@ -9,14 +9,14 @@
         rules: [
             (name: "started", criteria: [BoolIs(key: "LevelStarted", expected: true)]),
         ],
-        consequences: [Emit(effect: "crawl:level_05_intro")],
+        consequences: [Emit(effect: "crawl:level_05_crawl_intro")],
     ),
     (
         name: "The boss arrives",
         repeat: false,
         rules: [(name: "boss wave", criteria: [IntCmp(key: "CurrentWave", op: Eq, value: 4)])],
         consequences: [
-            Emit(effect: "crawl:level_05_boss"),
+            Emit(effect: "crawl:level_05_crawl_boss"),
             SetFact(key: "ObjectiveText", value: Text("Bring down the Alpaking Evolved!")),
         ],
     ),
@@ -40,6 +40,6 @@
                 ],
             ),
         ],
-        consequences: [Emit(effect: "crawl:level_05_outro")],
+        consequences: [Emit(effect: "crawl:level_05_crawl_outro")],
     ),
 ]

@@ -9,13 +9,13 @@
         rules: [
             (name: "started", criteria: [BoolIs(key: "LevelStarted", expected: true)]),
         ],
-        consequences: [Emit(effect: "crawl:level_04_intro")],
+        consequences: [Emit(effect: "crawl:level_04_crawl_intro")],
     ),
     (
         name: "Golems sighted",
         repeat: false,
         rules: [(name: "second wave", criteria: [IntCmp(key: "CurrentWave", op: Eq, value: 1)])],
-        consequences: [Emit(effect: "crawl:level_04_radio")],
+        consequences: [Emit(effect: "crawl:level_04_crawl_radio")],
     ),
     (
         name: "Halfway through the night",
@@ -45,6 +45,6 @@
                 ],
             ),
         ],
-        consequences: [Emit(effect: "crawl:level_04_outro")],
+        consequences: [Emit(effect: "crawl:level_04_crawl_outro")],
     ),
 ]

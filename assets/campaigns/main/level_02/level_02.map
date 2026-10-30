@@ -2,7 +2,7 @@
 
 [properties]
 name: The Community Centre
-stories: stories/level_02.ron
+stories: campaigns/main/level_02/level_02_story.ron
 loot: 1-2 per 40
 escape_limit: 10
 

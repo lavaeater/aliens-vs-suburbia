@@ -9,14 +9,14 @@
         rules: [
             (name: "started", criteria: [BoolIs(key: "LevelStarted", expected: true)]),
         ],
-        consequences: [Emit(effect: "crawl:level_03_intro")],
+        consequences: [Emit(effect: "crawl:level_03_crawl_intro")],
     ),
     (
         name: "Halfway",
         repeat: false,
         rules: [(name: "third wave", criteria: [IntCmp(key: "CurrentWave", op: Eq, value: 2)])],
         consequences: [
-            Emit(effect: "crawl:level_03_dinner"),
+            Emit(effect: "crawl:level_03_crawl_dinner"),
             SetFact(key: "ObjectiveText", value: Text("Hold the line until dinner")),
         ],
     ),
@@ -40,6 +40,6 @@
                 ],
             ),
         ],
-        consequences: [Emit(effect: "crawl:level_03_outro")],
+        consequences: [Emit(effect: "crawl:level_03_crawl_outro")],
     ),
 ]

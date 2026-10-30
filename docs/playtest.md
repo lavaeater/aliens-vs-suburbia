@@ -20,7 +20,7 @@ We need 5+ levels, showcasing our ability to write "stories" integrated with tur
 
 #### Status (2026-10-24)
 
-The campaign is in (`assets/campaign.ron`, `src/campaign/`): five levels, a card between
+The campaign is in (`assets/campaigns/main/`, `src/campaign/`): five levels, a card between
 levels (next level / retry after a loss), and a victory screen after level five. Start
 Game plays it from level 1; `cargo run -- --play --level N` jumps straight to level N, and
 **End** wins the current level on the spot (to skip ahead during a playtest).
@@ -33,8 +33,8 @@ Game plays it from level 1; `cargo run -- --play --level N` jumps straight to le
 | 4 | Night of the Golems | `level_04.map` | two spawns, stone golems, barrels to blow up, loot bags; radio chatter at wave 2 |
 | 5 | The Mothership | `level_05.map` | the boss wave (Alpaking Evolved) with its own announcement; only 5 may escape |
 
-Each level has its own stories (`assets/stories/level_0N.ron`) and crawls (`assets/crawls/
-level_0N_*.ron`): an intro, mid-level chatter driven by `CurrentWave` or items found, and
+Each level is a folder, `assets/campaigns/main/level_0N/`, with its map, its stories
+(`level_0N_story.ron`) and crawls (`level_0N_crawl_*.ron`): an intro, mid-level chatter driven by `CurrentWave` or items found, and
 an outro. A level's rules are map properties: `escape_limit`, `weapons`, `coins`
 (`docs/map-text-format.md`).
 

@@ -1,6 +1,8 @@
 // The campaign: the levels in the order they are played (`src/campaign`). Start Game
 // begins at the first; `cargo run -- --play --level N` jumps to level N.
 //   map:     the level's map, inside assets/ (`.map` text or `.ron`; a `.map` next to a `.ron` wins)
+// Each level is a folder here holding its map, its stories (<level>_story.ron) and its
+// crawls (<level>_crawl_<name>.ron, shown by `crawl:<file stem>`).
 //   title:   shown on the card before the level
 //   tagline: one line under the title
 // The victory screen after the last level shows `victory_title` and `victory_lines`.
@@ -8,27 +10,27 @@
 (
     levels: [
         (
-            map: "maps/level_01.map",
+            map: "campaigns/main/level_01/level_01.map",
             title: "Maple Drive",
             tagline: "Something has landed in the cul-de-sac.",
         ),
         (
-            map: "maps/level_02.map",
+            map: "campaigns/main/level_02/level_02.map",
             title: "The Community Centre",
             tagline: "Get the floodlights back on.",
         ),
         (
-            map: "maps/level_03.map",
+            map: "campaigns/main/level_03/level_03.map",
             title: "Snow Day",
             tagline: "No guns. Only snowballs.",
         ),
         (
-            map: "maps/level_04.map",
+            map: "campaigns/main/level_04/level_04.map",
             title: "Night of the Golems",
             tagline: "Survive until dawn.",
         ),
         (
-            map: "maps/level_05.map",
+            map: "campaigns/main/level_05/level_05.map",
             title: "The Mothership",
             tagline: "This is it.",
         ),

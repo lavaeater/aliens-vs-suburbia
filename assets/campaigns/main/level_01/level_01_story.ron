@@ -1,6 +1,7 @@
 // Level 1's own stories, loaded on top of the base level-flow ones (`MapFile::stories`).
 // Format: see turbofacts/assets/stories/example.ron. Crawls: `Emit(effect: "crawl:<name>")`
-// shows assets/crawls/<name>.ron, and sets `CrawlFinished.<name>` when it is done.
+// shows the crawl of that name (its file stem, e.g. level_01_crawl_intro.ron in this
+// folder), and sets `CrawlFinished.<name>` when it is done.
 // A story item (`Key(id: "letter")`) sets `ItemFound.letter` when picked up.
 [
     (
@@ -12,7 +13,7 @@
         rules: [
             (name: "started", criteria: [BoolIs(key: "LevelStarted", expected: true)]),
         ],
-        consequences: [Emit(effect: "crawl:level_01_intro")],
+        consequences: [Emit(effect: "crawl:level_01_crawl_intro")],
     ),
     (
         name: "The strange letter",
@@ -21,7 +22,7 @@
             (name: "found it", criteria: [BoolIs(key: "ItemFound.letter", expected: true)]),
         ],
         consequences: [
-            Emit(effect: "crawl:strange_letter"),
+            Emit(effect: "crawl:level_01_crawl_strange_letter"),
             SetFact(key: "ObjectiveText", value: Text("Hold Maple Drive - then off to the community centre")),
         ],
     ),
@@ -37,6 +38,6 @@
                 ],
             ),
         ],
-        consequences: [Emit(effect: "crawl:level_01_outro")],
+        consequences: [Emit(effect: "crawl:level_01_crawl_outro")],
     ),
 ]

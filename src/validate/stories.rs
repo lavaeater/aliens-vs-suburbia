@@ -1,4 +1,5 @@
-//! Stories (`assets/stories`) and crawls (`assets/crawls`).
+//! Stories and crawls: the levels' `_story.ron` / `_crawl_` files and `assets/crawls`
+//! (`assets::content`).
 //!
 //! A story waits on facts; the check is that something can ever set each one: another
 //! story (its `init_facts` or a consequence), the game itself (`turbofacts::keys`), a
@@ -6,11 +7,12 @@
 //! (`CrawlFinished.<id>`). A fact nothing sets is almost always a typo, and the story
 //! simply never fires.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
-use super::{Report, did_you_mean, files_in};
+use super::{Report, did_you_mean, display};
+use crate::assets::content;
 use crate::assets::paths::{content_ref, disk_path};
-use crate::crawl::{CRAWL_DIR, parse_crawl};
+use crate::crawl::parse_crawl;
 use crate::facts::keys;
 use crate::facts::persistence::load_stories;
 use crate::facts::stories::base_stories;
@@ -41,24 +43,34 @@ const GAME_FACTS: &[&str] = &[
     keys::CRAWL_SHOWING,
 ];
 
-/// The crawl ids in `assets/crawls` (file stems).
+/// The crawl ids (file stems).
 fn crawl_ids() -> Vec<String> {
-    files_in(CRAWL_DIR, "ron")
+    content::crawl_files()
         .iter()
-        .map(|p| super::stem(p).to_string())
+        .map(|p| super::stem(&display(p)).to_string())
         .collect()
 }
 
 pub fn check_crawls(report: &mut Report) {
     let mut shown = BTreeSet::new();
-    for path in files_in(super::STORIES, "ron") {
+    for path in content::story_files() {
         if let Ok(stories) = load_stories(&path) {
             shown.extend(stories.iter().flat_map(crawls_shown));
         }
     }
-    for path in files_in(CRAWL_DIR, "ron") {
+    let mut first_of: BTreeMap<String, String> = BTreeMap::new();
+    for path in content::crawl_files() {
         report.checked += 1;
+        let path = display(&path);
         let id = super::stem(&path);
+        if let Some(first) = first_of.get(id) {
+            report.error(
+                &path,
+                format!("crawl id '{id}' is taken by {first} too; one of them never shows"),
+            );
+        } else {
+            first_of.insert(id.to_string(), path.clone());
+        }
         match std::fs::read_to_string(&path)
             .map_err(|e| e.to_string())
             .and_then(|text| parse_crawl(id, &text))
@@ -97,9 +109,9 @@ pub fn check_level(report: &mut Report, map_file: &str, path: &str, keys_placed:
         }
         Ok(stories) => stories,
         Err(e) => {
-            let known: Vec<String> = files_in(super::STORIES, "ron")
+            let known: Vec<String> = content::story_files()
                 .iter()
-                .map(|p| content_ref(p))
+                .map(|p| content_ref(&display(p)))
                 .collect();
             report.error(
                 map_file,
@@ -162,7 +174,7 @@ fn check_stories(
                     report.error(
                         path,
                         format!(
-                            "story '{}': shows crawl '{id}', but there is no {CRAWL_DIR}/{id}.ron{}",
+                            "story '{}': shows crawl '{id}', but there is no crawl file '{id}.ron'{}",
                             story.name,
                             did_you_mean(id, crawls.iter().map(String::as_str))
                         ),
