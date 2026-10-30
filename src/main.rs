@@ -55,6 +55,7 @@ pub(crate) mod settings;
 pub mod skein;
 pub(crate) mod towers;
 pub(crate) mod ui;
+pub(crate) mod validate;
 
 fn create_map(
     seed: Option<u64>,
@@ -186,6 +187,7 @@ fn print_help() {
     println!("  cargo run -- --fullscreen                  1920x1080 fullscreen (combines with the others)");
     println!("  cargo run --features map-editor -- --map-editor [--file <path>]");
     println!("                                             Launch the map editor TUI");
+    println!("  cargo run -- --validate                    Check every content file and what it points at");
     println!("  cargo run -- --create-map [OPTIONS]        Generate a map file");
     println!("  cargo run -- --convert-map <in> [<out>] [--force]");
     println!(
@@ -209,6 +211,10 @@ fn main() -> std::process::ExitCode {
     if args.iter().any(|a| a == "--help" || a == "-h") {
         print_help();
         return std::process::ExitCode::SUCCESS;
+    }
+
+    if args.iter().any(|a| a == "--validate") {
+        return validate::run_cli();
     }
 
     if let Some(result) = parse_create_map_args(&args).or_else(|| parse_convert_map_args(&args)) {

@@ -12,10 +12,9 @@
     )),
     hidden_nodes: [],
     animations: {
-        Idle: "CharacterArmature|Idle",
-        Walk: "CharacterArmature|Walk",
-        Jump: "CharacterArmature|Jump",
-        Punch: "CharacterArmature|Bite_Front",
+        Idle: "CharacterArmature|Flying_Idle",
+        Walk: "CharacterArmature|Fast_Flying",
+        Punch: "CharacterArmature|Headbutt",
         Yes: "CharacterArmature|Yes",
         No: "CharacterArmature|No",
         Death: "CharacterArmature|Death",

@@ -19,6 +19,9 @@ use enumflags2::BitFlags;
 /// `(model_path, scale_in_player_units)`.
 type Prop = (&'static str, f32);
 
+/// Every palette, for `crate::validate`.
+pub(crate) const PALETTES: &[&[Prop]] = &[GROUND, COVER, LANDMARK];
+
 /// Ground-level gore/debris — the common scatter that dirties the floor.
 const GROUND: &[Prop] = &[
     ("packs/post-apocalypse/Blood Splat.glb", 0.05),
@@ -28,9 +31,7 @@ const GROUND: &[Prop] = &[
     ("packs/post-apocalypse/Wheel.glb", 0.25),
     ("packs/post-apocalypse/Pallet.glb", 0.2),
     ("packs/post-apocalypse/Pallet Broken.glb", 0.2),
-    ("packs/toon-shooter/Debris Pile.glb", 0.2),
-    ("packs/toon-shooter/Debris Papers.glb", 0.1),
-    ("packs/toon-shooter/Tires.glb", 0.6),
+    ("packs/city/Debris Papers.glb", 0.1),
     ("packs/survival/Gas Can.glb", 0.2),
 ];
 
@@ -38,21 +39,17 @@ const GROUND: &[Prop] = &[
 const COVER: &[Prop] = &[
     ("packs/post-apocalypse/Barrel.glb", 0.8),
     ("packs/post-apocalypse/Plastic Barrier.glb", 0.9),
-    ("packs/toon-shooter/Barrier Single.glb", 0.9),
-    ("packs/toon-shooter/Sack Trench Small.glb", 0.8),
-    ("packs/toon-shooter/Crate.glb", 0.7),
-    ("packs/toon-shooter/Gas Tank.glb", 0.6),
+    ("packs/toon-shooter/map/Barrier Single.glb", 0.9),
+    ("packs/city/Box.glb", 0.7),
     ("packs/city/Cone.glb", 0.35),
 ];
 
 /// Big landmarks — wrecked vehicles, dumpsters, the odd water tower.
 const LANDMARK: &[Prop] = &[
-    ("packs/toon-shooter/Broken Car.glb", 0.9),
     ("packs/city/Car.glb", 0.9),
     ("packs/city/SUV.glb", 1.1),
     ("packs/city/Van.glb", 1.2),
     ("packs/city/Dumpster.glb", 1.0),
-    ("packs/toon-shooter/Dumpster.glb", 1.0),
     ("packs/post-apocalypse/Water Tower.glb", 2.5),
     ("packs/post-apocalypse/Damaged Couch.glb", 0.6),
 ];

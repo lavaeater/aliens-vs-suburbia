@@ -67,8 +67,6 @@ const TREES: &[Prop] = &[
     ("packs/nature/Dead Tree.glb", 3.0),
     ("packs/nature/Dead Tree-MlmK5488ou.glb", 3.0),
     ("packs/city/Tree.glb", 4.0),
-    ("packs/toon-shooter/Tree.glb", 3.5),
-    ("packs/toon-shooter/Tree-1BkD9JnKrE.glb", 3.5),
 ];
 
 // Bushes / ground plants: about knee to shoulder height (0.4–1.2p)
@@ -109,7 +107,6 @@ const SUBURBAN: &[Prop] = &[
     ("packs/city/Pickup Truck.glb", 1.0),
     ("packs/city/Van.glb", 1.2),
     ("packs/city/Motorcycle.glb", 0.7),
-    ("packs/toon-shooter/Broken Car.glb", 0.9),
 ];
 
 // Alien-side dressing: sci-fi plants (tall) and invasion debris (varied)
@@ -137,18 +134,12 @@ const ALIEN_DRESSING: &[Prop] = &[
 
 // Battle debris: crates, barriers, barrels (0.5–1.5p)
 const COMBAT: &[Prop] = &[
-    ("packs/toon-shooter/Crate.glb", 0.7),
-    ("packs/toon-shooter/Cardboard Boxes.glb", 0.7),
-    ("packs/toon-shooter/Cardboard Boxes-rdKKO0DvMG.glb", 0.7),
+    ("packs/city/Box.glb", 0.7),
     ("packs/post-apocalypse/Barrel.glb", 0.8),
     ("packs/post-apocalypse/Pallet.glb", 0.2),
     ("packs/post-apocalypse/Pallet Broken.glb", 0.2),
-    ("packs/toon-shooter/Barrier Single.glb", 0.9),
-    ("packs/toon-shooter/Sack Trench Small.glb", 0.8),
-    ("packs/toon-shooter/Gas Tank.glb", 0.6),
-    ("packs/toon-shooter/Dumpster.glb", 1.0),
-    ("packs/toon-shooter/Pallet.glb", 0.2),
-    ("packs/toon-shooter/Tires.glb", 0.6),
+    ("packs/toon-shooter/map/Barrier Single.glb", 0.9),
+    ("packs/city/Dumpster.glb", 1.0),
     ("packs/post-apocalypse/Cinder Block.glb", 0.3),
     ("packs/post-apocalypse/Plastic Barrier.glb", 0.9),
     ("packs/post-apocalypse/Water Tower.glb", 2.5),
@@ -166,8 +157,6 @@ const CLUTTER: &[Prop] = &[
     ("packs/nature/Clover.glb", 0.1),
     ("packs/city/Box.glb", 0.25),
     ("packs/post-apocalypse/Blood Splat.glb", 0.05),
-    ("packs/toon-shooter/Debris Papers.glb", 0.1),
-    ("packs/toon-shooter/Debris Pile.glb", 0.2),
     ("packs/city/Debris Papers.glb", 0.1),
     ("packs/survival/Wood Log.glb", 0.2),
     ("packs/survival/Can.glb", 0.15),
@@ -430,7 +419,8 @@ pub fn generate_suburb_map(seed: u64, width: usize, height: usize) -> MapFile {
 
 // ── Showcase entry point ─────────────────────────────────────────────────────
 
-const ALL_PALETTES: &[&[Prop]] = &[TREES, BUSHES, SUBURBAN, ALIEN_DRESSING, COMBAT, CLUTTER];
+pub(crate) const ALL_PALETTES: &[&[Prop]] =
+    &[TREES, BUSHES, SUBURBAN, ALIEN_DRESSING, COMBAT, CLUTTER];
 
 pub fn generate_showcase_map(seed: u64) -> MapFile {
     let w: usize = 20;
