@@ -1,4 +1,5 @@
 use crate::animation::animation_plugin::AnimationKey;
+use crate::assets::paths;
 use crate::general::explosion::ExplosionProps;
 use crate::general::projectiles::ProjectileProps;
 use crate::gore::components::DamageKind;
@@ -211,6 +212,13 @@ pub enum ItemKind {
 }
 
 impl ItemKind {
+    /// A weapon pickup's def path in the short content form (`assets::paths`).
+    pub fn normalize_paths(&mut self) {
+        if let Self::WeaponPickup { def } = self {
+            paths::normalize(def);
+        }
+    }
+
     /// Short human label for editors and the HUD.
     pub fn label(&self) -> String {
         match self {
@@ -258,7 +266,7 @@ pub struct PlayerProps {
     /// Balls thrown per minute. Defaults to 60 (one per second).
     #[serde(default = "default_throw_rate")]
     pub throw_rate_per_minute: f32,
-    /// Def path of the weapon to equip on spawn, e.g. `"assets/defs/Pistol.ron"`.
+    /// Def path of the weapon to equip on spawn, e.g. `"defs/Pistol.ron"`.
     /// Snapped to this model's `grip` hardpoint. `None` = unarmed.
     #[serde(default)]
     pub weapon: Option<String>,
@@ -567,14 +575,34 @@ impl AssetDefinition {
     pub fn load(model_path: &str) -> Option<Self> {
         let path = Self::def_path(model_path);
         let text = std::fs::read_to_string(&path).ok()?;
-        ron::from_str(&text).ok()
+        ron::from_str::<Self>(&text).ok().map(Self::normalized)
     }
 
-    /// Load a def straight from its own `.ron` path (e.g. `"assets/defs/Pistol.ron"`),
-    /// as stored in `PlayerRoster::def_paths` and `PlayerProps::weapon`.
+    /// Load a def straight from its own `.ron` path, as content names it
+    /// (`"defs/Pistol.ron"`, `PlayerProps::weapon`) or from the project root
+    /// (`"assets/defs/Pistol.ron"`, `PlayerRoster::def_paths`); see `assets::paths`.
     pub fn load_from_def_path(def_path: &str) -> Option<Self> {
-        let text = std::fs::read_to_string(def_path).ok()?;
-        ron::from_str(&text).ok()
+        let text = std::fs::read_to_string(paths::disk_path(def_path)).ok()?;
+        ron::from_str::<Self>(&text).ok().map(Self::normalized)
+    }
+
+    /// The def with every path it names in the short content form (`assets::paths`).
+    #[must_use]
+    pub fn normalized(mut self) -> Self {
+        match &mut self.model_type {
+            ModelType::Player(props) => {
+                if let Some(weapon) = &mut props.weapon {
+                    paths::normalize(weapon);
+                }
+                props.extra_weapons.iter_mut().for_each(paths::normalize);
+            }
+            ModelType::Item(props) => props.kind.normalize_paths(),
+            ModelType::Tower(_)
+            | ModelType::Terrain(_)
+            | ModelType::Enemy(_)
+            | ModelType::Weapon(_) => {}
+        }
+        self
     }
 
     pub fn save(&self) {
@@ -582,7 +610,8 @@ impl AssetDefinition {
         if let Some(dir) = path.parent() {
             let _ = std::fs::create_dir_all(dir);
         }
-        if let Ok(text) = ron::ser::to_string_pretty(self, ron::ser::PrettyConfig::default()) {
+        let def = self.clone().normalized();
+        if let Ok(text) = ron::ser::to_string_pretty(&def, ron::ser::PrettyConfig::default()) {
             let _ = std::fs::write(path, text);
         }
     }
@@ -630,14 +659,17 @@ mod tests {
         const MAX_METRES: f32 = 12.0;
         let root = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/defs");
         let mut checked = 0;
-        for entry in std::fs::read_dir(root).expect("assets/defs exists").flatten() {
+        for entry in std::fs::read_dir(root)
+            .expect("assets/defs exists")
+            .flatten()
+        {
             let path = entry.path();
             if path.extension().and_then(|e| e.to_str()) != Some("ron") {
                 continue;
             }
-            let Ok(def) = ron::from_str::<super::AssetDefinition>(
-                &std::fs::read_to_string(&path).unwrap(),
-            ) else {
+            let Ok(def) =
+                ron::from_str::<super::AssetDefinition>(&std::fs::read_to_string(&path).unwrap())
+            else {
                 continue;
             };
             // Characters are sized in game (F2), not by their def scale.
@@ -650,12 +682,12 @@ mod tests {
             let Some(points) = crate::assets::gltf_info::mesh_points(&def.model_path) else {
                 continue;
             };
-            let Some((lo, hi)) = points
-                .iter()
-                .fold(None, |acc: Option<(bevy::math::Vec3, bevy::math::Vec3)>, p| {
+            let Some((lo, hi)) = points.iter().fold(
+                None,
+                |acc: Option<(bevy::math::Vec3, bevy::math::Vec3)>, p| {
                     Some(acc.map_or((*p, *p), |(lo, hi)| (lo.min(*p), hi.max(*p))))
-                })
-            else {
+                },
+            ) else {
                 continue;
             };
             let size = (hi - lo) * def.scale;

@@ -1,12 +1,19 @@
 # The `.map` text format
 
-A hand-editable companion to the RON maps in `assets/maps/`. Same data (`MapFile`), one
-letter per tile, editable in any text editor. Code: `src/map/text_format.rs`.
+The format the levels are kept in (`assets/maps/*.map`): the same data as a RON map
+(`MapFile`), one letter per tile, editable in any text editor. Code:
+`src/map/text_format.rs`. The map editor saves `.map`; RON still reads and writes, for
+tools and for later.
+
+Paths in a map (defs, stories, weapons, loot bags) are inside `assets/`, without the
+prefix: `defs/Barrel.ron`, like a def's `model_path`. Older maps wrote
+`assets/defs/Barrel.ron`; that still reads, and is saved in the short form
+(`src/assets/paths.rs`). `cargo run -- --validate` checks every one of them.
 
 ## Using it
 
-- **Convert:** `cargo run -- --convert-map assets/maps/level_01.ron` writes
-  `assets/maps/level_01.map` (and the other way round for a `.map`). Pass an output path
+- **Convert:** `cargo run -- --convert-map assets/maps/level_01.map` writes
+  `assets/maps/level_01.ron` (and the other way round for a `.ron`). Pass an output path
   as a second argument to put it elsewhere. Existing files are never overwritten without
   `--force`. Conversion is lossless both ways.
 - **Drop-in:** when the game loads a level by its `.ron` path (`level_01`, the editor's
@@ -35,13 +42,13 @@ A: grass + blocks_enemies
 at: 3, 1 | model: packs/nature/Pine.glb | rotation: 90 | scale: 1.2
 
 [placements]
-at: 2, 2 | def: assets/defs/door.ron | rotation: 45
+at: 2, 2 | def: defs/door.ron | rotation: 45
 
 [houses]
 house: bungalow | at: 4, 6 | rotation: 90
 
 [waves]
-enemy: assets/defs/Alien.ron | count: 5 | rate: 10
+enemy: defs/Alien.ron | count: 5 | rate: 10
 count: 20 | rate: 30
 ```
 
@@ -50,12 +57,12 @@ count: 20 | rate: 30
 | key | meaning |
 |-----|---------|
 | `name` | display name (optional) |
-| `stories` | the level's turbofacts story file, e.g. `assets/stories/level_01.ron` (optional; see `docs/crawls.md`) |
+| `stories` | the level's turbofacts story file, e.g. `stories/level_01.ron` (optional; see `docs/crawls.md`) |
 | `loot` | random loot bags on the open floor: `1-5 per 20` = 1 to 5 bags for every 20 open tiles (`3 per 20` for an exact count). A fresh spread every time the level loads; never on spawns, goals, water, walls or placements (optional) |
 | `loot_table` | the loot table the bags roll, a file stem in `assets/loot/` (default `trash_bag`) |
-| `loot_bags` | the defs the bags are drawn with, comma separated, one picked per bag (default `assets/defs/Trash Bag.ron, assets/defs/Trash Bags.ron`) |
+| `loot_bags` | the defs the bags are drawn with, comma separated, one picked per bag (default `defs/Trash Bag.ron, defs/Trash Bags.ron`) |
 | `escape_limit` | how many aliens may reach the goal before the level is lost (default 10) |
-| `weapons` | weapon defs every player carries on this level instead of their own, comma separated, the first one held (e.g. `assets/defs/Snowball.ron` for a snowballs-only level) |
+| `weapons` | weapon defs every player carries on this level instead of their own, comma separated, the first one held (e.g. `defs/Snowball.ron` for a snowballs-only level) |
 | `coins` | the team starts the level with at least this many coins (for towers) |
 | `seed` | random seed (optional) |
 | `generated` | `true` = ignore `[tiles]` and generate the map from `seed` |

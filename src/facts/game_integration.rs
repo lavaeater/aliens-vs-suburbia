@@ -71,7 +71,7 @@ fn load_map_stories(
         if map.stories.is_empty() {
             continue;
         }
-        match load_stories(&map.stories) {
+        match load_stories(crate::assets::paths::disk_path(&map.stories)) {
             Ok(level_stories) if level_stories.is_empty() => {
                 bevy::log::warn!("map stories '{}' are missing or empty", map.stories);
             }
@@ -123,7 +123,9 @@ fn derive_world_facts(
         .filter(|(h, downed)| h.health > 0 && !downed)
         .count() as i64;
     set_if_changed(&mut facts, keys::LIVING_PLAYER_COUNT, living);
-    let wiped = respawns.as_ref().is_some_and(|queue| queue.team_wiped(!players.is_empty()));
+    let wiped = respawns
+        .as_ref()
+        .is_some_and(|queue| queue.team_wiped(!players.is_empty()));
     set_bool_if_changed(&mut facts, keys::ALL_PLAYERS_DEAD, wiped);
 
     // Aliens: live count + kill total + the "all spawned aliens cleared" win condition.

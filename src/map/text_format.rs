@@ -7,7 +7,7 @@
 //! ```text
 //! [properties]
 //! name: Backyard
-//! stories: assets/stories/backyard.ron
+//! stories: stories/backyard.ron
 //! loot: 1-5 per 20
 //!
 //! [tiles]
@@ -23,10 +23,10 @@
 //! at: 3, 1 | model: packs/nature/Pine.glb | rotation: 90 | scale: 1.2
 //!
 //! [placements]
-//! at: 2, 2 | def: assets/defs/door.ron | rotation: 45
+//! at: 2, 2 | def: defs/door.ron | rotation: 45
 //!
 //! [waves]
-//! enemy: assets/defs/Alien.ron | count: 5 | rate: 10
+//! enemy: defs/Alien.ron | count: 5 | rate: 10
 //! ```
 //!
 //! The width and height are never written: they are the longest row and the number of
@@ -535,7 +535,7 @@ pub fn to_text(map: &MapFile) -> Result<String, String> {
     lines.extend([
         String::new(),
         "[placements]".into(),
-        "# at: x, y | def: <def .ron path> | rotation: <degrees, steps of 45>".into(),
+        "# at: x, y | def: <def under assets/, e.g. defs/Barrel.ron> | rotation: <degrees, steps of 45>".into(),
     ]);
     for p in &map.placements {
         let mut line = format!("at: {}, {} | def: {}", p.x, p.y, field_value(&p.def_path)?);
@@ -565,7 +565,7 @@ pub fn to_text(map: &MapFile) -> Result<String, String> {
     lines.extend([
         String::new(),
         "[waves]".into(),
-        "# enemy: <enemy def path, omit for the built-in alien> | count: <n> | rate: <per minute>"
+        "# enemy: <enemy def under assets/, omit for the built-in alien> | count: <n> | rate: <per minute>"
             .into(),
     ]);
     for w in &map.waves {
@@ -620,12 +620,17 @@ pub fn read_map_file(path: impl AsRef<Path>) -> Result<MapFile, String> {
     } else {
         ron::from_str::<MapFile>(&text).map_err(|e| e.to_string())
     };
-    map.map_err(|e| format!("cannot parse {}: {e}", path.display()))
+    let mut map = map.map_err(|e| format!("cannot parse {}: {e}", path.display()))?;
+    map.normalize_paths();
+    Ok(map)
 }
 
 /// Write a map in whichever format its extension says.
 pub fn write_map_file(path: impl AsRef<Path>, map: &MapFile) -> Result<(), String> {
     let path = path.as_ref();
+    let mut map = map.clone();
+    map.normalize_paths();
+    let map = &map;
     let text = if is_text_map(path) {
         to_text(map)?
     } else {
@@ -823,26 +828,47 @@ count: 3
         )
         .unwrap();
         assert_eq!(map.escape_limit, Some(3));
-        assert_eq!(map.weapons, vec!["assets/defs/Snowball.ron", "assets/defs/Pistol.ron"]);
+        assert_eq!(
+            map.weapons,
+            vec!["assets/defs/Snowball.ron", "assets/defs/Pistol.ron"]
+        );
         assert_eq!(map.coins, Some(200));
         let again = parse(&to_text(&map).unwrap()).unwrap();
-        assert_eq!((again.escape_limit, again.weapons, again.coins), (map.escape_limit, map.weapons, map.coins));
+        assert_eq!(
+            (again.escape_limit, again.weapons, again.coins),
+            (map.escape_limit, map.weapons, map.coins)
+        );
     }
 
     #[test]
     fn houses_are_named_placed_and_turned_in_quarters() {
-        let map = parse("[houses]\nhouse: bungalow | at: 3, 4 | rotation: -90\nhouse: shed | at: 0, 0\n").unwrap();
+        let map =
+            parse("[houses]\nhouse: bungalow | at: 3, 4 | rotation: -90\nhouse: shed | at: 0, 0\n")
+                .unwrap();
         assert_eq!(
             map.houses,
             vec![
-                HousePlacement { house: "bungalow".into(), x: 3, y: 4, turns: 3 },
-                HousePlacement { house: "shed".into(), x: 0, y: 0, turns: 0 },
+                HousePlacement {
+                    house: "bungalow".into(),
+                    x: 3,
+                    y: 4,
+                    turns: 3
+                },
+                HousePlacement {
+                    house: "shed".into(),
+                    x: 0,
+                    y: 0,
+                    turns: 0
+                },
             ]
         );
         assert!(parse("[houses]\nhouse: shed | at: 0, 0 | rotation: 45\n").is_err());
         assert!(parse("[houses]\nat: 0, 0\n").is_err());
         let text = to_text(&map).unwrap();
-        assert!(text.contains("house: bungalow | at: 3, 4 | rotation: 270"), "{text}");
+        assert!(
+            text.contains("house: bungalow | at: 3, 4 | rotation: 270"),
+            "{text}"
+        );
         assert_eq!(parse(&text).unwrap().houses, map.houses);
         assert!(!to_text(&MapFile::default()).unwrap().contains("[houses]"));
     }
@@ -862,10 +888,19 @@ count: 3
         let (map, _) = load_level(&path).unwrap();
         let _ = std::fs::remove_dir_all(&dir);
         assert!(map.houses.is_empty());
-        let wall = (MapFeatures::ImpassableForPlayers as u64) | (MapFeatures::ImpassableForEnemies as u64);
-        let blocked = map.tiles.iter().flatten().filter(|&&t| t & wall == wall).count();
+        let wall =
+            (MapFeatures::ImpassableForPlayers as u64) | (MapFeatures::ImpassableForEnemies as u64);
+        let blocked = map
+            .tiles
+            .iter()
+            .flatten()
+            .filter(|&&t| t & wall == wall)
+            .count();
         assert!(blocked > 10, "the bungalow's walls block: {blocked}");
-        assert!(map.placements.is_empty(), "no wall models: the wall mesh draws them");
+        assert!(
+            map.placements.is_empty(),
+            "no wall models: the wall mesh draws them"
+        );
         assert_eq!(map.tiles[0][0] & wall, 0, "the missing house is skipped");
     }
 

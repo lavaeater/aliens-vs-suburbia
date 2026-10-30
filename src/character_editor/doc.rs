@@ -17,6 +17,7 @@
 //! The live character follows the doc through `PlayerAssetDef`, which every gameplay
 //! system already reads: see [`sync_doc_to_live`].
 
+use crate::assets::paths;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
@@ -92,12 +93,17 @@ impl DefDoc {
         let (Some(def), Some(path)) = (self.def.as_ref(), self.def_path.as_deref()) else {
             return Err("nothing open to save".to_string());
         };
-        let text = ron::ser::to_string_pretty(def, ron::ser::PrettyConfig::default())
-            .map_err(|error| format!("FAILED to serialize {path}: {error}"))?;
-        if let Some(dir) = std::path::Path::new(path).parent() {
+        // Weapon refs go out in the short content form (`assets::paths`).
+        let text = ron::ser::to_string_pretty(
+            &def.clone().normalized(),
+            ron::ser::PrettyConfig::default(),
+        )
+        .map_err(|error| format!("FAILED to serialize {path}: {error}"))?;
+        let file = paths::disk_path(path);
+        if let Some(dir) = file.parent() {
             let _ = std::fs::create_dir_all(dir);
         }
-        std::fs::write(path, text).map_err(|error| format!("FAILED to write {path}: {error}"))?;
+        std::fs::write(&file, text).map_err(|error| format!("FAILED to write {path}: {error}"))?;
         self.saved = self.def.clone();
         Ok(format!("saved {path}"))
     }
@@ -502,7 +508,13 @@ pub fn sync_weapon_doc(
         .held_weapon
         .clone()
         .or_else(|| doc.def.as_ref().and_then(weapon_def_path));
-    if wanted == weapon.def_path {
+    // Either form of the path: the library's from the project root, the def's inside assets/.
+    let unchanged = match (&wanted, &weapon.def_path) {
+        (Some(a), Some(b)) => paths::same(a, b),
+        (None, None) => true,
+        _ => false,
+    };
+    if unchanged {
         return;
     }
     weapon.0 = wanted.as_deref().map(DefDoc::open).unwrap_or_default();
@@ -681,10 +693,8 @@ mod tests {
     fn a_held_weapon_changes_the_live_def_not_the_doc() {
         let doc = character(Some("assets/defs/Pistol.ron"));
         let live = expected_live(&doc, Some("assets/defs/SMG.ron"));
-        assert_eq!(
-            weapon_def_path(&live).as_deref(),
-            Some("assets/defs/SMG.ron")
-        );
+        // Stored in the short content form (`assets::paths`), whichever form came in.
+        assert_eq!(weapon_def_path(&live).as_deref(), Some("defs/SMG.ron"));
         assert_eq!(
             weapon_def_path(&doc).as_deref(),
             Some("assets/defs/Pistol.ron")

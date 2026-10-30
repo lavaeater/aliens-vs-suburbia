@@ -62,6 +62,17 @@ pub struct LootTable {
     pub entries: Vec<LootEntry>,
 }
 
+impl LootTable {
+    /// Weapon pickups' def paths in the short content form (`assets::paths`).
+    pub fn normalize_paths(&mut self) {
+        for entry in self.always.iter_mut().chain(&mut self.entries) {
+            if let LootEntry::Item { kind, .. } = entry {
+                kind.normalize_paths();
+            }
+        }
+    }
+}
+
 const fn default_rolls() -> u32 {
     1
 }
@@ -99,7 +110,8 @@ impl LootTables {
                     .map_err(|e| e.to_string())
                     .and_then(|t| ron::from_str::<LootTable>(&t).map_err(|e| e.to_string()))
                 {
-                    Ok(table) => {
+                    Ok(mut table) => {
+                        table.normalize_paths();
                         tables.insert(stem.to_string(), table);
                     }
                     Err(e) => warn!("loot table {} failed to load: {e}", path.display()),

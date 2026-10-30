@@ -290,7 +290,7 @@ pub fn set_weapon(def: &mut AssetDefinition, weapon_def_path: Option<&str>) -> b
     let ModelType::Player(props) = &mut def.model_type else {
         return false;
     };
-    props.weapon = weapon_def_path.map(str::to_string);
+    props.weapon = weapon_def_path.map(crate::assets::paths::content_ref);
     true
 }
 

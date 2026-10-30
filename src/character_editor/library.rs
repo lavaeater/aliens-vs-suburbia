@@ -17,6 +17,7 @@
 //! The search box takes the keyboard while it has focus: Up / Down step through the list,
 //! Enter opens the highlighted row.
 
+use crate::assets::paths::same;
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 use bevy::ui_widgets::Activate;
@@ -332,9 +333,9 @@ fn row_label(
     match row {
         LibraryRow::Heading(text) => (text.clone(), HEADING),
         LibraryRow::Def { def_path, .. } => {
-            let mark = if subject == Some(def_path.as_str()) {
+            let mark = if subject.is_some_and(|s| same(s, def_path)) {
                 "*"
-            } else if open.iter().flatten().any(|p| p == def_path) {
+            } else if open.iter().flatten().any(|p| same(p, def_path)) {
                 "-"
             } else {
                 " "
@@ -512,7 +513,9 @@ pub fn rebuild_library(
                 continue;
             }
             let is_open = match &entry {
-                LibraryRow::Def { def_path, .. } => subject.as_deref() == Some(def_path.as_str()),
+                LibraryRow::Def { def_path, .. } => {
+                    subject.as_deref().is_some_and(|s| same(s, def_path))
+                }
                 _ => false,
             };
             let label = if highlight == Some(index) {

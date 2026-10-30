@@ -2,7 +2,7 @@
 
 [properties]
 name: The Mothership
-stories: assets/stories/level_05.ron
+stories: stories/level_05.ron
 loot: 2-3 per 60
 escape_limit: 5
 
@@ -33,17 +33,17 @@ wrrrrrrrrrrrrfxffrrrrrrrrrrrrw
 wwwwwwwwwwwwwwwwwwwwwwwwwwwwww
 
 [placements]
-# at: x, y | def: <def .ron path> | rotation: <degrees, steps of 45>
-at: 10, 6 | def: assets/defs/Barrel.ron
-at: 19, 6 | def: assets/defs/Barrel.ron
-at: 10, 17 | def: assets/defs/Barrel.ron
-at: 19, 17 | def: assets/defs/Barrel.ron
+# at: x, y | def: <def under assets/, e.g. defs/Barrel.ron> | rotation: <degrees, steps of 45>
+at: 10, 6 | def: defs/Barrel.ron
+at: 19, 6 | def: defs/Barrel.ron
+at: 10, 17 | def: defs/Barrel.ron
+at: 19, 17 | def: defs/Barrel.ron
 
 [waves]
-# enemy: <enemy def path, omit for the built-in alien> | count: <n> | rate: <per minute>
+# enemy: <enemy def under assets/, omit for the built-in alien> | count: <n> | rate: <per minute>
 count: 12 | rate: 12
-enemy: assets/defs/Blue Demon.ron | count: 6 | rate: 6
-enemy: assets/defs/Demon-LnfIziKv4o.ron | count: 2 | rate: 2
-enemy: assets/defs/Alpaking.ron | count: 10 | rate: 12
-enemy: assets/defs/Alpaking Evolved.ron | count: 1 | rate: 1
+enemy: defs/Blue Demon.ron | count: 6 | rate: 6
+enemy: defs/Demon-LnfIziKv4o.ron | count: 2 | rate: 2
+enemy: defs/Alpaking.ron | count: 10 | rate: 12
+enemy: defs/Alpaking Evolved.ron | count: 1 | rate: 1
 count: 10 | rate: 10

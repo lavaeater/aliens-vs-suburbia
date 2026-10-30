@@ -4,9 +4,9 @@
     model_type: Player((
         ability: Bombardment,
         throw_rate_per_minute: 60.0,
-        weapon: Some("assets/defs/Assault Rifle.ron"),
+        weapon: Some("defs/Assault Rifle.ron"),
         extra_weapons: [
-            "assets/defs/Shotgun.ron",
+            "defs/Shotgun.ron",
         ],
         starting_ammo: [
             (Pistol, 36),

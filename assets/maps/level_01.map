@@ -2,7 +2,7 @@
 
 [properties]
 name: Maple Drive
-stories: assets/stories/level_01.ron
+stories: stories/level_01.ron
 loot: 1-3 per 40
 escape_limit: 10
 
@@ -32,10 +32,10 @@ wwwwwwwwwwwwwwwwwww
 # at: x, y | model: <path under assets/> | rotation: <degrees> | scale: <s>
 
 [placements]
-# at: x, y | def: <def .ron path> | rotation: <degrees, steps of 45>
-at: 7, 10 | def: assets/defs/story_letter.ron | rotation: 0
+# at: x, y | def: <def under assets/, e.g. defs/Barrel.ron> | rotation: <degrees, steps of 45>
+at: 7, 10 | def: defs/story_letter.ron | rotation: 0
 
 [waves]
-# enemy: <enemy def path, omit for the built-in alien> | count: <n> | rate: <per minute>
+# enemy: <enemy def under assets/, omit for the built-in alien> | count: <n> | rate: <per minute>
 count: 5 | rate: 5
-enemy: assets/defs/Bunny.ron | count: 8 | rate: 10
+enemy: defs/Bunny.ron | count: 8 | rate: 10

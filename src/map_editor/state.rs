@@ -1,14 +1,12 @@
 use crate::assets::asset_definition::{AssetDefinition, ModelType};
-use crate::general::components::map_components::{
-    HousePlacement, MapFile, TilePlacement, WaveDef,
-};
+use crate::general::components::map_components::{HousePlacement, MapFile, TilePlacement, WaveDef};
 use crate::map::MapFeatures;
 use crate::map::house::{self, HouseDef};
 use crate::map::procgen::{HouseResolveResult, HouseSpec, Polygon, apply_house, resolve_house};
-use std::collections::BTreeMap;
 use crate::map::text_format;
 use crate::map_editor::modal::{History, Mode};
 use bevy::prelude::Resource;
+use std::collections::BTreeMap;
 
 pub const TILE_SPECIAL_FLOOR: u64 = MapFeatures::Floor as u64;
 pub const TILE_ALIEN_SPAWN: u64 = MapFeatures::Floor as u64 | MapFeatures::EnemySpawn as u64;
@@ -94,6 +92,8 @@ impl PaletteItem {
 #[derive(Resource)]
 pub struct MapEditorState {
     pub map_name: String,
+    /// The map's display name (`MapFile::name`), kept through a load and save.
+    pub title: String,
     /// The loaded map's story file (`MapFile::stories`); not editable here, but kept so a
     /// save does not drop it.
     pub stories: String,
@@ -170,6 +170,7 @@ impl Default for MapEditorState {
         let house_library = house::house_library();
         let mut state = Self {
             map_name: "new_map".to_string(),
+            title: String::new(),
             stories: String::new(),
             loot: None,
             level_rules: (None, Vec::new(), None),
@@ -621,7 +622,7 @@ impl MapEditorState {
 
     pub fn to_map_file(&self) -> MapFile {
         MapFile {
-            name: String::new(),
+            name: self.title.clone(),
             generated: false,
             seed: 0,
             map_width: self.width,
@@ -639,37 +640,27 @@ impl MapEditorState {
         }
     }
 
-    /// Write the map as `.ron` and say how it went in the status line.
-    ///
-    /// A `.map` text file beside the `.ron` is what the game loads for that level
-    /// (`text_format::load_level`), so the save is called out as shadowed when one exists.
+    /// Write the map as `.map` text, the format the levels are kept in, and say how it
+    /// went in the status line. (`text_format` still reads and writes `.ron`; it is just
+    /// not what the editor saves.)
     pub fn save(&mut self) {
         let map = self.to_map_file();
-        let path = format!("assets/maps/{}.ron", self.map_name);
-        let written = ron::ser::to_string_pretty(&map, ron::ser::PrettyConfig::default())
+        let path = format!("assets/maps/{}.{}", self.map_name, text_format::EXTENSION);
+        let written = std::fs::create_dir_all("assets/maps")
             .map_err(|e| e.to_string())
-            .and_then(|text| {
-                std::fs::create_dir_all("assets/maps").map_err(|e| e.to_string())?;
-                std::fs::write(&path, text).map_err(|e| e.to_string())
-            });
-        if let Err(e) = written {
-            self.status = format!("save failed: {e}");
-            return;
-        }
-        bevy::log::info!("Map saved to {path}");
-        let text_map = text_format::converted_path(std::path::Path::new(&path));
-        self.status = if text_map.exists() {
-            format!(
-                "saved {path} - but {} exists and the game loads that instead",
-                text_map.display()
-            )
-        } else {
-            format!("saved {path}")
+            .and_then(|()| text_format::write_map_file(&path, &map));
+        self.status = match written {
+            Ok(()) => {
+                bevy::log::info!("Map saved to {path}");
+                format!("saved {path}")
+            }
+            Err(e) => format!("save failed: {e}"),
         };
     }
 
     pub fn load_from_map_file(&mut self, map: MapFile) {
         self.checkpoint();
+        self.title = map.name;
         self.width = map.map_width;
         self.height = map.map_height;
         self.tiles = map.tiles;

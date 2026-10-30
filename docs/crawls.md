@@ -28,8 +28,8 @@ fact changes -> story rules pass -> Emit(effect: "crawl:<name>")
 
 ## Level stories
 
-A map names its own story file: `stories: "assets/stories/level_01.ron"` in the `.ron`,
-`stories: assets/stories/level_01.ron` under `[properties]` in the `.map`. It is a RON
+A map names its own story file: `stories: stories/level_01.ron` under `[properties]` in
+the `.map` (`stories: "stories/level_01.ron"` in a `.ron`). It is a RON
 list of `Story` (format: `turbofacts/assets/stories/example.ron`), loaded on top of the
 base level-flow stories when the map loads. Useful keys: `LevelStarted`,
 `LevelComplete`, `LevelFailed`, `EnemyKillCount`, `CurrentWave`, ... (`turbofacts/src/keys.rs`).

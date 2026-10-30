@@ -2,8 +2,8 @@
 
 [properties]
 name: Snow Day
-stories: assets/stories/level_03.ron
-weapons: assets/defs/Snowball.ron
+stories: stories/level_03.ron
+weapons: defs/Snowball.ron
 coins: 250
 escape_limit: 8
 
@@ -31,12 +31,12 @@ wssssssssssssssssssssssssxsw
 wwwwwwwwwwwwwwwwwwwwwwwwwwww
 
 [placements]
-# at: x, y | def: <def .ron path> | rotation: <degrees, steps of 45>
+# at: x, y | def: <def under assets/, e.g. defs/Barrel.ron> | rotation: <degrees, steps of 45>
 
 [waves]
-# enemy: <enemy def path, omit for the built-in alien> | count: <n> | rate: <per minute>
-enemy: assets/defs/Bunny.ron | count: 12 | rate: 12
+# enemy: <enemy def under assets/, omit for the built-in alien> | count: <n> | rate: <per minute>
+enemy: defs/Bunny.ron | count: 12 | rate: 12
 count: 10 | rate: 10
-enemy: assets/defs/Bunny.ron | count: 20 | rate: 24
+enemy: defs/Bunny.ron | count: 20 | rate: 24
 count: 12 | rate: 12
-enemy: assets/defs/Alpaking.ron | count: 5 | rate: 8
+enemy: defs/Alpaking.ron | count: 5 | rate: 8

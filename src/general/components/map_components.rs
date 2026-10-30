@@ -82,10 +82,7 @@ pub fn default_loot_table() -> String {
 }
 
 pub fn default_loot_bags() -> Vec<String> {
-    vec![
-        "assets/defs/Trash Bag.ron".into(),
-        "assets/defs/Trash Bags.ron".into(),
-    ]
+    vec!["defs/Trash Bag.ron".into(), "defs/Trash Bags.ron".into()]
 }
 
 impl Default for LootSpread {
@@ -142,7 +139,7 @@ pub struct MapFile {
     #[serde(default)]
     pub waves: Vec<WaveDef>,
     /// The level's own turbofacts stories (a RON list of `Story`), e.g.
-    /// `"assets/stories/level_01.ron"`. Loaded on top of the base level-flow stories when
+    /// `"stories/level_01.ron"`. Loaded on top of the base level-flow stories when
     /// the map loads. Empty = none.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub stories: String,
@@ -160,6 +157,27 @@ pub struct MapFile {
     /// The team starts the level with at least this many coins (for towers).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub coins: Option<u32>,
+}
+
+impl MapFile {
+    /// Every path the map names (placements, wave enemies, weapons, loot bags, stories)
+    /// in the short content form, `"defs/Bunny.ron"` (`assets::paths`). Done on every
+    /// read and write, so an older map with `assets/` prefixes reads the same and
+    /// saves without them.
+    pub fn normalize_paths(&mut self) {
+        use crate::assets::paths::normalize;
+        self.placements
+            .iter_mut()
+            .for_each(|p| normalize(&mut p.def_path));
+        self.waves
+            .iter_mut()
+            .for_each(|w| normalize(&mut w.enemy_def));
+        self.weapons.iter_mut().for_each(normalize);
+        if let Some(loot) = &mut self.loot {
+            loot.bags.iter_mut().for_each(normalize);
+        }
+        normalize(&mut self.stories);
+    }
 }
 
 #[derive(Component, Default, Reflect)]

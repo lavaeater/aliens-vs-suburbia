@@ -2,7 +2,7 @@
 
 [properties]
 name: Night of the Golems
-stories: assets/stories/level_04.ron
+stories: stories/level_04.ron
 loot: 2-4 per 50
 escape_limit: 6
 
@@ -31,21 +31,21 @@ wmmmmmmmffffxfffffmmmmmmmw
 wwwwwwwwwwwwwwwwwwwwwwwwww
 
 [placements]
-# at: x, y | def: <def .ron path> | rotation: <degrees, steps of 45>
-at: 5, 8 | def: assets/defs/Barrel.ron
-at: 6, 8 | def: assets/defs/Barrel.ron
-at: 19, 8 | def: assets/defs/Barrel.ron
-at: 20, 9 | def: assets/defs/Barrel.ron
-at: 11, 17 | def: assets/defs/Barrel.ron
-at: 14, 17 | def: assets/defs/Barrel.ron
-at: 4, 12 | def: assets/defs/Barrier Trash.ron
-at: 21, 12 | def: assets/defs/Barrier Trash.ron
+# at: x, y | def: <def under assets/, e.g. defs/Barrel.ron> | rotation: <degrees, steps of 45>
+at: 5, 8 | def: defs/Barrel.ron
+at: 6, 8 | def: defs/Barrel.ron
+at: 19, 8 | def: defs/Barrel.ron
+at: 20, 9 | def: defs/Barrel.ron
+at: 11, 17 | def: defs/Barrel.ron
+at: 14, 17 | def: defs/Barrel.ron
+at: 4, 12 | def: defs/Barrier Trash.ron
+at: 21, 12 | def: defs/Barrier Trash.ron
 
 [waves]
-# enemy: <enemy def path, omit for the built-in alien> | count: <n> | rate: <per minute>
+# enemy: <enemy def under assets/, omit for the built-in alien> | count: <n> | rate: <per minute>
 count: 10 | rate: 10
-enemy: assets/defs/Stone Golem.ron | count: 3 | rate: 3
-enemy: assets/defs/Bunny.ron | count: 12 | rate: 16
-enemy: assets/defs/Blue Demon.ron | count: 6 | rate: 6
-enemy: assets/defs/Stone Golem.ron | count: 4 | rate: 4
-enemy: assets/defs/Alpaking.ron | count: 8 | rate: 10
+enemy: defs/Stone Golem.ron | count: 3 | rate: 3
+enemy: defs/Bunny.ron | count: 12 | rate: 16
+enemy: defs/Blue Demon.ron | count: 6 | rate: 6
+enemy: defs/Stone Golem.ron | count: 4 | rate: 4
+enemy: defs/Alpaking.ron | count: 8 | rate: 10

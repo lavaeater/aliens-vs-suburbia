@@ -38,7 +38,8 @@ const INPUT_GRACE: f32 = 0.8;
 /// One level of the campaign.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct CampaignLevel {
-    /// The map, as `text_format::load_level` takes it (a `.map` next to a `.ron` wins).
+    /// The map, inside `assets/` (`"maps/level_01.map"`; `assets::paths`). Given a `.ron`,
+    /// a `.map` next to it wins (`text_format::load_level`).
     pub map: String,
     /// Shown on the card before the level.
     pub title: String,
@@ -66,7 +67,7 @@ impl Default for CampaignFile {
     fn default() -> Self {
         Self {
             levels: vec![CampaignLevel {
-                map: "assets/maps/level_01.ron".into(),
+                map: "maps/level_01.map".into(),
                 title: "Level 1".into(),
                 tagline: String::new(),
             }],
@@ -220,16 +221,22 @@ pub fn start_level(
         error!("campaign: no level {}", campaign.current);
         return;
     };
-    let mut map = match crate::map::text_format::load_level(&level.map) {
-        Ok((map, path)) => {
-            info!("{}: {} ({})", campaign.progress(), level.title, path.display());
-            map
-        }
-        Err(e) => {
-            error!("{e}");
-            return;
-        }
-    };
+    let mut map =
+        match crate::map::text_format::load_level(crate::assets::paths::disk_path(&level.map)) {
+            Ok((map, path)) => {
+                info!(
+                    "{}: {} ({})",
+                    campaign.progress(),
+                    level.title,
+                    path.display()
+                );
+                map
+            }
+            Err(e) => {
+                error!("{e}");
+                return;
+            }
+        };
     if map.generated {
         let generated =
             crate::map::map_generator::generate_suburb_map(map.seed, map.map_width, map.map_height);
@@ -367,7 +374,10 @@ fn spawn_intermission(
     for (i, line) in lines.into_iter().enumerate() {
         let size = if i == 0 { 30.0 } else { 20.0 };
         ui.with_child(|c| {
-            c.with_text(line, Some(TextStyle::size_color(size, Color::srgb(0.85, 0.95, 0.88))));
+            c.with_text(
+                line,
+                Some(TextStyle::size_color(size, Color::srgb(0.85, 0.95, 0.88))),
+            );
         });
     }
     ui.with_child(|c| {
@@ -491,40 +501,61 @@ mod tests {
 
     #[test]
     fn the_shipped_campaign_reads_and_every_level_loads() {
+        use crate::assets::paths::disk_path;
         let text = std::fs::read_to_string(CAMPAIGN_FILE).expect("campaign file");
         let file: CampaignFile = ron::from_str(&text).expect("campaign parses");
         assert!(file.levels.len() >= 5, "at least five levels");
         for level in &file.levels {
-            let (map, _) = crate::map::text_format::load_level(&level.map)
+            let (map, _) = crate::map::text_format::load_level(disk_path(&level.map))
                 .unwrap_or_else(|e| panic!("{}: {e}", level.map));
             let flat: Vec<u64> = map.tiles.iter().flatten().copied().collect();
             let has = |flag: crate::map::MapFeatures| flat.iter().any(|t| t & flag as u64 != 0);
-            assert!(has(crate::map::MapFeatures::PlayerSpawn), "{}: player spawn", level.map);
-            assert!(has(crate::map::MapFeatures::EnemySpawn), "{}: enemy spawn", level.map);
-            assert!(has(crate::map::MapFeatures::EnemyExit), "{}: goal", level.map);
+            assert!(
+                has(crate::map::MapFeatures::PlayerSpawn),
+                "{}: player spawn",
+                level.map
+            );
+            assert!(
+                has(crate::map::MapFeatures::EnemySpawn),
+                "{}: enemy spawn",
+                level.map
+            );
+            assert!(
+                has(crate::map::MapFeatures::EnemyExit),
+                "{}: goal",
+                level.map
+            );
             assert!(!map.waves.is_empty(), "{}: waves", level.map);
             let holes = crate::map::walls::enclosed_voids(&map);
-            assert!(holes.is_empty(), "{}: void inside the map at {holes:?}", level.map);
+            assert!(
+                holes.is_empty(),
+                "{}: void inside the map at {holes:?}",
+                level.map
+            );
             assert!(
                 goal_reachable(&map.tiles),
                 "{}: an enemy spawn cannot reach the goal",
                 level.map
             );
             if !map.stories.is_empty() {
-                let stories = turbofacts::persistence::load_stories(&map.stories)
+                let stories = turbofacts::persistence::load_stories(disk_path(&map.stories))
                     .unwrap_or_else(|e| panic!("{}: {e}", map.stories));
                 assert!(!stories.is_empty(), "{}: no stories", map.stories);
             }
-            for def in map.weapons.iter().chain(map.waves.iter().map(|w| &w.enemy_def)) {
+            for def in map
+                .weapons
+                .iter()
+                .chain(map.waves.iter().map(|w| &w.enemy_def))
+            {
                 assert!(
-                    def.is_empty() || std::path::Path::new(def).exists(),
+                    def.is_empty() || disk_path(def).exists(),
                     "{}: {def} does not exist",
                     level.map
                 );
             }
             for p in &map.placements {
                 assert!(
-                    std::path::Path::new(&p.def_path).exists(),
+                    disk_path(&p.def_path).exists(),
                     "{}: {} does not exist",
                     level.map,
                     p.def_path
