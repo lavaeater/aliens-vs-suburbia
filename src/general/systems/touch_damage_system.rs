@@ -4,7 +4,7 @@ use crate::general::damage::ApplyDamage;
 use crate::gore::components::DamageKind;
 use crate::player::components::Player;
 use crate::player::components::PlayerDead;
-use avian3d::prelude::{CollidingEntities, Position};
+use crate::physics::prelude::{CollidingEntities, Position};
 use bevy::math::Vec3;
 use bevy::prelude::{Entity, MessageWriter, Or, Query, Res, Time, With, Without};
 
@@ -58,7 +58,7 @@ mod tests {
     use crate::general::damage::{ApplyDamage, DamageRules, apply_damage};
     use crate::gore::components::{DamageDealt, DamageKind};
     use crate::player::components::Player;
-    use avian3d::prelude::{CollidingEntities, Position};
+    use crate::physics::prelude::{CollidingEntities, Position};
     use bevy::ecs::entity::EntityHashSet;
     use bevy::prelude::*;
     use std::time::Duration;

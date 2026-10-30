@@ -15,8 +15,8 @@ use crate::general::components::{Health, TouchDamage};
 use crate::general::damage::DamageResistances;
 use crate::general::explosion::ExplodesOnDeath;
 use crate::player::systems::spawn_players::FixSceneTransform;
-use avian3d::prelude::Collider;
-use avian3d::prelude::Position;
+use crate::physics::prelude::Collider;
+use crate::physics::prelude::Position;
 use bevy::math::{Quat, Vec3};
 use bevy::prelude::{
     AssetServer, Commands, Entity, MessageReader, MessageWriter, Name, Query, Res, ResMut, Time,

@@ -7,7 +7,7 @@
 //! `Fire` explosions also leave a `FireField`. Writers: grenades and projectile weapons (`projectiles`), Bombardment,
 //! and anything carrying [`ExplodesOnDeath`].
 
-use avian3d::prelude::{LinearVelocity, Position, SpatialQuery, SpatialQueryFilter};
+use crate::physics::prelude::{LinearVelocity, Position, SpatialQuery, SpatialQueryFilter};
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 

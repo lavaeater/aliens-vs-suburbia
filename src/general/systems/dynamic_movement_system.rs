@@ -1,7 +1,7 @@
 #![allow(clippy::type_complexity)]
 use crate::control::components::{CharacterControl, DynamicMovement};
 use crate::settings::resources::GameSettings;
-use avian3d::prelude::LinearVelocity;
+use crate::physics::prelude::LinearVelocity;
 use bevy::prelude::{Query, Res, With};
 
 /// Move in world space. Both input paths now write a camera-relative `walk_direction`

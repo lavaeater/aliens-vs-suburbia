@@ -2,7 +2,7 @@ use crate::ai::components::avoid_wall_components::AvoidWallsData;
 use crate::control::components::{CharacterControl, ControlRotation};
 use crate::general::components::CollisionLayer;
 use crate::general::components::map_components::CoolDown;
-use avian3d::prelude::{Position, Rotation, SpatialQuery, SpatialQueryFilter};
+use crate::physics::prelude::{Position, Rotation, SpatialQuery, SpatialQueryFilter};
 use bevy::math::{EulerRot, Quat, Vec3};
 use bevy::prelude::{Query, Res};
 use bevy::time::Time;

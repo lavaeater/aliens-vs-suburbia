@@ -8,7 +8,7 @@
 //! so their tile re-opens no matter who destroyed them — a bullet, an explosion, or an
 //! alien chewing through (aliens already re-open the tiles they personally break).
 
-use avian3d::prelude::{AngularVelocity, Collider, CollisionLayers, LinearVelocity, RigidBody};
+use crate::physics::prelude::{AngularVelocity, Collider, CollisionLayers, LinearVelocity, RigidBody};
 use bevy::prelude::*;
 
 use crate::fx::{FxKind, SpawnFx};

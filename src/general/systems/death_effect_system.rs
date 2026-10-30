@@ -1,5 +1,5 @@
 use crate::general::components::Health;
-use avian3d::prelude::Position;
+use crate::physics::prelude::Position;
 use bevy::prelude::*;
 
 #[derive(Component)]

@@ -3,7 +3,7 @@ use crate::camera::components::{
 };
 use crate::player::components::PlayerDead;
 use crate::settings::resources::{GameSettings, ProjectionMode};
-use avian3d::interpolation::TransformInterpolation;
+use crate::physics::prelude::TransformInterpolation;
 use bevy::camera::visibility::RenderLayers;
 use bevy::camera::{ImageRenderTarget, Projection, RenderTarget, ScalingMode};
 use bevy::image::ImageSampler;

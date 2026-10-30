@@ -1,7 +1,7 @@
 use crate::general::components::{Ball, Health, HittableTarget};
 use crate::general::damage::ApplyDamage;
 use crate::gore::components::DamageKind;
-use avian3d::prelude::{CollisionStart, Position};
+use crate::physics::prelude::{CollisionStart, Position};
 use bevy::math::Vec3;
 use bevy::prelude::{Commands, MessageReader, MessageWriter, Query, With};
 
@@ -76,7 +76,7 @@ mod tests {
     use crate::general::components::{Ball, Health, HittableTarget};
     use crate::general::damage::{ApplyDamage, DamageRules, apply_damage};
     use crate::gore::components::DamageDealt;
-    use avian3d::prelude::CollisionStart;
+    use crate::physics::prelude::CollisionStart;
     use bevy::prelude::*;
 
     #[derive(Resource)]

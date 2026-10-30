@@ -1,4 +1,4 @@
-use avian3d::prelude::{CollisionLayers, LayerMask, RigidBody};
+use crate::physics::prelude::{CollisionLayers, LayerMask, RigidBody};
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

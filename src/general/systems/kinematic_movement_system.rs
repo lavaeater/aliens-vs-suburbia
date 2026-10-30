@@ -1,7 +1,7 @@
 use crate::control::components::{
     CharacterControl, ControlDirection, ControlRotation, KinematicMovement,
 };
-use avian3d::prelude::{AngularVelocity, LinearVelocity, Rotation};
+use crate::physics::prelude::{AngularVelocity, LinearVelocity, Rotation};
 use bevy::prelude::{Query, Vec3, With, trace};
 
 pub fn kinematic_movement(

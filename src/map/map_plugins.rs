@@ -9,7 +9,7 @@ use crate::general::resources::map_resources::MapGraph;
 use crate::general::systems::map_systems::{
     TileDefinitions, load_map_showcase, map_loader, update_current_tile_system,
 };
-use avian3d::prelude::{LayerMask, RigidBody};
+use crate::physics::prelude::{LayerMask, RigidBody};
 use bevy::app::{App, Plugin, Update};
 use bevy::ecs::schedule::SystemCondition;
 use bevy::prelude::{IntoScheduleConfigs, OnEnter, in_state};

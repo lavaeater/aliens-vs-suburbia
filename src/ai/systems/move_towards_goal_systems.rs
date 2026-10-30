@@ -8,7 +8,7 @@ use crate::game_state::score_keeper::GameTrackingEvent;
 use crate::general::components::map_components::{AlienGoal, CurrentTile};
 use crate::general::resources::map_resources::MapGraph;
 use crate::general::systems::map_systems::TileDefinitions;
-use avian3d::prelude::{LinearVelocity, Position, Rotation};
+use crate::physics::prelude::{LinearVelocity, Position, Rotation};
 use bevy::prelude::*;
 use pathfinding::directed::astar::astar;
 

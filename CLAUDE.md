@@ -180,7 +180,7 @@ both clips; Back always is: with no `WalkBack` clip, `AnimationStore::nodes`/`sp
 
 ### Physics & Collision
 
-Uses **avian3d 0.7**. Collision layers in `src/general/components/mod.rs`: `ImpassableAll`, `Floor`, `Ball`, `Alien`, `Player`, `BuildIndicator`, `Sensor`, `PlayerAimSensor`, `AlienSpawnPoint`, `AlienGoal`.
+Uses **avian3d 0.7**, always through `crate::physics::prelude` (`src/physics/`), never `avian3d` directly: the Jolt port (`docs/jolt-port.md`, branch `jolt`) swaps the backend behind it. A new physics name goes into the prelude of every backend. Collision layers in `src/general/components/mod.rs`: `ImpassableAll`, `Floor`, `Ball`, `Alien`, `Player`, `BuildIndicator`, `Sensor`, `PlayerAimSensor`, `AlienSpawnPoint`, `AlienGoal`.
 
 ### AI Pattern
 

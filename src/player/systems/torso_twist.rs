@@ -399,7 +399,7 @@ pub fn face_movement_direction(
     mut players: Query<
         (
             &Transform,
-            &mut avian3d::prelude::AngularVelocity,
+            &mut crate::physics::prelude::AngularVelocity,
             &AutoAim,
             &CharacterControl,
             Option<&CharacterState>,

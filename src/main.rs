@@ -8,9 +8,7 @@ use crate::ai::components::avoid_wall_components::AvoidWallsData;
 use crate::game_state::game_state_plugin::GamePlugin;
 use crate::general::components::Health;
 use crate::general::components::map_components::CurrentTile;
-use avian3d::prelude::{PhysicsDebugPlugin, PhysicsGizmos, PhysicsPlugins};
-use bevy::gizmos::AppGizmoBuilder;
-use bevy::gizmos::config::GizmoConfig;
+use physics::prelude::GamePhysicsPlugin;
 use bevy::log::LogPlugin;
 use bevy::prelude::*;
 use bevy::{DefaultPlugins, log};
@@ -48,6 +46,7 @@ pub(crate) mod map_editor;
 pub(crate) mod map_editor_tui;
 pub(crate) mod model_settings;
 pub(crate) mod music;
+pub(crate) mod physics;
 pub(crate) mod player;
 pub(crate) mod player_setup;
 pub(crate) mod poly_pizza;
@@ -282,16 +281,8 @@ fn main() -> std::process::ExitCode {
             }
         })
         // .add_plugins(SkeinPlugin::default())
-        .add_plugins(PhysicsPlugins::default())
-        .add_plugins(PhysicsDebugPlugin)
+        .add_plugins(GamePhysicsPlugin)
         .add_plugins(fx::FxPlugin)
-        .insert_gizmo_config(
-            PhysicsGizmos::default(),
-            GizmoConfig {
-                enabled: false,
-                ..Default::default()
-            },
-        )
         // Lit by lamps and flashlights rather than ambient light (`lights_systems`), so
         // unlit ground has to be allowed to go dark, and coloured lights to tint.
         //.add_plugins(FlatShaderPlugin::global_with(

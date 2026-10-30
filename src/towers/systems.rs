@@ -5,7 +5,7 @@ use crate::general::components::{Ball, CollisionLayer, Health};
 use crate::general::damage::ApplyDamage;
 use crate::gore::components::DamageKind;
 use crate::towers::components::{Slowed, TowerArea, TowerSensor, TowerShooter, TowerSlow};
-use avian3d::prelude::{
+use crate::physics::prelude::{
     Collider, CollidingEntities, CollisionLayers, LinearVelocity, Position, RigidBody,
 };
 use bevy::math::Vec3;
@@ -156,7 +156,7 @@ pub fn spawn_tower_sensor(
 ) {
     use crate::assets::asset_definition::TowerKind;
     use crate::general::damage::Faction;
-    use avian3d::prelude::Sensor;
+    use crate::physics::prelude::Sensor;
 
     let range = props.range.max(0.5);
     // `Collider::cylinder(radius, height)`: range is how far out the tower reaches.

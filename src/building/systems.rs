@@ -12,7 +12,7 @@ use crate::player::events::building_events::{
 use crate::towers::events::BuildTower;
 use crate::towers::systems::spawn_tower_sensor;
 use crate::ui::spawn_ui::AddHealthBar;
-use avian3d::prelude::{CollisionLayers, LockedAxes, Position, RigidBody, Rotation};
+use crate::physics::prelude::{CollisionLayers, LockedAxes, Position, RigidBody, Rotation};
 use bevy::asset::AssetServer;
 use bevy::log::info;
 use bevy::math::{Vec2, Vec3, Vec3Swizzles};
@@ -407,7 +407,7 @@ mod execute_build_tests {
     use crate::player::components::{BuildingIndicator, IsBuildIndicator};
     use crate::player::events::building_events::{ExecuteBuild, RemoveTile};
     use crate::towers::events::BuildTower;
-    use avian3d::prelude::Position;
+    use crate::physics::prelude::Position;
     use bevy::prelude::*;
     use std::collections::{HashMap, HashSet};
 
