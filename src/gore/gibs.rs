@@ -3,13 +3,15 @@
 //! via [`GoreBudget`].
 //!
 //! Chunks are procedural (small dark-red cuboids) so there's no art dependency — a
-//! generic "man-beast" gore burst. Per-enemy gib sets can come later via `EnemyProps`.
+//! generic "man-beast" gore burst. A skinned corpse comes apart into its own body parts
+//! instead (`crate::gore::dismember`); `GibStyle` says which, or both.
 
 use avian3d::prelude::{AngularVelocity, Collider, CollisionLayers, LinearVelocity, RigidBody};
 use bevy::prelude::*;
 
 use crate::general::components::CollisionLayer;
 use crate::gore::components::{EntityDied, Ephemeral, GoreBudget};
+use crate::gore::dismember::{Dismembered, GibSettings};
 
 /// Shared gib mesh + material, built once at startup.
 #[derive(Resource)]
@@ -38,7 +40,7 @@ pub fn setup_gib_assets(
 }
 
 /// Deterministic per-death PRNG (xorshift32) so a burst looks varied but is cheap.
-struct Rng(u32);
+pub(crate) struct Rng(pub(crate) u32);
 impl Rng {
     fn next(&mut self) -> u32 {
         let mut x = self.0.max(1);
@@ -49,11 +51,11 @@ impl Rng {
         x
     }
     /// In [-1, 1].
-    fn signed(&mut self) -> f32 {
+    pub(crate) fn signed(&mut self) -> f32 {
         (self.next() >> 8) as f32 / (1u32 << 23) as f32 - 1.0
     }
     /// In [0, 1].
-    fn unit(&mut self) -> f32 {
+    pub(crate) fn unit(&mut self) -> f32 {
         (self.next() >> 8) as f32 / (1u32 << 24) as f32
     }
 }
@@ -63,10 +65,16 @@ pub fn spawn_gibs_on_death(
     mut commands: Commands,
     mut budget: ResMut<GoreBudget>,
     gibs: Option<Res<GibAssets>>,
+    settings: Res<GibSettings>,
+    mut dismembered: ResMut<Dismembered>,
 ) {
     let Some(gibs) = gibs else { return };
 
     for death in deaths.read() {
+        let came_apart = dismembered.0.remove(&death.entity);
+        if !settings.style.boxes(came_apart) {
+            continue;
+        }
         let mut rng = Rng(death.entity.to_bits() as u32 ^ 0x6165);
         // Bias the burst away from the killing blow, upward and outward.
         let base_dir = (death.normal.normalize_or(Vec3::Y) + Vec3::Y * 0.6).normalize_or(Vec3::Y);

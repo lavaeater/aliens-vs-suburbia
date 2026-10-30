@@ -1,16 +1,21 @@
 //! The gore/FX layer. Registers the shared damage/death messages, the budget, and
-//! the subscriber systems: blood, gibs, destructible-terrain rubble, fire, plus the
+//! the subscriber systems: blood, gibs and dismemberment, destructible-terrain rubble, fire, plus the
 //! juice layer (SFX + barks).
 
 use bevy::prelude::*;
 
 use crate::game_state::GameState;
+use crate::general::damage::apply_damage;
+use crate::general::systems::health_monitor_system::health_monitor_system;
 use crate::gore::barks::{
     AtrocityMeter, BarkState, bark_on_events, reset_atrocity, setup_bark_caption, tick_bark_caption,
 };
 use crate::gore::blood::{setup_blood_assets, spawn_blood_on_damage};
 use crate::gore::components::{DamageDealt, EntityDied, GoreBudget};
 use crate::gore::despair::{DespairSettings, Heartbeat, apply_despair, despair_heartbeat};
+use crate::gore::dismember::{
+    Dismembered, GibSettings, cycle_gib_style, dismember_the_dead, setup_dismember_assets,
+};
 use crate::gore::fire::{SpawnFire, setup_fire_assets, spawn_fire_fields, tick_fire_fields};
 use crate::gore::gibs::{setup_gib_assets, spawn_gibs_on_death};
 use crate::gore::sfx::{PlaySfx, emit_combat_sfx, play_sfx, setup_sfx_bank};
@@ -30,11 +35,14 @@ impl Plugin for GorePlugin {
             .init_resource::<BarkState>()
             .init_resource::<DespairSettings>()
             .init_resource::<Heartbeat>()
+            .init_resource::<GibSettings>()
+            .init_resource::<Dismembered>()
             .add_systems(
                 Startup,
                 (
                     setup_blood_assets,
                     setup_gib_assets,
+                    setup_dismember_assets,
                     setup_debris_assets,
                     setup_fire_assets,
                     setup_sfx_bank,
@@ -50,6 +58,7 @@ impl Plugin for GorePlugin {
                     record_last_hit,
                     spawn_blood_on_damage,
                     spawn_gibs_on_death,
+                    cycle_gib_style,
                     destroy_damaged_terrain,
                     spawn_fire_fields,
                     tick_fire_fields,
@@ -61,6 +70,15 @@ impl Plugin for GorePlugin {
                     apply_despair,
                     despair_heartbeat,
                 )
+                    .run_if(in_state(GameState::InGame)),
+            )
+            // The corpse must still be there: after the damage lands, before the death
+            // path despawns it.
+            .add_systems(
+                Update,
+                dismember_the_dead
+                    .after(apply_damage)
+                    .before(health_monitor_system)
                     .run_if(in_state(GameState::InGame)),
             );
     }
