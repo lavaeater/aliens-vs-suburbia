@@ -54,22 +54,20 @@ object layer and takes a fixed table of which layers collide, made with the worl
 `CollisionLayers` the game makes is a constant combination fixed at spawn, so: one Jolt object
 layer per distinct (memberships, filters) pair, and a pair collides by Avian's own rule
 (`a.memberships & b.filters != 0 && b.memberships & a.filters != 0`). The table has to be
-complete when the world is made, so the backend needs the list of combinations up front. The
-choices:
-
-1. **A registry** (preferred): the combinations live as named constants next to
-   `CollisionLayer` (they are repeated inline today anyway), the backend builds the table from
-   that list, and a body with an unlisted combination is logged and recreated in a rebuilt
-   world (slow, but only ever on a bug).
-2. Rebuild the world whenever a new combination shows up: works without a list, but hitches
-   once per new combination.
+complete when the world is made, and a registry of combinations would mean rewriting the inline
+`CollisionLayers::new(..)` all over the game (merge conflicts with `playtest`). So the backend
+**learns** them: a body with a combination the table hasn't seen rebuilds the world with every
+body in it (`layers.rs`, `sync::create_bodies`). Loading a map learns most at once, before any
+body exists; the first gib, projectile and so on each rebuild once more, a few milliseconds a
+handful of times a session. If that ever shows, seed the table at startup.
 
 Queries filter by object layer list, which is computed from the mask the same way.
 
 ## Phases
 
 1. **Facade** (done): `src/physics/`, every import through it, Avian behind it. Game unchanged.
-2. **Jolt backend, headless**: `src/physics/jolt/` behind `physics-jolt`, every prelude name, with
+2. **Jolt backend, headless** (done, 14 tests in `src/physics/jolt/tests.rs`; the whole game
+   compiles and its 498 tests run on it): `src/physics/jolt/` behind `physics-jolt`, every prelude name, with
    tests that run a small app (as `spikes/jolt-bench` does): bodies made and removed by hooks,
    Position/velocity round trips, layers, ray and shape casts, contact events and
    `CollidingEntities`, sensors, interpolation. Sized buffers, and an incomplete `StepReport`
@@ -81,6 +79,32 @@ Queries filter by object layer list, which is computed from the mask the same wa
 5. **Jolt-only features**: `CharacterVirtual` for players and neighbours (stairs, slopes, no
    hand-rolled capsule); vehicles (`WheeledVehicleSettings::car`, tracked, motorcycles); ragdolls
    for kills as an alternative to `gore::dismember`.
+
+## How the Jolt backend differs (look for these when playing)
+
+- **Friction**: no `Friction` component means Avian's 0.5, but Jolt combines two bodies'
+  friction by geometric mean where Avian averages: a 0-friction alien on a 0.5 floor slides
+  freely on Jolt (sqrt(0 * 0.5) = 0) and gets 0.25 on Avian.
+- **Mass**: Jolt's density is 1000 kg/m^3, Avian's 1. Only ratios matter for contacts, but any
+  force or impulse code would feel 1000x weaker (the game sets velocities, so none known).
+- **Rounded boxes**: boxes and cylinders have Jolt's convex radius (up to 5 cm, less on small
+  ones); Avian's are sharp. Corners slide a little rounder.
+- **Child colliders** (the tower sensors) get a body of their own instead of joining the
+  parent's, which is the same while towers don't move.
+- **Sensors** are kinematic Jolt bodies: a static one would miss sleeping bodies.
+- **Contacts through sleep**: Jolt drops a contact when its bodies sleep; the backend keeps it
+  (`sync::Touching`), as Avian does, and checks again when one wakes.
+- **Excluded entities** in a query: Jolt's filter leaves out one body at a time, so two excluded
+  colliders on one line can make a cast miss. The game excludes nothing today.
+- **`Transform` writes** to a body after spawn aren't followed (only `Position`/`Rotation`
+  are); nothing in the game does that today.
+- **Interpolation** is the backend's own (`interpolation.rs`), not `bevy_transform_interpolation`.
+
+Found on the way, true on Avian too: Avian only fills a `CollidingEntities` that is already on
+an entity, and nothing in the game adds one, so the tower sensors (`towers/systems.rs`) and
+alien touch damage (`touch_damage_system.rs`) probably never fire today. Adding
+`CollidingEntities::default()` to the tower sensor and the alien bundles fixes it on both
+backends (best done on `playtest`).
 
 ## Risks
 

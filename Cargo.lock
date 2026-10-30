@@ -136,6 +136,7 @@ dependencies = [
  "itertools 0.15.0",
  "lava_ui_builder",
  "leafwing-input-manager",
+ "oxijolt",
  "pathfinding",
  "ratatui",
  "ron 0.12.2",
@@ -3624,6 +3625,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "filetime"
+version = "0.2.29"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c287a33c7f0a620c38e641e7f60827713987b3c0f26e8ddc9462cc69cf75759"
+dependencies = [
+ "cfg-if",
+ "libc",
+]
+
+[[package]]
 name = "find-msvc-tools"
 version = "0.1.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5926,6 +5937,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "oxijolt"
+version = "1.4.0+jolt-5.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9862a0b7809be6cbe342ce239d296e645f54dde59d78954cd8a7f746e2d2a06a"
+dependencies = [
+ "glam 0.32.1",
+ "oxijolt-sys",
+]
+
+[[package]]
+name = "oxijolt-sys"
+version = "1.4.0+jolt-5.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4e247efe385fff5f9cea95fbfcf5703bd18375a3d3f57cbd7839370fe704cab6"
+dependencies = [
+ "anyhow",
+ "cc",
+ "cmake",
+ "flate2",
+ "sha2",
+ "tar",
+]
+
+[[package]]
 name = "palette"
 version = "0.7.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7764,6 +7799,16 @@ dependencies = [
  "grid",
  "serde",
  "slotmap",
+]
+
+[[package]]
+name = "tar"
+version = "0.4.46"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3f6221d9a6003c78398e3b239969f352578258df48c8eb051caadae0015bc840"
+dependencies = [
+ "filetime",
+ "libc",
 ]
 
 [[package]]

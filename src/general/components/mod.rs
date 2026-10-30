@@ -43,7 +43,7 @@ impl Ball {
 #[type_path = "avs"]
 pub struct HittableTarget {}
 
-#[derive(PhysicsLayer, Default, PartialEq, Eq, Clone, Copy)]
+#[derive(Default, PartialEq, Eq, Clone, Copy)]
 pub enum CollisionLayer {
     #[default]
     Floor,
@@ -58,6 +58,17 @@ pub enum CollisionLayer {
     BuildIndicator,
     Sensor,
     PlayerAimSensor,
+}
+
+// By hand rather than derived: the same impl serves the Avian and the Jolt backend.
+impl PhysicsLayer for CollisionLayer {
+    fn to_bits(&self) -> u32 {
+        1 << *self as u32
+    }
+
+    fn all_bits() -> u32 {
+        (1 << (Self::PlayerAimSensor as u32 + 1)) - 1
+    }
 }
 
 #[derive(Component, Clone, Debug, PartialEq, Eq, Reflect)]

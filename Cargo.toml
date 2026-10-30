@@ -73,6 +73,8 @@ wildcard_imports = "allow"
 [dependencies]
 bevy = { version = "0.19.1", features = ["wayland", "3d", "ui", "bevy_feathers", "webp"] }
 avian3d = { version = "0.7.0", default-features = false, features = ["3d", "parry-f32", "debug-plugin", "collider-from-mesh", "simd", "parallel", "serialize", "bevy_scene", "bevy_picking", "xpbd_joints"] }
+# The Jolt physics backend (`src/physics/jolt/`, `docs/jolt-port.md`); Avian stays the default.
+oxijolt = { version = "1.4", optional = true, features = ["glam032"] }
 pathfinding = "4.6"
 itertools = "0.15.0"
 bevy_mod_outline = "0.13.0"
@@ -99,6 +101,8 @@ bevy_sprinkles = { git = "https://github.com/doceazedo/sprinkles", rev = "0e978f
 
 [features]
 map-editor = ["dep:ratatui", "dep:crossterm"]
+# `cargo run --features physics-jolt`: the game on Jolt instead of Avian.
+physics-jolt = ["dep:oxijolt"]
 
 # bevy_seedling has no crates.io release targeting Bevy 0.19; its `master` (0.8.0) does.
 # Pinned to a rev so builds stay reproducible. Drop this once 0.8 is published.
