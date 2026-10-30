@@ -11,7 +11,7 @@ workspace = true
 [workspace]
 members = ["turbofacts", "bevy_mod_inverse_kinematics"]
 # rusty_music is its own workspace (path dependency via the submodule).
-exclude = ["rusty_music"]
+exclude = ["rusty_music", "spikes"]
 resolver = "2"
 
 [workspace.lints.clippy]
