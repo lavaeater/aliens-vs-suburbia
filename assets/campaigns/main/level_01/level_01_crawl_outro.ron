@@ -6,7 +6,7 @@
         "",
         "But the lights in the sky have not gone away. They have only moved one street over...",
     ],
-    style: Scroll(tilt: 1.2),
+    style: Scroll(tilt: 0.0),
     speed: 55.0,
     backdrop: 0.85,
 )

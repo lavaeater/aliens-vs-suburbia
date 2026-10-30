@@ -7,7 +7,7 @@
         "",
         "As the sun goes down, the ground on Maple Drive begins to rumble...",
     ],
-    style: Scroll(tilt: 1.2),
+    style: Scroll(tilt: 0.0),
     speed: 55.0,
     backdrop: 0.85,
 )

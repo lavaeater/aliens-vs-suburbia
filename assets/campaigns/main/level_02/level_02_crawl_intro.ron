@@ -8,7 +8,7 @@
         "",
         "Find FUEL, SPARE PARTS and FUSES to get the lights back on - then clear the street.",
     ],
-    style: Scroll(tilt: 1.2),
+    style: Scroll(tilt: 0.0),
     speed: 55.0,
     backdrop: 0.85,
 )

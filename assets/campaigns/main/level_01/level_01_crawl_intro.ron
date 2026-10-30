@@ -19,7 +19,7 @@
         "",
         "Hold the street. Do not let them reach the end of the road...",
     ],
-    style: Scroll(tilt: 1.2),
+    style: Scroll(tilt: 0.0),
     speed: 55.0,
     backdrop: 0.85,
 )

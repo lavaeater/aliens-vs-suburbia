@@ -7,7 +7,7 @@
         "",
         "Maple Drive is quiet again. Somewhere, a sprinkler hisses.",
     ],
-    style: Scroll(tilt: 1.2),
+    style: Scroll(tilt: 0.0),
     speed: 55.0,
     backdrop: 0.85,
 )

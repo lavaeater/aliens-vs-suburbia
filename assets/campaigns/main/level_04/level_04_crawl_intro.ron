@@ -7,7 +7,7 @@
         "",
         "But they do not like explosions. Lead them past the barrels, then shoot the barrels. Survive until dawn.",
     ],
-    style: Scroll(tilt: 1.2),
+    style: Scroll(tilt: 0.0),
     speed: 55.0,
     backdrop: 0.85,
 )

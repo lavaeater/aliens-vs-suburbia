@@ -7,7 +7,7 @@
         "",
         "SNOW DAY TOMORROW. SCHOOL IS CLOSED. THE ALIENS ARE NOT.",
     ],
-    style: Scroll(tilt: 1.2),
+    style: Scroll(tilt: 0.0),
     speed: 55.0,
     backdrop: 0.85,
 )

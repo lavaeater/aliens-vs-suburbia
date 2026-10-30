@@ -7,7 +7,7 @@
         "",
         "This is it. Hold the landing site. If FIVE of them get past you, the suburbs belong to them.",
     ],
-    style: Scroll(tilt: 1.2),
+    style: Scroll(tilt: 0.0),
     speed: 55.0,
     backdrop: 0.85,
 )
