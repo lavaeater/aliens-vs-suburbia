@@ -29,9 +29,14 @@ Worked like a charm, bro.
 
 What about that house editor?
 
+## 6th iteration
+
+Cooler gibs? Yes, we shall dismember using bones or some or another.
 
 ## Thoughts and for later iterations
 the rest is just map stuff, to make the maps more interesting. 
 
 We could add a height map in the map-files so that we can describe the entire map as a height field somehow!
+
+Terrain, more beautiful textures for floor tiles and stuff.
 
