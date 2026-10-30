@@ -9,6 +9,7 @@ pub mod house;
 pub mod map_generator;
 pub mod map_lights;
 pub mod map_plugins;
+pub mod neighbourhood;
 pub mod procgen;
 pub mod scatter;
 pub mod stitch;

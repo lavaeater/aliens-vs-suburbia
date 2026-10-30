@@ -1,5 +1,7 @@
 use crate::assets::asset_definition::{AssetDefinition, ModelType};
-use crate::general::components::map_components::{HousePlacement, MapFile, TilePlacement, WaveDef};
+use crate::general::components::map_components::{
+    HousePlacement, MapFile, MapGenerator, TilePlacement, WaveDef,
+};
 use crate::map::MapFeatures;
 use crate::map::house::{self, HouseDef};
 use crate::map::procgen::{HouseResolveResult, HouseSpec, Polygon, apply_house, resolve_house};
@@ -101,6 +103,8 @@ pub struct MapEditorState {
     pub loot: Option<crate::general::components::map_components::LootSpread>,
     /// The loaded map's level rules (`escape_limit`, `weapons`, `coins`); kept like `stories`.
     pub level_rules: (Option<u32>, Vec<String>, Option<u32>),
+    /// The map's infestation rules, kept as they were (no editor for them yet).
+    pub infestation: Option<crate::general::components::map_components::InfestationRules>,
     pub width: usize,
     pub height: usize,
     /// Row-major tile grid; each cell is a `BitFlags<MapFeatures>` stored as u64.
@@ -174,6 +178,7 @@ impl Default for MapEditorState {
             stories: String::new(),
             loot: None,
             level_rules: (None, Vec::new(), None),
+            infestation: None,
             width,
             height,
             tiles: vec![vec![TILE_SPECIAL_FLOOR; width]; height],
@@ -637,6 +642,8 @@ impl MapEditorState {
             escape_limit: self.level_rules.0,
             weapons: self.level_rules.1.clone(),
             coins: self.level_rules.2,
+            generator: MapGenerator::default(),
+            infestation: self.infestation.clone(),
         }
     }
 
@@ -670,6 +677,7 @@ impl MapEditorState {
         self.stories = map.stories;
         self.loot = map.loot;
         self.level_rules = (map.escape_limit, map.weapons, map.coins);
+        self.infestation = map.infestation;
         self.cursor = (
             self.cursor.0.clamp(0, self.width as i32 - 1),
             self.cursor.1.clamp(0, self.height as i32 - 1),

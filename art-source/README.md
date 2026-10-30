@@ -11,5 +11,6 @@ To use one in the game, move it into `assets/packs/<pack>/` and give it a def
   male/female base meshes and animation libraries).
 - `mesh2motion/` - Mesh2Motion characters with no def: cyberpunk-voxel, female-default,
   male-180-armored, ugly-man, spider.
-- `models/` - an early fox companion, a spider and a humanoid monster.
+- `models/` - an early fox companion. (Its spider and humanoid monster are now in
+  `assets/packs/monsters/`, the infestation's enemies.)
 - `toon-shooter-characters/` - the toon-shooter pack's Enemy and Hazmat characters.

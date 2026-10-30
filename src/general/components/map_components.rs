@@ -116,6 +116,10 @@ pub struct MapFile {
     /// When true, `tiles` and `decorations` are ignored and the map is procedurally generated from `seed`.
     #[serde(default)]
     pub generated: bool,
+    /// Which generator, when `generated`.
+    #[serde(default, skip_serializing_if = "MapGenerator::is_default")]
+    pub generator: MapGenerator,
+    /// The generator's seed; 0 = a new layout every time the level is played.
     #[serde(default)]
     pub seed: u64,
     /// Procedural map dimensions. Only used when `generated: true`.
@@ -157,6 +161,63 @@ pub struct MapFile {
     /// The team starts the level with at least this many coins (for towers).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub coins: Option<u32>,
+    /// Play the level as an infestation (`crate::infestation`): spawners open up around
+    /// the map and send out the `waves`, instead of aliens walking to a goal.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub infestation: Option<InfestationRules>,
+}
+
+/// What builds a `generated: true` map.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum MapGenerator {
+    /// `map::map_generator`: houses in a field, spawns on the left, the goal on the right.
+    #[default]
+    Suburb,
+    /// `map::neighbourhood`: streets and lots by model synthesis, houses with people in
+    /// their yards. `width` / `height` are rounded down to whole lots.
+    Neighbourhood,
+}
+
+impl MapGenerator {
+    pub fn is_default(&self) -> bool {
+        *self == Self::default()
+    }
+
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Suburb => "suburb",
+            Self::Neighbourhood => "neighbourhood",
+        }
+    }
+
+    pub fn from_name(name: &str) -> Option<Self> {
+        [Self::Suburb, Self::Neighbourhood]
+            .into_iter()
+            .find(|g| g.name() == name)
+    }
+}
+
+/// How an infestation level plays (`crate::infestation`). In a `.map`:
+/// `spawners: 6`, `spawner_every: 20-40`, `spawner_waves: 3`.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct InfestationRules {
+    /// Spawners over the whole level; destroy them all (and what they sent) to win.
+    pub spawners: u32,
+    /// Seconds between one spawner opening and the next, picked anew each time.
+    pub every: (f32, f32),
+    /// Waves each spawner sends (drawn from the map's `waves`) before it slows to a
+    /// trickle; it keeps going until it is destroyed.
+    pub waves: u32,
+}
+
+impl Default for InfestationRules {
+    fn default() -> Self {
+        Self {
+            spawners: 6,
+            every: (20.0, 40.0),
+            waves: 3,
+        }
+    }
 }
 
 impl MapFile {

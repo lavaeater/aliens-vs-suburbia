@@ -146,7 +146,11 @@ fn check_stories(
     let base = base_stories();
     let everything: Vec<&Story> = base.iter().chain(stories).collect();
 
-    let mut set: BTreeSet<String> = GAME_FACTS.iter().map(|k| (*k).to_string()).collect();
+    let mut set: BTreeSet<String> = GAME_FACTS
+        .iter()
+        .chain(crate::infestation::keys::ALL)
+        .map(|k| (*k).to_string())
+        .collect();
     for story in &everything {
         set.extend(story.init_facts.iter().map(|(k, _)| k.clone()));
         for consequence in &story.consequences {

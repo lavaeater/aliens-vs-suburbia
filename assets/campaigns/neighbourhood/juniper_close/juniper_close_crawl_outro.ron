@@ -1,0 +1,13 @@
+// Shown when Juniper Close is won.
+(
+    title: "JUNIPER CLOSE HOLDS",
+    lines: [
+        "The last spawner caves in on itself with a wet sigh.",
+        "Somewhere a sprinkler comes back on.",
+        "",
+        "The neighbours who made it are already arguing about whose lawn it came out of.",
+    ],
+    style: Scroll(tilt: 0.0),
+    speed: 55.0,
+    backdrop: 0.85,
+)

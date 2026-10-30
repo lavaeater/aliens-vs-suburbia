@@ -100,6 +100,7 @@ impl Plugin for GamePlugin {
                 crate::ui::pause_menu::PauseMenuPlugin,
                 crate::campaign::CampaignPlugin,
             ))
+            .add_plugins(crate::infestation::InfestationPlugin)
             .init_resource::<LightingPreset>()
             .add_systems(OnEnter(GameState::InGame), spawn_lights)
             .add_systems(OnExit(GameState::InGame), restore_ambient)

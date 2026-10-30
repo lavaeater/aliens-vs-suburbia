@@ -97,7 +97,9 @@ pub fn check_table(report: &mut Report, file: &str, what: &str, table: &str, tab
 /// Parse every def, then check what each points at. Returns the ones that parsed.
 pub fn check_all(report: &mut Report) -> Defs {
     let mut defs = Defs::new();
-    for path in files_in(DEFS, "ron") {
+    let mut paths = files_in(DEFS, "ron");
+    paths.extend(files_in(crate::map::neighbourhood::PEOPLE_DIR, "ron"));
+    for path in paths {
         report.checked += 1;
         let text = match std::fs::read_to_string(&path) {
             Ok(text) => text,

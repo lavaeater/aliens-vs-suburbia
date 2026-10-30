@@ -40,7 +40,8 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use crate::general::components::map_components::{
-    DecorationItem, HousePlacement, LootSpread, MapFile, TilePlacement, WaveDef,
+    DecorationItem, HousePlacement, InfestationRules, LootSpread, MapFile, MapGenerator,
+    TilePlacement, WaveDef,
 };
 use crate::map::{BitFlags, MapFeatures, house};
 
@@ -246,6 +247,29 @@ fn property(
         }
         "coins" => map.coins = Some(number(key, value)?),
         "generated" => map.generated = number(key, value)?,
+        "generator" => {
+            map.generator = MapGenerator::from_name(value).ok_or_else(|| {
+                format!("generator: `{value}` is not one of suburb, neighbourhood")
+            })?;
+        }
+        "spawners" => {
+            map.infestation
+                .get_or_insert_with(InfestationRules::default)
+                .spawners = number(key, value)?;
+        }
+        "spawner_every" => {
+            let (min, max) = value
+                .split_once('-')
+                .ok_or_else(|| format!("spawner_every: expected `<min>-<max>`, got `{value}`"))?;
+            map.infestation
+                .get_or_insert_with(InfestationRules::default)
+                .every = (number(key, min.trim())?, number(key, max.trim())?);
+        }
+        "spawner_waves" => {
+            map.infestation
+                .get_or_insert_with(InfestationRules::default)
+                .waves = number(key, value)?;
+        }
         "seed" => map.seed = number(key, value)?,
         "width" => size.0 = Some(number(key, value)?),
         "height" => size.1 = Some(number(key, value)?),
@@ -491,8 +515,19 @@ pub fn to_text(map: &MapFile) -> Result<String, String> {
     if let Some(coins) = map.coins {
         lines.push(format!("coins: {coins}"));
     }
+    if let Some(rules) = &map.infestation {
+        lines.push(format!("spawners: {}", rules.spawners));
+        lines.push(format!(
+            "spawner_every: {}-{}",
+            rules.every.0, rules.every.1
+        ));
+        lines.push(format!("spawner_waves: {}", rules.waves));
+    }
     if map.generated {
         lines.push("generated: true".into());
+        if !map.generator.is_default() {
+            lines.push(format!("generator: {}", map.generator.name()));
+        }
         lines.push(format!("width: {}", map.map_width));
         lines.push(format!("height: {}", map.map_height));
     }
@@ -644,8 +679,8 @@ pub fn write_map_file(path: impl AsRef<Path>, map: &MapFile) -> Result<(), Strin
 /// it wins, so a level can be reworked as text without touching the code that names it.
 /// Returns the file actually read.
 ///
-/// The map comes back as the game plays it: its houses are stamped into the tiles
-/// (`house::bake_houses`).
+/// The map comes back as the game plays it: a `generated` map is generated (see
+/// [`generate`]) and its houses are stamped into the tiles (`house::bake_houses`).
 pub fn load_level(path: impl AsRef<Path>) -> Result<(MapFile, PathBuf), String> {
     let path = path.as_ref();
     let text_sibling = path.with_extension(EXTENSION);
@@ -655,6 +690,9 @@ pub fn load_level(path: impl AsRef<Path>) -> Result<(MapFile, PathBuf), String> 
         path.to_path_buf()
     };
     let mut map = read_map_file(&chosen)?;
+    if map.generated {
+        map = generate(map).map_err(|e| format!("{}: {e}", chosen.display()))?;
+    }
     if !map.houses.is_empty() {
         // No wall model: the walls are drawn with the rest of the map's (`spawn_walls`,
         // one merged mesh), until houses get their own. A model per wall tile was both
@@ -666,6 +704,41 @@ pub fn load_level(path: impl AsRef<Path>) -> Result<(MapFile, PathBuf), String> 
         }
     }
     Ok((map, chosen))
+}
+
+/// A `generated: true` map built by its generator, keeping the level's own rules
+/// (stories, waves, loot, weapons, coins, escape limit, infestation). Seed 0 lays out a
+/// new map every time.
+pub fn generate(map: MapFile) -> Result<MapFile, String> {
+    use crate::map::{map_generator, neighbourhood};
+    let seed = if map.seed == 0 {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(1, |d| d.as_nanos() as u64)
+    } else {
+        map.seed
+    };
+    let built = match map.generator {
+        MapGenerator::Suburb => {
+            map_generator::generate_suburb_map(seed, map.map_width, map.map_height)
+        }
+        MapGenerator::Neighbourhood => {
+            neighbourhood::generate_from_assets(seed, map.map_width, map.map_height)
+                .ok_or("the neighbourhood generator found no layout")?
+        }
+    };
+    Ok(MapFile {
+        name: map.name,
+        generator: map.generator,
+        stories: map.stories,
+        waves: map.waves,
+        loot: map.loot,
+        escape_limit: map.escape_limit,
+        weapons: map.weapons,
+        coins: map.coins,
+        infestation: map.infestation,
+        ..built
+    })
 }
 
 /// The other format's path for `path`: `foo.ron` <-> `foo.map`.

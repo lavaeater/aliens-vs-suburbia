@@ -130,6 +130,7 @@ pub fn map_loader(
     game_settings: Res<GameSettings>,
     mut add_health_bar_mw: MessageWriter<AddHealthBar>,
     mut wave_manager: Option<ResMut<crate::alien::wave_manager::WaveManager>>,
+    mut neighbours_mw: MessageWriter<crate::infestation::SpawnNeighbour>,
 ) {
     for load_map in load_map_event_reader.read() {
         let map_file = &load_map.map;
@@ -468,10 +469,8 @@ pub fn map_loader(
 
         // Spawn editor-placed model defs.
         for placement in &map_file.placements {
-            let Ok(text) = std::fs::read_to_string(&placement.def_path) else {
-                continue;
-            };
-            let Ok(def) = ron::from_str::<AssetDefinition>(&text) else {
+            let Some(def) = AssetDefinition::load_from_def_path(&placement.def_path) else {
+                bevy::log::warn!("placement: cannot read def '{}'", placement.def_path);
                 continue;
             };
 
@@ -586,7 +585,15 @@ pub fn map_loader(
                         ec.insert((Item(props.kind.clone()), Pickup::default()));
                     }
                 }
-                ModelType::Player(_) | ModelType::Enemy(_) | ModelType::Weapon(_) => {
+                ModelType::Player(_) => {
+                    // A character placed on the map lives there: a neighbour.
+                    neighbours_mw.write(crate::infestation::SpawnNeighbour {
+                        def: placement.def_path.clone(),
+                        position: Vec3::new(pos.x, 1.0, pos.z),
+                        yaw: f32::from(placement.rotation_steps) * std::f32::consts::FRAC_PI_4,
+                    });
+                }
+                ModelType::Enemy(_) | ModelType::Weapon(_) => {
                     // Weapons and decorative enemies just spawn as scenes.
                     commands.spawn((
                         Name::from(format!("Item {}:{}", placement.x, placement.y)),
