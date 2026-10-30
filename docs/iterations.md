@@ -47,9 +47,10 @@ Behavior trees, my man, that's the trick, for cooler alien behavior. Or is it re
 
 [Motion GFX](https://github.com/voxell-tech/motiongfx/tree/main/crates/bevy_motiongfx)
 
-VFX on screen, like CRT and stuff, much needed. Use our fork of Bevy VFX Bag if necessary.
+VFX on screen, like CRT and stuff, much needed. Use our fork of Bevy VFX Bag if necessary. - but I think most of it can be done with [post-processing](https://bevy.org/examples/3d-rendering/post-processing/) these days.
 
 Saving and loading the game, obviously. Perhaps [Moonshine Save](https://github.com/Zeenobit/moonshine_save)?
 
 Procedurally generated maps: [GHX ProcGen](https://github.com/Henauxg/ghx_proc_gen)
 
+[Smoke screen](https://github.com/VagabondTech/smokescreen)
