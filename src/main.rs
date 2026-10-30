@@ -38,6 +38,7 @@ pub(crate) mod game_state;
 pub(crate) mod general;
 pub(crate) mod gore;
 pub(crate) mod house_editor;
+pub(crate) mod infestation;
 pub(crate) mod items;
 pub(crate) mod loot;
 mod map;
@@ -183,6 +184,7 @@ fn print_help() {
     println!("  cargo run -- --asset-browser               Launch straight into the asset browser");
     println!("  cargo run -- --house-editor                Launch straight into the house editor");
     println!("  cargo run -- --play [--level N]            Launch straight into a match (level 1, or N)");
+    println!("  cargo run -- --campaign <name>             Play assets/campaigns/<name> (default: {})", campaign::DEFAULT_CAMPAIGN);
     println!("  cargo run -- --fullscreen                  1920x1080 fullscreen (combines with the others)");
     println!("  cargo run --features map-editor -- --map-editor [--file <path>]");
     println!("                                             Launch the map editor TUI");
@@ -314,6 +316,11 @@ fn main() -> std::process::ExitCode {
                 next.set(game_state::GameState::HouseEditor);
             },
         );
+    }
+
+    // `--campaign main` plays `assets/campaigns/main` instead of the default.
+    if let Some(name) = args.iter().skip_while(|a| *a != "--campaign").nth(1) {
+        app.insert_resource(campaign::CampaignChoice(name.clone()));
     }
 
     if let Some(number) = start_level {

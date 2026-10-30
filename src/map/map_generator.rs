@@ -56,7 +56,7 @@ impl Rng {
 type Prop = (&'static str, f32);
 
 // Trees: significantly taller than the player (3–5p)
-const TREES: &[Prop] = &[
+pub(crate) const TREES: &[Prop] = &[
     ("packs/nature/Pine.glb", 3.5),
     ("packs/nature/Pine-79gmlLnweB.glb", 3.5),
     ("packs/nature/Pine-Zt62gceKXZ.glb", 4.0),
@@ -70,7 +70,7 @@ const TREES: &[Prop] = &[
 ];
 
 // Bushes / ground plants: about knee to shoulder height (0.4–1.2p)
-const BUSHES: &[Prop] = &[
+pub(crate) const BUSHES: &[Prop] = &[
     ("packs/nature/Bush.glb", 0.8),
     ("packs/nature/Bush with Flowers.glb", 0.8),
     ("packs/nature/Fern.glb", 0.6),

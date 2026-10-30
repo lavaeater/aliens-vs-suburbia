@@ -30,8 +30,24 @@ use crate::general::systems::coin_system::TeamWallet;
 use crate::ui::spawn_ui::{StateMarker, cleanup_state};
 use crate::ui::ui_plugin::spawn_ui_camera;
 
-/// The campaign file.
-pub const CAMPAIGN_FILE: &str = "assets/campaigns/main/campaign.ron";
+/// The campaign played unless `--campaign <name>` says otherwise: a folder under
+/// `assets/campaigns`.
+pub const DEFAULT_CAMPAIGN: &str = "neighbourhood";
+
+/// A campaign's file: `assets/campaigns/<name>/campaign.ron`.
+pub fn campaign_file(name: &str) -> String {
+    format!("{}/{name}/campaign.ron", crate::assets::content::CAMPAIGNS)
+}
+
+/// Which campaign is played (`--campaign <name>`; [`DEFAULT_CAMPAIGN`]).
+#[derive(Resource, Debug, Clone)]
+pub struct CampaignChoice(pub String);
+
+impl Default for CampaignChoice {
+    fn default() -> Self {
+        Self(DEFAULT_CAMPAIGN.into())
+    }
+}
 
 /// Seconds an intermission card ignores input, so a held fire button does not skip it.
 const INPUT_GRACE: f32 = 0.8;
@@ -49,7 +65,7 @@ pub struct CampaignLevel {
     pub tagline: String,
 }
 
-/// [`CAMPAIGN_FILE`].
+/// A campaign's `campaign.ron` ([`campaign_file`]).
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct CampaignFile {
     pub levels: Vec<CampaignLevel>,
@@ -100,9 +116,11 @@ pub enum Intermission {
 }
 
 impl Campaign {
-    /// Read [`CAMPAIGN_FILE`], or a one-level campaign of level 1 if it cannot be read.
-    pub fn load() -> Self {
-        let file = std::fs::read_to_string(CAMPAIGN_FILE)
+    /// Read campaign `name` ([`campaign_file`]), or a one-level campaign of level 1 if it
+    /// cannot be read.
+    pub fn load(name: &str) -> Self {
+        let path = campaign_file(name);
+        let file = std::fs::read_to_string(&path)
             .map_err(|e| e.to_string())
             .and_then(|text| ron::from_str::<CampaignFile>(&text).map_err(|e| e.to_string()));
         match file {
@@ -111,11 +129,11 @@ impl Campaign {
                 ..Self::default()
             },
             Ok(_) => {
-                error!("{CAMPAIGN_FILE} lists no levels; playing level 1 only");
+                error!("{path} lists no levels; playing level 1 only");
                 Self::default()
             }
             Err(e) => {
-                error!("{CAMPAIGN_FILE}: {e}; playing level 1 only");
+                error!("{path}: {e}; playing level 1 only");
                 Self::default()
             }
         }
@@ -174,8 +192,11 @@ pub struct CampaignPlugin;
 
 impl Plugin for CampaignPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(Campaign::load())
+        app.init_resource::<CampaignChoice>()
+            .init_resource::<Campaign>()
             .init_resource::<LevelLoadout>()
+            // Before `Startup`, where `--play --level N` picks the level.
+            .add_systems(PreStartup, load_campaign)
             .add_systems(OnEnter(GameState::PlayerSetup), restart_campaign)
             .add_systems(
                 OnEnter(GameState::InGame),
@@ -199,10 +220,18 @@ impl Plugin for CampaignPlugin {
     }
 }
 
+fn load_campaign(choice: Res<CampaignChoice>, mut campaign: ResMut<Campaign>) {
+    *campaign = Campaign::load(&choice.0);
+}
+
 /// A new game starts at the first level, with an empty wallet. The campaign file is read
 /// again, so edits show up without a restart.
-fn restart_campaign(mut campaign: ResMut<Campaign>, mut wallet: ResMut<TeamWallet>) {
-    *campaign = Campaign::load();
+fn restart_campaign(
+    choice: Res<CampaignChoice>,
+    mut campaign: ResMut<Campaign>,
+    mut wallet: ResMut<TeamWallet>,
+) {
+    *campaign = Campaign::load(&choice.0);
     wallet.coins = 0;
 }
 
@@ -222,36 +251,22 @@ pub fn start_level(
         error!("campaign: no level {}", campaign.current);
         return;
     };
-    let mut map =
-        match crate::map::text_format::load_level(crate::assets::paths::disk_path(&level.map)) {
-            Ok((map, path)) => {
-                info!(
-                    "{}: {} ({})",
-                    campaign.progress(),
-                    level.title,
-                    path.display()
-                );
-                map
-            }
-            Err(e) => {
-                error!("{e}");
-                return;
-            }
-        };
-    if map.generated {
-        let generated =
-            crate::map::map_generator::generate_suburb_map(map.seed, map.map_width, map.map_height);
-        map = crate::general::components::map_components::MapFile {
-            loot: map.loot.take(),
-            stories: std::mem::take(&mut map.stories),
-            waves: std::mem::take(&mut map.waves),
-            escape_limit: map.escape_limit,
-            weapons: std::mem::take(&mut map.weapons),
-            coins: map.coins,
-            ..generated
-        };
-    }
-
+    let map = match crate::map::text_format::load_level(crate::assets::paths::disk_path(&level.map))
+    {
+        Ok((map, path)) => {
+            info!(
+                "{}: {} ({})",
+                campaign.progress(),
+                level.title,
+                path.display()
+            );
+            map
+        }
+        Err(e) => {
+            error!("{e}");
+            return;
+        }
+    };
     let defaults = LevelTracker::default();
     *tracker = LevelTracker {
         level_name: level.title.clone(),
@@ -501,12 +516,30 @@ mod tests {
     }
 
     #[test]
-    fn the_shipped_campaign_reads_and_every_level_loads() {
+    fn the_shipped_campaigns_read_and_every_level_loads() {
+        use crate::assets::content::{ContentKind, campaign_files};
+        let files = campaign_files(ContentKind::Campaign);
+        assert!(
+            files
+                .iter()
+                .any(|f| *f == std::path::Path::new(&campaign_file(DEFAULT_CAMPAIGN))),
+            "the default campaign is there"
+        );
+        for path in files {
+            let text = std::fs::read_to_string(&path).expect("campaign file");
+            let file: CampaignFile = ron::from_str(&text).expect("campaign parses");
+            assert!(!file.levels.is_empty(), "{}: no levels", path.display());
+            for level in &file.levels {
+                check_level(level);
+            }
+        }
+    }
+
+    /// A level loads as the game plays it and holds together: a classic level has a
+    /// spawn, a goal the spawns can reach; an infestation level needs neither.
+    fn check_level(level: &CampaignLevel) {
         use crate::assets::paths::disk_path;
-        let text = std::fs::read_to_string(CAMPAIGN_FILE).expect("campaign file");
-        let file: CampaignFile = ron::from_str(&text).expect("campaign parses");
-        assert!(file.levels.len() >= 5, "at least five levels");
-        for level in &file.levels {
+        {
             let (map, _) = crate::map::text_format::load_level(disk_path(&level.map))
                 .unwrap_or_else(|e| panic!("{}: {e}", level.map));
             let flat: Vec<u64> = map.tiles.iter().flatten().copied().collect();
@@ -516,13 +549,14 @@ mod tests {
                 "{}: player spawn",
                 level.map
             );
+            let classic = map.infestation.is_none();
             assert!(
-                has(crate::map::MapFeatures::EnemySpawn),
+                !classic || has(crate::map::MapFeatures::EnemySpawn),
                 "{}: enemy spawn",
                 level.map
             );
             assert!(
-                has(crate::map::MapFeatures::EnemyExit),
+                !classic || has(crate::map::MapFeatures::EnemyExit),
                 "{}: goal",
                 level.map
             );
@@ -534,7 +568,7 @@ mod tests {
                 level.map
             );
             assert!(
-                goal_reachable(&map.tiles),
+                !classic || goal_reachable(&map.tiles),
                 "{}: an enemy spawn cannot reach the goal",
                 level.map
             );

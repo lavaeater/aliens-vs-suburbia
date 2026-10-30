@@ -1,0 +1,19 @@
+// The neighbourhood campaign: infestation levels on generated suburbs (`src/infestation`,
+// `map::neighbourhood`). The default campaign (`campaign::DEFAULT_CAMPAIGN`); play the
+// older tower-defence one with `cargo run -- --campaign main`. Format: see
+// `assets/campaigns/main/campaign.ron`. Plain ASCII only.
+(
+    levels: [
+        (
+            map: "campaigns/neighbourhood/juniper_close/juniper_close.map",
+            title: "Juniper Close",
+            tagline: "They are coming up through the lawns.",
+        ),
+    ],
+    victory_title: "THE CLOSE IS CLEAR",
+    victory_lines: [
+        "The last spawner coughs, shudders and caves in on itself.",
+        "The neighbours come out to look at the holes in their lawns.",
+        "Somebody will have to tell the Homeowners' Association.",
+    ],
+)

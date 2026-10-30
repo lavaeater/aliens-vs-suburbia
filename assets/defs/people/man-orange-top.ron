@@ -1,0 +1,20 @@
+// A neighbour (Man in an orange top): stands in a yard (`infestation::neighbours`), runs from monsters.
+// Kept out of assets/defs itself so it is not offered as a player character.
+(
+    model_path: "people/man-orange-top.glb",
+    scale: 1.0,
+    model_type: Player(()),
+    hidden_nodes: [],
+    animations: {
+        Idle: "Idle_TalkingPhone",
+        Walk: "Walk",
+        Run: "Sprint",
+        Wave: "Help_Two_Arms",
+        Death: "Death_A",
+        HitReact: "Hit_Chest",
+    },
+    animation_sources: [],
+    attachments: [],
+    hardpoints: {},
+    aim_bones: [],
+)

@@ -10,7 +10,8 @@ use bevy::prelude::{Entity, MessageWriter, Or, Query, Res, Time, With, Without};
 
 /// Anything with [`TouchDamage`] grinds down the creatures it overlaps. Which creatures
 /// it may hurt (an alien mauling a player, a whirlwinding player shredding aliens, never a
-/// teammate) is the damage rules' decision, not this system's.
+/// teammate) is the damage rules' decision, not this system's. Neighbours
+/// (`infestation`) can be mauled too.
 #[allow(clippy::type_complexity)]
 pub fn touch_damage_system(
     time: Res<Time>,
@@ -19,7 +20,11 @@ pub fn touch_damage_system(
         Option<&Position>,
         (
             With<Health>,
-            Or<(With<Player>, With<Alien>)>,
+            Or<(
+                With<Player>,
+                With<Alien>,
+                With<crate::infestation::Neighbour>,
+            )>,
             Without<PlayerDead>,
         ),
     >,

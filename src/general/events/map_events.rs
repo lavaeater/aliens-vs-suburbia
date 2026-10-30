@@ -21,4 +21,7 @@ pub struct SpawnAlien {
     /// Enemy def to spawn (`assets/defs/<name>.ron`). `None` = the built-in alien.
     pub enemy_def: Option<String>,
     pub position: Vec3,
+    /// Hunts the nearest neighbour or player instead of walking to the goal
+    /// (`infestation::Hunter`).
+    pub hunts: bool,
 }

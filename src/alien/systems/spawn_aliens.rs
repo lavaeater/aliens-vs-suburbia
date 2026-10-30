@@ -50,6 +50,7 @@ pub fn alien_spawner_system(
             spawn_alien_mw.write(SpawnAlien {
                 enemy_def: enemy_def.clone(),
                 position: position.0,
+                hunts: false,
             });
         }
     }
@@ -68,7 +69,7 @@ fn spawn_from_def(
     let mut ec = commands.spawn((
         Alien,
         Faction::Alien,
-        EnemyDef(path.to_string()),
+        EnemyDef,
         Name::new(format!(
             "Enemy {}",
             std::path::Path::new(path)
@@ -125,6 +126,9 @@ pub fn spawn_aliens(
             && let Some(loaded) = def_cache.get_or_load(path, &asset_server)
         {
             let id = spawn_from_def(&mut commands, path, loaded, spawn_alien.position);
+            if spawn_alien.hunts {
+                crate::infestation::make_hunter(&mut commands.entity(id), loaded);
+            }
             add_health_bar_mw.write(AddHealthBar {
                 entity: id,
                 name: "ALIEN",
@@ -190,6 +194,9 @@ pub fn spawn_aliens(
             ))
             .id();
 
+        if spawn_alien.hunts {
+            crate::infestation::make_builtin_hunter(&mut commands.entity(id));
+        }
         add_health_bar_mw.write(AddHealthBar {
             entity: id,
             name: "ALIEN",

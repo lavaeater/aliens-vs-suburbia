@@ -9,7 +9,7 @@ use super::{Report, asset_exists, did_you_mean, display, files_in, stories};
 use crate::assets::asset_definition::{ItemKind, ModelType};
 use crate::assets::content::{self, CAMPAIGNS, ContentKind};
 use crate::assets::paths::{content_ref, disk_path};
-use crate::campaign::{CAMPAIGN_FILE, CampaignFile};
+use crate::campaign::CampaignFile;
 use crate::general::components::map_components::MapFile;
 use crate::map::house::{self, HOUSE_DIR, HouseDef};
 use crate::map::text_format;
@@ -17,7 +17,7 @@ use crate::map::text_format;
 /// The campaign, then every map (the levels' and `assets/maps`), then the story files no
 /// map uses and anything in a campaign folder that is none of these.
 pub fn check_all(report: &mut Report, defs: &Defs, tables: &Tables) {
-    check_campaign(report);
+    check_campaigns(report);
 
     let maps: Vec<String> = content::map_files().iter().map(|p| display(p)).collect();
     let mut stories_used = BTreeSet::new();
@@ -69,20 +69,35 @@ pub fn check_all(report: &mut Report, defs: &Defs, tables: &Tables) {
     }
 }
 
-fn check_campaign(report: &mut Report) {
+/// Every campaign under `assets/campaigns`, and that the default one is there.
+fn check_campaigns(report: &mut Report) {
+    let files = content::campaign_files(ContentKind::Campaign);
+    let default = crate::campaign::campaign_file(crate::campaign::DEFAULT_CAMPAIGN);
+    if !files.iter().any(|f| display(f) == default) {
+        report.error(
+            default.clone(),
+            "the default campaign (`campaign::DEFAULT_CAMPAIGN`) is missing",
+        );
+    }
+    for file in files {
+        check_campaign(report, &display(&file));
+    }
+}
+
+fn check_campaign(report: &mut Report, campaign_file: &str) {
     report.checked += 1;
-    let file = match std::fs::read_to_string(CAMPAIGN_FILE)
+    let file = match std::fs::read_to_string(campaign_file)
         .map_err(|e| e.to_string())
         .and_then(|t| ron::from_str::<CampaignFile>(&t).map_err(|e| e.to_string()))
     {
         Ok(file) => file,
         Err(e) => {
-            report.error(CAMPAIGN_FILE, format!("does not parse: {e}"));
+            report.error(campaign_file, format!("does not parse: {e}"));
             return;
         }
     };
     if file.levels.is_empty() {
-        report.error(CAMPAIGN_FILE, "lists no levels");
+        report.error(campaign_file, "lists no levels");
     }
     let maps: Vec<String> = content::map_files().iter().map(|p| display(p)).collect();
     for (i, level) in file.levels.iter().enumerate() {
@@ -93,14 +108,14 @@ fn check_campaign(report: &mut Report) {
             let known: Vec<String> = maps.iter().map(|m| content_ref(m)).collect();
             let hint = did_you_mean(&level.map, known.iter().map(String::as_str));
             report.error(
-                CAMPAIGN_FILE,
+                campaign_file,
                 format!("{what}: no map '{}'{hint}", level.map),
             );
         } else if path.extension().is_some_and(|e| e == "ron")
             && path.with_extension("map").is_file()
         {
             report.warn(
-                CAMPAIGN_FILE,
+                campaign_file,
                 format!(
                     "{what}: names '{}', but the game plays '{}' next to it",
                     level.map,
@@ -109,11 +124,11 @@ fn check_campaign(report: &mut Report) {
             );
         }
         if level.title.trim().is_empty() {
-            report.warn(CAMPAIGN_FILE, format!("level {} has no title", i + 1));
+            report.warn(campaign_file, format!("level {} has no title", i + 1));
         }
         if !level.title.is_ascii() || !level.tagline.is_ascii() {
             report.error(
-                CAMPAIGN_FILE,
+                campaign_file,
                 format!(
                     "{what}: title/tagline must be plain ASCII (the game font has nothing else)"
                 ),

@@ -36,9 +36,21 @@ pub struct LoadedEnemyDef {
     pub gltf: Handle<Gltf>,
 }
 
-/// Enemy defs by path, loaded on first use.
+/// A loaded def of any kind that is spawned as an animated creature (the infestation's
+/// neighbours, from character defs).
+pub struct LoadedCreatureDef {
+    pub def: AssetDefinition,
+    pub scene: Handle<WorldAsset>,
+    pub gltf: Handle<Gltf>,
+}
+
+/// Enemy defs by path, loaded on first use; `creatures` holds other defs spawned the
+/// same way (animation graph under the def path).
 #[derive(Resource, Default)]
-pub struct EnemyDefCache(pub HashMap<String, LoadedEnemyDef>);
+pub struct EnemyDefCache(
+    pub HashMap<String, LoadedEnemyDef>,
+    pub HashMap<String, LoadedCreatureDef>,
+);
 
 impl EnemyDefCache {
     pub fn get_or_load(
@@ -68,11 +80,41 @@ impl EnemyDefCache {
         }
         self.0.get(path)
     }
+
+    /// Any def, for a creature that is not an enemy. `None` if it cannot be read.
+    pub fn get_or_load_creature(
+        &mut self,
+        path: &str,
+        asset_server: &AssetServer,
+    ) -> Option<&LoadedCreatureDef> {
+        if !self.1.contains_key(path) {
+            let def = AssetDefinition::load_from_def_path(path)?;
+            let scene =
+                asset_server.load(GltfAssetLabel::Scene(0).from_asset(def.model_path.clone()));
+            let gltf = asset_server.load(def.model_path.clone());
+            self.1
+                .insert(path.to_string(), LoadedCreatureDef { def, scene, gltf });
+        }
+        self.1.get(path)
+    }
+
+    /// Every loaded def with its model: path, def, GLTF.
+    fn models(&self) -> impl Iterator<Item = (&String, &AssetDefinition, &Handle<Gltf>)> {
+        self.0
+            .iter()
+            .map(|(path, l)| (path, &l.def, &l.gltf))
+            .chain(self.1.iter().map(|(path, l)| (path, &l.def, &l.gltf)))
+    }
+
+    fn contains(&self, path: &str) -> bool {
+        self.0.contains_key(path) || self.1.contains_key(path)
+    }
 }
 
-/// Which def an alien was spawned from; its animation group is the def path.
+/// An alien spawned from a def; its animation group (`CurrentAnimationKey::group`) is the
+/// def path.
 #[derive(Component, Debug, Clone)]
-pub struct EnemyDef(pub String);
+pub struct EnemyDef;
 
 /// Fires at the nearest player in range while walking.
 #[derive(Component, Debug, Clone)]
@@ -105,9 +147,10 @@ impl RangedAttack {
     }
 }
 
-/// Build (once) the animation graph for every enemy def in play and hand it to the
-/// aliens using it. Waits for the GLTF; catches aliens whose `AnimationPlayer` appeared
-/// before the graph existed.
+/// Build (once) the animation graph for every enemy (and creature) def in play and hand
+/// it to whatever is animated from it (its `CurrentAnimationKey` group is the def path).
+/// Waits for the GLTF; catches models whose `AnimationPlayer` appeared before the graph
+/// existed.
 #[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn build_enemy_anim_graphs(
     cache: Res<EnemyDefCache>,
@@ -116,7 +159,7 @@ pub fn build_enemy_anim_graphs(
     asset_server: Res<AssetServer>,
     anim_store: Option<ResMut<AnimationStore>>,
     mut animation_graphs: ResMut<Assets<AnimationGraph>>,
-    aliens: Query<(Entity, &EnemyDef, &CurrentAnimationKey), With<Alien>>,
+    animated: Query<(Entity, &CurrentAnimationKey)>,
     child_query: Query<&Children>,
     mut anim_player_query: Query<&mut AnimationPlayer>,
     graph_handles: Query<(), With<AnimationGraphHandle>>,
@@ -124,16 +167,16 @@ pub fn build_enemy_anim_graphs(
 ) {
     let Some(mut store) = anim_store else { return };
 
-    for (path, loaded) in &cache.0 {
+    for (path, def, gltf) in cache.models() {
         if store.graphs.contains_key(path) {
             continue;
         }
-        let Some(gltf) = gltf_assets.get(&loaded.gltf) else {
+        let Some(gltf) = gltf_assets.get(gltf) else {
             continue;
         };
         let mut extra = Vec::new();
         let mut waiting = false;
-        for source in &loaded.def.animation_sources {
+        for source in &def.animation_sources {
             let handle: Handle<Gltf> = asset_server.load(source.clone());
             if let Some(g) = gltf_assets.get(&handle) {
                 extra.push((source, g));
@@ -145,20 +188,23 @@ pub fn build_enemy_anim_graphs(
         if waiting {
             continue;
         }
-        let (graph, anims) = build_graph(Some(&loaded.def), None, gltf, &gltf_nodes, &extra);
+        let (graph, anims) = build_graph(Some(def), None, gltf, &gltf_nodes, &extra);
         let handle = animation_graphs.add(graph);
         store.anims.insert(path.clone(), anims);
         store.graphs.insert(path.clone(), handle);
-        info!("enemy animation graph built for {path}");
+        info!("animation graph built for {path}");
     }
 
-    // Late binding: aliens already animated but without a graph (spawned before it existed).
-    for (alien, def, key) in aliens.iter() {
-        let Some(graph_handle) = store.graphs.get(&def.0) else {
+    // Late binding: models already animated but without a graph (spawned before it existed).
+    for (entity, key) in animated.iter() {
+        if !cache.contains(&key.group) {
+            continue;
+        }
+        let Some(graph_handle) = store.graphs.get(&key.group) else {
             continue;
         };
         let Some(anim_entity) =
-            get_child_with_component_recursive(alien, &child_query, &anim_player_query)
+            get_child_with_component_recursive(entity, &child_query, &anim_player_query)
         else {
             continue;
         };
@@ -171,7 +217,7 @@ pub fn build_enemy_anim_graphs(
         commands
             .entity(anim_entity)
             .try_insert(AnimationGraphHandle(graph_handle.clone()));
-        store.play(&def.0, key.key, &mut player, 0.0);
+        store.play(&key.group, key.key, &mut player, 0.0);
     }
 }
 
