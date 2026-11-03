@@ -43,9 +43,14 @@ use crate::player::events::building_events::{AddTile, RemoveTile};
 use crate::towers::systems::spawn_tower_sensor;
 use crate::ui::spawn_ui::AddHealthBar;
 
-pub fn load_map_one(mut send_event: MessageWriter<LoadMap>) {
+/// The level a match starts on, from `--level <path>`. Without it, level 1.
+#[derive(Resource)]
+pub struct StartLevel(pub String);
+
+pub fn load_map_one(mut send_event: MessageWriter<LoadMap>, start: Option<Res<StartLevel>>) {
     // A `level_01.map` next to the `.ron` takes its place.
-    let mut map = match crate::map::text_format::load_level("assets/maps/level_01.ron") {
+    let path = start.map_or_else(|| "assets/maps/level_01.ron".to_string(), |s| s.0.clone());
+    let mut map = match crate::map::text_format::load_level(&path) {
         Ok((map, path)) => {
             bevy::log::info!("Loaded {}", path.display());
             map

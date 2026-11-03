@@ -170,6 +170,17 @@ fn convert_map(input: Option<&String>, output: Option<&String>, force: bool) -> 
     Ok(())
 }
 
+/// `--import-osm <spec.ron | export.json> [--force]`: an OpenStreetMap level
+/// (`docs/gis-levels.md`).
+fn parse_import_osm_args(args: &[String]) -> Option<Result<(), String>> {
+    let position = args.iter().position(|a| a == "--import-osm")?;
+    let force = args.iter().any(|a| a == "--force");
+    Some(match args.get(position + 1).filter(|a| !a.starts_with("--")) {
+        Some(input) => map::osm::run_import(std::path::Path::new(input), force).map(|_| ()),
+        None => Err("--import-osm needs an import spec (.ron) or an Overpass export (.json)".into()),
+    })
+}
+
 fn print_help() {
     println!("Aliens vs Suburbia\n");
     println!("USAGE:");
@@ -181,6 +192,7 @@ fn print_help() {
     println!("  cargo run -- --asset-browser               Launch straight into the asset browser");
     println!("  cargo run -- --house-editor                Launch straight into the house editor");
     println!("  cargo run -- --play                        Launch straight into a match (level 1)");
+    println!("  cargo run -- --play --level <path>         ... into the level at <path> (.map or .ron)");
     println!("  cargo run --features map-editor -- --map-editor [--file <path>]");
     println!("                                             Launch the map editor TUI");
     println!("  cargo run -- --create-map [OPTIONS]        Generate a map file");
@@ -189,7 +201,11 @@ fn print_help() {
         "                                             Convert a map between .ron and .map text"
     );
     println!(
-        "                                             (out defaults to <in> with the other extension)\n"
+        "                                             (out defaults to <in> with the other extension)"
+    );
+    println!("  cargo run -- --import-osm <spec.ron | export.json> [--force]");
+    println!(
+        "                                             Make a level from OpenStreetMap (docs/gis-levels.md)\n"
     );
     println!("MAP EDITOR OPTIONS:");
     println!("  --file <path>    Open an existing map file (e.g. assets/maps/map_1.ron)\n");
@@ -208,7 +224,10 @@ fn main() -> std::process::ExitCode {
         return std::process::ExitCode::SUCCESS;
     }
 
-    if let Some(result) = parse_create_map_args(&args).or_else(|| parse_convert_map_args(&args)) {
+    if let Some(result) = parse_create_map_args(&args)
+        .or_else(|| parse_convert_map_args(&args))
+        .or_else(|| parse_import_osm_args(&args))
+    {
         return match result {
             Ok(()) => std::process::ExitCode::SUCCESS,
             Err(e) => {
@@ -240,6 +259,12 @@ fn main() -> std::process::ExitCode {
     // And into a match, skipping the menu and the player setup (one keyboard player, with a
     // connected pad handed to them by `assign_gamepads`' fallback).
     let straight_to_game = args.iter().any(|a| a == "--play");
+    // Which level a match loads, instead of level 1.
+    let start_level = args
+        .iter()
+        .skip_while(|a| *a != "--level")
+        .nth(1)
+        .cloned();
 
     let mut app = App::new();
     app.register_type::<CameraOffset>()
@@ -274,6 +299,10 @@ fn main() -> std::process::ExitCode {
         //))
         // .add_plugins(PixelShaderPlugin::default())
         .add_plugins(GamePlugin);
+
+    if let Some(level) = start_level {
+        app.insert_resource(general::systems::map_systems::StartLevel(level));
+    }
 
     if straight_to_asset_browser {
         app.add_systems(
