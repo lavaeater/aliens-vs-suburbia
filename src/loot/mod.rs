@@ -189,11 +189,7 @@ impl Plugin for LootPlugin {
         // `spawn_loot_on_death` is scheduled by `GamePlugin`, where it can be ordered
         // against the death/despawn systems; adding it here too would make the
         // ordering ambiguous.
-        app.insert_resource(LootTables::load_dir("assets/loot"))
-            .add_systems(
-                Update,
-                bags::spawn_loot_bags.run_if(in_state(crate::game_state::GameState::InGame)),
-            );
+        app.insert_resource(LootTables::load_dir("assets/loot"));
     }
 }
 

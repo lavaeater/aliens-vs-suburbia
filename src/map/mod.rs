@@ -13,6 +13,7 @@ pub mod osm;
 pub mod procgen;
 pub mod scatter;
 pub mod stitch;
+pub mod streaming;
 pub mod text_format;
 pub mod wall_mesh;
 pub mod walls;

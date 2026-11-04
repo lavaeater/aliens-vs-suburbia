@@ -162,13 +162,39 @@ length-weighted histogram of building edge angles folded into 0-90 degrees, its 
 turns everything by it, at most 45 degrees either way. Most planned Swedish areas are laid out
 on one grid, so this squares most houses up. `rotation_deg: Some(0.0)` keeps north up.
 
-### Size
+### Size and performance
 
-At 1 m per tile, 200 x 200 m is 40 000 tiles; the hand-made levels are about 20 x 20. The
-importer refuses anything over 400 tiles a side. Things to measure on the first real
-import: A* in `MapGraph` per alien, `plan_lights` (5-tile spacing means hundreds of lights; may
-need a cap), wall colliders, and whether it is still tower defence when a walk across takes
-minutes. Start with **80-120 m**; `metres_per_tile: 2.0` halves everything if needed.
+At 1 m per tile, an 800 x 800 m export is about 640 000 tiles; the hand-made levels are about
+20 x 20. The importer takes up to 1024 tiles a side. Measured on `map-01.osm`:
+
+| Size | Tiles | Wall colliders | Loot bags | Lights |
+|------|-------|----------------|-----------|--------|
+| 50 m | 2.7k | 32 | 87 | 72 |
+| 200 m | 41k | 251 | 1 635 | 1 091 |
+| 400 m | 162k | 961 | 6 670 | 4 320 |
+| 780 m | 610k | ~3 300 | 27 240 | 16 728 |
+
+The tiles aren't the cost: colliders are merged into rectangles. The cost was what is
+scattered over the area, so that is streamed:
+
+- **Always loaded:** the tile grid, pathfinding, colliders, spawns and goal. Aliens walk the
+  whole map off screen.
+- **Streamed by `src/map/streaming.rs`:** lights and loot bags. They are planned once at load
+  and kept as data per 32 x 32 chunk; the chunks the camera can see get entities.
+
+Full map, debug build, standing still: spawning everything at once produced no frame in 70 s;
+streaming with the floor kept out of shadow maps gives about 38 FPS, against 55 on the 50 x 50
+level.
+
+Next, in order:
+
+1. **Chunk the floor and wall meshes** (one mesh per chunk, per kind). Each shadow-casting lamp
+   in view redraws what is in its frustum; today the wall mesh is one object, so about 58
+   lamps each redraw every wall on the map. Keeping the floor out of shadow maps took the
+   full map from 22 to 38 FPS, so this is the likely remaining gap.
+2. **A flow field from the goal** instead of A* per alien, and no per-frame `info!` in
+   `move_towards_goal_systems.rs`.
+3. **Building heights** from `building:levels` (122 of 468 buildings in `map-01.osm`).
 
 ### Water
 
@@ -232,7 +258,7 @@ the level area with QGIS or `ogr2ogr`, export GeoJSON. A second reader next to
 | # | What | Status |
 |---|------|--------|
 | 1 | **OSM import**: `.osm` XML and Overpass JSON readers, projection, automatic rotation, buildings / roads / ground / water / fences / trees, walled border, spawns at road exits, goal, player start, path check. `--import-osm`, `--play --level`. | **Done** (tested on made-up data; needs a first real area and a playtest) |
-| 2 | **Tune on real areas**: road widths, what counts as grass, size and performance (lights, A*), fence rule. Water that blocks. | Next |
+| 2 | **Tune on real areas**: road widths, what counts as grass, size and performance (see *Size and performance*: lights and bags are streamed, meshes and pathfinding are next), fence rule. Water that blocks. | Started |
 | 3 | **More gameplay from the map**: goal by address, street lamps along roads, loot next to houses, decorations from OSM points (benches, bins, cars at parking). | |
 | 4 | **Real houses**: squared-up footprints as `HouseDef`s with doors and windows, type from `building=*` (house / detached / terrace / apartments / garage) or Lantmäteriet's `ändamål`; the house mesh work (`docs/house-editor.md`) draws them. | |
 | 5 | **Image import** and **Lantmäteriet reader**. | |

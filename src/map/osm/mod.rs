@@ -34,7 +34,7 @@ use geometry::{Frame, Point, Projection};
 
 /// A level is never larger than this many tiles a side; past it the spec has to set a
 /// smaller `size` or a larger `metres_per_tile`.
-pub const MAX_SIDE: usize = 400;
+pub const MAX_SIDE: usize = 1024;
 
 /// Space left around the buildings when the spec gives no `size`, metres per side.
 const MARGIN_M: f64 = 6.0;

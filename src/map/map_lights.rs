@@ -9,15 +9,15 @@
 //! lanterns (a flickering low point light), floodlights (a spot on a wall, aimed out across
 //! the floor) and neon globes (a coloured, pulsing point light).
 //!
-//! [`spawn_map_lights`] turns the plan into entities when a map loads.
+//! `map::streaming` holds the plan per chunk and calls [`spawn_light`] for the chunks near
+//! the camera.
+
+use std::collections::HashMap;
 
 use bevy::light::NotShadowCaster;
 use bevy::prelude::*;
 
-use crate::general::events::map_events::LoadMap;
 use crate::general::systems::lights_systems::{LightAnimation, LightStyle};
-use crate::general::systems::map_systems::TileDefinitions;
-use crate::map::walls::padded_tiles;
 use crate::map::{BitFlags, MapFeatures};
 
 /// Minimum distance between two placed lights, in tiles.
@@ -113,18 +113,33 @@ pub fn plan_lights(tiles: &[Vec<u64>]) -> Vec<LightPlan> {
             .map(|(dx, dy)| (col + dx, row + dy))
             .find(|&n| is_solid_wall(tiles, n))
     };
-    open.sort_by_key(|&t| (wall_beside(t).is_none(), scatter_key(t)));
+    open.sort_by_cached_key(|&t| (wall_beside(t).is_none(), scatter_key(t)));
 
-    let far_enough = |plan: &[LightPlan], (col, row): (i32, i32)| {
-        plan.iter().all(|p| {
-            let (dx, dy) = ((p.tile.0 - col) as f32, (p.tile.1 - row) as f32);
-            dx * dx + dy * dy >= SPACING * SPACING
-        })
+    // Placed lights by `SPACING`-sized cell, so a tile only checks the lights around it: a
+    // big map plans thousands.
+    let cell = |(col, row): (i32, i32)| {
+        let size = SPACING as i32;
+        (col.div_euclid(size), row.div_euclid(size))
+    };
+    let mut placed: HashMap<(i32, i32), Vec<(i32, i32)>> = HashMap::new();
+    for light in &plan {
+        placed.entry(cell(light.tile)).or_default().push(light.tile);
+    }
+    let far_enough = |placed: &HashMap<(i32, i32), Vec<(i32, i32)>>, tile: (i32, i32)| {
+        let (cx, cy) = cell(tile);
+        (cy - 1..=cy + 1)
+            .flat_map(|y| (cx - 1..=cx + 1).map(move |x| (x, y)))
+            .filter_map(|c| placed.get(&c))
+            .flatten()
+            .all(|other| {
+                let (dx, dy) = ((other.0 - tile.0) as f32, (other.1 - tile.1) as f32);
+                dx * dx + dy * dy >= SPACING * SPACING
+            })
     };
 
     let (mut along_walls, mut in_the_open) = (0usize, 0usize);
     for tile in open {
-        if !far_enough(&plan, tile) {
+        if !far_enough(&placed, tile) {
             continue;
         }
         let kind = if let Some(wall) = wall_beside(tile) {
@@ -145,6 +160,7 @@ pub fn plan_lights(tiles: &[Vec<u64>]) -> Vec<LightPlan> {
             }
         };
         plan.push(LightPlan { kind, tile });
+        placed.entry(cell(tile)).or_default().push(tile);
     }
     plan
 }
@@ -169,7 +185,7 @@ const STREET_LAMP_HEIGHT: f32 = 1.4;
 #[derive(Component)]
 pub struct MapLight;
 
-struct Fixtures {
+pub struct Fixtures {
     pole: Handle<Mesh>,
     bulb: Handle<Mesh>,
     lantern: Handle<Mesh>,
@@ -190,17 +206,9 @@ fn glow(
     })
 }
 
-pub fn spawn_map_lights(
-    mut loads: MessageReader<LoadMap>,
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    tile_defs: Res<TileDefinitions>,
-) {
-    for load in loads.read() {
-        let tiles = padded_tiles(&load.map);
-        let plan = plan_lights(&tiles);
-        let fixtures = Fixtures {
+impl Fixtures {
+    pub fn new(meshes: &mut Assets<Mesh>, materials: &mut Assets<StandardMaterial>) -> Self {
+        Self {
             pole: meshes.add(Cylinder::new(0.025, STREET_LAMP_HEIGHT)),
             bulb: meshes.add(Sphere::new(0.06)),
             lantern: meshes.add(Cuboid::new(0.08, 0.12, 0.08)),
@@ -211,22 +219,7 @@ pub fn spawn_map_lights(
                 perceptual_roughness: 0.5,
                 ..default()
             }),
-        };
-        let floor = tile_defs.floor_level;
-        let tw = tile_defs.tile_width;
-        for (i, light) in plan.iter().enumerate() {
-            let at = Vec3::new(tw * light.tile.0 as f32, floor, tw * light.tile.1 as f32);
-            spawn_light(
-                &mut commands,
-                &mut materials,
-                &fixtures,
-                light.kind,
-                at,
-                tw,
-                i as f32,
-            );
         }
-        info!("placed {} map lights", plan.len());
     }
 }
 
@@ -241,8 +234,8 @@ fn point(color: Color, intensity: f32, range: f32) -> PointLight {
 }
 
 #[allow(clippy::too_many_lines)]
-fn spawn_light(
-    commands: &mut Commands,
+pub fn spawn_light(
+    commands: &mut ChildSpawnerCommands,
     materials: &mut Assets<StandardMaterial>,
     fx: &Fixtures,
     kind: LightKind,

@@ -378,6 +378,9 @@ pub fn map_loader(
                 commands.spawn((
                     Name::from("Floor"),
                     Floor {},
+                    // Nothing lies below it, and every shadow-casting lamp in view would
+                    // otherwise redraw the whole map's floor into its shadow map.
+                    bevy::light::NotShadowCaster,
                     Mesh3d(meshes.add(mesh)),
                     MeshMaterial3d(materials.add(StandardMaterial {
                         base_color,

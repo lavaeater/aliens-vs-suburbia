@@ -170,6 +170,7 @@ impl Plugin for NonStateMapStuff {
                 },
             })
             .insert_resource(TileDefinitions::new(1.0, 32.0, 9.5, 1.0))
+            .init_resource::<crate::map::streaming::MapStream>()
             .insert_resource(AlienCounter::new(50))
             .insert_resource(MapGraph {
                 path_finding_grid: Grid::new(0, 0),
@@ -196,7 +197,11 @@ impl Plugin for StatefulMapPlugin {
                     update_current_tile_system,
                     map_loader,
                     crate::map::walls::spawn_walls,
-                    crate::map::map_lights::spawn_map_lights,
+                    (
+                        crate::map::streaming::plan_map_stream,
+                        crate::map::streaming::stream_map_chunks,
+                    )
+                        .chain(),
                 )
                     .run_if(
                         in_state(GameState::InGame).or_else(in_state(GameState::ModelShowcase)),
