@@ -1,6 +1,7 @@
-//! Reading OpenStreetMap data from an Overpass API JSON export.
+//! Reading OpenStreetMap data: an `.osm` XML file (openstreetmap.org's Export button) or
+//! an Overpass API JSON export.
 //!
-//! Two shapes of export both work (`docs/gis-levels.md` has a ready-made query):
+//! Two shapes of JSON export both work (`docs/gis-levels.md` has a ready-made query):
 //! - `out geom;`: ways and relation members carry their own `geometry` (lat/lon list).
 //! - `out body; >; out skel qt;`: ways list node ids and the nodes come as their own
 //!   elements (what overpass-turbo's "raw OSM data" export of a plain query gives).
@@ -89,10 +90,15 @@ struct Member {
     geometry: Option<Vec<Option<LatLon>>>,
 }
 
-/// Parse an Overpass JSON export.
-pub fn parse(json: &str) -> Result<OsmData, String> {
-    let export: Export =
-        serde_json::from_str(json).map_err(|e| format!("not an Overpass JSON export: {e}"))?;
+/// Parse OSM data: `.osm` XML when it starts with `<`, otherwise Overpass JSON.
+pub fn parse(text: &str) -> Result<OsmData, String> {
+    let export = if text.trim_start().starts_with('<') {
+        Export {
+            elements: parse_xml(text)?,
+        }
+    } else {
+        serde_json::from_str(text).map_err(|e| format!("not an Overpass JSON export: {e}"))?
+    };
 
     let mut nodes: HashMap<i64, LatLon> = HashMap::new();
     for element in &export.elements {
@@ -129,7 +135,7 @@ pub fn parse(json: &str) -> Result<OsmData, String> {
                 shape: Shape::Point(LatLon { lat, lon }),
             }),
             Element::Way { id, tags, .. } if !tags.is_empty() => {
-                let points = way_points.remove(&id).unwrap_or_default();
+                let points = way_points.get(&id).cloned().unwrap_or_default();
                 if points.len() < 2 {
                     continue;
                 }
@@ -163,6 +169,119 @@ pub fn parse(json: &str) -> Result<OsmData, String> {
         }
     }
     Ok(OsmData { features })
+}
+
+/// The elements of an `.osm` XML file: `<node>`, `<way>` with `<nd ref>`, `<relation>`
+/// with `<member>`, each with `<tag k v>`. Ways reference nodes by id, as in the JSON
+/// node-reference form.
+fn parse_xml(xml: &str) -> Result<Vec<Element>, String> {
+    use quick_xml::events::Event;
+
+    let mut reader = quick_xml::Reader::from_str(xml);
+    let mut elements = Vec::new();
+    let mut current: Option<Element> = None;
+    loop {
+        let event = reader
+            .read_event()
+            .map_err(|e| format!("not an OSM XML file: {e}"))?;
+        let (start, empty) = match &event {
+            Event::Start(e) => (e, false),
+            Event::Empty(e) => (e, true),
+            Event::End(e) => {
+                if matches!(e.name().as_ref(), b"node" | b"way" | b"relation")
+                    && let Some(element) = current.take()
+                {
+                    elements.push(element);
+                }
+                continue;
+            }
+            Event::Eof => break,
+            _ => continue,
+        };
+        let attrs = xml_attributes(start)?;
+        let get = |key: &str| attrs.iter().find(|(k, _)| k == key).map(|(_, v)| v.as_str());
+        let id = get("id").and_then(|v| v.parse::<i64>().ok());
+        let float = |key: &str| get(key).and_then(|v| v.parse::<f64>().ok());
+        let element = match start.name().as_ref() {
+            b"node" => match (id, float("lat"), float("lon")) {
+                (Some(id), Some(lat), Some(lon)) => Some(Element::Node {
+                    id,
+                    lat,
+                    lon,
+                    tags: Tags::new(),
+                }),
+                _ => None,
+            },
+            b"way" => id.map(|id| Element::Way {
+                id,
+                nodes: Vec::new(),
+                geometry: None,
+                tags: Tags::new(),
+            }),
+            b"relation" => id.map(|id| Element::Relation {
+                id,
+                members: Vec::new(),
+                tags: Tags::new(),
+            }),
+            b"tag" => {
+                if let (Some(k), Some(v)) = (get("k"), get("v"))
+                    && let Some(
+                        Element::Node { tags, .. }
+                        | Element::Way { tags, .. }
+                        | Element::Relation { tags, .. },
+                    ) = current.as_mut()
+                {
+                    tags.insert(k.to_string(), v.to_string());
+                }
+                continue;
+            }
+            b"nd" => {
+                if let (Some(Element::Way { nodes, .. }), Some(node)) =
+                    (current.as_mut(), get("ref").and_then(|v| v.parse::<i64>().ok()))
+                {
+                    nodes.push(node);
+                }
+                continue;
+            }
+            b"member" => {
+                if let (Some(Element::Relation { members, .. }), Some(id)) =
+                    (current.as_mut(), get("ref").and_then(|v| v.parse::<i64>().ok()))
+                {
+                    members.push(Member {
+                        kind: get("type").unwrap_or_default().to_string(),
+                        id,
+                        role: get("role").unwrap_or_default().to_string(),
+                        geometry: None,
+                    });
+                }
+                continue;
+            }
+            _ => continue,
+        };
+        if let Some(element) = element {
+            if empty {
+                elements.push(element);
+            } else {
+                current = Some(element);
+            }
+        }
+    }
+    Ok(elements)
+}
+
+fn xml_attributes(start: &quick_xml::events::BytesStart) -> Result<Vec<(String, String)>, String> {
+    start
+        .attributes()
+        .map(|attr| {
+            let attr = attr.map_err(|e| format!("bad XML attribute: {e}"))?;
+            let key = String::from_utf8_lossy(attr.key.as_ref()).into_owned();
+            let raw = String::from_utf8_lossy(&attr.value);
+            let value = quick_xml::escape::unescape(&raw)
+                .map_err(|e| format!("bad XML attribute value: {e}"))?
+                .into_owned();
+            Ok((key, value))
+        })
+        .collect()
 }
 
 fn is_closed(points: &[LatLon]) -> bool {
@@ -272,6 +391,37 @@ mod tests {
             data.features[0].shape,
             Shape::Line(vec![ll(59.0, 18.0), ll(59.0, 18.1)])
         );
+    }
+
+    #[test]
+    fn reads_osm_xml() {
+        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="openstreetmap-cgimap">
+ <bounds minlat="59.0" minlon="18.0" maxlat="59.1" maxlon="18.1"/>
+ <node id="1" visible="true" lat="59.0" lon="18.0"/>
+ <node id="2" visible="true" lat="59.0" lon="18.1"/>
+ <node id="3" visible="true" lat="59.1" lon="18.1"/>
+ <node id="4" lat="59.05" lon="18.05">
+  <tag k="natural" v="tree"/>
+ </node>
+ <way id="10">
+  <nd ref="1"/><nd ref="2"/><nd ref="3"/><nd ref="1"/>
+  <tag k="building" v="house"/>
+  <tag k="name" v="Bageri &amp; Kafé"/>
+ </way>
+ <way id="11"><nd ref="1"/><nd ref="3"/></way>
+ <relation id="20">
+  <member type="way" ref="10" role="outer"/>
+  <tag k="type" v="multipolygon"/>
+  <tag k="landuse" v="grass"/>
+ </relation>
+</osm>"#;
+        let data = parse(xml).unwrap();
+        assert_eq!(data.features.len(), 3, "{:?}", data.features);
+        assert!(matches!(data.features[0].shape, Shape::Point(_)));
+        assert_eq!(data.features[1].tags.get("name").map(String::as_str), Some("Bageri & Kafé"));
+        assert!(matches!(&data.features[1].shape, Shape::Area(r) if r[0].len() == 4));
+        assert!(matches!(&data.features[2].shape, Shape::Area(_)));
     }
 
     #[test]

@@ -137,6 +137,7 @@ dependencies = [
  "lava_ui_builder",
  "leafwing-input-manager",
  "pathfinding",
+ "quick-xml",
  "ratatui",
  "ron 0.12.2",
  "rusty_music",

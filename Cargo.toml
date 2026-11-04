@@ -81,6 +81,8 @@ lava_ui_builder = { path = "lava_ui_builder", features = ["serde"] }
 turbofacts = { path = "turbofacts" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# Reads OpenStreetMap .osm XML for the level importer (src/map/osm).
+quick-xml = "0.41"
 ron = "0.12.1"
 ureq = { version = "3.3.0", features = ["json"] }
 dotenvy = "0.15"

@@ -1,9 +1,10 @@
-//! Levels from OpenStreetMap: an Overpass JSON export in, a `.map` level out.
+//! Levels from OpenStreetMap: an `.osm` file (openstreetmap.org's Export button) or an
+//! Overpass JSON export in, a `.map` level out.
 //! Plan and usage: `docs/gis-levels.md`.
 //!
 //! `cargo run -- --import-osm assets/gis/<level>.ron` reads the import spec
 //! ([`OsmLevelSpec`]), the OSM export it names, and writes the level. Passing the export
-//! itself (`--import-osm gis-raw/street.json`) imports it with the default spec. The game
+//! itself (`--import-osm gis-raw/street.osm`) imports it with the default spec. The game
 //! never reads OSM data; the `.map` it writes is an ordinary level to touch up by hand.
 //!
 //! What becomes what (`classify.rs`): buildings are solid walls, roads and car parks
@@ -44,7 +45,8 @@ pub struct OsmLevelSpec {
     /// Display name of the level.
     #[serde(default)]
     pub name: String,
-    /// The Overpass JSON export, relative to the project root.
+    /// The OSM data, relative to the project root: an `.osm` XML file or an Overpass JSON
+    /// export.
     pub source: String,
     /// Where to write the level. Default: `assets/maps/<spec file stem>.map`.
     #[serde(default)]
@@ -612,7 +614,7 @@ fn distances(
     dist
 }
 
-/// `--import-osm <spec.ron | export.json> [--force]`: write the level and print the report.
+/// `--import-osm <spec.ron | export.osm | export.json> [--force]`: write the level and print the report.
 pub fn run_import(input: &Path, force: bool) -> Result<PathBuf, String> {
     let is_spec = input.extension().is_some_and(|e| e == "ron");
     let spec = if is_spec {
@@ -783,7 +785,7 @@ mod tests {
     fn the_example_spec_parses() {
         let text = std::fs::read_to_string("assets/gis/example.ron").unwrap();
         let spec: OsmLevelSpec = ron::from_str(&text).unwrap();
-        assert_eq!(spec.source, "gis-raw/example.json");
+        assert_eq!(spec.source, "gis-raw/example.osm");
         assert_eq!(spec.loot.map(|l| l.per_tiles), Some(40));
     }
 

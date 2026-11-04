@@ -35,8 +35,17 @@ map data at runtime.
 
 ### 1. Get the data
 
-Open [overpass-turbo.eu](https://overpass-turbo.eu/), pan and zoom to the area (keep it to a
-few streets, 100-250 m across), paste this query and press **Run**:
+Either way works; both end up as one file in the project.
+
+**A. openstreetmap.org (simplest).** Zoom to the area, press **Export** in the top bar,
+adjust the box if you want (*Manually select a different area*), and press **Export**
+again. You get `map.osm`, an XML file with everything in the box. Rename it after the area
+and put it in the project, e.g. `gis-raw/granvagen.osm`. The site refuses areas over 50 000
+nodes; a few streets is far below that.
+
+**B. overpass-turbo (only the layers the importer uses).** Open
+[overpass-turbo.eu](https://overpass-turbo.eu/), pan and zoom to the area, paste this query
+and press **Run**:
 
 ```text
 [out:json][timeout:60];
@@ -55,20 +64,19 @@ few streets, 100-250 m across), paste this query and press **Run**:
 out geom;
 ```
 
-Then **Export -> raw OSM data** and save the file as `gis-raw/<level>.json` in the project
-(`gis-raw/` is gitignored). `{{bbox}}` is whatever the map shows, so the view decides the
-area. Without a browser, the same query goes to `https://overpass-api.de/api/interpreter`
-with the bbox written out as `(south,west,north,east)`.
+Then **Export -> raw OSM data** and save it as e.g. `gis-raw/granvagen.json`. `{{bbox}}` is
+whatever the map shows. The importer also reads the other Overpass JSON shape
+(`out body; >; out skel qt;`).
 
-The importer also reads the other Overpass JSON shape (`out body; >; out skel qt;`, ways
-referencing node ids), but not the `.osm` XML from openstreetmap.org's Export button.
+`gis-raw/` is gitignored. To commit an export, put it in `assets/gis/` instead (credit
+OpenStreetMap, see *Licences*).
 
 ### 2. Import
 
-Quickest, with every default:
+Quickest, with every default (`.osm` or `.json`, the importer tells them apart):
 
 ```bash
-cargo run -- --import-osm gis-raw/granvagen.json
+cargo run -- --import-osm gis-raw/granvagen.osm
 ```
 
 writes `assets/maps/granvagen.map` and prints a report (size, rotation, counts, spawns,
@@ -80,7 +88,7 @@ For control, write a spec, `assets/gis/<level>.ron` (`OsmLevelSpec`, every field
 ```ron
 (
     name: "Granvägen",
-    source: "gis-raw/granvagen.json",
+    source: "gis-raw/granvagen.osm",   // .osm XML or Overpass .json
     // output: Some("assets/maps/granvagen.map"),   // default: assets/maps/<spec stem>.map
     centre: Some((59.3293, 18.0686)),  // (lat, lon); default: the middle of the buildings
     size: Some((120.0, 90.0)),         // metres; default: the buildings plus 6 m
@@ -115,7 +123,7 @@ Rerunning the import overwrites hand edits, so settle the spec first.
 
 ### What becomes what
 
-Code: `src/map/osm/` (`data.rs` reads the export, `geometry.rs` projects and rasterises,
+Code: `src/map/osm/` (`data.rs` reads the `.osm` XML or Overpass JSON, `geometry.rs` projects and rasterises,
 `classify.rs` holds the tag rules, `mod.rs` builds the level). All pure and unit tested.
 
 | OSM | Level |
@@ -223,7 +231,7 @@ the level area with QGIS or `ogr2ogr`, export GeoJSON. A second reader next to
 
 | # | What | Status |
 |---|------|--------|
-| 1 | **OSM import**: Overpass JSON reader, projection, automatic rotation, buildings / roads / ground / water / fences / trees, walled border, spawns at road exits, goal, player start, path check. `--import-osm`, `--play --level`. | **Done** (tested on made-up data; needs a first real area and a playtest) |
+| 1 | **OSM import**: `.osm` XML and Overpass JSON readers, projection, automatic rotation, buildings / roads / ground / water / fences / trees, walled border, spawns at road exits, goal, player start, path check. `--import-osm`, `--play --level`. | **Done** (tested on made-up data; needs a first real area and a playtest) |
 | 2 | **Tune on real areas**: road widths, what counts as grass, size and performance (lights, A*), fence rule. Water that blocks. | Next |
 | 3 | **More gameplay from the map**: goal by address, street lamps along roads, loot next to houses, decorations from OSM points (benches, bins, cars at parking). | |
 | 4 | **Real houses**: squared-up footprints as `HouseDef`s with doors and windows, type from `building=*` (house / detached / terrace / apartments / garage) or Lantmäteriet's `ändamål`; the house mesh work (`docs/house-editor.md`) draws them. | |

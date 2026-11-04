@@ -170,14 +170,14 @@ fn convert_map(input: Option<&String>, output: Option<&String>, force: bool) -> 
     Ok(())
 }
 
-/// `--import-osm <spec.ron | export.json> [--force]`: an OpenStreetMap level
+/// `--import-osm <spec.ron | export.osm | export.json> [--force]`: an OpenStreetMap level
 /// (`docs/gis-levels.md`).
 fn parse_import_osm_args(args: &[String]) -> Option<Result<(), String>> {
     let position = args.iter().position(|a| a == "--import-osm")?;
     let force = args.iter().any(|a| a == "--force");
     Some(match args.get(position + 1).filter(|a| !a.starts_with("--")) {
         Some(input) => map::osm::run_import(std::path::Path::new(input), force).map(|_| ()),
-        None => Err("--import-osm needs an import spec (.ron) or an Overpass export (.json)".into()),
+        None => Err("--import-osm needs an import spec (.ron) or OSM data (.osm or Overpass .json)".into()),
     })
 }
 
@@ -203,7 +203,7 @@ fn print_help() {
     println!(
         "                                             (out defaults to <in> with the other extension)"
     );
-    println!("  cargo run -- --import-osm <spec.ron | export.json> [--force]");
+    println!("  cargo run -- --import-osm <spec.ron | export.osm | export.json> [--force]");
     println!(
         "                                             Make a level from OpenStreetMap (docs/gis-levels.md)\n"
     );
