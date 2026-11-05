@@ -10,8 +10,8 @@
 //!   through.
 //! - **Blocks aliens only**: a low, translucent amber barrier players step over.
 //!
-//! A tile that already has a placed model (a house wall from the house tool, a fence)
-//! shows that model instead.
+//! A tile that already has a placed model (a house wall from the house tool, a fence) or a
+//! decoration standing on it (a forest's pine) shows that instead.
 
 use std::collections::{HashMap, HashSet};
 
@@ -171,7 +171,13 @@ pub fn plan_walls(
     let height_at = |at: (i32, i32)| -> Option<f32> {
         kind_at(at).map(|kind| kind.style_at(storeys_at(at)).height)
     };
-    let modelled: HashSet<(i32, i32)> = map.placements.iter().map(|p| (p.x + 1, p.y + 1)).collect();
+    let modelled: HashSet<(i32, i32)> = map
+        .placements
+        .iter()
+        .map(|p| (p.x, p.y))
+        .chain(map.decorations.iter().map(|d| (d.x, d.y)))
+        .map(|(x, y)| (x + 1, y + 1))
+        .collect();
 
     let mut cells: HashMap<(Chunk, WallKind, u8), HashSet<(i32, i32)>> = HashMap::new();
     for (row, cols) in tiles.iter().enumerate() {
@@ -330,6 +336,22 @@ mod tests {
         let planned = plan_walls(&map, &tiles, 1.0, 0.0);
         assert_eq!(planned.len(), 1, "both tiles are the same low fence");
         assert!(top_of(&planned[0].2) < 1.0);
+    }
+
+    #[test]
+    fn a_tree_on_a_blocked_tile_stands_in_for_the_wall() {
+        let map = MapFile {
+            tiles: vec![vec![solid()]],
+            decorations: vec![crate::general::components::map_components::DecorationItem {
+                x: 0,
+                y: 0,
+                model: String::new(),
+                rotation_y: 0.0,
+                scale: 1.0,
+            }],
+            ..default()
+        };
+        assert!(plan_walls(&map, &padded_tiles(&map), 1.0, 0.0).is_empty());
     }
 
     #[test]

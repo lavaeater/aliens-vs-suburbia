@@ -9,7 +9,7 @@
 //!
 //! What becomes what (`classify.rs`): buildings are solid walls, roads and car parks
 //! floor, parks and gardens grass, water water, fences and hedges block the aliens (players
-//! hop over; [`FenceRule`]), walls block everyone, trees are decorations. The level is
+//! hop over; [`FenceRule`]), walls block everyone, trees are decorations, forests get pines. The level is
 //! walled in, and every road that leaves it becomes an alien spawn. The goal is the spot
 //! the spec names (or the middle), the player starts next to it, and spawns that can't reach
 //! the goal are dropped and reported.
@@ -19,6 +19,7 @@
 pub mod classify;
 pub mod data;
 pub mod geometry;
+mod land_cover;
 
 use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
@@ -72,7 +73,10 @@ pub struct OsmLevelSpec {
     /// At most this many alien spawns, the widest roads first.
     #[serde(default = "four")]
     pub max_spawns: usize,
-    /// Mapped trees (`natural=tree`) as decorations.
+    /// Lantmäteriet land cover (`land_cover.rs`), a GeoJSON file. Its forests join OSM's.
+    #[serde(default)]
+    pub land_cover: Option<String>,
+    /// Trees as decorations: mapped ones (`natural=tree`), and pines in the forests.
     #[serde(default = "yes")]
     pub trees: bool,
     /// Copied into the level. Empty = the game's default waves.
@@ -115,6 +119,7 @@ impl OsmLevelSpec {
             fences: FenceRule::default(),
             goal: None,
             max_spawns: four(),
+            land_cover: None,
             trees: yes(),
             waves: Vec::new(),
             loot: default_loot(),
@@ -129,6 +134,18 @@ pub struct Imported {
     pub map: MapFile,
     pub report: Vec<String>,
 }
+
+/// Pines for a forest, with their models' height. Drawn [`FOREST_HEIGHT`] tall, not to scale:
+/// the camera sits about 3.2 above the floor at its default zoom.
+const PINES: &[(&str, f32)] = &[
+    ("packs/nature/Pine.glb", 8.49),
+    ("packs/nature/Pine-79gmlLnweB.glb", 10.0),
+    ("packs/nature/Pine-Zt62gceKXZ.glb", 7.14),
+];
+const FOREST_HEIGHT: f32 = 2.0;
+/// A forest has at most one tree in each square of this many tiles, a tile clear of the
+/// next square's, so it can never close a way through.
+const FOREST_SPACING: usize = 4;
 
 /// Tree models for `natural=tree`, with the height they're drawn at (as in the generator).
 const TREES: &[(&str, f32)] = &[
@@ -146,6 +163,7 @@ enum Layer {
     Building,
     Wall,
     Fence,
+    Tree,
 }
 
 fn bits(flags: impl Into<BitFlags<MapFeatures>>) -> u64 {
@@ -166,12 +184,69 @@ fn wall_bits() -> u64 {
     bits(MapFeatures::Floor | MapFeatures::ImpassableForPlayers | MapFeatures::ImpassableForEnemies)
 }
 
+fn blocks_everyone() -> u64 {
+    bits(MapFeatures::ImpassableForEnemies | MapFeatures::ImpassableForPlayers)
+}
+
 fn enemy_passable(tile: u64) -> bool {
     tile != 0 && !BitFlags::<MapFeatures>::from_bits_truncate(tile).contains(MapFeatures::ImpassableForEnemies)
 }
 
 fn player_passable(tile: u64) -> bool {
     tile != 0 && !BitFlags::<MapFeatures>::from_bits_truncate(tile).contains(MapFeatures::ImpassableForPlayers)
+}
+
+/// A number that looks random and is the same every import.
+const fn tile_hash(col: usize, row: usize) -> usize {
+    let mixed = (col as u64)
+        .wrapping_mul(0x9E37_79B9_7F4A_7C15)
+        .wrapping_add((row as u64).wrapping_mul(0xC2B2_AE3D_27D4_EB4F));
+    ((mixed ^ (mixed >> 29)) >> 16) as usize
+}
+
+/// Scatter pines over the `forest` tiles: one to a square of [`FOREST_SPACING`], on open
+/// grass with open ground all around, so roads and doorsteps stay clear. Each blocks its tile.
+fn plant_forest(
+    forest: &[Vec<bool>],
+    layer: &mut [Vec<Layer>],
+    ground: &[Vec<Ground>],
+) -> Vec<DecorationItem> {
+    let open = |layer: &[Vec<Layer>], col: usize, row: usize| {
+        layer.get(row).and_then(|r| r.get(col)) == Some(&Layer::Open)
+    };
+    let (height, width) = (layer.len(), layer.first().map_or(0, Vec::len));
+    let mut pines = Vec::new();
+    for top in (0..height).step_by(FOREST_SPACING) {
+        for left in (0..width).step_by(FOREST_SPACING) {
+            let hash = tile_hash(left, top);
+            // Short of the square's last column and row: that is the gap to the next.
+            let room = FOREST_SPACING - 1;
+            let (col, row) = (left + hash % room, top + (hash >> 8) % room);
+            let clear = (col.saturating_sub(1)..=col + 1)
+                .all(|c| (row.saturating_sub(1)..=row + 1).all(|r| open(layer, c, r)));
+            let on_grass = ground.get(row).and_then(|r| r.get(col)) == Some(&Ground::Grass);
+            let wooded = forest.get(row).and_then(|r| r.get(col)) == Some(&true);
+            let inside = col > 0 && row > 0;
+            if !(clear && on_grass && wooded && inside) {
+                continue;
+            }
+            let Some(&(model, model_height)) = PINES.get((hash >> 16) % PINES.len()) else {
+                continue;
+            };
+            if let Some(tile) = layer.get_mut(row).and_then(|r| r.get_mut(col)) {
+                *tile = Layer::Tree;
+            }
+            let size = 0.8 + ((hash >> 20) % 5) as f32 * 0.1; // 0.8 to 1.2
+            pines.push(DecorationItem {
+                x: col as i32,
+                y: row as i32,
+                model: model.to_string(),
+                rotation_y: ((hash >> 24) % 8) as f32 * 45.0,
+                scale: FOREST_HEIGHT * size / model_height,
+            });
+        }
+    }
+    pines
 }
 
 /// A feature in metres, with what it paints.
@@ -307,12 +382,14 @@ pub fn import(spec: &OsmLevelSpec, data: &OsmData) -> Result<Imported, String> {
     // Ground areas, largest first so the small ones end up on top.
     let mut areas: Vec<(f64, Ground, Vec<Vec<Point>>)> = projected
         .iter()
-        .filter_map(|f| match f.paint {
-            Paint::Ground(g) => {
-                let area = f.rings.iter().map(|r| geometry::ring_area(r)).sum::<f64>();
-                Some((area, g, in_tiles(f)))
-            }
-            _ => None,
+        .filter_map(|f| {
+            let g = match f.paint {
+                Paint::Ground(g) => g,
+                Paint::Forest => Ground::Grass,
+                _ => return None,
+            };
+            let area = f.rings.iter().map(|r| geometry::ring_area(r)).sum::<f64>();
+            Some((area, g, in_tiles(f)))
         })
         .collect();
     areas.sort_by(|a, b| b.0.total_cmp(&a.0));
@@ -392,6 +469,16 @@ pub fn import(spec: &OsmLevelSpec, data: &OsmData) -> Result<Imported, String> {
                 scale,
             });
         }
+
+        let mut forest = vec![vec![false; width]; height];
+        for f in projected.iter().filter(|f| f.paint == Paint::Forest) {
+            for (col, row) in geometry::fill_rings(&in_tiles(f), width, height) {
+                forest[row][col] = true;
+            }
+        }
+        let pines = plant_forest(&forest, &mut layer, &ground);
+        report.push(format!("{} pines in the forests", pines.len()));
+        decorations.extend(pines);
     }
     report.push(format!(
         "{} buildings, {} roads and paths, {} fences/hedges, {} walls, {} trees, {} ground areas",
@@ -410,6 +497,7 @@ pub fn import(spec: &OsmLevelSpec, data: &OsmData) -> Result<Imported, String> {
             (0..width)
                 .map(|col| match layer[row][col] {
                     Layer::Building | Layer::Wall => wall_bits(),
+                    Layer::Tree => ground_bits(ground[row][col]) | blocks_everyone(),
                     Layer::Road => ground_bits(Ground::Floor),
                     Layer::Fence => ground_bits(ground[row][col]) | fence_bits,
                     Layer::Open => ground_bits(ground[row][col]),
@@ -658,7 +746,12 @@ pub fn run_import(input: &Path, force: bool) -> Result<PathBuf, String> {
     }
     let json = std::fs::read_to_string(&spec.source)
         .map_err(|e| format!("cannot read the OSM export {}: {e}", spec.source))?;
-    let data = data::parse(&json)?;
+    let mut data = data::parse(&json)?;
+    if let Some(path) = &spec.land_cover {
+        let text = std::fs::read_to_string(path)
+            .map_err(|e| format!("cannot read the land cover export {path}: {e}"))?;
+        data.features.extend(land_cover::forests(&text)?);
+    }
     let mut imported = import(&spec, &data)?;
     if imported.map.name == "OpenStreetMap level" {
         imported.map.name = stem;
@@ -746,6 +839,53 @@ mod tests {
         assert_eq!(storeys(&[("building", "garage")]), 1);
         assert_eq!(storeys(&[("building", "apartments")]), 4);
         assert_eq!(storeys(&[("building", "yes"), ("building:levels", "many")]), 2);
+    }
+
+    fn square_forest(size: usize) -> (Vec<Vec<bool>>, Vec<Vec<Layer>>, Vec<Vec<Ground>>) {
+        (
+            vec![vec![true; size]; size],
+            vec![vec![Layer::Open; size]; size],
+            vec![vec![Ground::Grass; size]; size],
+        )
+    }
+
+    #[test]
+    fn a_forest_never_closes_a_way_through() {
+        let (forest, mut layer, ground) = square_forest(80);
+        let pines = plant_forest(&forest, &mut layer, &ground);
+        assert!(pines.len() > 300, "a real forest: {}", pines.len());
+        for row in &layer {
+            assert!(row.iter().any(|t| *t == Layer::Open));
+        }
+        // No two pines touch, not even at a corner.
+        for a in &pines {
+            for b in &pines {
+                let apart = (a.x - b.x).abs().max((a.y - b.y).abs());
+                assert!(apart != 1, "{},{} touches {},{}", a.x, a.y, b.x, b.y);
+            }
+        }
+    }
+
+    #[test]
+    fn pines_keep_off_what_is_not_open_grass() {
+        let (forest, mut layer, mut ground) = square_forest(40);
+        for row in &mut layer {
+            row[20] = Layer::Road;
+        }
+        ground[5] = vec![Ground::Water; 40];
+        for pine in plant_forest(&forest, &mut layer, &ground) {
+            assert!((pine.x - 20).abs() > 1, "next to the road: {}", pine.x);
+            assert_ne!(pine.y, 5, "in the water");
+        }
+    }
+
+    #[test]
+    fn the_same_forest_grows_every_import() {
+        let (forest, mut layer, ground) = square_forest(40);
+        let first = plant_forest(&forest, &mut layer.clone(), &ground);
+        let second = plant_forest(&forest, &mut layer, &ground);
+        assert_eq!(first.len(), second.len());
+        assert!(first.iter().zip(&second).all(|(a, b)| (a.x, a.y) == (b.x, b.y)));
     }
 
     #[test]

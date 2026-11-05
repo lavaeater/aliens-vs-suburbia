@@ -22,7 +22,9 @@
     goal: None,
     // Alien spawns where roads leave the level, widest roads first.
     max_spawns: 4,
-    // natural=tree nodes as tree decorations.
+    // Lantmateriet land cover (GeoJSON), its forests added to OSM's. None = OSM's only.
+    land_cover: None,
+    // natural=tree nodes as tree decorations, and pines in the forests.
     trees: true,
     // Empty = the game's default waves.
     waves: [],

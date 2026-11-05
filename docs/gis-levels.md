@@ -253,6 +253,10 @@ camera. One storey is a plain wall (0.9), each one more adds 0.35, 2.3 at most
 Only the look changes: colliders stay the same height for every wall, about 0.7 above the
 floor, so something thrown high enough still goes through a tall building.
 
+Decorations are streamed with their chunks (`map::streaming`), so trees cost nothing out of
+view. Measured in a debug build, vsync off, `map-01` with 10 160 pines, deep in a forest: 81
+FPS and about 21 000 entities.
+
 ### Water
 
 Water tiles are walkable in the game (they're a terrain colour). Making lakes block needs a
@@ -298,8 +302,15 @@ Lantmäteriet's Marktäcke Direkt: `GET https://api.lantmateriet.se/ogc-features
 collections/markytor/items?f=json&bbox=...` (WGS84, basic auth) gives GeoJSON polygons with an
 `objekttyp`. `map-01` is 23 polygons: Barr- och blandskog 31%, Låg bebyggelse 44%, Öppen mark
 13%, Hög bebyggelse 4%, Industri- och handelsbebyggelse 1%; 7% is covered by none. Coarse, but
-it lines up with the OSM buildings, and it says where the forest is, which the map has as
-plain grass today. `sankmarksytor` in the same API has wetlands.
+it lines up with the OSM buildings. `sankmarksytor` in the same API has wetlands.
+
+The import uses its forests: `land_cover: Some("assets/osm/map-01.markytor.json")` in a spec
+(`land_cover.rs`) adds them to OSM's own (`landuse=forest`, `natural=wood`), and `trees: true`
+fills both with pines (`plant_forest`), 10 160 of them in `map-01`. One pine to a square of 4
+tiles and a clear tile between any two, so a forest can't close a way through; none next to a
+road or a building. Each blocks its tile. They are drawn about 2 tall, not to scale, for the
+same reason buildings are. The saved JSON is the API's answer for the level's bounding box;
+Lantmäteriet data, CC BY 4.0.
 
 ## Image import (later)
 

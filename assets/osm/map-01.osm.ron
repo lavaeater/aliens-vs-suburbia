@@ -7,6 +7,7 @@
     // The OSM data: an .osm file (openstreetmap.org Export) or an Overpass .json export.
     // gis-raw/ is gitignored; put it in assets/gis/ to commit it.
     source: "assets/osm/map-01.osm",
+    land_cover: Some("assets/osm/map-01.markytor.json"),
     // Where the level goes. Default: assets/maps/<this file's stem>.map
     output: None,
     // Middle of the level, (lat, lon). Default: the middle of the buildings.

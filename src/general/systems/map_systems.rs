@@ -14,7 +14,6 @@ use crate::general::components::map_components::{
 use crate::general::events::map_events::{LoadMap, SpawnPlayer};
 use crate::general::resources::map_resources::MapGraph;
 use crate::map::{BitFlags, MapFeatures};
-use crate::settings::resources::GameSettings;
 use avian3d::prelude::{Collider, CollisionLayers, Position, RigidBody};
 use bevy::asset::AssetServer;
 use bevy::math::{Quat, Vec3};
@@ -131,7 +130,6 @@ pub fn map_loader(
     game_assets: Res<GameAssets>,
     tile_defs: Res<TileDefinitions>,
     model_defs: Res<MapModelDefinitions>,
-    game_settings: Res<GameSettings>,
     mut add_health_bar_mw: MessageWriter<AddHealthBar>,
     mut wave_manager: Option<ResMut<crate::alien::wave_manager::WaveManager>>,
 ) {
@@ -535,24 +533,6 @@ pub fn map_loader(
                     ));
                 }
             }
-        }
-
-        for dec in &map_file.decorations {
-            // Map coordinates, like placements: one tile in from the padded grid.
-            let pos = Vec3::new(
-                tile_defs.tile_width * (dec.x + 1) as f32,
-                tile_defs.floor_level + tile_defs.tile_depth,
-                tile_defs.tile_width * (dec.y + 1) as f32,
-            );
-            // dec.scale is expressed in player units; multiply by player_unit to get world-unit scale
-            let world_scale = dec.scale * game_settings.player_unit;
-            commands.spawn((
-                Name::from(format!("Decoration {}:{} {}", dec.x, dec.y, dec.model)),
-                WorldAssetRoot(asset_server.load(format!("{}#Scene0", dec.model))),
-                Transform::from_translation(pos)
-                    .with_rotation(Quat::from_rotation_y(dec.rotation_y.to_radians()))
-                    .with_scale(bevy::math::Vec3::splat(world_scale)),
-            ));
         }
 
         // Override WaveManager with map-defined waves if any are present.

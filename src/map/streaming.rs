@@ -1,6 +1,6 @@
 //! Streaming: what you can see of a map exists only near the camera.
 //!
-//! A map's lights, loot bags and floor and wall meshes scale with its area: 800 x 800 tiles
+//! A map's lights, loot bags, decorations and floor and wall meshes scale with its area: 800 x 800 tiles
 //! plan about 17 000 lights (many casting shadows) and 29 000 bags, each a glTF scene. So
 //! they are planned once, when the map loads, and kept per [`Chunk`] in [`MapStream`]: the
 //! lights and bags as plain data, the surfaces as built meshes. The chunks the camera can
@@ -18,6 +18,7 @@ use std::collections::{HashMap, HashSet};
 
 use bevy::light::NotShadowCaster;
 use bevy::prelude::*;
+use bevy::world_serialization::{WorldAsset, WorldAssetRoot};
 
 use crate::camera::components::GameCamera;
 use crate::general::components::map_components::Floor;
@@ -27,6 +28,7 @@ use crate::loot::bags::{self, PlannedBag, StreamedBag};
 use crate::map::floor_mesh::{TerrainColor, build_floors};
 use crate::map::map_lights::{Fixtures, LightPlan, plan_lights, spawn_light};
 use crate::map::walls::{WallKind, padded_tiles, plan_walls};
+use crate::settings::resources::GameSettings;
 
 /// A chunk's edge, in tiles.
 pub const CHUNK_TILES: i32 = 32;
@@ -163,6 +165,15 @@ struct ChunkPlan {
     lights: Vec<(LightPlan, f32)>,
     bags: Vec<PlannedBag>,
     surfaces: Vec<Surface>,
+    decorations: Vec<Decoration>,
+}
+
+/// A map decoration, a tree say. The plan holds its scene, so walking back and forth doesn't
+/// load the model from disk each time.
+struct Decoration {
+    name: String,
+    transform: Transform,
+    scene: Handle<WorldAsset>,
 }
 
 /// The current map's scatter: all of it as data, the chunks near the camera as entities.
@@ -251,6 +262,7 @@ fn spawn_surface(parent: &mut ChildSpawnerCommands, surface: &Surface) {
 }
 
 /// Plan a map's chunks when it loads.
+#[allow(clippy::too_many_arguments)]
 pub fn plan_map_stream(
     mut loads: MessageReader<LoadMap>,
     mut stream: ResMut<MapStream>,
@@ -259,6 +271,7 @@ pub fn plan_map_stream(
     mut materials: ResMut<Assets<StandardMaterial>>,
     asset_server: Res<AssetServer>,
     tile_defs: Res<TileDefinitions>,
+    game_settings: Res<GameSettings>,
 ) {
     for load in loads.read() {
         // Leaving a match sweeps these already, hence `try_`.
@@ -285,6 +298,28 @@ pub fn plan_map_stream(
             }
             None => (Vec::new(), String::new(), 0),
         };
+        for dec in &load.map.decorations {
+            // Map coordinates, like placements: one tile in from the padded grid.
+            let tile = (dec.x + 1, dec.y + 1);
+            let at = Vec3::new(
+                tile_defs.tile_width * tile.0 as f32,
+                tile_defs.floor_level + tile_defs.tile_depth,
+                tile_defs.tile_width * tile.1 as f32,
+            );
+            // `dec.scale` is in player units.
+            let scale = dec.scale * game_settings.player_unit;
+            planned
+                .entry(chunk_of(tile))
+                .or_default()
+                .decorations
+                .push(Decoration {
+                    name: format!("Decoration {}:{} {}", dec.x, dec.y, dec.model),
+                    transform: Transform::from_translation(at)
+                        .with_rotation(Quat::from_rotation_y(dec.rotation_y.to_radians()))
+                        .with_scale(Vec3::splat(scale)),
+                    scene: asset_server.load(format!("{}#Scene0", dec.model)),
+                });
+        }
         plan_surfaces(
             load,
             &tiles,
@@ -294,8 +329,9 @@ pub fn plan_map_stream(
             &mut materials,
         );
         info!(
-            "planned {} map lights and {bag_count} loot bags in {} chunks",
+            "planned {} map lights, {bag_count} loot bags and {} decorations in {} chunks",
             lights.len(),
+            load.map.decorations.len(),
             planned.len()
         );
         *stream = MapStream {
@@ -380,6 +416,13 @@ pub fn stream_map_chunks(
             .with_children(|parent| {
                 for surface in &plan.surfaces {
                     spawn_surface(parent, surface);
+                }
+                for decoration in &plan.decorations {
+                    parent.spawn((
+                        Name::new(decoration.name.clone()),
+                        WorldAssetRoot(decoration.scene.clone()),
+                        decoration.transform,
+                    ));
                 }
                 let tw = tile_defs.tile_width;
                 for (light, seed) in &plan.lights {

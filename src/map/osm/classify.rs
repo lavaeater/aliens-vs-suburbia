@@ -45,6 +45,8 @@ pub enum Paint {
     Fence,
     /// A single tree.
     Tree,
+    /// An area of trees: grass, with pines scattered over it.
+    Forest,
 }
 
 /// What a feature becomes. `area` is whether the shape is an area (closed and tagged as
@@ -110,6 +112,9 @@ pub fn classify(tags: &Tags, area: bool) -> Option<Paint> {
         return None;
     }
 
+    if get("landuse") == Some("forest") || get("natural") == Some("wood") {
+        return Some(Paint::Forest);
+    }
     area_ground(tags).map(Paint::Ground)
 }
 
