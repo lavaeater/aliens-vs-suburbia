@@ -35,7 +35,7 @@ Ground coverage data in vector format - grass, forest, water, etc.
 
 ### Marktäcke Direkt
 
-Ground coverage in some kind of data format, xml probably.
+Ground coverage as GeoJSON polygons, see *Land cover*.
 
 Endpoint: https://api.lantmateriet.se/ogc-features/v1/marktacke
 
@@ -270,11 +270,36 @@ the grid) and turning them into `HouseDef`s with doors and windows is phase 4.
 The game is flat; height is ignored. Later, from a DEM: steep slopes -> rock / impassable,
 hollows -> mud or water.
 
-The source is Lantmäteriet's Markhöjdmodell Nedladdning: free, a 1 m grid, 0.1 m height
-accuracy, SWEREF 99 TM / RH 2000, in files covering 10 x 10 km, found through a STAC API
-(`https://api.lantmateriet.se/stac-hojd/v1/`, basic auth; keep the credentials out of the
-repo). The camera limits this like it limits buildings: real height differences have to be
-compressed to fit under it.
+The source is Lantmäteriet's Markhöjdmodell Nedladdning, tried against `map-01` on
+2026-11-05. Free (CC BY 4.0), a 1 m grid, SWEREF 99 TM / RH 2000.
+
+- `POST https://api.lantmateriet.se/stac-hojd/v1/search` with a `bbox` (WGS84) and basic auth
+  finds the file. Collection `dtm-cog` is the height grid; `dsm-skoglig-copc` is a point
+  cloud with other licence terms, not needed.
+- The file is a 10 x 10 km cloud-optimised GeoTIFF on `dl1.lantmateriet.se`, which also wants
+  basic auth: 287 MB, float32, deflate, floating point predictor, 512 x 512 blocks, nodata
+  -9999. HTTP range requests work, so a 700 m level costs 2.4 MB, not the whole file.
+- Keep the credentials out of the repo (`credentials.txt` is ignored).
+
+Getting it onto the tiles takes real coordinates, not a shifted rectangle: SWEREF's grid is
+turned about 2.4 degrees from true north here, and the level has its own rotation. Sample
+per tile: tile -> `Frame` inverse -> lat/lon -> SWEREF 99 TM (the formula's `eta` is an
+`asinh`; `atanh` is 46 m out at this distance from the central meridian). Sampled like that,
+the roads of `map-01` land on their flattest ground at zero offset (mean slope 0.07, 0.16 for
+a typical offset).
+
+`map-01` spans 28-66 m, with 34% of it steeper than 10 degrees: rocky plateaus with the roads
+cut through the valleys. The camera limits this like it limits buildings, so real height
+differences have to be compressed to fit under it.
+
+### Land cover
+
+Lantmäteriet's Marktäcke Direkt: `GET https://api.lantmateriet.se/ogc-features/v1/marktacke/
+collections/markytor/items?f=json&bbox=...` (WGS84, basic auth) gives GeoJSON polygons with an
+`objekttyp`. `map-01` is 23 polygons: Barr- och blandskog 31%, Låg bebyggelse 44%, Öppen mark
+13%, Hög bebyggelse 4%, Industri- och handelsbebyggelse 1%; 7% is covered by none. Coarse, but
+it lines up with the OSM buildings, and it says where the forest is, which the map has as
+plain grass today. `sankmarksytor` in the same API has wetlands.
 
 ## Image import (later)
 
