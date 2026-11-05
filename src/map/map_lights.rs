@@ -310,7 +310,7 @@ pub fn spawn_light(
                 SpotLight {
                     color: warm,
                     intensity: lumens::STREET_LAMP,
-                    range: 6.0,
+                    range: 4.8,
                     outer_angle: 0.95,
                     inner_angle: 0.6,
                     // `budget_lamp_shadows` hands these out.
@@ -334,7 +334,7 @@ pub fn spawn_light(
             commands.spawn((
                 Name::from("Lantern Light"),
                 MapLight,
-                point(flame, lumens::LANTERN, 3.5),
+                point(flame, lumens::LANTERN, 2.8),
                 LightAnimation {
                     base: lumens::LANTERN,
                     style: LightStyle::Flicker { seed },
@@ -364,7 +364,7 @@ pub fn spawn_light(
                 SpotLight {
                     color: cold,
                     intensity: lumens::FLOODLIGHT,
-                    range: 8.0,
+                    range: 6.4,
                     outer_angle: 0.7,
                     inner_angle: 0.45,
                     // `budget_lamp_shadows` hands these out.
@@ -388,7 +388,7 @@ pub fn spawn_light(
             commands.spawn((
                 Name::from("Neon Light"),
                 MapLight,
-                point(color, lumens::NEON, 4.0),
+                point(color, lumens::NEON, 3.2),
                 LightAnimation {
                     base: lumens::NEON,
                     style: LightStyle::Pulse {
@@ -403,7 +403,7 @@ pub fn spawn_light(
             commands.spawn((
                 Name::from("Alien Spawn Glow"),
                 MapLight,
-                point(Color::srgb(0.45, 1.0, 0.3), lumens::ALIEN_SPAWN, 4.5),
+                point(Color::srgb(0.45, 1.0, 0.3), lumens::ALIEN_SPAWN, 3.6),
                 LightAnimation {
                     base: lumens::ALIEN_SPAWN,
                     style: LightStyle::Pulse {
@@ -418,7 +418,7 @@ pub fn spawn_light(
             commands.spawn((
                 Name::from("Goal Beacon"),
                 MapLight,
-                point(Color::srgb(1.0, 0.2, 0.15), lumens::GOAL, 4.5),
+                point(Color::srgb(1.0, 0.2, 0.15), lumens::GOAL, 3.6),
                 LightAnimation {
                     base: lumens::GOAL,
                     style: LightStyle::Pulse {
@@ -433,7 +433,7 @@ pub fn spawn_light(
             commands.spawn((
                 Name::from("Player Spawn Lamp"),
                 MapLight,
-                point(Color::srgb(0.95, 0.95, 1.0), lumens::PLAYER_SPAWN, 4.0),
+                point(Color::srgb(0.95, 0.95, 1.0), lumens::PLAYER_SPAWN, 3.2),
                 Transform::from_translation(at + Vec3::Y * 1.2),
             ));
         }

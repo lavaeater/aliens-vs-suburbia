@@ -132,6 +132,44 @@ What this shows:
 
 Render scale should come on top of these, but hasn't been measured properly yet.
 
+### Lamps
+
+OSM map, after the moon change, one setting changed at a time. GPU clock drifts with heat (1135
+down to about 960 MHz over a few runs), so options were bracketed by fresh baselines, which
+settled at about 42 ms (24 fps):
+
+| Change | Frame | FPS | Lamps planned | Lights in reach, avg / max |
+|---|---|---|---|---|
+| Baseline, spacing 5 | 42 ms | 24 | 13,325 | 2.5 / 5 |
+| Spacing 7 | 35 ms | 28 | 6,774 | 1.9 / 4 |
+| Spacing 8 | 34 ms | 30 | 5,207 | 1.5 / 3 |
+| Spacing 7, ranges x0.8 | 31 ms | 32 | 6,774 | not measured |
+
+Single runs on a hotter or cooler GPU, so read these as rough:
+
+- Ranges x0.7 cut about 4 ms, x0.5 about 7 ms.
+- Hiding all point lights (lanterns, neon, spawn glows) cut about 9 ms from a 38-41 ms frame.
+- Hiding street lamps cut about 10-13 ms, partly because they carry most shadow maps.
+- Hiding floodlights changed nothing measurable.
+
+Back to back on a cool GPU (about 1140 MHz), with ranges x0.8, the OSM map ran at 32 fps at
+spacing 5 and 36 fps at spacing 7. So shorter ranges give most of the gain. Screenshots show
+spacing 7 removing most coloured pools from view, leaving the flashlight and little else. Turbo
+was off for these two runs, so they don't compare directly with the earlier tables.
+
+**Kept: spacing 5, ranges x0.8.** It keeps the colour and most of the gain.
+
+Unexplained: on level 1, spacing 7 drops `fragment_shader_invocations` from 1.59M to 0.90M and
+moves GPU time from the main pass to the rest of the frame, though screenshots show the same
+geometry. Don't compare level 1 pass timings across lamp counts until that is understood.
+
+**Cluster layout is not worth tuning.** 2, 4 or 8 depth slices instead of 24 made no difference.
+4096 clusters is a hard limit: Bevy panics above it.
+
+The overlap is moderate, not extreme. The cost comes from the number of lit pixels times a few
+lights each, so it only falls by removing lights or shrinking their reach, and both change how
+levels look.
+
 ## Measuring
 
 ```bash
@@ -176,7 +214,7 @@ cat /sys/class/drm/card1/gt_act_freq_mhz
 1. Done: the Night preset's moon no longer casts shadows (`LightingPreset::sky_shadows`). The
    tables above are from before that change.
 2. Try `Hardware2x2` filtering, and a smaller lamp shadow budget, on low-end hardware.
-3. Look at lamp overlap (`SPACING`, ranges), the largest cost left in the main pass.
+3. Done: lamps stay at spacing 5, with every range cut to x0.8.
 4. Test disabling turbo, and measure real render scale.
 5. Build the quality system from those: render scale, shadow budget and filter, picked from the
    adapter type at startup.
