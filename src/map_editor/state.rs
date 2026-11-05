@@ -94,6 +94,8 @@ impl PaletteItem {
 #[derive(Resource)]
 pub struct MapEditorState {
     pub map_name: String,
+    /// The loaded map's building heights (`MapFile::storeys`); kept like `stories`.
+    pub storeys: Vec<Vec<u8>>,
     /// The loaded map's story file (`MapFile::stories`); not editable here, but kept so a
     /// save does not drop it.
     pub stories: String,
@@ -168,6 +170,7 @@ impl Default for MapEditorState {
         let house_library = house::house_library();
         let mut state = Self {
             map_name: "new_map".to_string(),
+            storeys: Vec::new(),
             stories: String::new(),
             loot: None,
             width,
@@ -624,6 +627,7 @@ impl MapEditorState {
             map_width: self.width,
             map_height: self.height,
             tiles: self.tiles.clone(),
+            storeys: self.storeys.clone(),
             decorations: Vec::new(),
             placements: self.placements.clone(),
             houses: self.houses.clone(),
@@ -670,6 +674,7 @@ impl MapEditorState {
         self.placements = map.placements;
         self.houses = map.houses;
         self.waves = map.waves;
+        self.storeys = map.storeys;
         self.stories = map.stories;
         self.loot = map.loot;
         self.cursor = (

@@ -15,6 +15,30 @@ Three sources, in the order we use them:
    [Geodataportalen](https://www.geodata.se/geodataportalen/srv/swe/catalog.search#/home)
    and Geotorget. Licence generally CC BY 4.0.
 
+## Lantmäteriet services available
+
+### Markhöjdmodell Nedladdning
+
+Grid-based topology with grids of 1 meter, with elevation data.
+
+Swagger url: https://apimanager.lantmateriet.se/devportal/apis/284d9023-e390-4f9a-a2e8-6d5d939050e6/api-console
+
+endpoint: https://api.lantmateriet.se/stac-hojd/v1
+
+Uses basic authentication.
+
+Documentation can be found in gis-documentation/Geotorget.html, for the height thingie.
+
+### Marktäcke Nedladdning, vektor
+
+Ground coverage data in vector format - grass, forest, water, etc.
+
+### Marktäcke Direkt
+
+Ground coverage in some kind of data format, xml probably.
+
+Endpoint: https://api.lantmateriet.se/ogc-features/v1/marktacke
+
 ## Why this fits the game well
 
 - **A tile is one metre** (`src/map/house.rs`). Real coordinates turn into tiles with a
@@ -200,10 +224,6 @@ Chunking the meshes didn't change the frame rate here: the render thread was bus
 lamps, not with what they drew (61 lamps 26 ms; 16, 8 or 0 lamps 17 ms). It does keep the
 entity count down and each lamp's work small.
 
-Next, in order:
-
-1. **Building heights** from `building:levels` (122 of 468 buildings in `map-01.osm`).
-
 Pathfinding is one flow field from the goal (`src/ai/flow_field.rs`), built at load and
 repaired tile by tile, instead of A* per alien. Measured in a debug build on 432 000 open
 tiles:
@@ -218,6 +238,20 @@ tiles:
 
 With vsync off and the window focused, the map runs at about 95 FPS (10.5 ms) with four
 aliens walking. Big waves are not measured yet.
+
+### Building heights
+
+The import gives each building tile a storey count, written to a `[storeys]` section in the
+`.map`: `building:levels` if mapped (122 of 468 buildings in `map-01.osm`), then `height`,
+then a guess from `building=*` (shed and garage 1, apartments 4, the rest 2).
+
+Heights are compressed, not to scale. The game camera sits about 3.2 above the floor at the
+default zoom and a person is about 0.5 tall, so real metres put a block of flats past the
+camera. One storey is a plain wall (0.9), each one more adds 0.35, 2.3 at most
+(`walls::STOREY_RISE`, `TALLEST_BUILDING`).
+
+Only the look changes: colliders stay the same height for every wall, about 0.7 above the
+floor, so something thrown high enough still goes through a tall building.
 
 ### Water
 
@@ -235,6 +269,12 @@ the grid) and turning them into `HouseDef`s with doors and windows is phase 4.
 
 The game is flat; height is ignored. Later, from a DEM: steep slopes -> rock / impassable,
 hollows -> mud or water.
+
+The source is Lantmäteriet's Markhöjdmodell Nedladdning: free, a 1 m grid, 0.1 m height
+accuracy, SWEREF 99 TM / RH 2000, in files covering 10 x 10 km, found through a STAC API
+(`https://api.lantmateriet.se/stac-hojd/v1/`, basic auth; keep the credentials out of the
+repo). The camera limits this like it limits buildings: real height differences have to be
+compressed to fit under it.
 
 ## Image import (later)
 

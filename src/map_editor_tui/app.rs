@@ -94,6 +94,7 @@ impl App {
             map_width: width,
             map_height: height,
             tiles: vec![vec![TILE_VOID as u64; width]; height],
+            storeys: vec![],
             decorations: vec![],
             placements: vec![],
             houses: vec![],

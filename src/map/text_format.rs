@@ -19,6 +19,10 @@
 //! [legend]
 //! A: grass + blocks_enemies
 //!
+//! [storeys]
+//! ........
+//! .2......
+//!
 //! [decorations]
 //! at: 3, 1 | model: packs/nature/Pine.glb | rotation: 90 | scale: 1.2
 //!
@@ -98,6 +102,7 @@ enum Section {
     Properties,
     Tiles,
     Legend,
+    Storeys,
     Decorations,
     Placements,
     Houses,
@@ -110,6 +115,7 @@ impl Section {
             "properties" => Self::Properties,
             "tiles" => Self::Tiles,
             "legend" => Self::Legend,
+            "storeys" => Self::Storeys,
             "decorations" => Self::Decorations,
             "placements" => Self::Placements,
             "houses" => Self::Houses,
@@ -161,6 +167,7 @@ pub fn parse(text: &str) -> Result<MapFile, String> {
             Some(Section::Legend) => legend_entry(line).map(|(letter, value)| {
                 legend.insert(letter, value);
             }),
+            Some(Section::Storeys) => storeys_row(line).map(|row| map.storeys.push(row)),
             Some(Section::Decorations) => decoration(line).map(|d| map.decorations.push(d)),
             Some(Section::Placements) => placement(line).map(|p| map.placements.push(p)),
             Some(Section::Houses) => house(line).map(|h| map.houses.push(h)),
@@ -243,6 +250,20 @@ fn property(
         _ => return Err(format!("unknown property `{key}`")),
     }
     Ok(())
+}
+
+/// A row of `[storeys]`: `.` for an ordinary tile, or a digit.
+fn storeys_row(line: &str) -> Result<Vec<u8>, String> {
+    line.chars()
+        .filter(|c| !c.is_whitespace())
+        .map(|c| match c {
+            '.' => Ok(0),
+            _ => c
+                .to_digit(10)
+                .and_then(|d| u8::try_from(d).ok())
+                .ok_or_else(|| format!("'{c}' is not a storey count (`.` or a digit)")),
+        })
+        .collect()
 }
 
 /// `A: grass + blocks_enemies`, or a raw tile value: `A: 261`.
@@ -498,6 +519,20 @@ pub fn to_text(map: &MapFile) -> Result<String, String> {
         }
     }
 
+    if !map.storeys.is_empty() {
+        lines.extend([String::new(), "[storeys]".into()]);
+        for row in &map.storeys {
+            lines.push(
+                row.iter()
+                    .map(|&n| match n {
+                        0 => '.',
+                        n => char::from_digit(u32::from(n.min(9)), 10).unwrap_or('9'),
+                    })
+                    .collect(),
+            );
+        }
+    }
+
     lines.extend([
         String::new(),
         "[decorations]".into(),
@@ -712,6 +747,27 @@ count: 3
         assert_eq!(map.waves[1].enemy_def, "");
         assert_eq!(map.waves[1].count, 3);
         assert_eq!(map.waves[1].spawn_rate_per_minute, 20.0);
+    }
+
+    #[test]
+    fn storeys_survive_a_round_trip() {
+        let map = parse("[tiles]\nwww\n[storeys]\n.3 9\n").unwrap();
+        assert_eq!(map.storeys, vec![vec![0, 3, 9]]);
+        let written = to_text(&map).unwrap();
+        assert!(written.contains("[storeys]\n.39\n"), "{written}");
+        assert_eq!(parse(&written).unwrap().storeys, map.storeys);
+    }
+
+    #[test]
+    fn a_map_without_storeys_writes_no_section() {
+        let map = parse("[tiles]\nwww\n").unwrap();
+        assert!(!to_text(&map).unwrap().contains("[storeys]"));
+    }
+
+    #[test]
+    fn a_bad_storey_names_its_line() {
+        let err = parse("[tiles]\nww\n[storeys]\n.x\n").unwrap_err();
+        assert!(err.contains("line 4") && err.contains("'x'"), "{err}");
     }
 
     #[test]

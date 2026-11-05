@@ -4,7 +4,8 @@
 //!
 //! Three looks, one per kind of blocking:
 //!
-//! - **Solid** (blocks everyone): opaque masonry with a capped top.
+//! - **Solid** (blocks everyone): opaque masonry with a capped top. A tile with storeys
+//!   (`MapFile::storeys`, an imported building) stands that tall, under a roof.
 //! - **Blocks players only**: a translucent green membrane, alien stuff the aliens walk
 //!   through.
 //! - **Blocks aliens only**: a low, translucent amber barrier players step over.
@@ -33,6 +34,15 @@ pub fn padded_tiles(map: &MapFile) -> Vec<Vec<u64>> {
     }
     padded
 }
+
+/// How much taller each storey past the first makes a building (the first is a plain wall's
+/// height). Compressed, not to scale: the game camera sits about 3.2 above the floor at its
+/// default zoom, and what comes near that fills the screen.
+pub const STOREY_RISE: f32 = 0.35;
+/// The tallest a building gets, however many storeys it has.
+pub const TALLEST_BUILDING: f32 = 2.3;
+
+const ROOF_COLOR: [f32; 4] = [0.46, 0.3, 0.26, 1.0];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum WallKind {
@@ -90,6 +100,22 @@ impl WallKind {
         }
     }
 
+    /// This kind's look at so many storeys. Only solid walls have storeys.
+    pub fn style_at(self, storeys: u8) -> WallStyle {
+        let style = self.style();
+        match style.cap {
+            Some(cap) if storeys > 0 => WallStyle {
+                height: (style.height + f32::from(storeys - 1) * STOREY_RISE).min(TALLEST_BUILDING),
+                cap: Some(WallCap {
+                    color: ROOF_COLOR,
+                    ..cap
+                }),
+                ..style
+            },
+            _ => style,
+        }
+    }
+
     pub fn material(self) -> StandardMaterial {
         match self {
             Self::Solid => StandardMaterial {
@@ -120,8 +146,8 @@ impl WallKind {
     }
 }
 
-/// A map's walls, one mesh per [`Chunk`] and kind. A side on a chunk's edge is judged against
-/// the real neighbour, so the seams between chunks don't show.
+/// A map's walls, one mesh per [`Chunk`], kind and height. A side on a chunk's edge is judged
+/// against the real neighbour, so the seams between chunks don't show.
 pub fn plan_walls(
     map: &MapFile,
     tiles: &[Vec<u64>],
@@ -134,30 +160,45 @@ pub fn plan_walls(
             .get(usize::try_from(col).ok()?)?;
         WallKind::of(raw)
     };
+    // `tiles` is padded and `MapFile::storeys` isn't.
+    let storeys_at = |(col, row): (i32, i32)| -> u8 {
+        usize::try_from(row - 1)
+            .ok()
+            .zip(usize::try_from(col - 1).ok())
+            .and_then(|(row, col)| map.storeys.get(row)?.get(col).copied())
+            .unwrap_or(0)
+    };
+    let height_at = |at: (i32, i32)| -> Option<f32> {
+        kind_at(at).map(|kind| kind.style_at(storeys_at(at)).height)
+    };
     let modelled: HashSet<(i32, i32)> = map.placements.iter().map(|p| (p.x + 1, p.y + 1)).collect();
 
-    let mut cells: HashMap<(Chunk, WallKind), HashSet<(i32, i32)>> = HashMap::new();
+    let mut cells: HashMap<(Chunk, WallKind, u8), HashSet<(i32, i32)>> = HashMap::new();
     for (row, cols) in tiles.iter().enumerate() {
         for col in 0..cols.len() {
             let at = (col as i32, row as i32);
             if let Some(kind) = kind_at(at)
                 && !modelled.contains(&at)
             {
-                cells.entry((chunk_of(at), kind)).or_default().insert(at);
+                let storeys = if kind == WallKind::Solid {
+                    storeys_at(at)
+                } else {
+                    0
+                };
+                cells
+                    .entry((chunk_of(at), kind, storeys))
+                    .or_default()
+                    .insert(at);
             }
         }
     }
 
     cells
         .into_iter()
-        .filter_map(|((chunk, kind), cells)| {
-            let style = kind.style();
-            // A side is hidden by a neighbour at least as tall: the same kind, or a taller
-            // wall of another kind.
-            let hides = |c| {
-                kind_at(c)
-                    .is_some_and(|other| other == kind || other.style().height >= style.height)
-            };
+        .filter_map(|((chunk, kind, storeys), cells)| {
+            let style = kind.style_at(storeys);
+            // A side is hidden by a neighbour at least as tall, of any kind.
+            let hides = |c| height_at(c).is_some_and(|other| other >= style.height);
             let built = build_walls(&cells, hides, tile, floor_y, &style);
             (!built.is_empty()).then_some((chunk, kind, built))
         })
@@ -170,6 +211,12 @@ mod tests {
     use crate::map::streaming::CHUNK_TILES;
 
     const CHUNK_SIZE: usize = CHUNK_TILES as usize;
+
+    fn solid() -> u64 {
+        MapFeatures::Floor as u64
+            | MapFeatures::ImpassableForPlayers as u64
+            | MapFeatures::ImpassableForEnemies as u64
+    }
 
     #[test]
     fn padding_adds_a_void_border_and_shifts_by_one() {
@@ -217,6 +264,72 @@ mod tests {
         let whole = build_walls(&cells, hides, 1.0, 0.0, &WallKind::Solid.style());
         let indices: usize = planned.iter().map(|(_, _, mesh)| mesh.indices.len()).sum();
         assert_eq!(indices, whole.indices.len());
+    }
+
+    fn top_of(mesh: &WallMesh) -> f32 {
+        mesh.positions
+            .iter()
+            .map(|p| p[1])
+            .fold(f32::NEG_INFINITY, f32::max)
+    }
+
+    /// Two tiles side by side in the map, the second with `storeys`, padded.
+    fn pair(first: u64, second: u64, storeys: u8) -> (MapFile, Vec<Vec<u64>>) {
+        let map = MapFile {
+            tiles: vec![vec![first, second]],
+            storeys: vec![vec![0, storeys]],
+            ..default()
+        };
+        let tiles = padded_tiles(&map);
+        (map, tiles)
+    }
+
+    #[test]
+    fn a_tile_with_storeys_stands_that_tall() {
+        let wall = solid();
+        let (map, tiles) = pair(wall, wall, 3);
+        let planned = plan_walls(&map, &tiles, 1.0, 0.0);
+        assert_eq!(planned.len(), 2, "one mesh per height");
+        let mut tops: Vec<f32> = planned.iter().map(|(_, _, mesh)| top_of(mesh)).collect();
+        tops.sort_by(f32::total_cmp);
+        assert!((tops[0] - WallKind::Solid.style().height).abs() < 1e-4);
+        let three_storeys = WallKind::Solid.style().height + 2.0 * STOREY_RISE;
+        assert!((tops[1] - three_storeys).abs() < 1e-4);
+    }
+
+    #[test]
+    fn the_taller_side_shows_above_a_lower_neighbour() {
+        let wall = solid();
+        let (map, tiles) = pair(wall, wall, 2);
+        let planned = plan_walls(&map, &tiles, 1.0, 0.0);
+        let side_faces_at_x = |x: f32| -> usize {
+            planned
+                .iter()
+                .map(|(_, _, mesh)| {
+                    mesh.positions
+                        .chunks(4)
+                        .filter(|q| q.iter().all(|p| (p[0] - x).abs() < 1e-4))
+                        .count()
+                })
+                .sum()
+        };
+        // Tiles are centred on their column; the padded ones at 1 and 2 meet at x = 1.5.
+        assert_eq!(side_faces_at_x(1.5), 1, "the tall tile's side, once");
+    }
+
+    #[test]
+    fn no_building_outgrows_the_cap() {
+        assert!((WallKind::Solid.style_at(9).height - TALLEST_BUILDING).abs() < 1e-4);
+    }
+
+    #[test]
+    fn only_solid_walls_take_storeys() {
+        let floor = MapFeatures::Floor as u64;
+        let fence = floor | MapFeatures::ImpassableForEnemies as u64;
+        let (map, tiles) = pair(fence, fence, 4);
+        let planned = plan_walls(&map, &tiles, 1.0, 0.0);
+        assert_eq!(planned.len(), 1, "both tiles are the same low fence");
+        assert!(top_of(&planned[0].2) < 1.0);
     }
 
     #[test]

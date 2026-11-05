@@ -82,6 +82,12 @@ raw tile number (`A: 261`). Flags: `nothing`, `water`, `grass`, `floor`, `mud`, 
 Converting a RON map writes one of these for every tile value that has no built-in
 letter.
 
+### `[storeys]`
+
+Optional, the same shape as `[tiles]`: `.` for an ordinary tile, or a digit for how many
+storeys a solid wall tile stands. Short rows mean `.`. Only the look changes:
+walking and colliders are as for any wall. The OpenStreetMap import writes it.
+
 ### `[decorations]`, `[placements]`, `[houses]`, `[waves]`
 
 One entry per line: `key: value` fields separated by `|`, in any order. Values can

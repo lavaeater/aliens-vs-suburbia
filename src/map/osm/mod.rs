@@ -178,6 +178,7 @@ fn player_passable(tile: u64) -> bool {
 struct Projected {
     id: i64,
     paint: Paint,
+    storeys: u8,
     rings: Vec<Vec<Point>>,
 }
 
@@ -221,6 +222,11 @@ pub fn import(spec: &OsmLevelSpec, data: &OsmData) -> Result<Imported, String> {
         .map(|(paint, f)| Projected {
             id: f.id,
             paint: *paint,
+            storeys: if *paint == Paint::Building {
+                classify::storeys(&f.tags)
+            } else {
+                0
+            },
             rings: match &f.shape {
                 Shape::Point(p) => vec![vec![projection.project(*p)]],
                 Shape::Line(line) => vec![line.iter().map(|p| projection.project(*p)).collect()],
@@ -338,10 +344,12 @@ pub fn import(spec: &OsmLevelSpec, data: &OsmData) -> Result<Imported, String> {
             }
         }
     }
+    let mut storeys = vec![vec![0u8; width]; height];
     for f in projected.iter().filter(|f| f.paint == Paint::Building) {
         counts[0] += 1;
         for (col, row) in geometry::fill_rings(&in_tiles(f), width, height) {
             layer[row][col] = Layer::Building;
+            storeys[row][col] = storeys[row][col].max(f.storeys);
         }
     }
     for f in &projected {
@@ -409,6 +417,15 @@ pub fn import(spec: &OsmLevelSpec, data: &OsmData) -> Result<Imported, String> {
                 .collect()
         })
         .collect();
+
+    // A wall or fence drawn across a building took the tile.
+    for (storeys, layer) in storeys.iter_mut().zip(&layer) {
+        for (storeys, layer) in storeys.iter_mut().zip(layer) {
+            if *layer != Layer::Building {
+                *storeys = 0;
+            }
+        }
+    }
 
     // Wall the level in; the roads that cross the edge are where the aliens come from.
     let perimeter = perimeter(width, height);
@@ -526,6 +543,7 @@ pub fn import(spec: &OsmLevelSpec, data: &OsmData) -> Result<Imported, String> {
         map: MapFile {
             name,
             tiles,
+            storeys,
             decorations,
             waves: spec.waves.clone(),
             stories: spec.stories.clone(),
@@ -704,6 +722,30 @@ mod tests {
         assert_eq!(spec.max_spawns, 4);
         assert!(spec.trees);
         assert_eq!(spec.fences, FenceRule::BlocksEnemies);
+    }
+
+    #[test]
+    fn buildings_stand_as_tall_as_their_tags_say() {
+        let imported = import_street(&spec());
+        let tallest = imported.map.storeys.iter().flatten().max().copied();
+        assert_eq!(tallest, Some(2), "untagged houses guess two storeys");
+        for (row, storeys) in imported.map.tiles.iter().zip(&imported.map.storeys) {
+            for (&tile, &storeys) in row.iter().zip(storeys) {
+                assert!(storeys == 0 || tile == wall_bits(), "only walls have storeys");
+            }
+        }
+
+        let tags = |pairs: &[(&str, &str)]| -> data::Tags {
+            pairs.iter().map(|(k, v)| ((*k).into(), (*v).into())).collect()
+        };
+        let storeys = |pairs: &[(&str, &str)]| classify::storeys(&tags(pairs));
+        assert_eq!(storeys(&[("building", "yes"), ("building:levels", "4")]), 4);
+        assert_eq!(storeys(&[("building", "shed"), ("building:levels", "2.5")]), 3);
+        assert_eq!(storeys(&[("building", "yes"), ("height", "9 m")]), 3);
+        assert_eq!(storeys(&[("building", "yes"), ("building:levels", "30")]), 9);
+        assert_eq!(storeys(&[("building", "garage")]), 1);
+        assert_eq!(storeys(&[("building", "apartments")]), 4);
+        assert_eq!(storeys(&[("building", "yes"), ("building:levels", "many")]), 2);
     }
 
     #[test]

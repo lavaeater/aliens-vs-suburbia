@@ -3,6 +3,9 @@
 
 use super::data::Tags;
 
+/// For turning a mapped `height` into storeys.
+const METRES_PER_STOREY: f64 = 3.0;
+
 /// Ground a tile can have. Painted largest area first, so a park inside a residential
 /// area, or a car park inside a shopping area, ends up on top.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -33,7 +36,8 @@ pub enum Paint {
     /// A road or path: floor, kept open through fences, and where it leaves the level the
     /// aliens come in.
     Road { width: f64 },
-    /// A building: solid wall tiles for now (`docs/gis-levels.md`, phase 4 makes houses).
+    /// A building: solid wall tiles for now, as tall as [`storeys`] says (`docs/gis-levels.md`,
+    /// phase 4 makes houses).
     Building,
     /// A wall line that blocks everyone.
     Wall,
@@ -107,6 +111,26 @@ pub fn classify(tags: &Tags, area: bool) -> Option<Paint> {
     }
 
     area_ground(tags).map(Paint::Ground)
+}
+
+/// How many storeys a building has: `building:levels` if it is mapped, then `height` (metres),
+/// then a guess from its type. A `.map` holds one digit per tile, so at most 9.
+pub fn storeys(tags: &Tags) -> u8 {
+    let get = |key: &str| tags.get(key).map(String::as_str);
+    let number = |value: &str| value.trim_end_matches('m').trim().parse::<f64>().ok();
+    let mapped = get("building:levels")
+        .and_then(number)
+        .or_else(|| get("height").and_then(number).map(|m| m / METRES_PER_STOREY));
+    match mapped {
+        Some(levels) if levels >= 0.5 => levels.round().min(9.0) as u8,
+        _ => match get("building").unwrap_or_default() {
+            "apartments" | "hotel" | "hospital" => 4,
+            "church" | "cathedral" => 3,
+            "shed" | "garage" | "garages" | "hut" | "cabin" | "kiosk" | "greenhouse"
+            | "service" | "kindergarten" => 1,
+            _ => 2,
+        },
+    }
 }
 
 /// Default carriageway widths, metres, by `highway` class.

@@ -130,6 +130,10 @@ pub struct MapFile {
     /// 0 = void (Nothing), non-zero = tile with feature flags set.
     #[serde(default)]
     pub tiles: Vec<Vec<u64>>,
+    /// How many storeys tall a solid wall tile stands, same shape as `tiles`. 0, or a tile
+    /// past the end, is an ordinary wall. Empty = none. Only the look: colliders don't care.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub storeys: Vec<Vec<u8>>,
     #[serde(default)]
     pub decorations: Vec<DecorationItem>,
     /// Items placed by the map editor (def-driven models on specific tiles).
