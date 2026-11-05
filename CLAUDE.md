@@ -22,7 +22,7 @@ cargo check
 cargo test
 ```
 
-Dev builds use `opt-level = 3` for all dependencies (configured in `Cargo.toml`) for acceptable frame rates without a full release build.
+Dev builds use `opt-level = 3` for all dependencies (configured in `Cargo.toml`) for acceptable frame rates without a full release build. Don't build dependencies with Cranelift (`codegen-backend` in `~/.cargo/config.toml`): it ignores that `opt-level`, and the music alone then eats a core (`docs/performance.md`). `cargo run -- --play --perf` logs frame and render pass timings.
 
 ## Architecture
 
@@ -201,6 +201,7 @@ Each behavior has its own submodule under `src/ai/`. When the flow field has no 
 - `leafwing-input-manager 0.21` — input actions and maps (0.22 is the Bevy 0.20 release; see `docs/bevy-0.20-upgrade.md`)
 - `bevy_sprinkles` — GPU particles, git dep pinned to a `main` rev (its Bevy 0.19 branch); used through `src/fx/`
 - `lava_ui_builder` — local UI helper crate used throughout for panels and buttons
+- `cpal 0.18` — depended on directly on Linux only for its `pipewire` + `realtime-dbus` features: a native PipeWire stream on a realtime thread, falling back to ALSA
 - `rusty_music` — local submodule (path dep, excluded from the workspace): generative music plugin built on `bevy_seedling 0.8` (pinned to a git rev; no 0.19 crates.io release yet)
 - `ron` — serialization for all `.ron` files
 

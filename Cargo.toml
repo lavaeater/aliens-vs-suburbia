@@ -99,6 +99,14 @@ leafwing-input-manager = "0.21"
 # GPU particles. `main` is the Bevy 0.19 branch (no release yet); pinned so it cannot move under us.
 bevy_sprinkles = { git = "https://github.com/doceazedo/sprinkles", rev = "0e978f5a9afc6b456b3693c8761e73a6c7e155bd" }
 
+# Enabled here only for its features; bevy_seedling depends on the same cpal. `default_host`
+# then opens a native PipeWire stream, on a realtime thread via rtkit, and falls back to ALSA
+# when PipeWire isn't running. `realtime-dbus` on its own does nothing on a desktop: cpal's ALSA
+# host only promotes hw-like PCMs, not the pipewire-alsa plugin. Builds need libpipewire,
+# libdbus and clang.
+[target.'cfg(target_os = "linux")'.dependencies]
+cpal = { version = "0.18", default-features = false, features = ["pipewire", "realtime-dbus"] }
+
 [features]
 map-editor = ["dep:ratatui", "dep:crossterm"]
 
