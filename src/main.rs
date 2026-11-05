@@ -8,6 +8,7 @@ use crate::ai::components::avoid_wall_components::AvoidWallsData;
 use crate::game_state::game_state_plugin::GamePlugin;
 use crate::general::components::Health;
 use crate::general::components::map_components::CurrentTile;
+use crate::player_setup::state::{InputDevice, PlayerRoster};
 use avian3d::prelude::{PhysicsDebugPlugin, PhysicsGizmos, PhysicsPlugins};
 use bevy::gizmos::AppGizmoBuilder;
 use bevy::gizmos::config::GizmoConfig;
@@ -53,6 +54,9 @@ pub(crate) mod settings;
 pub mod skein;
 pub(crate) mod towers;
 pub(crate) mod ui;
+
+/// Who plays a match started with `--play`.
+const PLAY_FLAG_CHARACTER: &str = "assets/defs/male-hazmat.ron";
 
 fn create_map(
     seed: Option<u64>,
@@ -191,7 +195,7 @@ fn print_help() {
     println!("                                             (--playground still works as an alias)");
     println!("  cargo run -- --asset-browser               Launch straight into the asset browser");
     println!("  cargo run -- --house-editor                Launch straight into the house editor");
-    println!("  cargo run -- --play                        Launch straight into a match (level 1)");
+    println!("  cargo run -- --play                        Launch straight into a match (level 1, as male-hazmat)");
     println!("  cargo run -- --play --level <path>         ... into the level at <path> (.map or .ron)");
     println!("  cargo run --features map-editor -- --map-editor [--file <path>]");
     println!("                                             Launch the map editor TUI");
@@ -323,6 +327,12 @@ fn main() -> std::process::ExitCode {
     }
 
     if straight_to_game && !straight_to_editor {
+        // The setup screen is skipped, so nobody picks a character.
+        app.insert_resource(PlayerRoster {
+            def_paths: vec![PLAY_FLAG_CHARACTER.to_string()],
+            devices: vec![InputDevice::Keyboard],
+            def_overrides: Vec::new(),
+        });
         app.add_systems(
             Startup,
             |mut next: ResMut<NextState<game_state::GameState>>| {

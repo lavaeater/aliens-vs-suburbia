@@ -133,7 +133,7 @@ weapon at its `muzzle` hardpoint, a burst of particle sparks along the aim, or b
 The global flat toon shader (`bevy_wind_waker_shader`, submodule) is configured in `main.rs`
 with `dark_level` (below it a surface bands down to black instead of resting at the 50% shadow
 tint; 0 = the old look) and `light_tint` (coloured lights tint what they hit). `cargo run --
---play` boots straight into level 1.
+--play` boots straight into level 1, as `male-hazmat` (`PLAY_FLAG_CHARACTER` in `main.rs`).
 
 ### Economy
 
