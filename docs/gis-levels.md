@@ -202,10 +202,22 @@ entity count down and each lamp's work small.
 
 Next, in order:
 
-1. **A flow field from the goal** instead of A* per alien, and no per-frame `info!` in
-   `move_towards_goal_systems.rs`. Not measured with aliens on the full map yet; A* took
-   31 ms per alien in a debug build at 800 m.
-2. **Building heights** from `building:levels` (122 of 468 buildings in `map-01.osm`).
+1. **Building heights** from `building:levels` (122 of 468 buildings in `map-01.osm`).
+
+Pathfinding is one flow field from the goal (`src/ai/flow_field.rs`), built at load and
+repaired tile by tile, instead of A* per alien. Measured in a debug build on 432 000 open
+tiles:
+
+| What | Before | Now |
+|------|--------|-----|
+| An alien spawning | 4-38 ms of A* | an array read |
+| Building the field | - | 107-115 ms, once per load |
+| A tile closing, median | - | 0.002 ms |
+| A tile closing, worst of 4 000 | - | 34 ms (a chokepoint; 2 went over 16 ms) |
+| A tile opening, worst of 4 000 | - | 3.6 ms |
+
+With vsync off and the window focused, the map runs at about 95 FPS (10.5 ms) with four
+aliens walking. Big waves are not measured yet.
 
 ### Water
 
@@ -269,7 +281,7 @@ the level area with QGIS or `ogr2ogr`, export GeoJSON. A second reader next to
 | # | What | Status |
 |---|------|--------|
 | 1 | **OSM import**: `.osm` XML and Overpass JSON readers, projection, automatic rotation, buildings / roads / ground / water / fences / trees, walled border, spawns at road exits, goal, player start, path check. `--import-osm`, `--play --level`. | **Done** (tested on made-up data; needs a first real area and a playtest) |
-| 2 | **Tune on real areas**: road widths, what counts as grass, size and performance (see *Size and performance*: rendering is streamed, pathfinding is next), fence rule. Water that blocks. | Started |
+| 2 | **Tune on real areas**: road widths, what counts as grass, size and performance (see *Size and performance*: rendering is streamed, pathfinding is a flow field), fence rule. Water that blocks. | Started |
 | 3 | **More gameplay from the map**: goal by address, street lamps along roads, loot next to houses, decorations from OSM points (benches, bins, cars at parking). | |
 | 4 | **Real houses**: squared-up footprints as `HouseDef`s with doors and windows, type from `building=*` (house / detached / terrace / apartments / garage) or Lantmäteriet's `ändamål`; the house mesh work (`docs/house-editor.md`) draws them. | |
 | 5 | **Image import** and **Lantmäteriet reader**. | |

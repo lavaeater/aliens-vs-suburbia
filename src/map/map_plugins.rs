@@ -177,6 +177,7 @@ impl Plugin for NonStateMapStuff {
                 occupied_tiles: HashSet::new(),
                 goal: (0, 0),
                 path_reopened: false,
+                flow: crate::ai::flow_field::FlowField::default(),
             });
     }
 }

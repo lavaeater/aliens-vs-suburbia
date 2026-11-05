@@ -443,6 +443,7 @@ mod execute_build_tests {
             occupied_tiles: HashSet::new(),
             goal: (0, 0),
             path_reopened: false,
+            flow: crate::ai::flow_field::FlowField::default(),
         });
         app.add_systems(Update, (execute_build, catch).chain());
 

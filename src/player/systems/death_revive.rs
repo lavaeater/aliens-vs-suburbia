@@ -55,7 +55,9 @@ pub struct Respawning {
 pub struct RespawnQueue {
     pub pending: Vec<Respawning>,
     pub out: Vec<usize>,
-    /// Set once any player has spawned this level, so an empty map is not a team wipe.
+    /// Set once a player has stood on this level, so an empty map is not a team wipe. Only
+    /// `check_team_wipe` sets it, from the entity itself: a spawn is a queued command, and
+    /// setting this when it is queued read as a wipe if the check ran before it applied.
     pub started: bool,
 }
 
@@ -406,14 +408,18 @@ pub fn respawn_position(death: Vec3, walkable: &[Vec3], aliens: &[Vec3]) -> Vec3
 
 /// Fail the level once nobody is alive, nobody is coming back, and someone did play.
 pub fn check_team_wipe(
-    queue: Res<RespawnQueue>,
+    mut queue: ResMut<RespawnQueue>,
     players: Query<(), With<Player>>,
     mut tracker: Option<ResMut<LevelTracker>>,
 ) {
     let Some(tracker) = tracker.as_mut() else {
         return;
     };
-    if !queue.started || !players.is_empty() || !queue.pending.is_empty() {
+    if !players.is_empty() {
+        queue.started = true;
+        return;
+    }
+    if !queue.started || !queue.pending.is_empty() {
         return;
     }
     if matches!(tracker.level_state, LevelState::InProgress) {
@@ -429,6 +435,58 @@ pub fn reset_respawn_queue(mut queue: ResMut<RespawnQueue>) {
 mod tests {
     use super::*;
     use crate::assets::asset_definition::AmmoKind;
+
+    fn wipe_app() -> App {
+        let mut app = App::new();
+        app.init_resource::<RespawnQueue>();
+        app.insert_resource(LevelTracker {
+            level_state: LevelState::InProgress,
+            ..default()
+        });
+        app.add_systems(Update, check_team_wipe);
+        app
+    }
+
+    fn level_state(app: &App) -> LevelState {
+        app.world().resource::<LevelTracker>().level_state
+    }
+
+    /// The first frame of a level: the spawn is queued, the entity not there yet.
+    #[test]
+    fn a_player_who_has_not_arrived_yet_is_not_a_team_wipe() {
+        let mut app = wipe_app();
+        app.update();
+        assert!(matches!(level_state(&app), LevelState::InProgress));
+    }
+
+    #[test]
+    fn the_last_player_gone_is_a_team_wipe() {
+        let mut app = wipe_app();
+        let player = app.world_mut().spawn(Player).id();
+        app.update();
+        assert!(matches!(level_state(&app), LevelState::InProgress));
+
+        app.world_mut().despawn(player);
+        app.update();
+        assert!(matches!(level_state(&app), LevelState::Failed));
+    }
+
+    #[test]
+    fn a_player_waiting_to_respawn_keeps_the_level_going() {
+        let mut app = wipe_app();
+        let player = app.world_mut().spawn(Player).id();
+        app.update();
+        app.world_mut().despawn(player);
+        app.world_mut().resource_mut::<RespawnQueue>().pending.push(Respawning {
+            slot: 0,
+            lives_left: 1,
+            timer: Timer::from_seconds(1.0, TimerMode::Once),
+            death_position: Vec3::ZERO,
+            anchor: None,
+        });
+        app.update();
+        assert!(matches!(level_state(&app), LevelState::InProgress));
+    }
 
     #[test]
     fn anchor_cycles_through_fell_here_and_each_living_player() {

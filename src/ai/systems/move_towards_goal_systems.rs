@@ -1,3 +1,4 @@
+use crate::ai::flow_field::Step;
 use crate::ai::components::move_towards_goal_components::{
     AgentCannotFindPath, AgentReachedGoal, MoveTowardsGoalData,
 };
@@ -8,9 +9,41 @@ use crate::game_state::score_keeper::GameTrackingEvent;
 use crate::general::components::map_components::{AlienGoal, CurrentTile};
 use crate::general::resources::map_resources::MapGraph;
 use crate::general::systems::map_systems::TileDefinitions;
-use avian3d::prelude::{LinearVelocity, Position, Rotation};
+use avian3d::prelude::{Position, Rotation};
 use bevy::prelude::*;
-use pathfinding::directed::astar::astar;
+
+/// Bring the flow field up to date before anyone reads it.
+pub fn refresh_flow_field(mut map_graph: ResMut<MapGraph>) {
+    if !map_graph.flow.fresh {
+        map_graph.refresh_flow();
+    }
+}
+
+/// Turn towards `target`, and walk once facing it.
+fn steer(controller: &mut CharacterControl, position: Vec2, rotation: &Rotation, target: Vec2) {
+    let facing = rotation.0.mul_vec3(Vec3::new(0.0, 0.0, -1.0)).xz();
+    let angle = facing.angle_to(target - position).to_degrees();
+
+    controller.rotations.clear();
+    controller.directions.clear();
+    let angle_speed_value = 90.0;
+    let angle_forward_value = 15.0;
+    if angle.abs() < angle_speed_value {
+        controller.turn_speed = controller.max_turn_speed * (angle.abs() / angle_speed_value);
+    } else {
+        controller.turn_speed = controller.max_turn_speed;
+    }
+    if angle.abs() > 1.0 {
+        if angle > 0.0 {
+            controller.rotations.insert(ControlRotation::Left);
+        } else {
+            controller.rotations.insert(ControlRotation::Right);
+        }
+    }
+    if angle.abs() < angle_forward_value {
+        controller.directions.insert(ControlDirection::Forward);
+    }
+}
 
 #[allow(clippy::type_complexity)]
 pub fn move_towards_goal_system(
@@ -23,7 +56,6 @@ pub fn move_towards_goal_system(
             &Position,
             &Rotation,
             &CurrentTile,
-            &LinearVelocity,
         ),
         With<Alien>,
     >,
@@ -33,125 +65,43 @@ pub fn move_towards_goal_system(
     goal_query: Query<(), With<AlienGoal>>,
 ) {
     if goal_query.is_empty() {
-        info!("Has no goal");
         return;
     }
 
-    for (
-        entity,
-        mut move_towards_goal_data,
-        mut controller,
-        alien_position,
-        alien_rotation,
-        alien_current_tile,
-        _linear_velocity,
-    ) in alien_query.iter_mut()
+    for (entity, mut walk, mut controller, position, rotation, current_tile) in
+        alien_query.iter_mut()
     {
-        // if move_towards_goal_data.path.is_some() && linear_velocity.0.length() < 0.001 {
-        //     info!("this little alien is standing still, i.e. has no path to goal right now.");
-        //     move_towards_goal_data.path = None;
-        //     continue;
-        // }
-
-        // info!("This little alien is supposed to be moving!");
-
-        match &move_towards_goal_data.path.clone() {
-            None => {
-                info!("We have no path!");
-                let astar_result = astar(
-                    &alien_current_tile.tile,
-                    |t| {
-                        map_graph
-                            .path_finding_grid
-                            .neighbours(*t)
-                            .into_iter()
-                            .map(|t| (t, 1))
-                    },
-                    |t| map_graph.path_finding_grid.distance(*t, map_graph.goal),
-                    |t| *t == map_graph.goal,
-                );
-                match astar_result {
-                    None => {
-                        info!("Could not find a path right now");
-                        cant_find_path_mw.write(AgentCannotFindPath(entity));
-                    }
-                    Some(path) => {
-                        info!("Found path! {:?}", &path);
-                        let Some((_, rest)) = path.0.split_first() else {
-                            return;
-                        };
-                        move_towards_goal_data.path = Some(rest.to_vec());
-                    }
-                }
-            }
-            Some(path) => {
-                info!("Alien has path!");
-                if path.is_empty() {
-                    info!("Path is empty");
-                    move_towards_goal_data.path = None;
+        // Heading somewhere that has since been built on counts as heading nowhere.
+        let held = walk
+            .next
+            .filter(|tile| map_graph.path_finding_grid.has_vertex(*tile));
+        let next_tile = match held {
+            Some(tile) => tile,
+            None => match map_graph.flow.step_from(current_tile.tile) {
+                Step::Towards(tile) => tile,
+                Step::Arrived => {
+                    walk.next = None;
                     alien_reached_goal_mw.write(AgentReachedGoal(entity));
-                } else {
-                    info!("Path has some steps left!");
-                    if let Some(next_tile) = path.first() {
-                        if map_graph.path_finding_grid.has_vertex(*next_tile) {
-                            info!("Found the next tile");
-                            let next_tile_position =
-                                next_tile.to_world_coords(&tile_definitions).xz();
-                            let alien_position_vector2 = alien_position.0.xz();
-                            let alien_direction_vector2 =
-                                alien_rotation.0.mul_vec3(Vec3::new(0.0, 0.0, -1.0)).xz();
-                            let alien_to_goal_direction =
-                                next_tile_position - alien_position_vector2;
-                            let distance = alien_to_goal_direction.length();
-                            if distance < 0.5
-                                && let Some((_, rest)) = path.split_first()
-                            {
-                                info!("Distance was sooo short, lets move to next!");
-                                move_towards_goal_data.path = Some(rest.to_vec());
-                                continue;
-                            }
-
-                            let angle = alien_direction_vector2
-                                .angle_to(alien_to_goal_direction)
-                                .to_degrees();
-                            info!(
-                                "Steering: alien_pos={:.2?} tile_pos={:.2?} facing={:.2?} to_goal={:.2?} angle={:.1}deg dist={:.2}",
-                                alien_position.0.xz(),
-                                next_tile_position,
-                                alien_direction_vector2,
-                                alien_to_goal_direction,
-                                angle,
-                                distance
-                            );
-                            controller.rotations.clear();
-                            controller.directions.clear();
-                            let angle_speed_value = 90.0;
-                            let angle_forward_value = 15.0;
-                            if angle.abs() < angle_speed_value {
-                                controller.turn_speed =
-                                    controller.max_turn_speed * (angle.abs() / angle_speed_value);
-                            } else {
-                                controller.turn_speed = controller.max_turn_speed;
-                            }
-                            if angle.abs() > 1.0 {
-                                if angle > 0.0 {
-                                    controller.rotations.insert(ControlRotation::Left);
-                                } else {
-                                    controller.rotations.insert(ControlRotation::Right);
-                                }
-                            }
-                            if angle.abs() < angle_forward_value {
-                                info!("We can move forward!");
-                                controller.directions.insert(ControlDirection::Forward);
-                            }
-                        } else {
-                            info!("Couldn't find next tile on map!");
-                            move_towards_goal_data.path = None;
-                        }
-                    }
+                    continue;
                 }
-            }
+                Step::NoWay => {
+                    walk.next = None;
+                    cant_find_path_mw.write(AgentCannotFindPath(entity));
+                    continue;
+                }
+            },
+        };
+        walk.next = Some(next_tile);
+
+        let target = next_tile.to_world_coords(&tile_definitions).xz();
+        if position.0.xz().distance(target) < 0.5 {
+            walk.next = match map_graph.flow.step_from(next_tile) {
+                Step::Towards(tile) => Some(tile),
+                Step::Arrived | Step::NoWay => None,
+            };
+            continue;
         }
+        steer(&mut controller, position.0.xz(), rotation, target);
     }
 }
 

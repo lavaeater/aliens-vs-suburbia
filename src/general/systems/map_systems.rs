@@ -28,6 +28,7 @@ use bevy_wind_waker_shader::WindWakerShaderBuilder;
 use pathfinding::grid::Grid;
 use std::collections::HashSet;
 
+use crate::ai::flow_field::FlowField;
 use crate::assets::asset_definition::{AssetDefinition, ModelType};
 use crate::general::components::{Health, Indestructible};
 use crate::general::damage::{DamageResistances, Faction};
@@ -147,6 +148,7 @@ pub fn map_loader(
         }
         let m = &padded;
         map_graph.path_finding_grid = Grid::new(cols, rows);
+        map_graph.flow = FlowField::default();
 
         // Single pass: build tile sets and handle functional markers.
         let mut floor_set: HashSet<(i32, i32)> = HashSet::new();
@@ -586,15 +588,13 @@ pub fn remove_tile_from_map(
     mut map_graph: ResMut<MapGraph>,
 ) {
     for remove_tile_event in remove_tile_evr.read() {
-        map_graph
-            .path_finding_grid
-            .remove_vertex(remove_tile_event.0);
+        map_graph.close(remove_tile_event.0);
     }
 }
 
 pub fn add_tile_to_map(mut add_tile_evr: MessageReader<AddTile>, mut map_graph: ResMut<MapGraph>) {
     for add_tile_event in add_tile_evr.read() {
-        map_graph.path_finding_grid.add_vertex(add_tile_event.0);
+        map_graph.open(add_tile_event.0);
         map_graph.path_reopened = true;
     }
 }

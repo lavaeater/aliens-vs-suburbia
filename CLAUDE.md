@@ -43,7 +43,7 @@ Most gameplay systems use `.run_if(in_state(InGame))`. Physics runs on a fixed t
 
 | Module | Responsibility |
 |--------|---------------|
-| `src/ai/` | Enemy AI behaviors: `ApproachAndAttackPlayer`, `AvoidWalls`, `MoveTowardsGoal`, `DestroyTheMap`. `recheck_path_after_tile_opened` clears stale destroy-behavior when a tile opens. |
+| `src/ai/` | Enemy AI behaviors: `ApproachAndAttackPlayer`, `AvoidWalls`, `MoveTowardsGoal`, `DestroyTheMap`. `flow_field.rs` (pure, tested): steps to the goal per tile, a breadth-first walk at load (`MapGraph::refresh_flow`), repaired per tile after (`opened`/`closed`). Change the grid through `MapGraph::open`/`close` so the field follows. Aliens hold `MoveTowardsGoalData::next` until they reach it, then read the next tile with `step_from`. A* remains only for finding something to destroy. `recheck_path_after_tile_opened` clears stale destroy-behavior when a tile opens. |
 | `src/alien/` | Alien spawning (wave-based via `WaveManager`). `wave_manager.rs` drives wave progression; waves can come from `MapFile.waves` or fall back to hardcoded defaults. |
 | `src/player/` | Player character: physics, auto-aim, scene loading, outline rendering, death/revive, special abilities (`src/player/systems/abilities.rs`), torso twist (`systems/torso_twist.rs`). |
 | `src/towers/` | Tower entities: shooting, slow, area-damage sensors and cooldown systems. |
@@ -178,7 +178,7 @@ Uses **avian3d 0.7**. Collision layers in `src/general/components/mod.rs`: `Impa
 
 ### AI Pattern
 
-Each behavior has its own submodule under `src/ai/`. When aliens can't find a path, `MustDestroyTheMap` is inserted. When a tile is re-opened (`path_reopened` flag on `MapGraph`), `recheck_path_after_tile_opened` clears destroy-behavior from all aliens if a normal path now exists.
+Each behavior has its own submodule under `src/ai/`. When the flow field has no way to the goal from an alien's tile, `MustDestroyTheMap` is inserted. When a tile is re-opened (`path_reopened` flag on `MapGraph`), `recheck_path_after_tile_opened` clears destroy-behavior from all aliens if a normal path now exists.
 
 ### Bevy 0.19 Patterns
 
@@ -195,7 +195,7 @@ Each behavior has its own submodule under `src/ai/`. When aliens can't find a pa
 
 - `bevy 0.19` — game engine
 - `avian3d 0.7` — 3D physics (`parry-f32` feature required)
-- `pathfinding 4.6.0` — A* grid navigation
+- `pathfinding 4.6.0` — the `Grid` type, and A* for `DestroyTheMap`
 - `bevy_mod_outline 0.13` — entity outlines
 - `bevy-inspector-egui 0.37` — runtime debug inspector
 - `leafwing-input-manager 0.21` — input actions and maps (0.22 is the Bevy 0.20 release; see `docs/bevy-0.20-upgrade.md`)

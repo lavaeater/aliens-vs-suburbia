@@ -168,7 +168,7 @@ pub fn spawn_aliens(
                CurrentAnimationKey::new("aliens".into(), AnimationKey::Walk),
                AvoidWallsData::new(0.125, 0.125, 0.125, 5.0),
                ApproachAndAttackPlayerData::default(),
-               MoveTowardsGoalData { path: None },
+               MoveTowardsGoalData { next: None },
                AlienSightShape::default(),
                Attack::default(),
                Health::default(),
