@@ -47,6 +47,7 @@ pub(crate) mod map_editor;
 pub(crate) mod map_editor_tui;
 pub(crate) mod model_settings;
 pub(crate) mod music;
+mod perf;
 pub(crate) mod player;
 pub(crate) mod player_setup;
 pub(crate) mod poly_pizza;
@@ -197,6 +198,7 @@ fn print_help() {
     println!("  cargo run -- --house-editor                Launch straight into the house editor");
     println!("  cargo run -- --play                        Launch straight into a match (level 1, as male-hazmat)");
     println!("  cargo run -- --play --level <path>         ... into the level at <path> (.map or .ron)");
+    println!("  cargo run -- --play --perf                 ... logging frame and render pass timings, uncapped");
     println!("  cargo run --features map-editor -- --map-editor [--file <path>]");
     println!("                                             Launch the map editor TUI");
     println!("  cargo run -- --create-map [OPTIONS]        Generate a map file");
@@ -306,6 +308,10 @@ fn main() -> std::process::ExitCode {
 
     if let Some(level) = start_level {
         app.insert_resource(general::systems::map_systems::StartLevel(level));
+    }
+
+    if args.iter().any(|a| a == "--perf") {
+        app.add_plugins(perf::PerfPlugin);
     }
 
     if straight_to_asset_browser {
