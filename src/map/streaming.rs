@@ -1,11 +1,11 @@
-//! Streaming: what a map scatters over its tiles exists only near the camera.
+//! Streaming: what you can see of a map exists only near the camera.
 //!
-//! A map's lights and loot bags scale with its area: 800 x 800 tiles plan about 17 000
-//! lights (many casting shadows) and 29 000 bags, each a glTF scene. So they are planned
-//! once, when the map loads, and kept as plain data per [`Chunk`] in [`MapStream`]. The
-//! chunks the camera can see get entities, under one root per chunk; the ones it has left
-//! lose them. A bag picked up in the meantime is gone from the plan when its chunk unloads,
-//! so it stays gone.
+//! A map's lights, loot bags and floor and wall meshes scale with its area: 800 x 800 tiles
+//! plan about 17 000 lights (many casting shadows) and 29 000 bags, each a glTF scene. So
+//! they are planned once, when the map loads, and kept per [`Chunk`] in [`MapStream`]: the
+//! lights and bags as plain data, the surfaces as built meshes. The chunks the camera can
+//! see get entities, under one root per chunk; the ones it has left lose them. A bag picked
+//! up in the meantime is gone from the plan when its chunk unloads, so it stays gone.
 //!
 //! The tile grid, pathfinding and colliders are **not** streamed: aliens walk the whole map
 //! off screen and need them everywhere.
@@ -16,14 +16,17 @@
 
 use std::collections::{HashMap, HashSet};
 
+use bevy::light::NotShadowCaster;
 use bevy::prelude::*;
 
 use crate::camera::components::GameCamera;
+use crate::general::components::map_components::Floor;
 use crate::general::events::map_events::LoadMap;
 use crate::general::systems::map_systems::TileDefinitions;
 use crate::loot::bags::{self, PlannedBag, StreamedBag};
+use crate::map::floor_mesh::{TerrainColor, build_floors};
 use crate::map::map_lights::{Fixtures, LightPlan, plan_lights, spawn_light};
-use crate::map::walls::padded_tiles;
+use crate::map::walls::{WallKind, padded_tiles, plan_walls};
 
 /// A chunk's edge, in tiles.
 pub const CHUNK_TILES: i32 = 32;
@@ -140,12 +143,26 @@ fn forget_taken_bags(bags: &mut Vec<PlannedBag>, chunk: Chunk, left: &HashSet<St
     });
 }
 
+/// One built mesh of a chunk.
+struct Surface {
+    kind: SurfaceKind,
+    mesh: Handle<Mesh>,
+    material: Handle<StandardMaterial>,
+}
+
+#[derive(Clone, Copy)]
+enum SurfaceKind {
+    Floor,
+    Wall(WallKind),
+}
+
 /// What stands in one chunk.
 #[derive(Default)]
 struct ChunkPlan {
     /// A light and its animation seed.
     lights: Vec<(LightPlan, f32)>,
     bags: Vec<PlannedBag>,
+    surfaces: Vec<Surface>,
 }
 
 /// The current map's scatter: all of it as data, the chunks near the camera as entities.
@@ -162,7 +179,78 @@ pub struct MapStream {
 #[derive(Component)]
 pub struct MapChunk;
 
-/// Plan a map's lights and bags when it loads.
+/// A floor's look. Terrain of one colour shares it, so its chunks can batch.
+fn floor_material(
+    [r, g, b]: TerrainColor,
+    materials: &mut Assets<StandardMaterial>,
+) -> Handle<StandardMaterial> {
+    materials.add(StandardMaterial {
+        base_color: Color::srgb_u8(r, g, b),
+        perceptual_roughness: 1.0,
+        metallic: 0.0,
+        ..default()
+    })
+}
+
+/// Build a map's floors and walls into the chunks' plans.
+fn plan_surfaces(
+    load: &LoadMap,
+    tiles: &[Vec<u64>],
+    tile_defs: &TileDefinitions,
+    planned: &mut HashMap<Chunk, ChunkPlan>,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+) {
+    let (tile, floor_y) = (tile_defs.tile_width, tile_defs.floor_level);
+
+    let mut floor_looks: HashMap<TerrainColor, Handle<StandardMaterial>> = HashMap::new();
+    for ((chunk, color), floor) in build_floors(tiles, tile, floor_y) {
+        let material = floor_looks
+            .entry(color)
+            .or_insert_with(|| floor_material(color, materials))
+            .clone();
+        planned.entry(chunk).or_default().surfaces.push(Surface {
+            kind: SurfaceKind::Floor,
+            mesh: meshes.add(floor.into_mesh()),
+            material,
+        });
+    }
+
+    let mut wall_looks: HashMap<WallKind, Handle<StandardMaterial>> = HashMap::new();
+    for (chunk, kind, wall) in plan_walls(&load.map, tiles, tile, floor_y) {
+        let material = wall_looks
+            .entry(kind)
+            .or_insert_with(|| materials.add(kind.material()))
+            .clone();
+        planned.entry(chunk).or_default().surfaces.push(Surface {
+            kind: SurfaceKind::Wall(kind),
+            mesh: meshes.add(wall.into_mesh()),
+            material,
+        });
+    }
+}
+
+fn spawn_surface(parent: &mut ChildSpawnerCommands, surface: &Surface) {
+    let mut spawned = parent.spawn((
+        Mesh3d(surface.mesh.clone()),
+        MeshMaterial3d(surface.material.clone()),
+    ));
+    match surface.kind {
+        // Nothing lies below the floor, and every shadow-casting lamp in view would
+        // otherwise redraw it into its shadow map.
+        SurfaceKind::Floor => {
+            spawned.insert((Name::from("Floor"), Floor {}, NotShadowCaster));
+        }
+        SurfaceKind::Wall(WallKind::Solid) => {
+            spawned.insert(Name::from(WallKind::Solid.label()));
+        }
+        SurfaceKind::Wall(kind) => {
+            spawned.insert((Name::from(kind.label()), NotShadowCaster));
+        }
+    }
+}
+
+/// Plan a map's chunks when it loads.
 pub fn plan_map_stream(
     mut loads: MessageReader<LoadMap>,
     mut stream: ResMut<MapStream>,
@@ -170,6 +258,7 @@ pub fn plan_map_stream(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     asset_server: Res<AssetServer>,
+    tile_defs: Res<TileDefinitions>,
 ) {
     for load in loads.read() {
         // Leaving a match sweeps these already, hence `try_`.
@@ -196,6 +285,14 @@ pub fn plan_map_stream(
             }
             None => (Vec::new(), String::new(), 0),
         };
+        plan_surfaces(
+            load,
+            &tiles,
+            &tile_defs,
+            &mut planned,
+            &mut meshes,
+            &mut materials,
+        );
         info!(
             "planned {} map lights and {bag_count} loot bags in {} chunks",
             lights.len(),
@@ -241,12 +338,14 @@ pub fn stream_map_chunks(
     if stream.planned.is_empty() {
         return;
     }
-    let (view, centre) = cameras.single().map_or((View::EVERYTHING, Vec2::ZERO), |(camera, at)| {
-        let under = at.translation().xz() / tile_defs.tile_width;
-        let reach = View::around(under, MAX_VIEW_REACH);
-        let view = camera_view(camera, at, &tile_defs).map_or(reach, |v| v.clipped_to(reach));
-        (view, under)
-    });
+    let (view, centre) = cameras
+        .single()
+        .map_or((View::EVERYTHING, Vec2::ZERO), |(camera, at)| {
+            let under = at.translation().xz() / tile_defs.tile_width;
+            let reach = View::around(under, MAX_VIEW_REACH);
+            let view = camera_view(camera, at, &tile_defs).map_or(reach, |v| v.clipped_to(reach));
+            (view, under)
+        });
 
     let stream = &mut *stream;
     let leaving = to_unload(view, stream.live.keys().copied());
@@ -279,6 +378,9 @@ pub fn stream_map_chunks(
                 Visibility::default(),
             ))
             .with_children(|parent| {
+                for surface in &plan.surfaces {
+                    spawn_surface(parent, surface);
+                }
                 let tw = tile_defs.tile_width;
                 for (light, seed) in &plan.lights {
                     let at = Vec3::new(
@@ -290,7 +392,14 @@ pub fn stream_map_chunks(
                 }
                 for (id, bag) in plan.bags.iter().enumerate() {
                     let id = StreamedBag { chunk, id };
-                    bags::spawn_bag(parent, bag, id, &stream.bag_looks, &stream.bag_table, &tile_defs);
+                    bags::spawn_bag(
+                        parent,
+                        bag,
+                        id,
+                        &stream.bag_looks,
+                        &stream.bag_table,
+                        &tile_defs,
+                    );
                 }
             })
             .id();
@@ -333,7 +442,12 @@ mod tests {
         let planned: Vec<Chunk> = (0..12)
             .flat_map(|row| (0..12).map(move |col| (col, row)))
             .collect();
-        let loaded = to_load(view, Vec2::splat(SIZE * 5.5), planned.clone(), &HashSet::new());
+        let loaded = to_load(
+            view,
+            Vec2::splat(SIZE * 5.5),
+            planned.clone(),
+            &HashSet::new(),
+        );
         assert_eq!(loaded.first(), Some(&(5, 5)));
         assert!(loaded.contains(&(6, 6)) && loaded.contains(&(4, 4)));
         assert!(!loaded.contains(&(7, 5)) && !loaded.contains(&(3, 5)));
@@ -380,9 +494,18 @@ mod tests {
         let mut bags = vec![bag(1), bag(2), bag(3)];
         // Bag 1 was picked up; another chunk's bag with the same id doesn't count.
         let left = HashSet::from([
-            StreamedBag { chunk: (0, 0), id: 0 },
-            StreamedBag { chunk: (0, 0), id: 2 },
-            StreamedBag { chunk: (9, 9), id: 1 },
+            StreamedBag {
+                chunk: (0, 0),
+                id: 0,
+            },
+            StreamedBag {
+                chunk: (0, 0),
+                id: 2,
+            },
+            StreamedBag {
+                chunk: (9, 9),
+                id: 1,
+            },
         ]);
         forget_taken_bags(&mut bags, (0, 0), &left);
         assert_eq!(bags, vec![bag(1), bag(3)]);

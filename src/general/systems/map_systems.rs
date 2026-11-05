@@ -17,9 +17,7 @@ use crate::map::{BitFlags, MapFeatures};
 use crate::settings::resources::GameSettings;
 use avian3d::prelude::{Collider, CollisionLayers, Position, RigidBody};
 use bevy::asset::AssetServer;
-use bevy::asset::RenderAssetUsages;
 use bevy::math::{Quat, Vec3};
-use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::pbr::StandardMaterial;
 use bevy::prelude::{
     Assets, Color, Commands, Has, Mesh, Mesh3d, MeshMaterial3d, MessageReader, MessageWriter, Name,
@@ -30,8 +28,6 @@ use bevy_wind_waker_shader::WindWakerShaderBuilder;
 use pathfinding::grid::Grid;
 use std::collections::HashSet;
 
-/// Positions, normals, UVs and indices accumulated per terrain color while building floor meshes.
-type TerrainQuadMesh = (Vec<[f32; 3]>, Vec<[f32; 3]>, Vec<[f32; 2]>, Vec<u32>);
 use crate::assets::asset_definition::{AssetDefinition, ModelType};
 use crate::general::components::{Health, Indestructible};
 use crate::general::damage::{DamageResistances, Faction};
@@ -119,25 +115,6 @@ impl TileDefinitions {
             self.tile_width * y as f32,
         )
     }
-}
-
-fn terrain_color_key(mf: BitFlags<MapFeatures>) -> [u8; 3] {
-    if mf.contains(MapFeatures::Water) {
-        return [38, 90, 179];
-    }
-    if mf.contains(MapFeatures::Mud) {
-        return [115, 82, 46];
-    }
-    if mf.contains(MapFeatures::Snow) {
-        return [209, 224, 235];
-    }
-    if mf.contains(MapFeatures::Rock) {
-        return [97, 89, 77];
-    }
-    if mf.contains(MapFeatures::Grass) {
-        return [56, 140, 56];
-    }
-    [140, 133, 122] // Floor (default)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -320,76 +297,6 @@ pub fn map_loader(
             }
         } else {
             bevy::log::error!("No \"floor\" model def found; skipping floor colliders");
-        }
-
-        // ── Floor visual mesh (per-terrain-type coloured quads) ───────────────
-        {
-            let mut terrain_quads: std::collections::HashMap<[u8; 3], TerrainQuadMesh> =
-                std::collections::HashMap::default();
-            let tw = tile_defs.tile_width;
-            let y_floor = tile_defs.floor_level;
-            #[allow(clippy::needless_range_loop)]
-            for row in 0..rows {
-                for col in 0..cols {
-                    let raw = m[row][col];
-                    if raw == 0 {
-                        continue;
-                    }
-                    let mf = BitFlags::<MapFeatures>::from_bits_truncate(raw);
-                    let color_key = terrain_color_key(mf);
-                    let entry = terrain_quads.entry(color_key).or_default();
-                    let base = entry.0.len() as u32;
-                    let (x0, x1) = (tw * (col as f32 - 0.5), tw * (col as f32 + 0.5));
-                    let (z0, z1) = (tw * (row as f32 - 0.5), tw * (row as f32 + 0.5));
-                    entry.0.extend_from_slice(&[
-                        [x0, y_floor, z0],
-                        [x1, y_floor, z0],
-                        [x1, y_floor, z1],
-                        [x0, y_floor, z1],
-                    ]);
-                    entry.1.extend_from_slice(&[[0.0, 1.0, 0.0]; 4]);
-                    entry
-                        .2
-                        .extend_from_slice(&[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]);
-                    entry.3.extend_from_slice(&[
-                        base,
-                        base + 2,
-                        base + 1,
-                        base,
-                        base + 3,
-                        base + 2,
-                    ]);
-                }
-            }
-            for ([r, g, b], (positions, normals, uvs, indices)) in terrain_quads {
-                let mut mesh = Mesh::new(
-                    PrimitiveTopology::TriangleList,
-                    RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
-                );
-                mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
-                mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
-                mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
-                mesh.insert_indices(Indices::U32(indices));
-                let base_color = Color::srgb(
-                    f32::from(r) / 255.0,
-                    f32::from(g) / 255.0,
-                    f32::from(b) / 255.0,
-                );
-                commands.spawn((
-                    Name::from("Floor"),
-                    Floor {},
-                    // Nothing lies below it, and every shadow-casting lamp in view would
-                    // otherwise redraw the whole map's floor into its shadow map.
-                    bevy::light::NotShadowCaster,
-                    Mesh3d(meshes.add(mesh)),
-                    MeshMaterial3d(materials.add(StandardMaterial {
-                        base_color,
-                        perceptual_roughness: 1.0,
-                        metallic: 0.0,
-                        ..Default::default()
-                    })),
-                ));
-            }
         }
 
         // ── Impassable cube colliders (greedy merge per category) ─────────────

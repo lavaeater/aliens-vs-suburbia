@@ -1,9 +1,10 @@
 //! Wall meshes for impassable tiles: what the colliders in `map_loader` look like.
 //!
-//! Pure geometry, no ECS: given the set of tiles in one wall category, build one merged
-//! mesh for all of them. Only the faces that can be seen are emitted -- the side between
-//! two neighbouring wall tiles is never drawn -- so a long wall is a handful of quads per
-//! tile instead of a box each, and a whole map is one draw call per category.
+//! Pure geometry, no ECS: given a set of tiles in one wall category, build one merged mesh
+//! for all of them. Only the faces that can be seen are emitted -- the side between two
+//! neighbouring wall tiles is never drawn -- so a long wall is a handful of quads per tile
+//! instead of a box each. `walls::plan_walls` calls this once per chunk: a shadow-casting
+//! lamp redraws whole entities, so one mesh for the map would be redrawn by all of them.
 //!
 //! A wall is a body with an optional cap: a slightly wider, lighter slab on top that
 //! overhangs only on the exposed sides, so runs of wall read as one continuous coping
@@ -13,6 +14,9 @@
 //! that still reads once ambient light is gone.
 
 use std::collections::HashSet;
+
+use bevy::asset::RenderAssetUsages;
+use bevy::mesh::{Indices, Mesh, PrimitiveTopology};
 
 /// One wall category's look.
 #[derive(Clone, Copy, Debug)]
@@ -47,6 +51,18 @@ pub struct WallMesh {
 impl WallMesh {
     pub fn is_empty(&self) -> bool {
         self.indices.is_empty()
+    }
+
+    pub fn into_mesh(self) -> Mesh {
+        let mut mesh = Mesh::new(
+            PrimitiveTopology::TriangleList,
+            RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
+        );
+        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, self.positions);
+        mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, self.normals);
+        mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, self.colors);
+        mesh.insert_indices(Indices::U32(self.indices));
+        mesh
     }
 
     /// A quad whose corners `c` run counter-clockwise seen from the side `normal` points

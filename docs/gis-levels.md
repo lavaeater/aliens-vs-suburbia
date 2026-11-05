@@ -179,22 +179,33 @@ scattered over the area, so that is streamed:
 
 - **Always loaded:** the tile grid, pathfinding, colliders, spawns and goal. Aliens walk the
   whole map off screen.
-- **Streamed by `src/map/streaming.rs`:** lights and loot bags. They are planned once at load
-  and kept as data per 32 x 32 chunk; the chunks the camera can see get entities.
+- **Streamed by `src/map/streaming.rs`:** lights, loot bags, and floor and wall meshes. They
+  are planned once at load and kept per 32 x 32 chunk (meshes built, the rest as data); the
+  chunks the camera can see get entities.
+- **Budgeted:** only the 16 lamps nearest the camera cast shadows (`SHADOW_LAMPS`). Each
+  shadow map is a render pass of its own, and their number was the last big cost.
 
-Full map, debug build, standing still: spawning everything at once produced no frame in 70 s;
-streaming with the floor kept out of shadow maps gives about 38 FPS, against 55 on the 50 x 50
-level.
+Debug build, standing still, no aliens yet. The first three rows are the 782 x 782 export, the
+last two the 700 x 700 one:
+
+| What | Frame | FPS |
+|------|-------|-----|
+| Everything spawned at once | no frame in 70 s | - |
+| Streaming | | 22 |
+| Plus the floor out of shadow maps | 26 ms | 38 |
+| Plus chunked floor and wall meshes | 26 ms | 38 |
+| Plus 16 shadow lamps | 17 ms | 60 (vsync) |
+
+Chunking the meshes didn't change the frame rate here: the render thread was busy with the
+lamps, not with what they drew (61 lamps 26 ms; 16, 8 or 0 lamps 17 ms). It does keep the
+entity count down and each lamp's work small.
 
 Next, in order:
 
-1. **Chunk the floor and wall meshes** (one mesh per chunk, per kind). Each shadow-casting lamp
-   in view redraws what is in its frustum; today the wall mesh is one object, so about 58
-   lamps each redraw every wall on the map. Keeping the floor out of shadow maps took the
-   full map from 22 to 38 FPS, so this is the likely remaining gap.
-2. **A flow field from the goal** instead of A* per alien, and no per-frame `info!` in
-   `move_towards_goal_systems.rs`.
-3. **Building heights** from `building:levels` (122 of 468 buildings in `map-01.osm`).
+1. **A flow field from the goal** instead of A* per alien, and no per-frame `info!` in
+   `move_towards_goal_systems.rs`. Not measured with aliens on the full map yet; A* took
+   31 ms per alien in a debug build at 800 m.
+2. **Building heights** from `building:levels` (122 of 468 buildings in `map-01.osm`).
 
 ### Water
 
@@ -258,7 +269,7 @@ the level area with QGIS or `ogr2ogr`, export GeoJSON. A second reader next to
 | # | What | Status |
 |---|------|--------|
 | 1 | **OSM import**: `.osm` XML and Overpass JSON readers, projection, automatic rotation, buildings / roads / ground / water / fences / trees, walled border, spawns at road exits, goal, player start, path check. `--import-osm`, `--play --level`. | **Done** (tested on made-up data; needs a first real area and a playtest) |
-| 2 | **Tune on real areas**: road widths, what counts as grass, size and performance (see *Size and performance*: lights and bags are streamed, meshes and pathfinding are next), fence rule. Water that blocks. | Started |
+| 2 | **Tune on real areas**: road widths, what counts as grass, size and performance (see *Size and performance*: rendering is streamed, pathfinding is next), fence rule. Water that blocks. | Started |
 | 3 | **More gameplay from the map**: goal by address, street lamps along roads, loot next to houses, decorations from OSM points (benches, bins, cars at parking). | |
 | 4 | **Real houses**: squared-up footprints as `HouseDef`s with doors and windows, type from `building=*` (house / detached / terrace / apartments / garage) or Lantmäteriet's `ändamål`; the house mesh work (`docs/house-editor.md`) draws them. | |
 | 5 | **Image import** and **Lantmäteriet reader**. | |

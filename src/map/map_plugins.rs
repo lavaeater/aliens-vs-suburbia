@@ -196,10 +196,10 @@ impl Plugin for StatefulMapPlugin {
                 (
                     update_current_tile_system,
                     map_loader,
-                    crate::map::walls::spawn_walls,
                     (
                         crate::map::streaming::plan_map_stream,
                         crate::map::streaming::stream_map_chunks,
+                        crate::map::map_lights::budget_lamp_shadows,
                     )
                         .chain(),
                 )

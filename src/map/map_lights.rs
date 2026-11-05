@@ -17,6 +17,7 @@ use std::collections::HashMap;
 use bevy::light::NotShadowCaster;
 use bevy::prelude::*;
 
+use crate::camera::components::GameCamera;
 use crate::general::systems::lights_systems::{LightAnimation, LightStyle};
 use crate::map::{BitFlags, MapFeatures};
 
@@ -179,6 +180,47 @@ mod lumens {
     pub const PLAYER_SPAWN: f32 = 30_000.0;
 }
 
+/// Lamps allowed a shadow map at once, the ones nearest the point under the camera. Each one
+/// is a render pass of its own, and it is their number that costs, not what they draw: 61
+/// took 26 ms a frame, 16 stays at 60 FPS. With lamps about 8 tiles apart this reaches well
+/// past the edge of the picture at normal zoom, so a shadow switching off happens off
+/// screen.
+const SHADOW_LAMPS: usize = 16;
+
+/// Which of these lamps get a shadow map: the `budget` nearest `focus`.
+fn shadow_budget(lamps: &[Vec2], focus: Vec2, budget: usize) -> Vec<bool> {
+    let mut order: Vec<usize> = (0..lamps.len()).collect();
+    order.sort_by(|&a, &b| {
+        let distance = |i: usize| lamps.get(i).map_or(f32::MAX, |p| p.distance_squared(focus));
+        distance(a).total_cmp(&distance(b))
+    });
+    let mut chosen = vec![false; lamps.len()];
+    for i in order.into_iter().take(budget) {
+        if let Some(slot) = chosen.get_mut(i) {
+            *slot = true;
+        }
+    }
+    chosen
+}
+
+/// Give the lamps near the camera their shadows and take them from the rest.
+pub fn budget_lamp_shadows(
+    mut lamps: Query<(&mut SpotLight, &GlobalTransform), With<MapLight>>,
+    cameras: Query<&GlobalTransform, With<GameCamera>>,
+) {
+    let Ok(camera) = cameras.single() else {
+        return;
+    };
+    let at: Vec<Vec2> = lamps.iter().map(|(_, lamp)| lamp.translation().xz()).collect();
+    let chosen = shadow_budget(&at, camera.translation().xz(), SHADOW_LAMPS);
+    for ((mut lamp, _), shadow) in lamps.iter_mut().zip(chosen) {
+        // Reading through `Mut` doesn't mark it changed; only a real change should.
+        if lamp.shadow_maps_enabled != shadow {
+            lamp.shadow_maps_enabled = shadow;
+        }
+    }
+}
+
 const STREET_LAMP_HEIGHT: f32 = 1.4;
 
 /// A placed light's fixture, so it can be found (and filtered out of the inspector).
@@ -271,7 +313,8 @@ pub fn spawn_light(
                     range: 6.0,
                     outer_angle: 0.95,
                     inner_angle: 0.6,
-                    shadow_maps_enabled: true,
+                    // `budget_lamp_shadows` hands these out.
+                    shadow_maps_enabled: false,
                     ..default()
                 },
                 Transform::from_translation(top - Vec3::Y * 0.05).looking_at(at, Vec3::Z),
@@ -324,7 +367,8 @@ pub fn spawn_light(
                     range: 8.0,
                     outer_angle: 0.7,
                     inner_angle: 0.45,
-                    shadow_maps_enabled: true,
+                    // `budget_lamp_shadows` hands these out.
+                    shadow_maps_enabled: false,
                     ..default()
                 },
                 Transform::from_translation(mount + out * 0.05).looking_at(target, Vec3::Y),
@@ -399,6 +443,27 @@ pub fn spawn_light(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_nearest_lamps_get_the_shadows() {
+        let lamps = [
+            Vec2::new(9.0, 0.0),
+            Vec2::new(1.0, 0.0),
+            Vec2::new(5.0, 0.0),
+            Vec2::new(2.0, 0.0),
+        ];
+        assert_eq!(
+            shadow_budget(&lamps, Vec2::ZERO, 2),
+            vec![false, true, false, true]
+        );
+    }
+
+    #[test]
+    fn a_budget_bigger_than_the_lamps_covers_them_all() {
+        let lamps = [Vec2::ZERO, Vec2::X];
+        assert_eq!(shadow_budget(&lamps, Vec2::ZERO, 16), vec![true, true]);
+        assert!(shadow_budget(&[], Vec2::ZERO, 16).is_empty());
+    }
 
     const FLOOR: u64 = MapFeatures::Floor as u64;
     const WALL: u64 =
