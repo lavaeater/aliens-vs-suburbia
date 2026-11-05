@@ -12,7 +12,7 @@
     // Middle of the level, (lat, lon). Default: the middle of the buildings.
     centre: Some((59.199295,17.753444)),
     // Width and height in metres. Default: the buildings plus 6 m each side.
-    size: Some((200.0, 200.0)),
+    size: Some((700.0, 700.0)),
     // Degrees counter-clockwise. None = line the streets up with the grid automatically.
     rotation_deg: None,
     metres_per_tile: 1.0,
