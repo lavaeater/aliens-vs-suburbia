@@ -10,8 +10,9 @@ Symptom: dreadful audio stutter, while the picture mostly kept up.
 
 - **Audio stutter: a compiler setting, not hardware or drivers.** `~/.cargo/config.toml` set
   `codegen-backend = "cranelift"` for the dev profile. Removed; audio no longer underruns.
-- **Frame rate: a power limit.** CPU and GPU share a sustained 17 W. Level 1 runs at about
-  24 fps and the OSM map at about 17 fps.
+- **Frame rate: per-pixel lighting and shadows, on a GPU held back by power and heat.** Level 1
+  runs at about 24 fps and the OSM map at about 17 fps. Turning off the moon's shadows alone
+  gives about 32 and 24.
 - **Drivers are fine.** ANV, firmware and adapter selection are all correct.
 - **Realtime audio added.** On Linux the game now opens a native PipeWire stream on a
   realtime thread.
@@ -76,49 +77,60 @@ Those 17 W are shared by the CPU and the iGPU. Under sustained load both settle 
 1.8 GHz and 900 MHz; the GPU rarely reaches its 1150 MHz. The system was about 67% idle during
 play, with CPU threads waiting for the GPU, so **frames are GPU-bound**.
 
+A 100 W USB-C supply raises PL1 to 28 W, but adds no frames: level 1 stayed at 23 fps and the
+OSM map at 17. The CPU takes the extra power (3.4 GHz instead of 1.9), the GPU stays near
+950 MHz, and the package reaches 96-98 C. Not tested yet: disabling turbo to leave that heat
+budget to the GPU.
+
 Temperatures reached 97-99 C in some runs, and the package logged about 74,000 throttle events
 in one boot (builds included).
 
 Stay on the `performance` power profile. `balanced` was slower: 20 vs 23 fps on level 1, 15 vs
 17 on the OSM map.
 
-### Graphics settings
-
-Release build, OSM map, 1080p, uncapped:
-
-| Setting | FPS | Gain |
-|---|---|---|
-| Baseline | 15.1 | - |
-| MSAA off | 15.7 | +4% |
-| 4 shadow lamps (from 16) | 17.6 | +17% |
-| 0 shadow lamps | 20.1 | +33% |
-| 960x540 | 20.6 | +36% |
-| No MSAA + 4 lamps + 960x540 | 25.9 | +72% |
-
-Level 1 went from 21 to 31 fps with all three.
-
-So a quality system (`docs/not-right-now/warbell-suggestions.md`) would need render scale and
-the `SHADOW_LAMPS` budget. MSAA barely matters here. Aim for a steady 30 fps on this class of
-machine, not 60.
-
 ### Where a frame goes
 
-`--perf`, dev build:
+`--perf`, dev build, OSM map, one setting changed at a time. The two baselines were 58.0 and
+53.9 ms, so differences under about 4 ms mean little:
 
-| Pass | Level 1 | OSM map |
+| Change | Frame | FPS | Main opaque pass | Rest of frame |
+|---|---|---|---|---|
+| Baseline | 56 ms | 18 | 35 ms | 21 ms |
+| Tonemapping and dither off | 55 ms | 18 | 35 ms | 21 ms |
+| MSAA off | 56 ms | 18 | 36 ms | 20 ms |
+| Shadow filter `Hardware2x2` | 53 ms | 19 | 31 ms | 21 ms |
+| No lamp shadows | 47 ms | 21 | 32 ms | 14 ms |
+| Flashlight off | 49 ms | 21 | 29 ms | 20 ms |
+| **No moon shadows** | 40 ms | 25 | 31 ms | 9 ms |
+| Map lamps off | 33 ms | 31 | 18 ms | 14 ms |
+| Everything unlit | 26 ms | 38 | 3.4 ms | 23 ms |
+
+What this shows:
+
+- **Geometry and overdraw are not the problem.** About 21,000 vertices, 14,000 triangles and
+  2M fragments a frame, which is about one layer of 1080p.
+- **Lighting is about 90% of the main pass**, about 20 ns per pixel. Map lamps are about half
+  of the pass, because their ranges overlap at `SPACING`.
+- **The main pass scales linearly with pixels.** A window that reached 0.63x the pixels took
+  0.63x the time. Earlier notes here said resolution helped little: that test's resize to
+  960x540 never fully applied, reaching 1.26M pixels and not 0.5M.
+- **The moon's shadows are the most expensive single thing.** The night moon is a directional
+  light with shadow maps on, at the default cascade count, for barely visible light.
+- **Bevy has no timing spans for shadow passes**, so they are only visible as "rest of frame".
+  The rest of frame also contains whatever else isn't timed.
+
+### Combinations
+
+| Change | OSM map | Level 1 |
 |---|---|---|
-| Frame time | 41.8 ms | 59.1 ms |
-| `main_opaque_pass_3d` (GPU) | 28.3 ms | 39.8 ms |
-| `msaa_writeback` | 0.5 ms | 0.5 ms |
-| `clustering` | 0.3 ms | 0.4 ms |
-| `upscaling` | 0.2 ms | 0.2 ms |
-| Everything else timed | 0.1 ms | 0.1 ms |
+| Baseline | 18 fps | 24 fps |
+| No moon shadows | 24 fps | 32 fps |
+| + `Hardware2x2` | 27 fps | not measured |
+| + 6 shadow lamps | 29 fps | 36 fps |
+| + 0 shadow lamps | 33 fps | not measured |
+| + 6 lamps, MSAA and tonemapping off | 32 fps | not measured |
 
-The main opaque pass is about two thirds of the frame. **Shadow passes do not appear in these
-numbers**, so the unaccounted 12-18 ms per frame may be shadows, but that isn't measured.
-
-Open question: quarter resolution only gained 36%, which is less than a pass dominated by pixel
-shading should give. Finding out why comes before building a quality system.
+Render scale should come on top of these, but hasn't been measured properly yet.
 
 ## Measuring
 
@@ -161,8 +173,12 @@ cat /sys/class/drm/card1/gt_act_freq_mhz
 
 ## Next steps
 
-1. Find out what the main opaque pass spends its time on, and time the shadow passes.
-2. Build the quality system from what that shows: render scale and shadow budget first, picked
-   from the adapter type at startup.
-3. Optionally skip the lane fills for idle synth voices. Not needed with LLVM, at about 1% of a
+1. Done: the Night preset's moon no longer casts shadows (`LightingPreset::sky_shadows`). The
+   tables above are from before that change.
+2. Try `Hardware2x2` filtering, and a smaller lamp shadow budget, on low-end hardware.
+3. Look at lamp overlap (`SPACING`, ranges), the largest cost left in the main pass.
+4. Test disabling turbo, and measure real render scale.
+5. Build the quality system from those: render scale, shadow budget and filter, picked from the
+   adapter type at startup.
+6. Optionally skip the lane fills for idle synth voices. Not needed with LLVM, at about 1% of a
    core, but it would help on any slower machine.

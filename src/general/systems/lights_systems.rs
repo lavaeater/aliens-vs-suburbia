@@ -56,6 +56,12 @@ impl LightingPreset {
             Self::Day => (5000.0, Color::WHITE),
         }
     }
+
+    /// Whether the sky light casts shadows. Only the sun does: the moon's cascades cost more
+    /// than any other single light (`docs/performance.md`) for shadows too faint to read.
+    const fn sky_shadows(self) -> bool {
+        matches!(self, Self::Day)
+    }
 }
 
 /// The one directional light: the moon at night, the sun by day.
@@ -82,7 +88,7 @@ pub fn spawn_lights(
         DirectionalLight {
             illuminance,
             color,
-            shadow_maps_enabled: true,
+            shadow_maps_enabled: preset.sky_shadows(),
             ..default()
         },
         Transform {
@@ -127,7 +133,7 @@ pub fn apply_lighting_preset(
     for mut light in &mut sky {
         light.illuminance = illuminance;
         light.color = color;
-        light.shadow_maps_enabled = illuminance > 0.0;
+        light.shadow_maps_enabled = preset.sky_shadows();
     }
 }
 
@@ -188,6 +194,14 @@ pub fn animate_lights(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn only_the_sun_casts_shadows() {
+        use super::LightingPreset::{Dark, Day, Night};
+        assert!(Day.sky_shadows());
+        assert!(!Night.sky_shadows());
+        assert!(!Dark.sky_shadows());
+    }
+
     use super::*;
 
     #[test]
