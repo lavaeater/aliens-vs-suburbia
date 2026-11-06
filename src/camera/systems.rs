@@ -1,4 +1,3 @@
-use crate::map::ground::GroundHeight;
 use crate::camera::components::{
     CameraFocus, CameraOffset, CameraShake, CameraTarget, GameCamera, PixelCanvas,
 };
@@ -172,17 +171,13 @@ pub fn camera_follow(
     mut shake: ResMut<CameraShake>,
     mut camera_query: Query<(&mut Transform, &mut Projection, &CameraOffset), With<GameCamera>>,
     targets: Query<(&Transform, &CameraTarget, Has<PlayerDead>), Without<GameCamera>>,
-    ground: Res<GroundHeight>,
 ) {
-    let Some((mut raw_center, radius)) = focus_of(targets.iter().map(|(p, t, dead)| {
+    let Some((raw_center, radius)) = focus_of(targets.iter().map(|(p, t, dead)| {
         // A downed player still matters, just less: the living ones need the room.
         (p.translation, if dead { t.weight * 0.5 } else { t.weight })
     })) else {
         return;
     };
-
-    // Players don't climb the hills yet, so the camera does it for them.
-    raw_center.y += ground.height(raw_center.x, raw_center.z);
 
     let wanted_fit = fit_factor(
         radius,

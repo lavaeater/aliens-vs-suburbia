@@ -4,6 +4,7 @@
 // genuinely risky spots are fixed individually.
 #![allow(clippy::arithmetic_side_effects, clippy::indexing_slicing)]
 
+use crate::map::ground::{GroundHeight, HillsPreview};
 use crate::alien::components::general::AlienCounter;
 use crate::assets::assets_plugin::GameAssets;
 use crate::building::systems::ToWorldCoordinates;
@@ -117,6 +118,12 @@ impl TileDefinitions {
     }
 }
 
+/// Where a spawn point or the goal lies: its tile, on the ground.
+fn lying_at(tile: (usize, usize), tiles: &TileDefinitions, ground: &GroundHeight) -> Vec3 {
+    let at = tile.to_world_coords(tiles) + Vec3::new(0.0, -tiles.wall_height, 0.0);
+    at + Vec3::Y * ground.height(at.x, at.z)
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn map_loader(
     mut load_map_event_reader: MessageReader<LoadMap>,
@@ -132,9 +139,11 @@ pub fn map_loader(
     model_defs: Res<MapModelDefinitions>,
     mut add_health_bar_mw: MessageWriter<AddHealthBar>,
     mut wave_manager: Option<ResMut<crate::alien::wave_manager::WaveManager>>,
+    hills: Option<Res<HillsPreview>>,
 ) {
     for load_map in load_map_event_reader.read() {
         let map_file = &load_map.map;
+        let ground = GroundHeight::for_level(map_file, hills.is_some(), tile_defs.tile_width);
         let raw = &map_file.tiles;
         let rows = raw.len() + 2;
         let cols = raw[0].len() + 2;
@@ -186,10 +195,7 @@ pub fn map_loader(
                         RigidBody::Static,
                         WindWakerShaderBuilder::default().build(),
                         Collider::cuboid(0.5, 0.5, 0.45),
-                        Position::from(
-                            (col, row).to_world_coords(&tile_defs)
-                                + Vec3::new(0.0, -tile_defs.wall_height, 0.0),
-                        ),
+                        Position::from(lying_at((col, row), &tile_defs, &ground)),
                         CollisionLayers::new(
                             [CollisionLayer::AlienSpawnPoint],
                             [CollisionLayer::Player],
@@ -205,10 +211,7 @@ pub fn map_loader(
                         RigidBody::Static,
                         WindWakerShaderBuilder::default().build(),
                         Collider::cuboid(0.5, 0.5, 0.45),
-                        Position::from(
-                            (col, row).to_world_coords(&tile_defs)
-                                + Vec3::new(0.0, -tile_defs.wall_height, 0.0),
-                        ),
+                        Position::from(lying_at((col, row), &tile_defs, &ground)),
                         CollisionLayers::new(
                             [CollisionLayer::AlienGoal],
                             [
@@ -230,7 +233,18 @@ pub fn map_loader(
         }
 
         // ── Floor colliders (greedy rectangle merge) ──────────────────────────
-        if let Some(floor_model_def) = model_defs.definitions.get("floor") {
+        if let Some((terrain, at)) = ground.terrain() {
+            if let Some(floor_def) = model_defs.definitions.get("floor") {
+                commands.spawn((
+                    Name::from("Terrain Collider"),
+                    Floor {},
+                    RigidBody::Static,
+                    terrain,
+                    Position::from(at + Vec3::Y * tile_defs.floor_level),
+                    floor_def.create_collision_layers(),
+                ));
+            }
+        } else if let Some(floor_model_def) = model_defs.definitions.get("floor") {
             let mut covered = vec![vec![false; cols]; rows];
             for row in 0..rows {
                 for col in 0..cols {
@@ -366,14 +380,23 @@ pub fn map_loader(
                     }
                     let w = (max_col - col + 1) as f32;
                     let h = (max_row - row + 1) as f32;
+                    // Up over the highest ground under it, so anything walking into it meets
+                    // it. Flat ground adds nothing.
+                    let mut highest = 0.0_f32;
+                    for r in row..=max_row {
+                        for c in col..=max_col {
+                            let (_, high) = ground.span(tw * c as f32, tw * r as f32);
+                            highest = highest.max(high);
+                        }
+                    }
                     let center = Vec3::new(
                         tw * (col + max_col) as f32 / 2.0,
-                        block_y,
+                        block_y + highest / 2.0,
                         tw * (row + max_row) as f32 / 2.0,
                     );
                     commands.spawn((
                         RigidBody::Static,
-                        Collider::cuboid(tw * w, block_half_h, tw * h),
+                        Collider::cuboid(tw * w, block_half_h + highest, tw * h),
                         *layers,
                         Transform::from_translation(center),
                         Position::from(center),
@@ -415,11 +438,9 @@ pub fn map_loader(
             // one tile of void on every side, so they sit one tile in from it.
             let (px, py) = (placement.x + 1, placement.y + 1);
             // Raised by the def's lift, for a model whose origin is not at its base.
-            let pos = Vec3::new(
-                tile_defs.tile_width * px as f32,
-                tile_defs.floor_level + tile_defs.tile_depth + def.lift_world(),
-                tile_defs.tile_width * py as f32,
-            );
+            let (x, z) = (tile_defs.tile_width * px as f32, tile_defs.tile_width * py as f32);
+            let floor = tile_defs.floor_level + tile_defs.tile_depth + ground.height(x, z);
+            let pos = Vec3::new(x, floor + def.lift_world(), z);
             let rot = Quat::from_rotation_y(
                 f32::from(placement.rotation_steps) * std::f32::consts::FRAC_PI_4,
             );

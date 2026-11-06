@@ -10,9 +10,9 @@ use crate::general::systems::map_systems::{
     TileDefinitions, load_map_one, load_map_showcase, map_loader, update_current_tile_system,
 };
 use avian3d::prelude::{LayerMask, RigidBody};
-use bevy::app::{App, Plugin, Startup, Update};
+use bevy::app::{App, FixedUpdate, Plugin, Startup, Update};
 use bevy::ecs::schedule::SystemCondition;
-use bevy::prelude::{IntoScheduleConfigs, OnEnter, in_state};
+use bevy::prelude::{IntoScheduleConfigs, OnEnter, in_state, resource_exists};
 use pathfinding::grid::Grid;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -193,6 +193,16 @@ impl Plugin for StatefulMapPlugin {
                 load_map_one.run_if(crate::character_editor::state::in_normal_game),
             )
             .add_systems(OnEnter(GameState::ModelShowcase), load_map_showcase)
+            .add_systems(
+                FixedUpdate,
+                (
+                    crate::general::systems::ground_follow::adopt_walkers,
+                    crate::general::systems::ground_follow::follow_ground,
+                )
+                    .chain()
+                    .run_if(resource_exists::<crate::map::ground::HillsPreview>)
+                    .run_if(in_state(GameState::InGame)),
+            )
             .add_systems(
                 Update,
                 (

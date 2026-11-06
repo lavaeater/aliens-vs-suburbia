@@ -289,11 +289,7 @@ pub fn plan_map_stream(
     mut ground: ResMut<GroundHeight>,
 ) {
     for load in loads.read() {
-        *ground = if hills.is_some() {
-            GroundHeight::new(&load.map, tile_defs.tile_width)
-        } else {
-            GroundHeight::default()
-        };
+        *ground = GroundHeight::for_level(&load.map, hills.is_some(), tile_defs.tile_width);
         // Leaving a match sweeps these already, hence `try_`.
         for root in stream.live.values() {
             commands.entity(*root).try_despawn();

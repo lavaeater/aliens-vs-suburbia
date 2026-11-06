@@ -3,6 +3,7 @@
 //! Hills are behind `--hills` ([`HillsPreview`]) until everything that stands on the ground
 //! follows it. Without the flag, or on a map with no heights, [`GroundHeight`] is flat at 0.
 
+use avian3d::prelude::Collider;
 use bevy::math::Vec3;
 use bevy::prelude::Resource;
 
@@ -22,6 +23,15 @@ pub struct GroundHeight {
 }
 
 impl GroundHeight {
+    /// A level's ground: its own with `hills` on, else flat.
+    pub fn for_level(map: &MapFile, hills: bool, tile: f32) -> Self {
+        if hills {
+            Self::new(map, tile)
+        } else {
+            Self::default()
+        }
+    }
+
     pub fn new(map: &MapFile, tile: f32) -> Self {
         let points = map
             .elevation
@@ -63,6 +73,28 @@ impl GroundHeight {
         start + (row(south) - start) * down
     }
 
+    /// The ground as a collider, for what falls on it, and where it goes, above the floor.
+    /// `None` when flat.
+    pub fn terrain(&self) -> Option<(Collider, Vec3)> {
+        let columns = self.points.first().map_or(0, Vec::len);
+        let rows = self.points.len();
+        if columns < 2 || rows < 2 {
+            return None;
+        }
+        // `Collider::heightfield` flattens this and hands it to parry, which takes it as
+        // `rows` x `columns` stored column by column, whatever the shape it came in. So: that
+        // order, cut into `rows` pieces. `the_terrain_collider_lies_where_the_ground_is`.
+        let by_columns: Vec<f32> = (0..columns)
+            .flat_map(|col| (0..rows).map(move |row| self.point(col, row)))
+            .collect();
+        let heights = by_columns.chunks(columns).map(<[f32]>::to_vec).collect();
+        let step = ELEVATION_STEP as f32 * self.tile;
+        let (width, depth) = ((columns - 1) as f32 * step, (rows - 1) as f32 * step);
+        let collider = Collider::heightfield(heights, Vec3::new(width, 1.0, depth));
+        let centre = Vec3::new(self.tile + width / 2.0, 0.0, self.tile + depth / 2.0);
+        Some((collider, centre))
+    }
+
     /// The way the ground faces at a point. Measured a tile either side, so that it turns
     /// smoothly over the lattice and hills shade softly.
     pub fn normal(&self, x: f32, z: f32) -> Vec3 {
@@ -88,6 +120,7 @@ impl GroundHeight {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bevy::prelude::Quat;
 
     fn ground(elevation: Vec<Vec<u16>>) -> GroundHeight {
         GroundHeight::new(
@@ -132,6 +165,39 @@ mod tests {
         let normal = slope.normal(5.0, 5.0);
         assert!(normal.x < 0.0 && normal.y > 0.8, "{normal}");
         assert!(normal.z.abs() < 1e-6, "{normal}");
+    }
+
+    #[test]
+    fn the_terrain_collider_lies_where_the_ground_is() {
+        // Different slopes along the two axes, so a swapped grid can't pass.
+        let elevation = (0..6)
+            .map(|row| (0..4).map(|col| col * 30 + row * 110).collect())
+            .collect();
+        let hill = ground(elevation);
+        let (collider, at) = hill.terrain().unwrap();
+        for (x, z) in [(2.0, 2.0), (6.0, 3.0), (4.0, 9.0), (1.5, 10.5)] {
+            let (toi, _) = collider
+                .cast_ray(
+                    at,
+                    Quat::IDENTITY,
+                    Vec3::new(x, 50.0, z),
+                    Vec3::NEG_Y,
+                    100.0,
+                    true,
+                )
+                .expect("the ray hits the terrain");
+            let height = 50.0 - toi;
+            let wanted = hill.height(x, z);
+            assert!(
+                (height - wanted).abs() < 0.02,
+                "({x}, {z}): {height}, not {wanted}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_flat_level_has_no_terrain() {
+        assert!(ground(vec![]).terrain().is_none());
     }
 
     #[test]
