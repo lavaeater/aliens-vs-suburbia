@@ -9,7 +9,7 @@
     ortho_far: 1000.0,
     ortho_viewport_height: 1.75,
     persp_fov: 105.0,
-    persp_near: 1.9999993,
+    persp_near: 0.3,
     persp_far: 201.1,
     fit_margin: 3.0,
     fit_zoom_max: 3.0,

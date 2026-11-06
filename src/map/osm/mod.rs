@@ -9,7 +9,7 @@
 //!
 //! What becomes what (`classify.rs`): buildings are solid walls, roads and car parks
 //! floor, parks and gardens grass, water water, fences and hedges block the aliens (players
-//! hop over; [`FenceRule`]), walls block everyone, trees are decorations, forests get pines. The level is
+//! hop over; [`FenceRule`]), walls block everyone, trees are decorations, forests get trees. The level is
 //! walled in, and every road that leaves it becomes an alien spawn. The goal is the spot
 //! the spec names (or the middle), the player starts next to it, and spawns that can't reach
 //! the goal are dropped and reported.
@@ -76,7 +76,7 @@ pub struct OsmLevelSpec {
     /// Lantmäteriet land cover (`land_cover.rs`), a GeoJSON file. Its forests join OSM's.
     #[serde(default)]
     pub land_cover: Option<String>,
-    /// Trees as decorations: mapped ones (`natural=tree`), and pines in the forests.
+    /// Trees as decorations: mapped ones (`natural=tree`), and the forests'.
     #[serde(default = "yes")]
     pub trees: bool,
     /// Copied into the level. Empty = the game's default waves.
@@ -135,17 +135,27 @@ pub struct Imported {
     pub report: Vec<String>,
 }
 
-/// Pines for a forest, with their models' height. Drawn [`FOREST_HEIGHT`] tall, not to scale:
-/// the camera sits about 3.2 above the floor at its default zoom.
-const PINES: &[(&str, f32)] = &[
+/// Conifers for a forest, with their models' height. Drawn [`FOREST_HEIGHT`] tall, not to
+/// scale: the camera sits about 3.2 above the floor at its default zoom.
+const CONIFERS: &[(&str, f32)] = &[
     ("packs/nature/Pine.glb", 8.49),
     ("packs/nature/Pine-79gmlLnweB.glb", 10.0),
     ("packs/nature/Pine-Zt62gceKXZ.glb", 7.14),
+];
+/// The same for leafy trees. The birches are `tools/make_birches.py`.
+const LEAFY: &[(&str, f32)] = &[
+    ("packs/nature/Birch.glb", 9.2),
+    ("packs/nature/Birch-2.glb", 7.4),
+    ("packs/nature/Birch.glb", 9.2),
+    ("packs/nature/Tree.glb", 9.2),
+    ("packs/nature/Tree-aVOxaHRPWe.glb", 7.4),
 ];
 const FOREST_HEIGHT: f32 = 2.0;
 /// A forest has at most one tree in each square of this many tiles, a tile clear of the
 /// next square's, so it can never close a way through.
 const FOREST_SPACING: usize = 4;
+/// A forest grows in stands this many tiles across, each mostly conifers or mostly leafy.
+const STAND_SIZE: usize = 24;
 
 /// Tree models for `natural=tree`, with the height they're drawn at (as in the generator).
 const TREES: &[(&str, f32)] = &[
@@ -204,7 +214,14 @@ const fn tile_hash(col: usize, row: usize) -> usize {
     ((mixed ^ (mixed >> 29)) >> 16) as usize
 }
 
-/// Scatter pines over the `forest` tiles: one to a square of [`FOREST_SPACING`], on open
+/// The kind of tree for a square of the forest: its stand's, or, for one in four, the other.
+fn forest_kind(left: usize, top: usize, hash: usize) -> &'static [(&'static str, f32)] {
+    let stand_is_leafy = tile_hash(left / STAND_SIZE, top / STAND_SIZE).is_multiple_of(2);
+    let odd_one_out = (hash >> 28).is_multiple_of(4);
+    if stand_is_leafy == odd_one_out { CONIFERS } else { LEAFY }
+}
+
+/// Scatter trees over the `forest` tiles: one to a square of [`FOREST_SPACING`], on open
 /// grass with open ground all around, so roads and doorsteps stay clear. Each blocks its tile.
 fn plant_forest(
     forest: &[Vec<bool>],
@@ -215,7 +232,7 @@ fn plant_forest(
         layer.get(row).and_then(|r| r.get(col)) == Some(&Layer::Open)
     };
     let (height, width) = (layer.len(), layer.first().map_or(0, Vec::len));
-    let mut pines = Vec::new();
+    let mut trees = Vec::new();
     for top in (0..height).step_by(FOREST_SPACING) {
         for left in (0..width).step_by(FOREST_SPACING) {
             let hash = tile_hash(left, top);
@@ -230,14 +247,15 @@ fn plant_forest(
             if !(clear && on_grass && wooded && inside) {
                 continue;
             }
-            let Some(&(model, model_height)) = PINES.get((hash >> 16) % PINES.len()) else {
+            let kind = forest_kind(left, top, hash);
+            let Some(&(model, model_height)) = kind.get((hash >> 16) % kind.len()) else {
                 continue;
             };
             if let Some(tile) = layer.get_mut(row).and_then(|r| r.get_mut(col)) {
                 *tile = Layer::Tree;
             }
             let size = 0.8 + ((hash >> 20) % 5) as f32 * 0.1; // 0.8 to 1.2
-            pines.push(DecorationItem {
+            trees.push(DecorationItem {
                 x: col as i32,
                 y: row as i32,
                 model: model.to_string(),
@@ -246,7 +264,7 @@ fn plant_forest(
             });
         }
     }
-    pines
+    trees
 }
 
 /// A feature in metres, with what it paints.
@@ -476,9 +494,9 @@ pub fn import(spec: &OsmLevelSpec, data: &OsmData) -> Result<Imported, String> {
                 forest[row][col] = true;
             }
         }
-        let pines = plant_forest(&forest, &mut layer, &ground);
-        report.push(format!("{} pines in the forests", pines.len()));
-        decorations.extend(pines);
+        let trees = plant_forest(&forest, &mut layer, &ground);
+        report.push(format!("{} trees in the forests", trees.len()));
+        decorations.extend(trees);
     }
     report.push(format!(
         "{} buildings, {} roads and paths, {} fences/hedges, {} walls, {} trees, {} ground areas",
@@ -877,6 +895,18 @@ mod tests {
             assert!((pine.x - 20).abs() > 1, "next to the road: {}", pine.x);
             assert_ne!(pine.y, 5, "in the water");
         }
+    }
+
+    #[test]
+    fn a_forest_grows_stands_of_both_kinds() {
+        let (forest, mut layer, ground) = square_forest(200);
+        let trees = plant_forest(&forest, &mut layer, &ground);
+        let leafy = trees
+            .iter()
+            .filter(|t| LEAFY.iter().any(|(model, _)| *model == t.model))
+            .count();
+        let share = leafy as f32 / trees.len() as f32;
+        assert!((0.25..0.75).contains(&share), "{leafy} of {}", trees.len());
     }
 
     #[test]

@@ -254,7 +254,7 @@ Only the look changes: colliders stay the same height for every wall, about 0.7 
 floor, so something thrown high enough still goes through a tall building.
 
 Decorations are streamed with their chunks (`map::streaming`), so trees cost nothing out of
-view. Measured in a debug build, vsync off, `map-01` with 10 160 pines, deep in a forest: 81
+view. Measured in a debug build, vsync off, `map-01` with 10 160 trees, deep in a forest: 81
 FPS and about 21 000 entities.
 
 ### Water
@@ -306,7 +306,7 @@ it lines up with the OSM buildings. `sankmarksytor` in the same API has wetlands
 
 The import uses its forests: `land_cover: Some("assets/osm/map-01.markytor.json")` in a spec
 (`land_cover.rs`) adds them to OSM's own (`landuse=forest`, `natural=wood`), and `trees: true`
-fills both with pines (`plant_forest`), 10 160 of them in `map-01`. One pine to a square of 4
+fills both with trees (`plant_forest`), 10 160 of them in `map-01`, in stands 24 tiles across, each three quarters conifers or leafy (half of each overall: the land cover says only "Barr- och blandskog", and birches read well). The birches are the pack's leafy trees with white bark and paler leaves (`tools/make_birches.py`). One pine to a square of 4
 tiles and a clear tile between any two, so a forest can't close a way through; none next to a
 road or a building. Each blocks its tile. They are drawn about 2 tall, not to scale, for the
 same reason buildings are. The saved JSON is the API's answer for the level's bounding box;

@@ -174,6 +174,17 @@ struct Decoration {
     name: String,
     transform: Transform,
     scene: Handle<WorldAsset>,
+    foliage: bool,
+}
+
+/// A plant, drawn without an outline: its leaves are see-through cards, and an outline
+/// follows the cards, not the leaves.
+#[derive(Component)]
+pub struct Foliage;
+
+/// The nature pack is the plants' (and a few rocks').
+fn is_foliage(model: &str) -> bool {
+    model.starts_with("packs/nature/")
 }
 
 /// The current map's scatter: all of it as data, the chunks near the camera as entities.
@@ -318,6 +329,7 @@ pub fn plan_map_stream(
                         .with_rotation(Quat::from_rotation_y(dec.rotation_y.to_radians()))
                         .with_scale(Vec3::splat(scale)),
                     scene: asset_server.load(format!("{}#Scene0", dec.model)),
+                    foliage: is_foliage(&dec.model),
                 });
         }
         plan_surfaces(
@@ -418,11 +430,14 @@ pub fn stream_map_chunks(
                     spawn_surface(parent, surface);
                 }
                 for decoration in &plan.decorations {
-                    parent.spawn((
+                    let mut scene = parent.spawn((
                         Name::new(decoration.name.clone()),
                         WorldAssetRoot(decoration.scene.clone()),
                         decoration.transform,
                     ));
+                    if decoration.foliage {
+                        scene.insert(Foliage);
+                    }
                 }
                 let tw = tile_defs.tile_width;
                 for (light, seed) in &plan.lights {

@@ -24,7 +24,7 @@
     max_spawns: 4,
     // Lantmateriet land cover (GeoJSON), its forests added to OSM's. None = OSM's only.
     land_cover: None,
-    // natural=tree nodes as tree decorations, and pines in the forests.
+    // natural=tree nodes as tree decorations, and trees in the forests.
     trees: true,
     // Empty = the game's default waves.
     waves: [],
