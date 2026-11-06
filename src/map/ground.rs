@@ -1,16 +1,15 @@
 //! The height of the ground anywhere on a map: [`MapFile::elevation`] read between its points.
 //!
-//! Hills are behind `--hills` ([`HillsPreview`]) until everything that stands on the ground
-//! follows it. Without the flag, or on a map with no heights, [`GroundHeight`] is flat at 0.
+//! Hills are behind `--hills` ([`HillsPreview`]) until they have been played. Without the flag,
+//! or on a map with no heights, [`GroundHeight`] is flat at 0.
 
 use avian3d::prelude::Collider;
-use bevy::math::Vec3;
+use bevy::math::{Quat, Vec3};
 use bevy::prelude::Resource;
 
 use crate::general::components::map_components::{ELEVATION_STEP, MapFile};
 
-/// Insert it to bend the world to `MapFile::elevation`. Characters and colliders stay on the
-/// flat floor for now, so a player walks unseen beneath the hills.
+/// Insert it to bend the world to `MapFile::elevation`.
 #[derive(Resource)]
 pub struct HillsPreview;
 
@@ -106,6 +105,32 @@ impl GroundHeight {
         Vec3::new(-east, 2.0 * self.tile, -south).normalize()
     }
 
+    /// Where a level shot from `from` ends up at `point`, carried over the ground: as high
+    /// above it as `from` is. Shots hit in level rays, against tall colliders, so this is
+    /// where to draw them and what they hit.
+    pub fn carried(&self, from: Vec3, point: Vec3) -> Vec3 {
+        let rise = self.height(point.x, point.z) - self.height(from.x, from.z);
+        point + Vec3::Y * rise
+    }
+
+    /// `dir` turned to run along the ground ahead of `from`, for what flies straight.
+    pub fn along(&self, from: Vec3, dir: Vec3) -> Vec3 {
+        const LOOK_AHEAD: f32 = 2.0;
+        let flat = dir.with_y(0.0).normalize_or_zero();
+        let reach = LOOK_AHEAD * self.tile;
+        if self.points.is_empty() || flat == Vec3::ZERO {
+            return dir;
+        }
+        let ahead = from + flat * reach;
+        let rise = self.height(ahead.x, ahead.z) - self.height(from.x, from.z);
+        (flat + Vec3::Y * rise / reach).normalize_or(dir)
+    }
+
+    /// The turn that lays something flat, a decal say, on the ground at a point.
+    pub fn lie(&self, x: f32, z: f32) -> Quat {
+        Quat::from_rotation_arc(Vec3::Y, self.normal(x, z))
+    }
+
     /// The lowest and highest ground under a tile centred at `(x, z)`.
     pub fn span(&self, x: f32, z: f32) -> (f32, f32) {
         let half = self.tile / 2.0;
@@ -120,7 +145,6 @@ impl GroundHeight {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bevy::prelude::Quat;
 
     fn ground(elevation: Vec<Vec<u16>>) -> GroundHeight {
         GroundHeight::new(
@@ -193,6 +217,29 @@ mod tests {
                 "({x}, {z}): {height}, not {wanted}"
             );
         }
+    }
+
+    #[test]
+    fn a_shot_is_carried_over_the_ground() {
+        let slope = ground(vec![vec![0, 100, 200, 300, 400]; 5]);
+        let end = slope.carried(Vec3::new(2.0, 1.5, 3.0), Vec3::new(6.0, 1.5, 3.0));
+        assert!((end.y - 3.5).abs() < 1e-5, "{end}");
+    }
+
+    #[test]
+    fn straight_flight_follows_the_slope_and_stays_level_on_the_flat() {
+        let slope = ground(vec![vec![0, 100, 200, 300, 400]; 5]);
+        let dir = slope.along(Vec3::new(3.0, 1.0, 5.0), Vec3::X);
+        assert!((dir.y / dir.x - 0.5).abs() < 1e-5, "{dir}");
+        assert_eq!(ground(vec![]).along(Vec3::ZERO, Vec3::X), Vec3::X);
+    }
+
+    #[test]
+    fn a_decal_lies_on_the_slope() {
+        let slope = ground(vec![vec![0, 100, 200, 300, 400]; 5]);
+        let up = slope.lie(5.0, 5.0) * Vec3::Y;
+        assert!(up.distance(slope.normal(5.0, 5.0)) < 1e-5);
+        assert_eq!(ground(vec![]).lie(1.0, 1.0), Quat::IDENTITY);
     }
 
     #[test]

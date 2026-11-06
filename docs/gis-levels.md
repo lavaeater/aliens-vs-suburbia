@@ -276,8 +276,19 @@ Levels carry their ground heights, and hills go in three stages. Smooth slopes, 
 1. The heights in the map. Done.
 2. The world bent to them, behind `--hills`: floor, walls, trees, lamps and loot bags stand on
    the ground (`map::ground`). Done. Without the flag the game is flat.
-3. Everything that moves following the ground: players, aliens, shots, colliders, towers. Until
-   then the camera climbs the hills by itself, and a player walks unseen under them.
+3. Everything that moves following the ground. Done, still behind `--hills` until it has been
+   played.
+
+The game stays close to a flat one underneath. Characters ignore the terrain and have no
+gravity: each physics step `ground_follow.rs` sets their vertical speed to land them on the
+ground where that step ends, so they can't fall through or fly off a crest. Their colliders
+are 8 tall and wall colliders reach over the highest ground under them, so sideways everything
+meets as on a flat map, and pathfinding doesn't know about hills. Shots are level rays against
+those tall colliders, passing through the terrain, then drawn carried over the ground
+(`GroundHeight::carried`). A rocket flies along the slope (`along`). A heightfield catches what
+really falls: grenades, gibs, balls. Blood and scorch marks lie on the slope.
+
+Known limit: a level shot from high ground can pass over a low wall further down the hill.
 
 The camera looks nearly straight down, so a hill's shape can't show in perspective, only in
 its light, and the real light barely shows it. The floor bakes it in (`hill_shade` in

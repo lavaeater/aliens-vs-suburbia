@@ -17,6 +17,7 @@ use crate::general::components::Health;
 use crate::general::damage::ApplyDamage;
 use crate::general::systems::map_systems::TileDefinitions;
 use crate::gore::components::{DECAL_LIFT, DamageKind, GoreBudget};
+use crate::map::ground::GroundHeight;
 use crate::player::components::Player;
 
 /// Start a fire field. Position is on the ground; radius/duration/dps shape it.
@@ -137,6 +138,7 @@ pub fn tick_fire_fields(
     targets: Query<(Entity, &Position, Has<Alien>, Has<Player>), With<Health>>,
     mut damage_mw: MessageWriter<ApplyDamage>,
     tile_defs: Res<TileDefinitions>,
+    ground: Res<GroundHeight>,
 ) {
     let dt = time.delta();
     for (entity, mut field, transform) in fields.iter_mut() {
@@ -178,8 +180,13 @@ pub fn tick_fire_fields(
                     .spawn((
                         Mesh3d(fa.scorch_mesh.clone()),
                         MeshMaterial3d(fa.scorch_material.clone()),
-                        Transform::from_xyz(center.x, tile_defs.floor_level + DECAL_LIFT, center.z)
-                            .with_scale(Vec3::splat(field.radius * 2.2)),
+                        Transform::from_xyz(
+                            center.x,
+                            tile_defs.floor_level + ground.height(center.x, center.z) + DECAL_LIFT,
+                            center.z,
+                        )
+                        .with_rotation(ground.lie(center.x, center.z))
+                        .with_scale(Vec3::splat(field.radius * 2.2)),
                     ))
                     .id();
                 if let Some(evicted) = budget.push_decal(scorch) {
@@ -199,6 +206,7 @@ mod tests {
     use crate::general::components::Health;
     use crate::general::damage::{ApplyDamage, DamageRules, apply_damage};
     use crate::general::systems::map_systems::TileDefinitions;
+    use crate::map::ground::GroundHeight;
     use crate::gore::components::{DamageDealt, DamageKind, GoreBudget};
     use avian3d::prelude::Position;
     use bevy::prelude::*;
@@ -225,6 +233,7 @@ mod tests {
         app.init_resource::<GoreBudget>();
         // Scorch marks are placed on the floor plane, so the tile metrics have to exist.
         app.insert_resource(TileDefinitions::new(1.0, 32.0, 9.5, 1.0));
+        app.init_resource::<GroundHeight>();
         // No FireAssets / FxAssets -> no scorch, no flames; the burning is what's tested.
         app.add_systems(Update, (tick_fire_fields, apply_damage, catch).chain());
 

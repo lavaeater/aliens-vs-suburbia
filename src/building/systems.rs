@@ -5,6 +5,7 @@ use crate::general::damage::Faction;
 use crate::general::resources::map_resources::MapGraph;
 use crate::general::systems::coin_system::TeamWallet;
 use crate::general::systems::map_systems::TileDefinitions;
+use crate::map::ground::GroundHeight;
 use crate::player::components::{BuildingIndicator, IsBuildIndicator, IsBuilding, IsObstacle};
 use crate::player::events::building_events::{
     ChangeBuildIndicator, EnterBuildMode, ExecuteBuild, ExitBuildMode, RemoveTile,
@@ -36,13 +37,19 @@ pub fn enter_build_mode(
     tile_definitions: Res<TileDefinitions>,
     model_defs: Res<MapModelDefinitions>,
     mut commands: Commands,
+    ground: Res<GroundHeight>,
 ) {
     for start_event in enter_build_mode_evr.read() {
         if let Ok((current_tile, rotation)) = builder_query.get_mut(start_event.0) {
-            let desired_neighbour_pos = rotation
+            let tile = rotation
                 .get_neighbour(current_tile.tile)
-                .to_world_coords(&tile_definitions)
-                + Vec3::new(0.0, -tile_definitions.wall_height * 2.0, 0.0);
+                .to_world_coords(&tile_definitions);
+            let desired_neighbour_pos = tile
+                + Vec3::new(
+                    0.0,
+                    ground.height(tile.x, tile.z) - tile_definitions.wall_height * 2.0,
+                    0.0,
+                );
 
             let first = model_defs.build_indicators.first();
             let building_indicator = spawn_building_indicator(
@@ -228,13 +235,16 @@ pub fn building_mode(
         With<IsBuildIndicator>,
     >,
     tile_definitions: Res<TileDefinitions>,
+    ground: Res<GroundHeight>,
 ) {
     for (current_tile, rotation, building_indicator) in builder_query.iter() {
         let desired_neighbour = rotation.get_neighbour(current_tile.tile);
         if let Ok((_, _, mut position, _)) = building_indicator_query.get_mut(building_indicator.0)
         {
-            let desired_neighbour_pos = desired_neighbour.to_world_coords(&tile_definitions)
-                + Vec3::new(0.0, -tile_definitions.wall_height, 0.0);
+            let tile = desired_neighbour.to_world_coords(&tile_definitions);
+            let height = ground.height(tile.x, tile.z);
+            let desired_neighbour_pos =
+                tile + Vec3::new(0.0, height - tile_definitions.wall_height, 0.0);
             position.0 = desired_neighbour_pos;
         }
     }
