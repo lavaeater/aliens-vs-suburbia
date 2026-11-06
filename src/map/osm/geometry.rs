@@ -41,6 +41,14 @@ impl Projection {
             (p.lat - self.centre.lat) * self.metres_per_degree_lat,
         )
     }
+
+    /// Undo [`Projection::project`].
+    pub fn unproject(&self, (x, y): Point) -> LatLon {
+        LatLon {
+            lat: self.centre.lat + y / self.metres_per_degree_lat,
+            lon: self.centre.lon + x / self.metres_per_degree_lon,
+        }
+    }
 }
 
 /// Metres (around the centre) to tile coordinates. A tile `(col, row)` covers
@@ -62,6 +70,14 @@ impl Frame {
             rx / self.metres_per_tile + self.width as f64 / 2.0,
             self.height as f64 / 2.0 - ry / self.metres_per_tile,
         )
+    }
+
+    /// Undo [`Frame::to_tiles`].
+    pub fn metres_at(&self, (x, y): Point) -> Point {
+        let (sin, cos) = self.rotation.sin_cos();
+        let rx = (x - self.width as f64 / 2.0) * self.metres_per_tile;
+        let ry = (self.height as f64 / 2.0 - y) * self.metres_per_tile;
+        (rx * cos + ry * sin, ry * cos - rx * sin)
     }
 
     /// The tile a point falls in, if it is inside the grid.
@@ -182,6 +198,16 @@ pub fn dominant_rotation(edges: impl IntoIterator<Item = (Point, Point)>) -> f64
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tiles_and_lat_lon_come_back_from_the_way_there() {
+        let centre = LatLon { lat: 59.2, lon: 17.75 };
+        let projection = Projection::new(centre);
+        let frame = Frame { rotation: 0.3, metres_per_tile: 2.0, width: 40, height: 60 };
+        let start = (12.5, 31.5);
+        let back = frame.to_tiles(projection.project(projection.unproject(frame.metres_at(start))));
+        assert!((back.0 - start.0).abs() < 1e-6 && (back.1 - start.1).abs() < 1e-6, "{back:?}");
+    }
 
     #[test]
     fn projection_is_metres() {

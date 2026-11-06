@@ -19,6 +19,7 @@
 pub mod classify;
 pub mod data;
 pub mod geometry;
+mod elevation;
 mod land_cover;
 
 use std::collections::VecDeque;
@@ -76,6 +77,12 @@ pub struct OsmLevelSpec {
     /// Lantmäteriet land cover (`land_cover.rs`), a GeoJSON file. Its forests join OSM's.
     #[serde(default)]
     pub land_cover: Option<String>,
+    /// Ground heights, an ESRI ASCII grid from `tools/fetch_heights.py` (`elevation.rs`).
+    #[serde(default)]
+    pub elevation: Option<String>,
+    /// World units of height to the metre: real slopes are far too steep under this camera.
+    #[serde(default = "default_height_scale")]
+    pub height_scale: f64,
     /// Trees as decorations: mapped ones (`natural=tree`), and the forests'.
     #[serde(default = "yes")]
     pub trees: bool,
@@ -91,6 +98,9 @@ pub struct OsmLevelSpec {
 
 const fn one() -> f64 {
     1.0
+}
+const fn default_height_scale() -> f64 {
+    0.25
 }
 const fn four() -> usize {
     4
@@ -120,6 +130,8 @@ impl OsmLevelSpec {
             goal: None,
             max_spawns: four(),
             land_cover: None,
+            elevation: None,
+            height_scale: default_height_scale(),
             trees: yes(),
             waves: Vec::new(),
             loot: default_loot(),
@@ -275,8 +287,12 @@ struct Projected {
     rings: Vec<Vec<Point>>,
 }
 
-/// Turn OSM data into a level.
-pub fn import(spec: &OsmLevelSpec, data: &OsmData) -> Result<Imported, String> {
+/// Turn OSM data into a level, its ground heights from `heights` if there are any.
+pub fn import(
+    spec: &OsmLevelSpec,
+    data: &OsmData,
+    heights: Option<&elevation::HeightGrid>,
+) -> Result<Imported, String> {
     let mut report = Vec::new();
     if spec.metres_per_tile <= 0.0 {
         return Err("metres_per_tile must be above 0".into());
@@ -645,11 +661,22 @@ pub fn import(spec: &OsmLevelSpec, data: &OsmData) -> Result<Imported, String> {
     } else {
         spec.name.clone()
     };
+    let elevation = heights
+        .map(|grid| elevation::lattice(grid, &frame, &projection, spec.height_scale))
+        .transpose()?
+        .unwrap_or_default();
+    if !elevation.is_empty() {
+        let (highest, nearly, steepest) = elevation::relief(&elevation);
+        report.push(format!(
+            "ground up to {highest:.2} high, 99% under {nearly:.1} degrees, steepest {steepest:.1}"
+        ));
+    }
     Ok(Imported {
         map: MapFile {
             name,
             tiles,
             storeys,
+            elevation,
             decorations,
             waves: spec.waves.clone(),
             stories: spec.stories.clone(),
@@ -770,7 +797,16 @@ pub fn run_import(input: &Path, force: bool) -> Result<PathBuf, String> {
             .map_err(|e| format!("cannot read the land cover export {path}: {e}"))?;
         data.features.extend(land_cover::forests(&text)?);
     }
-    let mut imported = import(&spec, &data)?;
+    let heights = spec
+        .elevation
+        .as_ref()
+        .map(|path| {
+            let text = std::fs::read_to_string(path)
+                .map_err(|e| format!("cannot read the height grid {path}: {e}"))?;
+            elevation::HeightGrid::parse(&text).map_err(|e| format!("{path}: {e}"))
+        })
+        .transpose()?;
+    let mut imported = import(&spec, &data, heights.as_ref())?;
     if imported.map.name == "OpenStreetMap level" {
         imported.map.name = stem;
     }
@@ -818,7 +854,7 @@ mod tests {
     }
 
     fn import_street(spec: &OsmLevelSpec) -> Imported {
-        import(spec, &data::parse(STREET).unwrap()).unwrap()
+        import(spec, &data::parse(STREET).unwrap(), None).unwrap()
     }
 
     fn count(map: &MapFile, value: u64) -> usize {
@@ -961,7 +997,7 @@ mod tests {
             r#",{"type":"way","id":7,"tags":{"barrier":"wall"},
                 "geometry":[{"lat":58.999,"lon":18.0003},{"lat":59.001,"lon":18.0003}]}]}"#,
         );
-        let imported = import(&spec(), &data::parse(&json).unwrap()).unwrap();
+        let imported = import(&spec(), &data::parse(&json).unwrap(), None).unwrap();
         // Walls don't cut roads, so both spawns still reach the goal ...
         let spawn = bits(MapFeatures::Floor | MapFeatures::EnemySpawn);
         assert_eq!(count(&imported.map, spawn), 2);
@@ -969,7 +1005,7 @@ mod tests {
         let mut s = spec();
         s.goal = Some((58.9997, 17.9990));
         let without_road: String = json.replace("\"highway\":\"residential\"", "\"highway\":\"proposed\"");
-        let imported = import(&s, &data::parse(&without_road).unwrap()).unwrap();
+        let imported = import(&s, &data::parse(&without_road).unwrap(), None).unwrap();
         assert_eq!(count(&imported.map, spawn), 1, "{:?}", imported.report);
         assert!(imported.report.iter().any(|l| l.contains("farthest")));
     }
@@ -990,7 +1026,7 @@ mod tests {
     fn too_big_is_an_error() {
         let mut s = spec();
         s.size = Some((5000.0, 100.0));
-        assert!(import(&s, &data::parse(STREET).unwrap()).is_err());
+        assert!(import(&s, &data::parse(STREET).unwrap(), None).is_err());
     }
 
     #[test]

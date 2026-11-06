@@ -111,6 +111,9 @@ const fn default_map_height() -> usize {
     24
 }
 
+/// Tiles between the points of [`MapFile::elevation`].
+pub const ELEVATION_STEP: usize = 2;
+
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct MapFile {
     /// Display name. Optional; the `.map` text format writes it under `[properties]`.
@@ -134,6 +137,11 @@ pub struct MapFile {
     /// past the end, is an ordinary wall. Empty = none. Only the look: colliders don't care.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub storeys: Vec<Vec<u8>>,
+    /// Ground height on a lattice: point `(i, j)` (`elevation[j][i]`) sits on the centre of
+    /// tile `(i * ELEVATION_STEP, j * ELEVATION_STEP)`, in centimetres of world height above
+    /// the level's lowest point. Empty = flat.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub elevation: Vec<Vec<u16>>,
     #[serde(default)]
     pub decorations: Vec<DecorationItem>,
     /// Items placed by the map editor (def-driven models on specific tiles).

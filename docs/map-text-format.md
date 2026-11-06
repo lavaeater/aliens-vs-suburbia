@@ -88,6 +88,13 @@ Optional, the same shape as `[tiles]`: `.` for an ordinary tile, or a digit for 
 storeys a solid wall tile stands. Short rows mean `.`. Only the look changes:
 walking and colliders are as for any wall. The OpenStreetMap import writes it.
 
+### `[elevation]`
+
+Optional: ground height on a lattice, one line per row of numbers separated by spaces. A
+point sits on the centre of every second tile (`ELEVATION_STEP`), and holds centimetres of
+world height above the level's lowest point. The OpenStreetMap import writes it from real
+height data (`docs/gis-levels.md`). The game is still flat: nothing reads it yet.
+
 ### `[decorations]`, `[placements]`, `[houses]`, `[waves]`
 
 One entry per line: `key: value` fields separated by `|`, in any order. Values can

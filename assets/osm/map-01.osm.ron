@@ -8,6 +8,9 @@
     // gis-raw/ is gitignored; put it in assets/gis/ to commit it.
     source: "assets/osm/map-01.osm",
     land_cover: Some("assets/osm/map-01.markytor.json"),
+    // Ground heights, fetched with tools/fetch_heights.py, and world units to the metre.
+    elevation: Some("assets/osm/map-01.heights.asc"),
+    height_scale: 0.25,
     // Where the level goes. Default: assets/maps/<this file's stem>.map
     output: None,
     // Middle of the level, (lat, lon). Default: the middle of the buildings.

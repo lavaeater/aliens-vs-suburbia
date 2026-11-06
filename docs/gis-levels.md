@@ -271,8 +271,21 @@ the grid) and turning them into `HouseDef`s with doors and windows is phase 4.
 
 ### Elevation
 
-The game is flat; height is ignored. Later, from a DEM: steep slopes -> rock / impassable,
-hollows -> mud or water.
+Levels carry their ground heights, but the game doesn't use them yet: it is still flat. Hills
+go in three stages: the heights in the map (done), the floor mesh bent to them, then everything
+standing on the ground following it. Smooth slopes, no terraces.
+
+`tools/fetch_heights.py <lat> <lon> <half width> <out.asc>` needs `credentials.txt`, and is
+run once per level. It writes an ESRI ASCII grid averaged to 2 m (QGIS opens it). A spec then
+names it, and re-importing works offline:
+
+    elevation: Some("assets/osm/map-01.heights.asc"),
+    height_scale: 0.25,
+
+`elevation.rs` samples it per tile, smooths it and writes `[elevation]` (`docs/map-text-format.md`):
+a point every 2 tiles, in centimetres of world height above the level's lowest point.
+`height_scale` is world units to the metre. At 0.25, `map-01` rises 9.2 units, with 99% of it
+under 9 degrees and the steepest spot 22.
 
 The source is Lantmäteriet's Markhöjdmodell Nedladdning, tried against `map-01` on
 2026-11-05. Free (CC BY 4.0), a 1 m grid, SWEREF 99 TM / RH 2000.
