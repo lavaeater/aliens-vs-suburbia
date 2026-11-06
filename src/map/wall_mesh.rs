@@ -39,6 +39,20 @@ pub struct WallCap {
     pub color: [f32; 4],
 }
 
+/// Where a wall tile stands: its top is `floor` plus the style's height, and on a slope its
+/// sides carry on down to `foot`, the lowest ground under the tile.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct WallBase {
+    pub floor: f32,
+    pub foot: f32,
+}
+
+impl WallBase {
+    pub const fn flat(y: f32) -> Self {
+        Self { floor: y, foot: y }
+    }
+}
+
 /// Mesh data ready for `Mesh::insert_attribute`.
 #[derive(Default, Debug)]
 pub struct WallMesh {
@@ -144,26 +158,31 @@ fn top_face((x0, x1): (f32, f32), y: f32, (z0, z1): (f32, f32)) -> [[f32; 3]; 4]
 }
 
 /// Build the walls for `cells` (grid `(col, row)`, tile centres at `tile * (col, row)` like
-/// the floor). `hides(neighbour)` says whether a neighbouring tile covers the side facing
-/// it -- the same category, or a taller wall -- so that side is skipped.
+/// the floor). `hides(from, neighbour)` says whether a neighbouring tile covers the side of
+/// `from` facing it -- the same category, or a taller wall -- so that side is skipped.
+/// `base` says where each tile stands.
 pub fn build_walls(
     cells: &HashSet<(i32, i32)>,
-    hides: impl Fn((i32, i32)) -> bool,
+    hides: impl Fn((i32, i32), (i32, i32)) -> bool,
     tile: f32,
-    floor_y: f32,
+    base: impl Fn((i32, i32)) -> WallBase,
     style: &WallStyle,
 ) -> WallMesh {
     let mut mesh = WallMesh::default();
     let half = tile * 0.5;
     let cap_thickness = style.cap.map_or(0.0, |c| c.thickness.min(style.height));
-    let body_top = floor_y + style.height - cap_thickness;
-    let top = floor_y + style.height;
 
     // Sorted so the output does not depend on the set's iteration order.
     let mut sorted: Vec<(i32, i32)> = cells.iter().copied().collect();
     sorted.sort_unstable();
 
     for (col, row) in sorted {
+        let WallBase {
+            floor,
+            foot: foot_y,
+        } = base((col, row));
+        let body_top = floor + style.height - cap_thickness;
+        let top = floor + style.height;
         let (cx, cz) = (tile * col as f32, tile * row as f32);
         let (xs, zs) = ((cx - half, cx + half), (cz - half, cz + half));
         let k = 1.0 + style.jitter * tile_noise(col, row);
@@ -171,13 +190,13 @@ pub fn build_walls(
         let foot = shade(body, style.foot_shade);
         let exposed = SIDES.map(|side| {
             let (dx, dy) = side.step();
-            !hides((col + dx, row + dy))
+            !hides((col, row), (col + dx, row + dy))
         });
 
         for (side, open) in SIDES.into_iter().zip(exposed) {
             if open {
                 mesh.quad(
-                    side_face(side, xs, (floor_y, body_top), zs),
+                    side_face(side, xs, (foot_y, body_top), zs),
                     side.normal(),
                     [foot, foot, body, body],
                 );
@@ -222,11 +241,30 @@ mod tests {
 
     fn walls(cells: &[(i32, i32)], style: &WallStyle) -> WallMesh {
         let set: HashSet<(i32, i32)> = cells.iter().copied().collect();
-        build_walls(&set, |c| set.contains(&c), 1.0, 0.0, style)
+        build_walls(
+            &set,
+            |_, c| set.contains(&c),
+            1.0,
+            |_| WallBase::flat(0.0),
+            style,
+        )
     }
 
     fn quads(mesh: &WallMesh) -> usize {
         mesh.indices.len() / 6
+    }
+
+    #[test]
+    fn a_wall_on_a_slope_reaches_down_to_the_ground() {
+        let set = HashSet::from([(0, 0)]);
+        let base = |_| WallBase {
+            floor: 2.0,
+            foot: 1.5,
+        };
+        let mesh = build_walls(&set, |_, _| false, 1.0, base, &STYLE);
+        let ys = mesh.positions.iter().map(|p| p[1]);
+        assert_eq!(ys.clone().fold(f32::INFINITY, f32::min), 1.5, "the foot");
+        assert_eq!(ys.fold(f32::NEG_INFINITY, f32::max), 3.0, "floor + height");
     }
 
     #[test]
@@ -294,7 +332,13 @@ mod tests {
     fn a_hidden_side_is_skipped_even_against_another_category() {
         let set: HashSet<(i32, i32)> = [(0, 0)].into_iter().collect();
         // Pretend a taller wall stands to the east.
-        let mesh = build_walls(&set, |c| c == (1, 0), 1.0, 0.0, &STYLE);
+        let mesh = build_walls(
+            &set,
+            |_, c| c == (1, 0),
+            1.0,
+            |_| WallBase::flat(0.0),
+            &STYLE,
+        );
         assert_eq!(quads(&mesh), 4);
     }
 

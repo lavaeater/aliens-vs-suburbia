@@ -18,8 +18,9 @@ use std::collections::{HashMap, HashSet};
 use bevy::prelude::*;
 
 use crate::general::components::map_components::MapFile;
+use crate::map::ground::GroundHeight;
 use crate::map::streaming::{Chunk, chunk_of};
-use crate::map::wall_mesh::{WallCap, WallMesh, WallStyle, build_walls};
+use crate::map::wall_mesh::{WallBase, WallCap, WallMesh, WallStyle, build_walls};
 use crate::map::{BitFlags, MapFeatures};
 
 /// The map's tiles with the one-tile border of void `map_loader` adds, so grid coordinates
@@ -146,6 +147,64 @@ impl WallKind {
     }
 }
 
+/// Where wall tiles stand on the ground. `building` says which tiles are part of a building:
+/// joined ones stand level, on the highest ground under them, or roofs would run downhill.
+/// Other walls follow the ground.
+fn wall_bases(
+    walls: impl IntoIterator<Item = (i32, i32)>,
+    building: impl Fn((i32, i32)) -> bool,
+    tile: f32,
+    floor_y: f32,
+    ground: &GroundHeight,
+) -> HashMap<(i32, i32), WallBase> {
+    let span = |(col, row): (i32, i32)| ground.span(tile * col as f32, tile * row as f32);
+    let mut bases: HashMap<(i32, i32), WallBase> = walls
+        .into_iter()
+        .map(|at| {
+            let (low, _) = span(at);
+            let centre = ground.height(tile * at.0 as f32, tile * at.1 as f32);
+            let base = WallBase {
+                floor: floor_y + centre,
+                foot: floor_y + low,
+            };
+            (at, base)
+        })
+        .collect();
+
+    let mut seen = HashSet::new();
+    let starts: Vec<(i32, i32)> = bases.keys().copied().filter(|at| building(*at)).collect();
+    for start in starts {
+        if !seen.insert(start) {
+            continue;
+        }
+        let mut block = vec![start];
+        let mut next = 0;
+        while let Some(&(col, row)) = block.get(next) {
+            next += 1;
+            for at in [
+                (col + 1, row),
+                (col - 1, row),
+                (col, row + 1),
+                (col, row - 1),
+            ] {
+                if bases.contains_key(&at) && building(at) && seen.insert(at) {
+                    block.push(at);
+                }
+            }
+        }
+        let highest = block
+            .iter()
+            .map(|at| span(*at).1)
+            .fold(f32::NEG_INFINITY, f32::max);
+        for at in block {
+            if let Some(base) = bases.get_mut(&at) {
+                base.floor = floor_y + highest;
+            }
+        }
+    }
+    bases
+}
+
 /// A map's walls, one mesh per [`Chunk`], kind and height. A side on a chunk's edge is judged
 /// against the real neighbour, so the seams between chunks don't show.
 pub fn plan_walls(
@@ -153,6 +212,7 @@ pub fn plan_walls(
     tiles: &[Vec<u64>],
     tile: f32,
     floor_y: f32,
+    ground: &GroundHeight,
 ) -> Vec<(Chunk, WallKind, WallMesh)> {
     let kind_at = |(col, row): (i32, i32)| -> Option<WallKind> {
         let raw = *tiles
@@ -199,13 +259,27 @@ pub fn plan_walls(
         }
     }
 
+    let all_walls = tiles
+        .iter()
+        .enumerate()
+        .flat_map(|(row, cols)| (0..cols.len()).map(move |col| (col as i32, row as i32)));
+    let bases = wall_bases(
+        all_walls.filter(|at| kind_at(*at).is_some()),
+        |at| kind_at(at) == Some(WallKind::Solid) && storeys_at(at) > 0,
+        tile,
+        floor_y,
+        ground,
+    );
+    let base = |at| bases.get(&at).copied().unwrap_or(WallBase::flat(floor_y));
+    let top_at = |at| height_at(at).map(|height| base(at).floor + height);
+
     cells
         .into_iter()
         .filter_map(|((chunk, kind, storeys), cells)| {
             let style = kind.style_at(storeys);
-            // A side is hidden by a neighbour at least as tall, of any kind.
-            let hides = |c| height_at(c).is_some_and(|other| other >= style.height);
-            let built = build_walls(&cells, hides, tile, floor_y, &style);
+            // A side is hidden by a neighbour reaching at least as high, of any kind.
+            let hides = |from, to| top_at(from).zip(top_at(to)).is_some_and(|(a, b)| b >= a);
+            let built = build_walls(&cells, hides, tile, base, &style);
             (!built.is_empty()).then_some((chunk, kind, built))
         })
         .collect()
@@ -252,6 +326,27 @@ mod tests {
         assert_eq!(WallKind::of(floor | aliens), Some(WallKind::BlocksAliens));
     }
 
+    #[test]
+    fn a_building_stands_level_and_other_walls_follow_the_ground() {
+        let ground = GroundHeight::new(
+            &MapFile {
+                elevation: vec![vec![0, 100, 200, 300, 400]; 5],
+                ..default()
+            },
+            1.0,
+        );
+        let walls = [(2, 2), (3, 2), (4, 2), (7, 2)];
+        let bases = wall_bases(walls, |(col, _)| col < 5, 1.0, 0.0, &ground);
+        let (west, east) = (bases[&(2, 2)], bases[&(4, 2)]);
+        assert_eq!(west.floor, east.floor, "one height for the block");
+        assert!(
+            west.floor > ground.height(4.5, 2.0) - 1e-6,
+            "on its highest ground"
+        );
+        assert!(west.foot < east.foot, "each side reaches its own ground");
+        assert_eq!(bases[&(7, 2)].floor, ground.height(7.0, 2.0));
+    }
+
     /// A straight wall across a chunk border must come out as it would in one piece.
     #[test]
     fn a_wall_across_a_chunk_border_has_no_seam() {
@@ -261,13 +356,20 @@ mod tests {
             | MapFeatures::ImpassableForEnemies as u64;
         let tiles = vec![vec![wall; CHUNK_SIZE + 1]];
 
-        let planned = plan_walls(&MapFile::default(), &tiles, 1.0, 0.0);
+        let planned = plan_walls(
+            &MapFile::default(),
+            &tiles,
+            1.0,
+            0.0,
+            &GroundHeight::default(),
+        );
         assert_eq!(planned.len(), 2, "one mesh on each side of the border");
 
         let run = 0..=CHUNK_TILES;
         let cells = run.clone().map(|col| (col, 0)).collect();
-        let hides = |(col, row): (i32, i32)| row == 0 && run.contains(&col);
-        let whole = build_walls(&cells, hides, 1.0, 0.0, &WallKind::Solid.style());
+        let hides = |_, (col, row): (i32, i32)| row == 0 && run.contains(&col);
+        let base = |_| WallBase::flat(0.0);
+        let whole = build_walls(&cells, hides, 1.0, base, &WallKind::Solid.style());
         let indices: usize = planned.iter().map(|(_, _, mesh)| mesh.indices.len()).sum();
         assert_eq!(indices, whole.indices.len());
     }
@@ -294,7 +396,7 @@ mod tests {
     fn a_tile_with_storeys_stands_that_tall() {
         let wall = solid();
         let (map, tiles) = pair(wall, wall, 3);
-        let planned = plan_walls(&map, &tiles, 1.0, 0.0);
+        let planned = plan_walls(&map, &tiles, 1.0, 0.0, &GroundHeight::default());
         assert_eq!(planned.len(), 2, "one mesh per height");
         let mut tops: Vec<f32> = planned.iter().map(|(_, _, mesh)| top_of(mesh)).collect();
         tops.sort_by(f32::total_cmp);
@@ -307,7 +409,7 @@ mod tests {
     fn the_taller_side_shows_above_a_lower_neighbour() {
         let wall = solid();
         let (map, tiles) = pair(wall, wall, 2);
-        let planned = plan_walls(&map, &tiles, 1.0, 0.0);
+        let planned = plan_walls(&map, &tiles, 1.0, 0.0, &GroundHeight::default());
         let side_faces_at_x = |x: f32| -> usize {
             planned
                 .iter()
@@ -333,7 +435,7 @@ mod tests {
         let floor = MapFeatures::Floor as u64;
         let fence = floor | MapFeatures::ImpassableForEnemies as u64;
         let (map, tiles) = pair(fence, fence, 4);
-        let planned = plan_walls(&map, &tiles, 1.0, 0.0);
+        let planned = plan_walls(&map, &tiles, 1.0, 0.0, &GroundHeight::default());
         assert_eq!(planned.len(), 1, "both tiles are the same low fence");
         assert!(top_of(&planned[0].2) < 1.0);
     }
@@ -351,7 +453,16 @@ mod tests {
             }],
             ..default()
         };
-        assert!(plan_walls(&map, &padded_tiles(&map), 1.0, 0.0).is_empty());
+        assert!(
+            plan_walls(
+                &map,
+                &padded_tiles(&map),
+                1.0,
+                0.0,
+                &GroundHeight::default()
+            )
+            .is_empty()
+        );
     }
 
     #[test]
@@ -368,6 +479,15 @@ mod tests {
             }],
             ..default()
         };
-        assert!(plan_walls(&map, &padded_tiles(&map), 1.0, 0.0).is_empty());
+        assert!(
+            plan_walls(
+                &map,
+                &padded_tiles(&map),
+                1.0,
+                0.0,
+                &GroundHeight::default()
+            )
+            .is_empty()
+        );
     }
 }

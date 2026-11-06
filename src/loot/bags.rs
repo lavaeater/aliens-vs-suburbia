@@ -12,6 +12,7 @@ use std::collections::HashSet;
 use bevy::prelude::*;
 use bevy::world_serialization::{WorldAsset, WorldAssetRoot};
 
+use crate::map::ground::GroundHeight;
 use crate::assets::asset_definition::{AssetDefinition, ItemKind};
 use crate::general::components::map_components::{LootSpread, MapFile};
 use crate::general::systems::map_systems::TileDefinitions;
@@ -183,6 +184,7 @@ pub fn spawn_bag(
     looks: &[BagLook],
     table: &str,
     tile_defs: &TileDefinitions,
+    ground: &GroundHeight,
 ) {
     let Some((def, scene)) = looks.get(bag.look) else {
         return;
@@ -190,11 +192,8 @@ pub fn spawn_bag(
     let tw = tile_defs.tile_width;
     let floor = tile_defs.floor_level + tile_defs.tile_depth;
     let (col, row) = bag.tile;
-    let at = Vec3::new(
-        tw * (col as f32 + bag.offset.x),
-        floor + def.lift_world(),
-        tw * (row as f32 + bag.offset.y),
-    );
+    let (x, z) = (tw * (col as f32 + bag.offset.x), tw * (row as f32 + bag.offset.y));
+    let at = Vec3::new(x, floor + ground.height(x, z) + def.lift_world(), z);
     parent.spawn((
         Name::new(format!("Loot bag {col}:{row}")),
         WorldAssetRoot(scene.clone()),

@@ -26,6 +26,7 @@ use crate::general::events::map_events::LoadMap;
 use crate::general::systems::map_systems::TileDefinitions;
 use crate::loot::bags::{self, PlannedBag, StreamedBag};
 use crate::map::floor_mesh::{TerrainColor, build_floors};
+use crate::map::ground::{GroundHeight, HillsPreview};
 use crate::map::map_lights::{Fixtures, LightPlan, plan_lights, spawn_light};
 use crate::map::walls::{WallKind, padded_tiles, plan_walls};
 use crate::settings::resources::GameSettings;
@@ -219,6 +220,7 @@ fn plan_surfaces(
     load: &LoadMap,
     tiles: &[Vec<u64>],
     tile_defs: &TileDefinitions,
+    ground: &GroundHeight,
     planned: &mut HashMap<Chunk, ChunkPlan>,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
@@ -226,7 +228,7 @@ fn plan_surfaces(
     let (tile, floor_y) = (tile_defs.tile_width, tile_defs.floor_level);
 
     let mut floor_looks: HashMap<TerrainColor, Handle<StandardMaterial>> = HashMap::new();
-    for ((chunk, color), floor) in build_floors(tiles, tile, floor_y) {
+    for ((chunk, color), floor) in build_floors(tiles, tile, floor_y, ground) {
         let material = floor_looks
             .entry(color)
             .or_insert_with(|| floor_material(color, materials))
@@ -239,7 +241,7 @@ fn plan_surfaces(
     }
 
     let mut wall_looks: HashMap<WallKind, Handle<StandardMaterial>> = HashMap::new();
-    for (chunk, kind, wall) in plan_walls(&load.map, tiles, tile, floor_y) {
+    for (chunk, kind, wall) in plan_walls(&load.map, tiles, tile, floor_y, ground) {
         let material = wall_looks
             .entry(kind)
             .or_insert_with(|| materials.add(kind.material()))
@@ -283,8 +285,15 @@ pub fn plan_map_stream(
     asset_server: Res<AssetServer>,
     tile_defs: Res<TileDefinitions>,
     game_settings: Res<GameSettings>,
+    hills: Option<Res<HillsPreview>>,
+    mut ground: ResMut<GroundHeight>,
 ) {
     for load in loads.read() {
+        *ground = if hills.is_some() {
+            GroundHeight::new(&load.map, tile_defs.tile_width)
+        } else {
+            GroundHeight::default()
+        };
         // Leaving a match sweeps these already, hence `try_`.
         for root in stream.live.values() {
             commands.entity(*root).try_despawn();
@@ -312,11 +321,12 @@ pub fn plan_map_stream(
         for dec in &load.map.decorations {
             // Map coordinates, like placements: one tile in from the padded grid.
             let tile = (dec.x + 1, dec.y + 1);
-            let at = Vec3::new(
+            let (x, z) = (
                 tile_defs.tile_width * tile.0 as f32,
-                tile_defs.floor_level + tile_defs.tile_depth,
                 tile_defs.tile_width * tile.1 as f32,
             );
+            let floor = tile_defs.floor_level + tile_defs.tile_depth;
+            let at = Vec3::new(x, floor + ground.height(x, z), z);
             // `dec.scale` is in player units.
             let scale = dec.scale * game_settings.player_unit;
             planned
@@ -336,6 +346,7 @@ pub fn plan_map_stream(
             load,
             &tiles,
             &tile_defs,
+            &ground,
             &mut planned,
             &mut meshes,
             &mut materials,
@@ -357,10 +368,16 @@ pub fn plan_map_stream(
 }
 
 /// The ground the camera sees, in tiles, from where its corners meet the floor. `None` when
-/// a corner looks above the horizon.
-fn camera_view(camera: &Camera, at: &GlobalTransform, tiles: &TileDefinitions) -> Option<View> {
+/// a corner looks above the horizon. On hills that is measured at the ground under the camera.
+fn camera_view(
+    camera: &Camera,
+    at: &GlobalTransform,
+    tiles: &TileDefinitions,
+    ground: &GroundHeight,
+) -> Option<View> {
     let size = camera.logical_viewport_size()?;
-    let floor = Vec3::Y * tiles.floor_level;
+    let under = at.translation();
+    let floor = Vec3::Y * (tiles.floor_level + ground.height(under.x, under.z));
     let on_floor = |corner: Vec2| {
         let ray = camera.viewport_to_world(at, corner).ok()?;
         let along = ray.intersect_plane(floor, InfinitePlane3d::new(Vec3::Y))?;
@@ -382,6 +399,7 @@ pub fn stream_map_chunks(
     cameras: Query<(&Camera, &GlobalTransform), With<GameCamera>>,
     bags_left: Query<&StreamedBag>,
     tile_defs: Res<TileDefinitions>,
+    ground: Res<GroundHeight>,
 ) {
     if stream.planned.is_empty() {
         return;
@@ -391,7 +409,7 @@ pub fn stream_map_chunks(
         .map_or((View::EVERYTHING, Vec2::ZERO), |(camera, at)| {
             let under = at.translation().xz() / tile_defs.tile_width;
             let reach = View::around(under, MAX_VIEW_REACH);
-            let view = camera_view(camera, at, &tile_defs).map_or(reach, |v| v.clipped_to(reach));
+            let view = camera_view(camera, at, &tile_defs, &ground).map_or(reach, |v| v.clipped_to(reach));
             (view, under)
         });
 
@@ -441,11 +459,8 @@ pub fn stream_map_chunks(
                 }
                 let tw = tile_defs.tile_width;
                 for (light, seed) in &plan.lights {
-                    let at = Vec3::new(
-                        tw * light.tile.0 as f32,
-                        tile_defs.floor_level,
-                        tw * light.tile.1 as f32,
-                    );
+                    let (x, z) = (tw * light.tile.0 as f32, tw * light.tile.1 as f32);
+                    let at = Vec3::new(x, tile_defs.floor_level + ground.height(x, z), z);
                     spawn_light(parent, &mut materials, fixtures, light.kind, at, tw, *seed);
                 }
                 for (id, bag) in plan.bags.iter().enumerate() {
@@ -457,6 +472,7 @@ pub fn stream_map_chunks(
                         &stream.bag_looks,
                         &stream.bag_table,
                         &tile_defs,
+                        &ground,
                     );
                 }
             })

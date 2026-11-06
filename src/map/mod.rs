@@ -9,6 +9,7 @@ pub mod floor_mesh;
 pub mod house;
 pub mod map_generator;
 pub mod map_lights;
+pub mod ground;
 pub mod map_plugins;
 pub mod osm;
 pub mod procgen;

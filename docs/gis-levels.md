@@ -271,9 +271,21 @@ the grid) and turning them into `HouseDef`s with doors and windows is phase 4.
 
 ### Elevation
 
-Levels carry their ground heights, but the game doesn't use them yet: it is still flat. Hills
-go in three stages: the heights in the map (done), the floor mesh bent to them, then everything
-standing on the ground following it. Smooth slopes, no terraces.
+Levels carry their ground heights, and hills go in three stages. Smooth slopes, no terraces.
+
+1. The heights in the map. Done.
+2. The world bent to them, behind `--hills`: floor, walls, trees, lamps and loot bags stand on
+   the ground (`map::ground`). Done. Without the flag the game is flat.
+3. Everything that moves following the ground: players, aliens, shots, colliders, towers. Until
+   then the camera climbs the hills by itself, and a player walks unseen under them.
+
+The camera looks nearly straight down, so a hill's shape can't show in perspective, only in
+its light, and the real light barely shows it. The floor bakes it in (`hill_shade` in
+`floor_mesh.rs`): vertex colours, brighter towards the north west, darker away from it, white
+on flat ground. Tone mapping squashes the bright side, so the dark side does most of the work.
+
+A building stands level on the highest ground under it, joined tiles together, with its walls
+carried down to the ground on the low side. Other walls follow the ground tile by tile.
 
 `tools/fetch_heights.py <lat> <lon> <half width> <out.asc>` needs `credentials.txt`, and is
 run once per level. It writes an ESRI ASCII grid averaged to 2 m (QGIS opens it). A spec then

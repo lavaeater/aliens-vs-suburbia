@@ -171,6 +171,7 @@ impl Plugin for NonStateMapStuff {
             })
             .insert_resource(TileDefinitions::new(1.0, 32.0, 9.5, 1.0))
             .init_resource::<crate::map::streaming::MapStream>()
+            .init_resource::<crate::map::ground::GroundHeight>()
             .insert_resource(AlienCounter::new(50))
             .insert_resource(MapGraph {
                 path_finding_grid: Grid::new(0, 0),
