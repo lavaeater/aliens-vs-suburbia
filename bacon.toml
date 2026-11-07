@@ -23,24 +23,10 @@ need_stdout = false
 command = ["cargo", "clippy"]
 need_stdout = false
 
-# Run clippy on all targets
-# To disable some lints, you may change the job this way:
-#    [jobs.clippy-all]
-#    command = [
-#        "cargo", "clippy",
-#        "--all-targets",
-#    	 "--",
-#    	 "-A", "clippy::bool_to_int_with_if",
-#    	 "-A", "clippy::collapsible_if",
-#    	 "-A", "clippy::derive_partial_eq_without_eq",
-#    ]
-# need_stdout = false
 [jobs.clippy-all]
 command = ["cargo", "clippy", "--all-targets"]
 need_stdout = false
 
-# Run clippy in pedantic mode
-# The 'dismiss' feature may come handy
 [jobs.pedantic]
 command = [
 	"cargo", "clippy",
@@ -48,14 +34,6 @@ command = [
 	"-W", "clippy::pedantic",
 ]
 need_stdout = false
-
-# This job lets you run
-# - all tests: bacon test
-# - a specific test: bacon test -- config::test_default_files
-# - the tests of a package: bacon test -- -- -p config
-[jobs.test]
-command = ["cargo", "test"]
-need_stdout = true
 
 [jobs.nextest]
 command = [
@@ -89,16 +67,6 @@ background = true
 show_command_error_code = true
 scroll_anchor = "auto"
 
-# Run your long-running application (eg server) and have the result displayed in bacon.
-# For programs that never stop (eg a server), `background` is set to false
-# to have the cargo run output immediately displayed instead of waiting for
-# program's end.
-# 'on_change_strategy' is set to `kill_then_restart` to have your program restart
-# on every change (an alternative would be to use the 'F5' key manually in bacon).
-# If you often use this job, it makes sense to override the 'r' key by adding
-# a binding `r = job:run-long` at the end of this file .
-# A custom kill command such as the one suggested below is frequently needed to kill
-# long running programs (uncomment it if you need it)
 [jobs.run-long]
 command = [
     "cargo", "run",
@@ -111,19 +79,12 @@ on_change_strategy = "kill_then_restart"
 # kill = ["pkill", "-TERM", "-P"]
 scroll_anchor = "auto"
 
-# This parameterized job runs the example of your choice, as soon
-# as the code compiles.
-# Call it as
-#    bacon ex -- my-example
 [jobs.ex]
 command = ["cargo", "run", "--example"]
 need_stdout = true
 allow_warnings = true
 
-# You may define here keybindings that would be specific to
-# a project, for example a shortcut to launch a specific job.
-# Shortcuts to internal functions (scrolling, toggling, etc.)
-# should go in your personal global prefs.toml file instead.
 [keybindings]
 # alt-m = "job:my-job"
 c = "job:clippy-all" # comment this to have 'c' run clippy on only the default target
+t = "job:nextest" # comment this to have 'c' run clippy on only the default target
