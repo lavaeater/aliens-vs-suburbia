@@ -232,7 +232,7 @@ fn default_binding(action: PlayerAction) -> ActionBinding {
             [Some(Mouse(MouseButton::Left)), Some(Key(KeyCode::Space))],
             Some(Pad::RightTrigger2), // R2
         ),
-        PlayerAction::Reload => ([Some(Key(KeyCode::KeyR)), None], Some(Pad::RightTrigger)), // R1
+        PlayerAction::Reload => ([Some(Key(KeyCode::KeyR)), Some(Mouse(MouseButton::Middle))], Some(Pad::RightTrigger)), // R1
         PlayerAction::NextWeapon => ([Some(Key(KeyCode::Tab)), None], Some(Pad::DPadUp)),
         PlayerAction::PrevWeapon => ([None, None], Some(Pad::DPadDown)),
         PlayerAction::Weapon1 => ([Some(Key(KeyCode::Digit1)), None], None),
