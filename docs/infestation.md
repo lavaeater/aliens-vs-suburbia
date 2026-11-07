@@ -3,9 +3,9 @@
 A level mode next to the classic one (aliens walk to a goal, too many escaping loses).
 On an infestation level there is no goal: spawners open up around a suburb, monsters
 come out of them and go for the neighbours in their yards, and the players have to kill
-the monsters and destroy the spawners. The default campaign, `assets/campaigns/neighbourhood`,
-is one such level, Juniper Close, on a generated map; `cargo run -- --campaign main` plays
-the older campaign.
+the monsters and destroy the spawners. The `neighbourhood` campaign
+(`cargo run -- --campaign neighbourhood`) is one such level, Juniper Close, on a generated
+map; `--campaign main` plays the older campaign, and the default is `gis`.
 
 ## Pieces
 

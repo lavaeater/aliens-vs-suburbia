@@ -5,14 +5,18 @@ use enumflags2::*;
 
 pub mod chunk_loader;
 pub mod chunks;
+pub mod floor_mesh;
 pub mod house;
 pub mod map_generator;
 pub mod map_lights;
+pub mod ground;
 pub mod map_plugins;
 pub mod neighbourhood;
+pub mod osm;
 pub mod procgen;
 pub mod scatter;
 pub mod stitch;
+pub mod streaming;
 pub mod text_format;
 pub mod wall_mesh;
 pub mod walls;

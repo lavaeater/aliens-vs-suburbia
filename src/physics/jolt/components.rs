@@ -41,6 +41,11 @@ pub enum ColliderKind {
     /// Tip up, as Avian's.
     Cone { radius: f32, half_height: f32 },
     ConvexHull(Arc<Vec<Vec3>>),
+    /// A static triangle mesh; what `Collider::heightfield` becomes.
+    TriangleMesh {
+        vertices: Arc<Vec<Vec3>>,
+        triangles: Arc<Vec<[u32; 3]>>,
+    },
 }
 
 /// A collision shape. Sizes follow Avian's constructors (full extents, `capsule(radius,
@@ -117,12 +122,95 @@ impl Collider {
         Some(Self { kind, shape: Arc::new(shape) })
     }
 
+    /// Avian's (parry's) heightfield, as a static triangle mesh: Jolt's own heightfield is
+    /// square and quantises the heights. Same layout as parry: `heights` is read flattened
+    /// and column-major as `rows` x `columns` (`heights.len()` x `heights[0].len()`), rows
+    /// along Z and columns along X, centred on the origin and spanning `scale.x` by
+    /// `scale.z`; heights are multiplied by `scale.y`. Each cell is split along the same
+    /// diagonal as parry's, so both backends have the same ground.
+    pub fn heightfield(heights: Vec<Vec<f32>>, scale: Vec3) -> Self {
+        let rows = heights.len();
+        let columns = heights.first().map_or(0, Vec::len);
+        let data: Vec<f32> = heights.into_iter().flatten().collect();
+        if rows < 2 || columns < 2 || data.len() != rows * columns {
+            warn!("heightfield of {rows} x {columns} with {} heights; using a small sphere", data.len());
+            return Self::sphere(0.1);
+        }
+        let step = Vec3::new(
+            scale.x / (columns - 1) as f32,
+            scale.y,
+            scale.z / (rows - 1) as f32,
+        );
+        // Vertex `i + j * rows` is row `i` (z), column `j` (x), as parry stores them.
+        let vertices: Vec<Vec3> = (0..columns)
+            .flat_map(|j| {
+                let data = &data;
+                (0..rows).map(move |i| {
+                    Vec3::new(
+                        -scale.x / 2.0 + j as f32 * step.x,
+                        data[i + j * rows] * step.y,
+                        -scale.z / 2.0 + i as f32 * step.z,
+                    )
+                })
+            })
+            .collect();
+        let id = |i: usize, j: usize| (i + j * rows) as u32;
+        let mut triangles = Vec::with_capacity((rows - 1) * (columns - 1) * 2);
+        for j in 0..columns - 1 {
+            for i in 0..rows - 1 {
+                let (p00, p10, p01, p11) = (id(i, j), id(i + 1, j), id(i, j + 1), id(i + 1, j + 1));
+                // Parry's split (no zigzag), wound to face up.
+                triangles.push(upward(&vertices, [p00, p10, p01]));
+                triangles.push(upward(&vertices, [p10, p11, p01]));
+            }
+        }
+        Self::new(ColliderKind::TriangleMesh {
+            vertices: Arc::new(vertices),
+            triangles: Arc::new(triangles),
+        })
+    }
+
+    /// The size of the collider's own bounding box, unscaled and unrotated.
+    pub fn local_size(&self) -> Vec3 {
+        match &self.kind {
+            ColliderKind::Cuboid(half) => *half * 2.0,
+            ColliderKind::Sphere(r) => Vec3::splat(r * 2.0),
+            ColliderKind::Capsule { radius, half_length } => {
+                Vec3::new(radius * 2.0, (half_length + radius) * 2.0, radius * 2.0)
+            }
+            ColliderKind::Cylinder { radius, half_height }
+            | ColliderKind::Cone { radius, half_height } => {
+                Vec3::new(radius * 2.0, half_height * 2.0, radius * 2.0)
+            }
+            ColliderKind::ConvexHull(points) => bounds(points).1 - bounds(points).0,
+            ColliderKind::TriangleMesh { vertices, .. } => bounds(vertices).1 - bounds(vertices).0,
+        }
+    }
+
     pub fn kind(&self) -> &ColliderKind {
         &self.kind
     }
 
     pub(super) fn shape(&self) -> &Shape {
         &self.shape
+    }
+}
+
+/// The smallest and largest corner of `points`; zero for none.
+pub(super) fn bounds(points: &[Vec3]) -> (Vec3, Vec3) {
+    if points.is_empty() {
+        return (Vec3::ZERO, Vec3::ZERO);
+    }
+    points.iter().fold((Vec3::MAX, Vec3::MIN), |(lo, hi), p| (lo.min(*p), hi.max(*p)))
+}
+
+/// `triangle` in the order that makes it face up (counter-clockwise seen from above).
+fn upward(vertices: &[Vec3], triangle: [u32; 3]) -> [u32; 3] {
+    let [a, b, c] = triangle.map(|i| vertices[i as usize]);
+    if (b - a).cross(c - a).y >= 0.0 {
+        triangle
+    } else {
+        [triangle[0], triangle[2], triangle[1]]
     }
 }
 
@@ -144,6 +232,14 @@ fn build_shape(kind: &ColliderKind) -> Result<Shape, oxijolt::ShapeError> {
         ColliderKind::ConvexHull(points) => {
             let points: Vec<oxijolt::Vec3> = points.iter().map(|&p| p.into()).collect();
             Shape::new_convex_hull(&points)
+        }
+        ColliderKind::TriangleMesh { vertices, triangles } => {
+            let vertices: Vec<oxijolt::Vec3> = vertices.iter().map(|&p| p.into()).collect();
+            let (shape, dropped) = Shape::new_mesh(&vertices, triangles)?;
+            if !dropped.indices().is_empty() {
+                debug!("triangle mesh: Jolt dropped {} degenerate triangles", dropped.indices().len());
+            }
+            Ok(shape)
         }
     }
 }

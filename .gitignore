@@ -3,3 +3,8 @@
 .env
 assets/poly_pizza_cache/
 assets/unitystuff/
+
+# Raw map data for GIS level imports (docs/gis-levels.md)
+gis-raw/
+credentials.txt
+docs/gis-documentation

@@ -10,9 +10,9 @@ use crate::general::systems::map_systems::{
     TileDefinitions, load_map_showcase, map_loader, update_current_tile_system,
 };
 use crate::physics::prelude::{LayerMask, RigidBody};
-use bevy::app::{App, Plugin, Update};
+use bevy::app::{App, FixedUpdate, Plugin, Update};
 use bevy::ecs::schedule::SystemCondition;
-use bevy::prelude::{IntoScheduleConfigs, OnEnter, in_state};
+use bevy::prelude::{IntoScheduleConfigs, OnEnter, in_state, resource_exists};
 use pathfinding::grid::Grid;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -170,12 +170,15 @@ impl Plugin for NonStateMapStuff {
                 },
             })
             .insert_resource(TileDefinitions::new(1.0, 32.0, 9.5, 1.0))
+            .init_resource::<crate::map::streaming::MapStream>()
+            .init_resource::<crate::map::ground::GroundHeight>()
             .insert_resource(AlienCounter::new(50))
             .insert_resource(MapGraph {
                 path_finding_grid: Grid::new(0, 0),
                 occupied_tiles: HashSet::new(),
                 goal: (0, 0),
                 path_reopened: false,
+                flow: crate::ai::flow_field::FlowField::default(),
             });
     }
 }
@@ -188,12 +191,26 @@ impl Plugin for StatefulMapPlugin {
             // A match's map comes from the campaign (`campaign::start_level`).
             .add_systems(OnEnter(GameState::ModelShowcase), load_map_showcase)
             .add_systems(
+                FixedUpdate,
+                (
+                    crate::general::systems::ground_follow::adopt_walkers,
+                    crate::general::systems::ground_follow::follow_ground,
+                )
+                    .chain()
+                    .run_if(resource_exists::<crate::map::ground::Hills>)
+                    .run_if(in_state(GameState::InGame)),
+            )
+            .add_systems(
                 Update,
                 (
                     update_current_tile_system,
                     map_loader,
-                    crate::map::walls::spawn_walls,
-                    crate::map::map_lights::spawn_map_lights,
+                    (
+                        crate::map::streaming::plan_map_stream,
+                        crate::map::streaming::stream_map_chunks,
+                        crate::map::map_lights::budget_lamp_shadows,
+                    )
+                        .chain(),
                 )
                     .run_if(
                         in_state(GameState::InGame).or_else(in_state(GameState::ModelShowcase)),

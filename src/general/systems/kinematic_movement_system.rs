@@ -2,7 +2,7 @@ use crate::control::components::{
     CharacterControl, ControlDirection, ControlRotation, KinematicMovement,
 };
 use crate::physics::prelude::{AngularVelocity, LinearVelocity, Rotation};
-use bevy::prelude::{Query, Vec3, With, trace};
+use bevy::prelude::{Query, Vec3, With};
 
 pub fn kinematic_movement(
     mut query: Query<
@@ -21,19 +21,15 @@ pub fn kinematic_movement(
         let mut torque = Vec3::ZERO;
 
         if controller.directions.contains(&ControlDirection::Forward) {
-            trace!("Move forward!");
             force.z = -1.0;
         }
         if controller.directions.contains(&ControlDirection::Backward) {
-            trace!("Move backwards!");
             force.z = 1.0;
         }
         if controller.rotations.contains(&ControlRotation::Left) {
-            trace!("Rotate left!");
             torque.y = -1.0;
         }
         if controller.rotations.contains(&ControlRotation::Right) {
-            trace!("Rotate right!");
             torque.y = 1.0;
         }
         force = rotation.0.mul_vec3(force);

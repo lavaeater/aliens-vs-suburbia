@@ -13,6 +13,11 @@ pub use avian3d::prelude::{
 };
 use avian3d::prelude::{PhysicsDebugPlugin, PhysicsPlugins};
 
+/// The size of a collider's own bounding box, unscaled and unrotated.
+pub fn local_size(collider: &Collider) -> Vec3 {
+    collider.shape().compute_local_aabb().half_extents() * 2.0
+}
+
 pub(super) fn build(app: &mut App) {
     app.add_plugins((PhysicsPlugins::default(), PhysicsDebugPlugin))
         .insert_gizmo_config(

@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use super::components::{Collider, ColliderKind, Position, Rotation, Sensor};
+use super::components::{Collider, ColliderKind, Position, Rotation, Sensor, bounds};
 
 #[derive(Default, Reflect, GizmoConfigGroup)]
 pub struct PhysicsGizmos;
@@ -39,6 +39,12 @@ pub(super) fn draw_colliders(
                         gizmos.line(at * a, at * b, color);
                     }
                 }
+            }
+            // Tens of thousands of triangles: only the box round them.
+            ColliderKind::TriangleMesh { vertices, .. } => {
+                let (lo, hi) = bounds(vertices);
+                let box_at = Isometry3d::new(at * ((lo + hi) / 2.0), rotation.0);
+                gizmos.primitive_3d(&Cuboid { half_size: (hi - lo) / 2.0 }, box_at, color);
             }
         }
     }

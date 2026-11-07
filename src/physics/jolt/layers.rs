@@ -25,6 +25,16 @@ pub struct LayerMask(pub u32);
 impl LayerMask {
     pub const ALL: Self = Self(u32::MAX);
     pub const NONE: Self = Self(0);
+
+    /// Adds `layers` to the mask, as Avian's.
+    pub fn add(&mut self, layers: impl Into<Self>) {
+        self.0 |= layers.into().0;
+    }
+
+    /// Removes `layers` from the mask, as Avian's.
+    pub fn remove(&mut self, layers: impl Into<Self>) {
+        self.0 &= !layers.into().0;
+    }
 }
 
 impl Default for LayerMask {

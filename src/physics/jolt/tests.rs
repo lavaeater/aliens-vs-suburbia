@@ -25,7 +25,9 @@ impl PhysicsLayer for Layer {
     }
 }
 
-fn app() -> App {
+/// A headless app with the backend and no window, stepped by [`run`]; also used by game tests
+/// that need a Jolt world (`map::ground`).
+pub(crate) fn app() -> App {
     let step = Duration::from_secs_f32(0.05);
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, TransformPlugin))
@@ -37,7 +39,7 @@ fn app() -> App {
     app
 }
 
-fn run(app: &mut App, ticks: usize) {
+pub(crate) fn run(app: &mut App, ticks: usize) {
     for _ in 0..ticks {
         app.update();
     }

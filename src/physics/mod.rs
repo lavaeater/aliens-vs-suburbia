@@ -21,6 +21,7 @@ pub mod prelude {
         CollisionLayers, CollisionStart, Friction, GravityScale, LayerMask, LinearDamping,
         LinearVelocity, LockedAxes, PhysicsGizmos, PhysicsLayer, Position, RigidBody, Rotation,
         Sensor, ShapeCastConfig, SpatialQuery, SpatialQueryFilter, TransformInterpolation,
+        local_size,
     };
     pub use super::GamePhysicsPlugin;
 }

@@ -96,6 +96,19 @@ raw tile number (`A: 261`). Flags: `nothing`, `water`, `grass`, `floor`, `mud`, 
 Converting a RON map writes one of these for every tile value that has no built-in
 letter.
 
+### `[storeys]`
+
+Optional, the same shape as `[tiles]`: `.` for an ordinary tile, or a digit for how many
+storeys a solid wall tile stands. Short rows mean `.`. Only the look changes:
+walking and colliders are as for any wall. The OpenStreetMap import writes it.
+
+### `[elevation]`
+
+Optional: ground height on a lattice, one line per row of numbers separated by spaces. A
+point sits on the centre of every second tile (`ELEVATION_STEP`), and holds centimetres of
+world height above the level's lowest point. The OpenStreetMap import writes it from real
+height data (`docs/gis-levels.md`). The game bends the world to it unless started with `--flat`.
+
 ### `[decorations]`, `[placements]`, `[houses]`, `[waves]`
 
 One entry per line: `key: value` fields separated by `|`, in any order. Values can

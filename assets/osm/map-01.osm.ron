@@ -1,0 +1,41 @@
+// An OpenStreetMap level spec (`OsmLevelSpec`, src/map/osm/mod.rs; docs/gis-levels.md).
+// Import with: cargo run -- --import-osm assets/gis/example.ron
+// Only `source` is required; every other line shows its default or an example.
+// Data: (c) OpenStreetMap contributors, ODbL.
+(
+    name: "Example Area",
+    // The OSM data: an .osm file (openstreetmap.org Export) or an Overpass .json export.
+    // gis-raw/ is gitignored; put it in assets/gis/ to commit it.
+    source: "assets/osm/map-01.osm",
+    land_cover: Some("assets/osm/map-01.markytor.json"),
+    // Ground heights, fetched with tools/fetch_heights.py, and world units to the metre.
+    elevation: Some("assets/osm/map-01.heights.asc"),
+    height_scale: 0.8,
+    // Where the level goes. Default: assets/maps/<this file's stem>.map
+    // The `gis` campaign's level. Re-importing overwrites it (with --force); add back
+    // `escape_limit: 10` under [properties], the spec has no field for it.
+    output: Some("assets/campaigns/gis/map_01/map_01.map"),
+    // Middle of the level, (lat, lon). Default: the middle of the buildings.
+    centre: Some((59.199295,17.753444)),
+    // Width and height in metres. Default: the buildings plus 6 m each side.
+    size: Some((700.0, 700.0)),
+    // Degrees counter-clockwise. None = line the streets up with the grid automatically.
+    rotation_deg: None,
+    metres_per_tile: 3.0,
+    // Fences and hedges: BlocksEnemies (players hop over) | BlocksEveryone | Ignore
+    fences: BlocksEnemies,
+    // What the aliens are after, (lat, lon). Default: the middle of the level.
+    goal: None,
+    // Alien spawns where roads leave the level, widest roads first.
+    max_spawns: 4,
+    // natural=tree nodes as tree decorations.
+    trees: true,
+    // Empty = the game's default waves.
+    waves: [
+        (enemy_def: "", count: 8, spawn_rate_per_minute: 8.0),
+        (enemy_def: "defs/Bunny.ron", count: 12, spawn_rate_per_minute: 12.0),
+        (enemy_def: "", count: 20, spawn_rate_per_minute: 15.0),
+    ],
+    loot: Some((min: 1, max: 3, per_tiles: 40)),
+    stories: "campaigns/gis/map_01/map_01_story.ron",
+)

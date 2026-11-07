@@ -1,0 +1,15 @@
+// The GIS level's own stories, loaded on top of the base level-flow ones (`MapFile::stories`).
+// Format: see assets/campaigns/main/level_01/level_01_story.ron. Placeholder texts.
+[
+    (
+        name: "Map 01 intro",
+        repeat: false,
+        init_facts: [
+            ("ObjectiveText", Text("Hold the hill. Do not let 10 of them reach the goal")),
+        ],
+        rules: [
+            (name: "started", criteria: [BoolIs(key: "LevelStarted", expected: true)]),
+        ],
+        consequences: [Emit(effect: "crawl:map_01_crawl_intro")],
+    ),
+]

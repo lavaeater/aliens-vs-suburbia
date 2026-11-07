@@ -1,0 +1,33 @@
+// An OpenStreetMap level spec (`OsmLevelSpec`, src/map/osm/mod.rs; docs/gis-levels.md).
+// Import with: cargo run -- --import-osm assets/gis/example.ron
+// Only `source` is required; every other line shows its default or an example.
+// Data: (c) OpenStreetMap contributors, ODbL.
+(
+    name: "Example street",
+    // The OSM data: an .osm file (openstreetmap.org Export) or an Overpass .json export.
+    // gis-raw/ is gitignored; put it in assets/gis/ to commit it.
+    source: "gis-raw/example.osm",
+    // Where the level goes. Default: assets/maps/<this file's stem>.map
+    output: None,
+    // Middle of the level, (lat, lon). Default: the middle of the buildings.
+    centre: None,
+    // Width and height in metres. Default: the buildings plus 6 m each side.
+    size: Some((100.0, 80.0)),
+    // Degrees counter-clockwise. None = line the streets up with the grid automatically.
+    rotation_deg: None,
+    metres_per_tile: 1.0,
+    // Fences and hedges: BlocksEnemies (players hop over) | BlocksEveryone | Ignore
+    fences: BlocksEnemies,
+    // What the aliens are after, (lat, lon). Default: the middle of the level.
+    goal: None,
+    // Alien spawns where roads leave the level, widest roads first.
+    max_spawns: 4,
+    // Lantmateriet land cover (GeoJSON), its forests added to OSM's. None = OSM's only.
+    land_cover: None,
+    // natural=tree nodes as tree decorations, and trees in the forests.
+    trees: true,
+    // Empty = the game's default waves.
+    waves: [],
+    loot: Some((min: 1, max: 3, per_tiles: 40)),
+    stories: "",
+)

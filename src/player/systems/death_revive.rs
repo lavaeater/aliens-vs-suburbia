@@ -443,6 +443,58 @@ mod tests {
     use super::*;
     use crate::assets::asset_definition::AmmoKind;
 
+    fn wipe_app() -> App {
+        let mut app = App::new();
+        app.init_resource::<RespawnQueue>();
+        app.insert_resource(LevelTracker {
+            level_state: LevelState::InProgress,
+            ..default()
+        });
+        app.add_systems(Update, check_team_wipe);
+        app
+    }
+
+    fn level_state(app: &App) -> LevelState {
+        app.world().resource::<LevelTracker>().level_state
+    }
+
+    /// The first frame of a level: the spawn is queued, the entity not there yet.
+    #[test]
+    fn a_player_who_has_not_arrived_yet_is_not_a_team_wipe() {
+        let mut app = wipe_app();
+        app.update();
+        assert!(matches!(level_state(&app), LevelState::InProgress));
+    }
+
+    #[test]
+    fn the_last_player_gone_is_a_team_wipe() {
+        let mut app = wipe_app();
+        let player = app.world_mut().spawn(Player).id();
+        app.update();
+        assert!(matches!(level_state(&app), LevelState::InProgress));
+
+        app.world_mut().despawn(player);
+        app.update();
+        assert!(matches!(level_state(&app), LevelState::Failed));
+    }
+
+    #[test]
+    fn a_player_waiting_to_respawn_keeps_the_level_going() {
+        let mut app = wipe_app();
+        let player = app.world_mut().spawn(Player).id();
+        app.update();
+        app.world_mut().despawn(player);
+        app.world_mut().resource_mut::<RespawnQueue>().pending.push(Respawning {
+            slot: 0,
+            lives_left: 1,
+            timer: Timer::from_seconds(1.0, TimerMode::Once),
+            death_position: Vec3::ZERO,
+            anchor: None,
+        });
+        app.update();
+        assert!(matches!(level_state(&app), LevelState::InProgress));
+    }
+
     #[test]
     fn going_down_spawns_a_revive_bar() {
         let mut app = App::new();

@@ -31,33 +31,21 @@ pub fn recheck_path_after_tile_opened(
     }
     map_graph.path_reopened = false;
 
-    // Run A* from an arbitrary alien's position to confirm a path exists.
-    // Use the first alien found; if the grid is passable they'll all benefit.
+    // Any alien will do: if the grid is passable they all benefit.
     let Some((_, sample_tile, _)) = aliens.iter().next() else {
         return;
     };
-    let has_path = astar(
-        &sample_tile.tile,
-        |t| {
-            map_graph
-                .path_finding_grid
-                .neighbours(*t)
-                .into_iter()
-                .map(|t| (t, 1))
-        },
-        |t| map_graph.path_finding_grid.distance(*t, map_graph.goal),
-        |t| *t == map_graph.goal,
-    )
-    .is_some();
+    map_graph.refresh_flow();
+    let has_path = map_graph.flow.steps(sample_tile.tile).is_some();
 
     if has_path {
         for (entity, _, destroying) in aliens.iter() {
             if destroying.is_some() {
                 commands.entity(entity).remove::<MustDestroyTheMap>();
-                // Reset their movement path so they pick up A* fresh next tick.
+                // Forget where they were heading, so they read the field afresh.
                 commands
                     .entity(entity)
-                    .insert(MoveTowardsGoalData { path: None });
+                    .insert(MoveTowardsGoalData { next: None });
             }
         }
     }
@@ -294,6 +282,7 @@ pub fn destroy_the_map_action_system(
 #[cfg(test)]
 mod tests {
     use super::recheck_path_after_tile_opened;
+    use crate::ai::flow_field::FlowField;
     use crate::ai::components::destroy_the_map_components::MustDestroyTheMap;
     use crate::ai::components::move_towards_goal_components::MoveTowardsGoalData;
     use crate::alien::components::general::Alien;
@@ -314,6 +303,7 @@ mod tests {
             occupied_tiles: HashSet::new(),
             goal,
             path_reopened: reopened,
+            flow: FlowField::default(),
         }
     }
 

@@ -14,7 +14,7 @@ mod sync;
 mod world;
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
 
 use bevy::app::RunFixedMainLoopSystems;
 use bevy::gizmos::AppGizmoBuilder;
@@ -30,6 +30,11 @@ pub use debug::PhysicsGizmos;
 pub use layers::{CollisionLayers, LayerMask, PhysicsLayer};
 pub use query::{ShapeCastConfig, SpatialQuery, SpatialQueryFilter};
 pub use world::JoltWorld;
+
+/// The size of a collider's own bounding box, unscaled and unrotated.
+pub fn local_size(collider: &Collider) -> Vec3 {
+    collider.local_size()
+}
 
 /// The step and its sync, in order, in `FixedPostUpdate`.
 #[derive(SystemSet, Clone, Debug, PartialEq, Eq, Hash)]

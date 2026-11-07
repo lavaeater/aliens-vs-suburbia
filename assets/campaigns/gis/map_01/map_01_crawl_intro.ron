@@ -1,0 +1,15 @@
+// The GIS level's intro crawl (placeholder). Fields: see
+// assets/campaigns/main/level_01/level_01_crawl_intro.ron. Plain ASCII only.
+(
+    title: "PLACEHOLDER: UP THE HILL",
+    lines: [
+        "This level is a real place, imported from OpenStreetMap, hills and all.",
+        "",
+        "Something is coming up the roads from the edge of the map.",
+        "",
+        "Hold the hill. Do not let them reach the goal...",
+    ],
+    style: Scroll(tilt: 0.0),
+    speed: 55.0,
+    backdrop: 0.85,
+)

@@ -54,7 +54,7 @@ const fn locked_axes() -> LockedAxes {
     CurrentTile::default(),
     CurrentAnimationKey::new("aliens".into(), AnimationKey::Walk),
     AvoidWallsData::new(0.125, 0.125, 0.125, 5.0),
-    MoveTowardsGoalData { path: None },
+    MoveTowardsGoalData { next: None },
     AlienSightShape::default(),
     Attack::default(),
     Health::default(),
