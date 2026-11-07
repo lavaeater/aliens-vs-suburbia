@@ -4,7 +4,7 @@
 // genuinely risky spots are fixed individually.
 #![allow(clippy::arithmetic_side_effects, clippy::indexing_slicing)]
 
-use crate::map::ground::{GroundHeight, HillsPreview};
+use crate::map::ground::{GroundHeight, Hills};
 use crate::alien::components::general::AlienCounter;
 use crate::assets::assets_plugin::GameAssets;
 use crate::building::systems::ToWorldCoordinates;
@@ -119,7 +119,7 @@ pub fn map_loader(
     mut add_health_bar_mw: MessageWriter<AddHealthBar>,
     mut wave_manager: Option<ResMut<crate::alien::wave_manager::WaveManager>>,
     mut neighbours_mw: MessageWriter<crate::infestation::SpawnNeighbour>,
-    hills: Option<Res<HillsPreview>>,
+    hills: Option<Res<Hills>>,
 ) {
     for load_map in load_map_event_reader.read() {
         let map_file = &load_map.map;

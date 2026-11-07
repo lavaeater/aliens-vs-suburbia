@@ -197,7 +197,7 @@ impl Plugin for StatefulMapPlugin {
                     crate::general::systems::ground_follow::follow_ground,
                 )
                     .chain()
-                    .run_if(resource_exists::<crate::map::ground::HillsPreview>)
+                    .run_if(resource_exists::<crate::map::ground::Hills>)
                     .run_if(in_state(GameState::InGame)),
             )
             .add_systems(

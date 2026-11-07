@@ -274,10 +274,10 @@ the grid) and turning them into `HouseDef`s with doors and windows is phase 4.
 Levels carry their ground heights, and hills go in three stages. Smooth slopes, no terraces.
 
 1. The heights in the map. Done.
-2. The world bent to them, behind `--hills`: floor, walls, trees, lamps and loot bags stand on
-   the ground (`map::ground`). Done. Without the flag the game is flat.
-3. Everything that moves following the ground. Done, still behind `--hills` until it has been
-   played.
+2. The world bent to them: floor, walls, trees, lamps and loot bags stand on the ground
+   (`map::ground`). Done. On by default; `--flat` plays any level flat.
+3. Everything that moves following the ground. Done. The default campaign, `gis`, plays
+   `map-01` (`assets/campaigns/gis/map_01/map_01.map`, the spec's `output`) with its hills.
 
 The game stays close to a flat one underneath. Characters ignore the terrain and have no
 gravity: each physics step `ground_follow.rs` sets their vertical speed to land them on the

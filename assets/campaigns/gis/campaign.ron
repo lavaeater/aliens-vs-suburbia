@@ -1,0 +1,18 @@
+// The GIS campaign: levels imported from OpenStreetMap (`src/map/osm`, docs/gis-levels.md),
+// played with their hills. The default campaign (`campaign::DEFAULT_CAMPAIGN`); the others
+// with `cargo run -- --campaign neighbourhood` or `--campaign main`. Format: see
+// `assets/campaigns/main/campaign.ron`. Placeholder texts for now. Plain ASCII only.
+(
+    levels: [
+        (
+            map: "campaigns/gis/map_01/map_01.map",
+            title: "Up The Hill",
+            tagline: "Placeholder: a real place, real hills, unreal visitors.",
+        ),
+    ],
+    victory_title: "THE HILL IS HELD",
+    victory_lines: [
+        "Placeholder: the last of them rolls back down the slope.",
+        "The neighbourhood goes back to arguing about parking.",
+    ],
+)

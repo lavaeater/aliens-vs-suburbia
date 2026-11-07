@@ -10,8 +10,8 @@
 //!
 //! Keys: **Ctrl+K** on/off, **Ctrl+J** next palette (Shift: previous; the first is full
 //! colour), **Ctrl+H** dither strength, **Ctrl+U / Ctrl+I** smaller / bigger pixels.
-//! `--retro` starts with it on, `--palette <name>` picks the palette, `--retro-shots <dir>`
-//! saves a screenshot per palette and quits.
+//! On from the start with [`DEFAULT_PALETTE`]; `--no-retro` starts with it off, `--palette
+//! <name>` picks another palette, `--retro-shots <dir>` saves a screenshot per palette and quits.
 //! Off in the character editor (its camera is clipped to a pane).
 
 pub mod palette;
@@ -42,6 +42,8 @@ const CANVAS_LAYER: usize = 31;
 const SHADER: &str = "shaders/retro_canvas.wgsl";
 const DITHER_STEPS: [f32; 4] = [0.0, 0.35, 0.7, 1.0];
 const MAX_PIXEL_SIZE: u32 = 8;
+/// The palette the game starts with, unless `--palette` names another.
+pub const DEFAULT_PALETTE: &str = "moebius-64";
 
 /// What the retro look should be. Edited by the hotkeys; read every frame.
 #[derive(Resource, Clone, Debug)]
@@ -177,12 +179,11 @@ impl Plugin for RetroPlugin {
             enabled: self.enabled,
             ..default()
         };
-        if let Some(name) = &self.palette {
-            if let Some(i) = palettes.index_of(name) {
-                look.palette = i;
-            } else {
-                warn!("no palette named {name} in {}", palette::PALETTE_DIR);
-            }
+        let name = self.palette.as_deref().unwrap_or(DEFAULT_PALETTE);
+        if let Some(i) = palettes.index_of(name) {
+            look.palette = i;
+        } else {
+            warn!("no palette named {name} in {}", palette::PALETTE_DIR);
         }
         if let Some(dir) = &self.shots {
             shots::plugin(app, dir.clone());

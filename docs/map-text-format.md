@@ -107,7 +107,7 @@ walking and colliders are as for any wall. The OpenStreetMap import writes it.
 Optional: ground height on a lattice, one line per row of numbers separated by spaces. A
 point sits on the centre of every second tile (`ELEVATION_STEP`), and holds centimetres of
 world height above the level's lowest point. The OpenStreetMap import writes it from real
-height data (`docs/gis-levels.md`). The game only uses it with `--hills`, for now.
+height data (`docs/gis-levels.md`). The game bends the world to it unless started with `--flat`.
 
 ### `[decorations]`, `[placements]`, `[houses]`, `[waves]`
 

@@ -32,7 +32,7 @@ use crate::ui::ui_plugin::spawn_ui_camera;
 
 /// The campaign played unless `--campaign <name>` says otherwise: a folder under
 /// `assets/campaigns`.
-pub const DEFAULT_CAMPAIGN: &str = "neighbourhood";
+pub const DEFAULT_CAMPAIGN: &str = "gis";
 
 /// A campaign's file: `assets/campaigns/<name>/campaign.ron`.
 pub fn campaign_file(name: &str) -> String {

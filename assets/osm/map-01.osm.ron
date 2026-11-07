@@ -12,7 +12,9 @@
     elevation: Some("assets/osm/map-01.heights.asc"),
     height_scale: 0.4,
     // Where the level goes. Default: assets/maps/<this file's stem>.map
-    output: None,
+    // The `gis` campaign's level. Re-importing overwrites it (with --force); add back
+    // `escape_limit: 10` under [properties], the spec has no field for it.
+    output: Some("assets/campaigns/gis/map_01/map_01.map"),
     // Middle of the level, (lat, lon). Default: the middle of the buildings.
     centre: Some((59.199295,17.753444)),
     // Width and height in metres. Default: the buildings plus 6 m each side.
@@ -29,7 +31,11 @@
     // natural=tree nodes as tree decorations.
     trees: true,
     // Empty = the game's default waves.
-    waves: [],
+    waves: [
+        (enemy_def: "", count: 8, spawn_rate_per_minute: 8.0),
+        (enemy_def: "defs/Bunny.ron", count: 12, spawn_rate_per_minute: 12.0),
+        (enemy_def: "", count: 20, spawn_rate_per_minute: 15.0),
+    ],
     loot: Some((min: 1, max: 3, per_tiles: 40)),
-    stories: "",
+    stories: "campaigns/gis/map_01/map_01_story.ron",
 )

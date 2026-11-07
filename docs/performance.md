@@ -174,7 +174,7 @@ levels look.
 
 ```bash
 cargo run --release -- --play --perf
-cargo run --release -- --play --perf --level assets/maps/map-01.osm.map
+cargo run --release -- --play --perf --level assets/campaigns/gis/map_01/map_01.map
 ```
 
 `--perf` (`src/perf.rs`) logs frame time, entity count and render pass timings every 5 seconds.

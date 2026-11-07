@@ -26,7 +26,7 @@ use crate::general::events::map_events::LoadMap;
 use crate::general::systems::map_systems::TileDefinitions;
 use crate::loot::bags::{self, PlannedBag, StreamedBag};
 use crate::map::floor_mesh::{TerrainColor, build_floors};
-use crate::map::ground::{GroundHeight, HillsPreview};
+use crate::map::ground::{GroundHeight, Hills};
 use crate::map::map_lights::{Fixtures, LightPlan, plan_lights, spawn_light};
 use crate::map::walls::{WallKind, padded_tiles, plan_walls};
 use crate::settings::resources::GameSettings;
@@ -285,7 +285,7 @@ pub fn plan_map_stream(
     asset_server: Res<AssetServer>,
     tile_defs: Res<TileDefinitions>,
     game_settings: Res<GameSettings>,
-    hills: Option<Res<HillsPreview>>,
+    hills: Option<Res<Hills>>,
     mut ground: ResMut<GroundHeight>,
 ) {
     for load in loads.read() {

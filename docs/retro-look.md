@@ -35,7 +35,8 @@ Return of the Obra Dinn. Built in layers, each one switchable on its own.
 Keys: **Ctrl+K** on/off, **Ctrl+J** next palette (Shift+Ctrl+J back; first is full colour),
 **Ctrl+H** dither strength (0 / 0.35 / 0.7 / 1), **Ctrl+U / Ctrl+I** smaller / bigger pixels.
 
-Flags: `--retro`, `--palette <name>`, `--retro-shots <dir>` (one screenshot per palette,
+On from the start with `moebius-64` (`DEFAULT_PALETTE`). Flags: `--no-retro` (start in full colour),
+`--palette <name>`, `--retro-shots <dir>` (one screenshot per palette,
 then quit; run under XWayland with `env -u WAYLAND_DISPLAY` if the window is not visible,
 Wayland stops drawing hidden windows).
 

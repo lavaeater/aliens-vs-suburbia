@@ -1,7 +1,7 @@
 //! The height of the ground anywhere on a map: [`MapFile::elevation`] read between its points.
 //!
-//! Hills are behind `--hills` ([`HillsPreview`]) until they have been played. Without the flag,
-//! or on a map with no heights, [`GroundHeight`] is flat at 0.
+//! Hills are on unless `--flat` ([`Hills`]). With the flag, or on a map with no heights,
+//! [`GroundHeight`] is flat at 0.
 
 use avian3d::prelude::Collider;
 use bevy::math::{Quat, Vec3};
@@ -9,9 +9,9 @@ use bevy::prelude::Resource;
 
 use crate::general::components::map_components::{ELEVATION_STEP, MapFile};
 
-/// Insert it to bend the world to `MapFile::elevation`.
+/// Present unless `--flat`: bends the world to `MapFile::elevation`.
 #[derive(Resource)]
-pub struct HillsPreview;
+pub struct Hills;
 
 /// The current map's ground, above `TileDefinitions::floor_level`, in world coordinates.
 #[derive(Resource, Debug, Clone, Default)]

@@ -203,9 +203,10 @@ fn print_help() {
     println!("  cargo run -- --fullscreen                  1920x1080 fullscreen (combines with the others)");
     println!("  cargo run -- --play --level <path>         ... into the map at <path> (.map or .ron), outside the campaign");
     println!("  cargo run -- --play --perf                 ... logging frame and render pass timings, uncapped");
-    println!("  cargo run -- --play --hills --level <path> ... with the level's hills");
-    println!("  cargo run -- --play --retro [--palette <name>]");
-    println!("                                             ... pixelated, palette from assets/palettes (Ctrl+K/J/H/U/I)");
+    println!("  cargo run -- --flat                        Ignore the levels' hills (flat ground)");
+    println!("  cargo run -- --palette <name>              Start with another palette from assets/palettes");
+    println!("                                             (default {}; Ctrl+K/J/H/U/I change the look)", retro::DEFAULT_PALETTE);
+    println!("  cargo run -- --no-retro                    Start in full colour, without the retro look");
     println!("  cargo run -- --play --retro-shots <dir>    ... a screenshot per palette into <dir>, then quit");
     println!("  cargo run --features map-editor -- --map-editor [--file <path>]");
     println!("                                             Launch the map editor TUI");
@@ -339,7 +340,7 @@ fn main() -> std::process::ExitCode {
         // .add_plugins(PixelShaderPlugin::default())
         .add_plugins(GamePlugin)
         .add_plugins(retro::RetroPlugin {
-            enabled: args.iter().any(|a| a == "--retro"),
+            enabled: !args.iter().any(|a| a == "--no-retro"),
             palette: args.iter().skip_while(|a| *a != "--palette").nth(1).cloned(),
             shots: args
                 .iter()
@@ -351,8 +352,8 @@ fn main() -> std::process::ExitCode {
     if let Some(path) = level_path {
         app.insert_resource(general::systems::map_systems::StartLevel(path));
     }
-    if args.iter().any(|a| a == "--hills") {
-        app.insert_resource(map::ground::HillsPreview);
+    if !args.iter().any(|a| a == "--flat") {
+        app.insert_resource(map::ground::Hills);
     }
 
     if args.iter().any(|a| a == "--perf") {
