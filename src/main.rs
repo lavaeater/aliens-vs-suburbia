@@ -51,6 +51,7 @@ mod perf;
 pub(crate) mod player;
 pub(crate) mod player_setup;
 pub(crate) mod poly_pizza;
+pub(crate) mod retro;
 pub(crate) mod settings;
 pub mod skein;
 pub(crate) mod towers;
@@ -200,6 +201,9 @@ fn print_help() {
     println!("  cargo run -- --play --level <path>         ... into the level at <path> (.map or .ron)");
     println!("  cargo run -- --play --perf                 ... logging frame and render pass timings, uncapped");
     println!("  cargo run -- --play --hills --level <path> ... with the level's hills");
+    println!("  cargo run -- --play --retro [--palette <name>]");
+    println!("                                             ... pixelated, palette from assets/palettes (Ctrl+K/J/H/U/I)");
+    println!("  cargo run -- --play --retro-shots <dir>    ... a screenshot per palette into <dir>, then quit");
     println!("  cargo run --features map-editor -- --map-editor [--file <path>]");
     println!("                                             Launch the map editor TUI");
     println!("  cargo run -- --create-map [OPTIONS]        Generate a map file");
@@ -305,7 +309,16 @@ fn main() -> std::process::ExitCode {
         //         .build(),
         //))
         // .add_plugins(PixelShaderPlugin::default())
-        .add_plugins(GamePlugin);
+        .add_plugins(GamePlugin)
+        .add_plugins(retro::RetroPlugin {
+            enabled: args.iter().any(|a| a == "--retro"),
+            palette: args.iter().skip_while(|a| *a != "--palette").nth(1).cloned(),
+            shots: args
+                .iter()
+                .skip_while(|a| *a != "--retro-shots")
+                .nth(1)
+                .map(std::path::PathBuf::from),
+        });
 
     if let Some(level) = start_level {
         app.insert_resource(general::systems::map_systems::StartLevel(level));
