@@ -133,7 +133,7 @@ file references and what is left. Phases 1-6 landed 2026-09-20 **without a runti
 
 No ambient light in a match: `general/systems/lights_systems.rs` holds `LightingPreset` (Night = faint
 blue moon without shadows, default; Dark = placed lights only; Day = the old ambient 300 + sun), cycled with
-**Ctrl+L**; the character editor starts in Day. Leaving `InGame` restores the default ambient
+**Ctrl+L** or the F12 panel's Sky row, which also tunes `SkyLightSettings` (sky light height/turn/strength, extra ambient; saved with the preset in `retro-settings.ron`); the character editor starts in Day. Leaving `InGame` restores the default ambient
 for the other screens. `gore::despair` dims the preset's ambient (`ambient_dread_factor`), so it
 only shows in Day. `LightAnimation` (`Flicker` / `Pulse`) drives point/spot intensity. Every
 player carries a shadow-casting spot (`player/systems/flashlight.rs`): its own entity, placed

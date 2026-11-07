@@ -6,6 +6,7 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use super::Palettes;
+use crate::general::systems::lights_systems::{LightingPreset, SkyLightSettings};
 
 pub const SETTINGS_PATH: &str = "retro-settings.ron";
 pub const MAX_PIXEL_SIZE: u32 = 8;
@@ -176,6 +177,65 @@ impl Setting {
     }
 }
 
+/// A lighting row of the panel: the sky preset and its tuning.
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LightSetting {
+    Preset,
+    Height,
+    Turn,
+    Strength,
+    Ambient,
+}
+
+impl LightSetting {
+    pub const ALL: [LightSetting; 5] = [
+        LightSetting::Preset,
+        LightSetting::Height,
+        LightSetting::Turn,
+        LightSetting::Strength,
+        LightSetting::Ambient,
+    ];
+
+    pub fn name(self) -> &'static str {
+        match self {
+            LightSetting::Preset => "Sky",
+            LightSetting::Height => "Height",
+            LightSetting::Turn => "Turn",
+            LightSetting::Strength => "Strength",
+            LightSetting::Ambient => "Ambient",
+        }
+    }
+
+    pub fn step(self, preset: &mut LightingPreset, sky: &mut SkyLightSettings, dir: i32) {
+        let up = dir > 0;
+        let by = |step: f32| if up { step } else { -step };
+        match self {
+            LightSetting::Preset => {
+                *preset = if up { preset.next() } else { preset.previous() };
+            }
+            LightSetting::Height => {
+                sky.elevation_deg = (sky.elevation_deg + by(5.0)).clamp(5.0, 90.0);
+            }
+            LightSetting::Turn => sky.azimuth_deg = (sky.azimuth_deg + by(15.0)).rem_euclid(360.0),
+            LightSetting::Strength => {
+                sky.strength = ((sky.strength + by(0.25)) * 4.0).round() / 4.0;
+                sky.strength = sky.strength.clamp(0.0, 8.0);
+            }
+            LightSetting::Ambient => sky.ambient = (sky.ambient + by(25.0)).clamp(0.0, 1000.0),
+        }
+    }
+
+    pub fn value(self, preset: LightingPreset, sky: &SkyLightSettings) -> String {
+        match self {
+            LightSetting::Preset => preset.name().to_string(),
+            LightSetting::Height => format!("{:.0} deg", sky.elevation_deg),
+            LightSetting::Turn => format!("{:.0} deg", sky.azimuth_deg),
+            LightSetting::Strength => format!("{:.2}x", sky.strength),
+            LightSetting::Ambient => format!("+{:.0}", sky.ambient),
+        }
+    }
+}
+
 /// One line for the on-screen flash when something changes.
 pub fn summary(look: &RetroLook, palettes: &Palettes) -> String {
     if !look.enabled {
@@ -205,6 +265,9 @@ pub struct RetroFile {
     pub warmth: f32,
     pub ink: f32,
     pub ink_threshold: f32,
+    /// The sky preset and its tuning (`general::systems::lights_systems`).
+    pub light: LightingPreset,
+    pub sky: SkyLightSettings,
 }
 
 impl Default for RetroFile {
@@ -219,6 +282,16 @@ impl Default for RetroFile {
 
 impl RetroFile {
     fn from_look(look: &RetroLook, palettes: &Palettes, palette: &str) -> Self {
+        Self::with_light(look, palettes, palette, LightingPreset::default(), SkyLightSettings::default())
+    }
+
+    fn with_light(
+        look: &RetroLook,
+        palettes: &Palettes,
+        palette: &str,
+        light: LightingPreset,
+        sky: SkyLightSettings,
+    ) -> Self {
         Self {
             enabled: look.enabled,
             palette: palettes
@@ -233,11 +306,23 @@ impl RetroFile {
             warmth: look.warmth,
             ink: look.ink,
             ink_threshold: look.ink_threshold,
+            light,
+            sky,
         }
     }
 
+    #[cfg(test)]
     pub fn of(look: &RetroLook, palettes: &Palettes) -> Self {
         Self::from_look(look, palettes, "")
+    }
+
+    pub fn of_all(
+        look: &RetroLook,
+        palettes: &Palettes,
+        light: LightingPreset,
+        sky: SkyLightSettings,
+    ) -> Self {
+        Self::with_light(look, palettes, "", light, sky)
     }
 
     /// The look this file describes; an unknown palette name falls back to full colour.
@@ -346,6 +431,22 @@ mod tests {
         assert_eq!(back.look(&p), look);
         let shuffled = Palettes(p.0.into_iter().rev().collect());
         assert_eq!(back.look(&shuffled).palette, 1);
+    }
+
+    #[test]
+    fn the_light_rows_wrap_and_clamp() {
+        let mut preset = LightingPreset::Night;
+        let mut sky = SkyLightSettings::default();
+        LightSetting::Preset.step(&mut preset, &mut sky, -1);
+        assert_eq!(preset, LightingPreset::Day);
+        LightSetting::Turn.step(&mut preset, &mut sky, 1);
+        assert_eq!(LightSetting::Turn.value(preset, &sky), "0 deg");
+        for _ in 0..30 {
+            LightSetting::Height.step(&mut preset, &mut sky, 1);
+            LightSetting::Strength.step(&mut preset, &mut sky, -1);
+        }
+        assert_eq!(sky.elevation_deg, 90.0);
+        assert_eq!(sky.strength, 0.0);
     }
 
     #[test]

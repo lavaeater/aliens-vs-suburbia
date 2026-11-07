@@ -41,7 +41,9 @@ Return of the Obra Dinn. Built in layers, each one switchable on its own.
   into the small image.
 - Off in the character editor (its camera is clipped to a pane).
 
-**F12** opens the panel: every setting with `<` / `>` buttons. Any change flashes a
+**F12** opens the panel: every setting with `<` / `>` buttons, and under "Light" the sky
+(moon / none / sun, same as Ctrl+L), its height and turn in degrees, its strength and extra
+ambient (`SkyLightSettings` in `general/systems/lights_systems.rs`). Any change flashes a
 summary at the top of the screen and is saved to `retro-settings.ron` (project root,
 committed like `game-settings.ron`; palette by name). Hotkeys: **Ctrl+K** on/off, **Ctrl+J** next palette (Shift+Ctrl+J back; first is full colour),
 **Ctrl+H** dither strength (0 / 0.2 / 0.35 / 0.7 / 1), **Ctrl+U / Ctrl+I** smaller / bigger pixels.

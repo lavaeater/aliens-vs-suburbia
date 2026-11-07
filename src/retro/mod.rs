@@ -171,7 +171,9 @@ pub struct RetroPlugin {
 impl Plugin for RetroPlugin {
     fn build(&self, app: &mut App) {
         let palettes = Palettes(palette::load_all());
-        let mut look = RetroFile::load().unwrap_or_default().look(&palettes);
+        let file = RetroFile::load().unwrap_or_default();
+        let mut look = file.look(&palettes);
+        app.insert_resource(file.light).insert_resource(file.sky);
         if self.force_off {
             look.enabled = false;
         }
