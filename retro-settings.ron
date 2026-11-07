@@ -1,0 +1,13 @@
+(
+    enabled: true,
+    palette: "giraud-128",
+    pixel_size: 3,
+    dither: 0.35,
+    exposure: 1.3,
+    contrast: 1.1,
+    saturation: 1.2,
+    shadow_tint: 0.8,
+    warmth: 0.5,
+    ink: 0.75,
+    ink_threshold: 0.08,
+)

@@ -1,6 +1,7 @@
 // The retro canvas (src/retro/mod.rs): draws the low-res scene on the window, one texel
-// at a time, matched to a palette in OKLab with an 8x8 ordered (Bayer) dither between the
-// two nearest colours.
+// at a time: graded in OKLab (exposure, contrast, saturation, violet shadows, warm
+// highlights), inked where it is darker than a neighbour, then matched to a palette with
+// an 8x8 ordered (Bayer) dither between the two nearest colours.
 
 #import bevy_sprite::mesh2d_vertex_output::VertexOutput
 
@@ -14,6 +15,14 @@ struct RetroParams {
     exposure: f32,
     palette_len: u32,
     _pad: u32,
+    contrast: f32,
+    saturation: f32,
+    shadow_tint: f32,
+    warmth: f32,
+    ink: f32,
+    ink_threshold: f32,
+    _pad2: f32,
+    _pad3: f32,
     palette_lab: array<vec4<f32>, 256>,
     palette_linear: array<vec4<f32>, 256>,
 }
@@ -35,6 +44,58 @@ fn linear_to_oklab(c: vec3<f32>) -> vec3<f32> {
     );
 }
 
+fn oklab_to_linear(c: vec3<f32>) -> vec3<f32> {
+    let l_ = c.x + 0.3963377774 * c.y + 0.2158037573 * c.z;
+    let m_ = c.x - 0.1055613458 * c.y - 0.0638541728 * c.z;
+    let s_ = c.x - 0.0894841775 * c.y - 1.2914855480 * c.z;
+    let l = l_ * l_ * l_;
+    let m = m_ * m_ * m_;
+    let s = s_ * s_ * s_;
+    return vec3<f32>(
+        4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+        -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+        -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
+    );
+}
+
+// Where the shadows lean (violet, OKLCh hue ~290) and the highlights (warm, ~75).
+const SHADOW_AB: vec2<f32> = vec2<f32>(0.026, -0.072);
+const WARM_AB: vec2<f32> = vec2<f32>(0.013, 0.048);
+
+fn lightness(texel: vec2<i32>) -> f32 {
+    let size = vec2<i32>(params.image_size);
+    let c = textureLoad(scene, clamp(texel, vec2<i32>(0), size - 1), 0).rgb * params.exposure;
+    return linear_to_oklab(c).x;
+}
+
+// The scene colour at `texel`, graded, in OKLab.
+fn graded(texel: vec2<i32>) -> vec3<f32> {
+    let colour = textureLoad(scene, texel, 0).rgb * params.exposure;
+    var lab = linear_to_oklab(colour);
+    lab.x = clamp((lab.x - 0.5) * params.contrast + 0.5, 0.0, 1.0);
+    var ab = lab.yz * params.saturation;
+    let dark = (1.0 - lab.x) * (1.0 - lab.x);
+    ab += SHADOW_AB * params.shadow_tint * dark;
+    lab.x += 0.05 * params.shadow_tint * dark * dark;
+    ab += WARM_AB * params.warmth * lab.x * lab.x;
+    lab = vec3<f32>(lab.x, ab);
+
+    // Ink: a line on the dark side of every edge, so it is one texel thick.
+    if params.ink > 0.0 {
+        let here = lightness(texel);
+        var rise = 0.0;
+        rise = max(rise, lightness(texel + vec2<i32>(1, 0)) - here);
+        rise = max(rise, lightness(texel - vec2<i32>(1, 0)) - here);
+        rise = max(rise, lightness(texel + vec2<i32>(0, 1)) - here);
+        rise = max(rise, lightness(texel - vec2<i32>(0, 1)) - here);
+        if rise > params.ink_threshold {
+            let ink = vec3<f32>(0.16, SHADOW_AB * 0.6);
+            lab = mix(lab, ink, params.ink);
+        }
+    }
+    return lab;
+}
+
 // 8x8 Bayer threshold in 0..1: bit-reverse of the interleaved (x ^ y, y) bits.
 fn bayer8(p: vec2<u32>) -> f32 {
     let x = p.x & 7u;
@@ -50,15 +111,14 @@ fn bayer8(p: vec2<u32>) -> f32 {
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let size = vec2<i32>(params.image_size);
     let texel = clamp(vec2<i32>(floor(in.uv * params.image_size)), vec2<i32>(0), size - 1);
-    let colour = textureLoad(scene, texel, 0).rgb * params.exposure;
+    let lab = graded(texel);
 
     let count = min(params.palette_len, MAX_COLORS);
     if count == 0u {
-        return vec4<f32>(colour, 1.0);
+        return vec4<f32>(max(oklab_to_linear(lab), vec3<f32>(0.0)), 1.0);
     }
 
     // The two palette colours nearest in OKLab.
-    let lab = linear_to_oklab(colour);
     var best = 0u;
     var second = 0u;
     var best_d = 1e9;

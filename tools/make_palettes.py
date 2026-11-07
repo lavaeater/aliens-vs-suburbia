@@ -99,6 +99,28 @@ MOEBIUS = [
 ]
 
 
+# The 128-colour sets: the ramps above plus the in-between hues, 16 ramps x 8.
+SUBURB_WIDE = SUBURB + [
+    (285, 0.08),   # violet shadow (the Giraud night)
+    (220, 0.07),   # slate
+    (165, 0.09),   # spring green
+    (20, 0.10),    # rust
+    (75, 0.05),    # dry grass / sand
+    (0, 0.15),     # alarm red
+]
+
+MOEBIUS_WIDE = MOEBIUS + [
+    (285, 0.09),   # violet night
+    (255, 0.05),   # steel blue
+    (170, 0.05),   # pale jade
+    (100, 0.06),   # moss
+    (55, 0.14),    # hazmat orange
+    (30, 0.10),    # red clay
+    (330, 0.06),   # mauve
+    (90, 0.04),    # bone
+]
+
+
 def palette(ramps, steps, **kw):
     colours = []
     for hue, chroma in ramps:
@@ -120,6 +142,8 @@ if __name__ == "__main__":
     write("suburb-30", palette(SUBURB, 3), "10 suburban ramps x 3")
     write("suburb-50", palette(SUBURB, 5), "10 suburban ramps x 5")
     write("suburb-80", palette(SUBURB, 8, lo=0.08, hi=0.96), "10 suburban ramps x 8")
+    write("suburb-128", palette(SUBURB_WIDE, 8, lo=0.08, hi=0.96), "16 suburban ramps x 8")
+    write("moebius-128", palette(MOEBIUS_WIDE, 8, lo=0.14, hi=0.97, shift=0.3), "16 pastel ramps x 8")
     write("drifter-32", palette(DRIFTER, 4, lo=0.14, hi=0.92, shift=0.15), "neon ramps x 4")
     write("drifter-48", palette(DRIFTER, 6, lo=0.10, hi=0.94, shift=0.15), "neon ramps x 6")
     write("moebius-40", palette(MOEBIUS, 5, lo=0.22, hi=0.96, shift=0.3), "pastel ramps x 5")

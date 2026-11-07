@@ -8,13 +8,18 @@
 //! glued to the world while the camera still glides; the dither pattern is offset by the
 //! camera's texel so it stays on the world too.
 //!
-//! Keys: **Ctrl+K** on/off, **Ctrl+J** next palette (Shift: previous; the first is full
-//! colour), **Ctrl+H** dither strength, **Ctrl+U / Ctrl+I** smaller / bigger pixels.
-//! On from the start with [`DEFAULT_PALETTE`]; `--no-retro` starts with it off, `--palette
-//! <name>` picks another palette, `--retro-shots <dir>` saves a screenshot per palette and quits.
+//! **F12** opens the settings panel (`panel.rs`), every setting with left/right buttons;
+//! any change flashes a summary on screen and is saved to `retro-settings.ron`
+//! (`look.rs`). Hotkeys: **Ctrl+K** on/off, **Ctrl+J** next palette (Shift: previous; the
+//! first is full colour), **Ctrl+H** dither strength, **Ctrl+U / Ctrl+I** smaller / bigger
+//! pixels. Starts as the file says ([`DEFAULT_PALETTE`] without one); `--no-retro` starts
+//! with it off, `--palette <name>` picks another palette, `--retro-shots <dir>` saves a
+//! screenshot per palette and quits.
 //! Off in the character editor (its camera is clipped to a pane).
 
+pub mod look;
 pub mod palette;
+mod panel;
 mod shots;
 pub mod snap;
 
@@ -34,42 +39,16 @@ use bevy::window::{PrimaryWindow, WindowRef};
 
 use crate::camera::components::GameCamera;
 use crate::character_editor::state::EditorSession;
+pub use look::RetroLook;
+use look::{RetroFile, Setting};
 use palette::{MAX_COLORS, Palette};
 use snap::{CanvasLayout, snap_to_texels};
 
 /// The render layer only the canvas camera and its quad live on.
 const CANVAS_LAYER: usize = 31;
 const SHADER: &str = "shaders/retro_canvas.wgsl";
-const DITHER_STEPS: [f32; 4] = [0.0, 0.35, 0.7, 1.0];
-const MAX_PIXEL_SIZE: u32 = 8;
 /// The palette the game starts with, unless `--palette` names another.
 pub const DEFAULT_PALETTE: &str = "moebius-64";
-
-/// What the retro look should be. Edited by the hotkeys; read every frame.
-#[derive(Resource, Clone, Debug)]
-pub struct RetroLook {
-    pub enabled: bool,
-    /// Screen pixels per texel.
-    pub pixel_size: u32,
-    /// Index into `Palettes`; 0 is full colour (pixelation only).
-    pub palette: usize,
-    /// 0 = nearest colour, 1 = full ordered dither between the two nearest.
-    pub dither: f32,
-    /// Brightness before the palette is matched; dark palettes on a night map want more.
-    pub exposure: f32,
-}
-
-impl Default for RetroLook {
-    fn default() -> Self {
-        Self {
-            enabled: false,
-            pixel_size: 3,
-            palette: 0,
-            dither: 0.7,
-            exposure: 1.0,
-        }
-    }
-}
 
 /// Every `.hex` palette in `assets/palettes`, sorted. `RetroLook::palette` 0 is "none",
 /// so palette `i` is `list[i - 1]`.
@@ -131,6 +110,14 @@ struct RetroParams {
     exposure: f32,
     palette_len: u32,
     _pad: u32,
+    contrast: f32,
+    saturation: f32,
+    shadow_tint: f32,
+    warmth: f32,
+    ink: f32,
+    ink_threshold: f32,
+    _pad2: f32,
+    _pad3: f32,
     palette_lab: [Vec4; MAX_COLORS],
     palette_linear: [Vec4; MAX_COLORS],
 }
@@ -144,6 +131,14 @@ impl Default for RetroParams {
             exposure: 1.0,
             palette_len: 0,
             _pad: 0,
+            contrast: 1.0,
+            saturation: 1.0,
+            shadow_tint: 0.0,
+            warmth: 0.0,
+            ink: 0.0,
+            ink_threshold: 0.1,
+            _pad2: 0.0,
+            _pad3: 0.0,
             palette_lab: [Vec4::ZERO; MAX_COLORS],
             palette_linear: [Vec4::ZERO; MAX_COLORS],
         }
@@ -166,7 +161,8 @@ impl Material2d for RetroCanvasMaterial {
 }
 
 pub struct RetroPlugin {
-    pub enabled: bool,
+    /// `--no-retro`: start with the look off whatever the settings file says.
+    pub force_off: bool,
     pub palette: Option<String>,
     /// `--retro-shots <dir>`: screenshot every palette and quit (`shots.rs`).
     pub shots: Option<std::path::PathBuf>,
@@ -175,15 +171,16 @@ pub struct RetroPlugin {
 impl Plugin for RetroPlugin {
     fn build(&self, app: &mut App) {
         let palettes = Palettes(palette::load_all());
-        let mut look = RetroLook {
-            enabled: self.enabled,
-            ..default()
-        };
-        let name = self.palette.as_deref().unwrap_or(DEFAULT_PALETTE);
-        if let Some(i) = palettes.index_of(name) {
-            look.palette = i;
-        } else {
-            warn!("no palette named {name} in {}", palette::PALETTE_DIR);
+        let mut look = RetroFile::load().unwrap_or_default().look(&palettes);
+        if self.force_off {
+            look.enabled = false;
+        }
+        if let Some(name) = &self.palette {
+            if let Some(i) = palettes.index_of(name) {
+                look.palette = i;
+            } else {
+                warn!("no palette named {name} in {}", palette::PALETTE_DIR);
+            }
         }
         if let Some(dir) = &self.shots {
             shots::plugin(app, dir.clone());
@@ -194,6 +191,7 @@ impl Plugin for RetroPlugin {
             .init_resource::<RetroView>()
             .init_resource::<RetroRig>()
             .add_systems(Update, (retro_keys, sync_retro_rig).chain())
+            .add_plugins(panel::plugin)
             .add_systems(
                 PostUpdate,
                 snap_retro_camera
@@ -211,44 +209,21 @@ fn retro_keys(
     if !keys.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]) {
         return;
     }
-    let shift = keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]);
-    let before = look.clone();
-    if keys.just_pressed(KeyCode::KeyK) {
-        look.enabled = !look.enabled;
-    }
-    if keys.just_pressed(KeyCode::KeyJ) {
-        let count = palettes.0.len() + 1;
-        look.palette = if shift {
-            (look.palette + count - 1) % count
-        } else {
-            (look.palette + 1) % count
-        };
-    }
-    if keys.just_pressed(KeyCode::KeyH) {
-        let at = DITHER_STEPS
-            .iter()
-            .position(|d| (d - look.dither).abs() < 1e-3)
-            .unwrap_or(0);
-        look.dither = DITHER_STEPS.get(at + 1).copied().unwrap_or(DITHER_STEPS[0]);
-    }
-    if keys.just_pressed(KeyCode::KeyU) {
-        look.pixel_size = (look.pixel_size - 1).max(1);
-    }
-    if keys.just_pressed(KeyCode::KeyI) {
-        look.pixel_size = (look.pixel_size + 1).min(MAX_PIXEL_SIZE);
-    }
-    if look.enabled != before.enabled
-        || look.palette != before.palette
-        || (look.dither - before.dither).abs() > f32::EPSILON
-        || look.pixel_size != before.pixel_size
-    {
-        info!(
-            "retro look {}: {}, {} px, dither {:.2}",
-            if look.enabled { "on" } else { "off" },
-            palettes.name(look.palette),
-            look.pixel_size,
-            look.dither
-        );
+    let back = if keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]) {
+        -1
+    } else {
+        1
+    };
+    for (key, setting, dir) in [
+        (KeyCode::KeyK, Setting::Enabled, 1),
+        (KeyCode::KeyJ, Setting::Palette, back),
+        (KeyCode::KeyH, Setting::Dither, 1),
+        (KeyCode::KeyU, Setting::PixelSize, -1),
+        (KeyCode::KeyI, Setting::PixelSize, 1),
+    ] {
+        if keys.just_pressed(key) {
+            setting.step(&mut look, &palettes, dir);
+        }
     }
 }
 
@@ -448,6 +423,12 @@ fn snap_retro_camera(
     );
     params.dither = look.dither;
     params.exposure = look.exposure;
+    params.contrast = look.contrast;
+    params.saturation = look.saturation;
+    params.shadow_tint = look.shadow_tint;
+    params.warmth = look.warmth;
+    params.ink = look.ink;
+    params.ink_threshold = look.ink_threshold;
     match palettes.get(look.palette) {
         Some(p) => {
             let (lab, linear) = p.shader_arrays();

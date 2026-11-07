@@ -204,7 +204,7 @@ fn print_help() {
     println!("  cargo run -- --play --perf                 ... logging frame and render pass timings, uncapped");
     println!("  cargo run -- --flat                        Ignore the levels' hills (flat ground)");
     println!("  cargo run -- --palette <name>              Start with another palette from assets/palettes");
-    println!("                                             (default {}; Ctrl+K/J/H/U/I change the look)", retro::DEFAULT_PALETTE);
+    println!("                                             (default {}; F12 for all settings)", retro::DEFAULT_PALETTE);
     println!("  cargo run -- --no-retro                    Start in full colour, without the retro look");
     println!("  cargo run -- --play --retro-shots <dir>    ... a screenshot per palette into <dir>, then quit");
     println!("  cargo run --features map-editor -- --map-editor [--file <path>]");
@@ -331,7 +331,7 @@ fn main() -> std::process::ExitCode {
         // .add_plugins(PixelShaderPlugin::default())
         .add_plugins(GamePlugin)
         .add_plugins(retro::RetroPlugin {
-            enabled: !args.iter().any(|a| a == "--no-retro"),
+            force_off: args.iter().any(|a| a == "--no-retro"),
             palette: args.iter().skip_while(|a| *a != "--palette").nth(1).cloned(),
             shots: args
                 .iter()
