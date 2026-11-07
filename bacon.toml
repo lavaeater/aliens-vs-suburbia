@@ -43,13 +43,17 @@ command = [
 need_stdout = true
 analyzer = "nextest"
 
+# Coverage as a browsable HTML report (target/llvm-cov/html), opened in the browser.
+# Failing tests show in bacon as usual; on success bacon goes back to the previous job,
+# so it doesn't reopen the browser on every save.
 [jobs.coverage]
 command = [
-    "cargo", "llvm-cov", "nextest", 
+    "cargo", "llvm-cov", "nextest", "--html", "--open",
     "--hide-progress-bar", "--failure-output", "final"
 ]
 need_stdout = true
 analyzer = "nextest"
+on_success = "back"
 
 [jobs.doc]
 command = ["cargo", "doc", "--no-deps"]
