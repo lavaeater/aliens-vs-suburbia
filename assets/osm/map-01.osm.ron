@@ -21,7 +21,7 @@
     size: Some((700.0, 700.0)),
     // Degrees counter-clockwise. None = line the streets up with the grid automatically.
     rotation_deg: None,
-    metres_per_tile: 2.0,
+    metres_per_tile: 4.0,
     // Fences and hedges: BlocksEnemies (players hop over) | BlocksEveryone | Ignore
     fences: BlocksEnemies,
     // What the aliens are after, (lat, lon). Default: the middle of the level.
