@@ -43,6 +43,14 @@ command = [
 need_stdout = true
 analyzer = "nextest"
 
+[jobs.coverage]
+command = [
+    "cargo", "llvm-cov", "nextest", 
+    "--hide-progress-bar", "--failure-output", "final"
+]
+need_stdout = true
+analyzer = "nextest"
+
 [jobs.doc]
 command = ["cargo", "doc", "--no-deps"]
 need_stdout = false
@@ -88,3 +96,4 @@ allow_warnings = true
 # alt-m = "job:my-job"
 c = "job:clippy-all" # comment this to have 'c' run clippy on only the default target
 t = "job:nextest" # comment this to have 'c' run clippy on only the default target
+o = "job:coverage"
