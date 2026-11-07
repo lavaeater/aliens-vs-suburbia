@@ -23,8 +23,11 @@ Return of the Obra Dinn. Built in layers, each one switchable on its own.
   colours in OKLab and an 8x8 Bayer threshold picks between them by how far between them
   it lies. The pattern is offset by the camera's texel index, so it does not swim when
   the camera pans.
-- **Palettes** are Lospec `.hex` files in `assets/palettes/` (one `rrggbb` per line, max
-  64). Drop any palette from lospec.com in and it shows up in the cycle.
+- **Palettes** are Lospec `.hex` files in `assets/palettes/` (one `rrggbb` per line, `;` comments, max
+  256). Drop any palette from lospec.com in and it shows up in the cycle. The bigger ones
+  (`suburb-*`, `drifter-*`, `moebius-*`, the number is the colour count) come from
+  `tools/make_palettes.py`: ramps dark to light, even in OKLab lightness, shadows leaning
+  blue and highlights yellow; edit the ramp tables there and rerun.
 - **Mouse aim** goes through `RetroView::cursor_to_viewport`, the window cursor mapped
   into the small image.
 - Off in the character editor (its camera is clipped to a pane).

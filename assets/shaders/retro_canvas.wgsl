@@ -4,7 +4,7 @@
 
 #import bevy_sprite::mesh2d_vertex_output::VertexOutput
 
-const MAX_COLORS: u32 = 64u;
+const MAX_COLORS: u32 = 256u;
 
 struct RetroParams {
     image_size: vec2<f32>,
@@ -14,8 +14,8 @@ struct RetroParams {
     exposure: f32,
     palette_len: u32,
     _pad: u32,
-    palette_lab: array<vec4<f32>, 64>,
-    palette_linear: array<vec4<f32>, 64>,
+    palette_lab: array<vec4<f32>, 256>,
+    palette_linear: array<vec4<f32>, 256>,
 }
 
 @group(#{MATERIAL_BIND_GROUP}) @binding(0) var<uniform> params: RetroParams;

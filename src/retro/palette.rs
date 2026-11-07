@@ -7,7 +7,7 @@ use bevy::math::Vec4;
 pub const PALETTE_DIR: &str = "assets/palettes";
 
 /// The shader's palette arrays hold this many colours; longer palettes are cut.
-pub const MAX_COLORS: usize = 64;
+pub const MAX_COLORS: usize = 256;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Palette {
