@@ -1,6 +1,6 @@
 (
     enabled: true,
-    palette: "giraud-128",
+    palette: "rover-dusk-128",
     pixel_size: 2,
     dither: 0.7,
     exposure: 1.3,
@@ -12,9 +12,9 @@
     ink_threshold: 0.28,
     light: Night,
     sky: (
-        elevation_deg: 30.0,
+        elevation_deg: 50.0,
         azimuth_deg: 345.0,
-        strength: 1.0,
-        ambient: 0.0,
+        strength: 0.5,
+        ambient: 50.0,
     ),
 )
