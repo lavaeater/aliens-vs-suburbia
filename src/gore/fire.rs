@@ -7,7 +7,7 @@
 //! [`DamageDealt`] with [`DamageKind::Fire`], which the blood system skips (burns
 //! don't spray) while still feeding death/score.
 
-use avian3d::prelude::Position;
+use crate::physics::prelude::Position;
 use bevy::prelude::*;
 use bevy_sprinkles::prelude::Particles3d;
 
@@ -208,7 +208,7 @@ mod tests {
     use crate::general::systems::map_systems::TileDefinitions;
     use crate::map::ground::GroundHeight;
     use crate::gore::components::{DamageDealt, DamageKind, GoreBudget};
-    use avian3d::prelude::Position;
+    use crate::physics::prelude::Position;
     use bevy::prelude::*;
     use std::time::Duration;
 

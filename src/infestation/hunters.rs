@@ -9,7 +9,7 @@
 //! capsule with the model's feet at its bottom and the model turned to face -Z, the way
 //! the shared Quaternius rig needs.
 
-use avian3d::prelude::{AngularVelocity, Collider, LinearVelocity, Position, Rotation};
+use crate::physics::prelude::{AngularVelocity, Collider, LinearVelocity, Position, Rotation};
 use bevy::ecs::system::EntityCommands;
 use bevy::prelude::*;
 use pathfinding::directed::astar::astar;

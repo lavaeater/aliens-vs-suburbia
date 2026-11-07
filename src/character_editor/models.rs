@@ -10,7 +10,7 @@
 //! exactly the path a real match takes: `spawn_players` reads the def for the slot and
 //! derives the scene, ability, throw rate, animation graph and equipped weapon from it.
 
-use avian3d::prelude::Position;
+use crate::physics::prelude::Position;
 use bevy::platform::collections::HashSet;
 use bevy::prelude::*;
 

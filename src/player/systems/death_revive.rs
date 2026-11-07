@@ -11,7 +11,7 @@
 //!    cycles the anchor) or on the nearest walkable tile to where they fell that has no
 //!    alien nearby. With no lives left they are out; when everyone is out the level fails.
 
-use avian3d::prelude::{LinearVelocity, Position};
+use crate::physics::prelude::{LinearVelocity, Position};
 use bevy::prelude::*;
 use lava_ui_builder::{WorldFollower, progress_bar};
 

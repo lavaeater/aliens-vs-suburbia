@@ -6,7 +6,7 @@
 //! generic "man-beast" gore burst. A skinned corpse comes apart into its own body parts
 //! instead (`crate::gore::dismember`); `GibStyle` says which, or both.
 
-use avian3d::prelude::{AngularVelocity, Collider, CollisionLayers, LinearVelocity, RigidBody};
+use crate::physics::prelude::{AngularVelocity, Collider, CollisionLayers, LinearVelocity, RigidBody};
 use bevy::prelude::*;
 
 use crate::general::components::CollisionLayer;

@@ -6,7 +6,7 @@
 //! every so often until it is destroyed. It is shot like an alien (the `Alien` collision
 //! layer and faction), and blows up when it goes.
 
-use avian3d::prelude::{Collider, CollisionLayers, Position, RigidBody};
+use crate::physics::prelude::{Collider, CollisionLayers, Position, RigidBody};
 use bevy::prelude::*;
 use bevy::world_serialization::WorldAssetRoot;
 use bevy_wind_waker_shader::WindWakerShaderBuilder;

@@ -7,7 +7,7 @@ use crate::general::components::{Ball, CollisionLayer};
 use crate::player::components::{AutoAim, Player, PlayerDead};
 use crate::player::systems::abilities::AbilityCooldown;
 use crate::player::systems::equip::EquippedWeapon;
-use avian3d::prelude::{
+use crate::physics::prelude::{
     Collider, CollisionEventsEnabled, CollisionLayers, LinearVelocity, Position, RigidBody,
 };
 use bevy::math::Vec3;

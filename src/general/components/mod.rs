@@ -1,6 +1,6 @@
 pub(crate) mod map_components;
 
-use avian3d::prelude::PhysicsLayer;
+use crate::physics::prelude::PhysicsLayer;
 use bevy::prelude::*;
 
 /// Entities with this component deal damage per second to any Player they collide with.

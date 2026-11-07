@@ -5,7 +5,7 @@ use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
 use crate::control::components::{CharacterControl, KinematicMovement};
 use crate::general::components::{Attack, CollisionLayer, Health, HittableTarget, TouchDamage};
 use crate::player::systems::spawn_players::FixSceneTransform;
-use avian3d::prelude::{
+use crate::physics::prelude::{
     AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody,
 };
 use bevy::math::{EulerRot, Quat};

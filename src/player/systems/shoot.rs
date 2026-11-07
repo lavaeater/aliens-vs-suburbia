@@ -7,7 +7,7 @@
 //! Guns replace throwing while equipped — `throwing` is gated `Without<EquippedWeapon>`
 //! and this system requires it, so the same fire button does one or the other.
 
-use avian3d::prelude::{Position, SpatialQuery, SpatialQueryFilter};
+use crate::physics::prelude::{Position, SpatialQuery, SpatialQueryFilter};
 use bevy::prelude::*;
 
 use crate::animation::animation_plugin::{AnimationEvent, AnimationEventType, AnimationKey};

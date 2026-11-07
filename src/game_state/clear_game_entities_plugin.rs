@@ -1,5 +1,5 @@
 use crate::game_state::GameState;
-use avian3d::prelude::{Collider, RigidBody};
+use crate::physics::prelude::{Collider, RigidBody};
 use bevy::app::{App, Plugin};
 use bevy::ecs::observer::Observer;
 use bevy::ecs::resource::IsResource;

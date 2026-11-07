@@ -7,7 +7,7 @@
 //! They are on the players' side (`Faction::Player`, the player collision layer), so the
 //! players' bullets and blasts pass them by and the monsters' claws do not.
 
-use avian3d::prelude::{
+use crate::physics::prelude::{
     AngularDamping, AngularVelocity, CollisionLayers, Friction, LinearDamping, LinearVelocity,
     LockedAxes, Position, RigidBody, Rotation,
 };

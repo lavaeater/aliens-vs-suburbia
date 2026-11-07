@@ -8,7 +8,7 @@
 //! (`ItemKind::Loot`) is the one item that turns into others: [`pickup_items`] rolls its
 //! table and spills the drops around where it lay.
 
-use avian3d::prelude::Position;
+use crate::physics::prelude::Position;
 use bevy::prelude::*;
 
 use crate::assets::asset_definition::{AssetDefinition, ItemKind, ModelType};

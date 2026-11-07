@@ -1,7 +1,7 @@
 use crate::general::components::{Health, Indestructible};
 use crate::gore::components::{EntityDied, LastHit};
 use crate::player::components::{IsObstacle, Player};
-use avian3d::prelude::Position;
+use crate::physics::prelude::Position;
 use bevy::math::Vec3;
 use bevy::prelude::{Commands, Entity, MessageWriter, Query, Without};
 

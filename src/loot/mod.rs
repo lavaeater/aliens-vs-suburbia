@@ -15,7 +15,7 @@ pub mod bags;
 
 use std::collections::HashMap;
 
-use avian3d::prelude::Position;
+use crate::physics::prelude::Position;
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 

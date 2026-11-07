@@ -8,7 +8,7 @@
 //! [`throw_special`]; launcher guns come through `shoot_weapons` with
 //! `WeaponProps.projectile` set.
 
-use avian3d::prelude::{
+use crate::physics::prelude::{
     Collider, CollisionEventsEnabled, CollisionLayers, CollisionStart, GravityScale,
     LinearVelocity, Position, RigidBody,
 };

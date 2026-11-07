@@ -9,7 +9,7 @@
 //! The panel button and the key stay in sync because the button reads and writes that
 //! config rather than keeping a copy of the answer.
 
-use avian3d::prelude::PhysicsGizmos;
+use crate::physics::prelude::PhysicsGizmos;
 use bevy::gizmos::config::{DefaultGizmoConfigGroup, GizmoConfigStore};
 use bevy::mesh::skinning::SkinnedMesh;
 use bevy::prelude::*;

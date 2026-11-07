@@ -4,7 +4,7 @@
 //! ground where that step will end. Sideways, physics is as on a flat map: colliders are tall
 //! enough to always meet, so walls and other characters block as before.
 
-use avian3d::prelude::{Collider, CollisionLayers, GravityScale, LinearVelocity, Position};
+use crate::physics::prelude::{Collider, CollisionLayers, GravityScale, LinearVelocity, Position};
 use bevy::prelude::*;
 
 use crate::alien::components::general::Alien;

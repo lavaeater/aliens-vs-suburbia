@@ -15,7 +15,7 @@ use crate::general::components::map_components::{
 use crate::general::events::map_events::{LoadMap, SpawnPlayer};
 use crate::general::resources::map_resources::MapGraph;
 use crate::map::{BitFlags, MapFeatures};
-use avian3d::prelude::{Collider, CollisionLayers, Position, RigidBody};
+use crate::physics::prelude::{Collider, CollisionLayers, Position, RigidBody};
 use bevy::asset::AssetServer;
 use bevy::math::{Quat, Vec3};
 use bevy::pbr::StandardMaterial;

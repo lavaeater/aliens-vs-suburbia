@@ -9,7 +9,7 @@ use crate::game_state::score_keeper::GameTrackingEvent;
 use crate::general::components::map_components::{AlienGoal, CurrentTile};
 use crate::general::resources::map_resources::MapGraph;
 use crate::general::systems::map_systems::TileDefinitions;
-use avian3d::prelude::{Position, Rotation};
+use crate::physics::prelude::{Position, Rotation};
 use bevy::prelude::*;
 
 /// Bring the flow field up to date before anyone reads it.

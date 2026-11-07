@@ -10,7 +10,7 @@
 
 use std::collections::HashMap;
 
-use avian3d::prelude::{Position, SpatialQuery, SpatialQueryFilter};
+use crate::physics::prelude::{Position, SpatialQuery, SpatialQueryFilter};
 use bevy::gltf::{Gltf, GltfAssetLabel, GltfNode};
 use bevy::prelude::*;
 use bevy::world_serialization::WorldAsset;

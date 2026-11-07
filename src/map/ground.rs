@@ -3,7 +3,7 @@
 //! Hills are on unless `--flat` ([`Hills`]). With the flag, or on a map with no heights,
 //! [`GroundHeight`] is flat at 0.
 
-use avian3d::prelude::Collider;
+use crate::physics::prelude::Collider;
 use bevy::math::{Quat, Vec3};
 use bevy::prelude::Resource;
 

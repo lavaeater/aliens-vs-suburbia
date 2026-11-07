@@ -1,4 +1,4 @@
-use avian3d::prelude::PhysicsGizmos;
+use crate::physics::prelude::PhysicsGizmos;
 use bevy::app::{App, Plugin, Update};
 use bevy::gizmos::config::GizmoConfigStore;
 use bevy::prelude::{

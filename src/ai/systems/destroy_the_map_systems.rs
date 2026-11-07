@@ -14,7 +14,7 @@ use crate::general::resources::map_resources::MapGraph;
 use crate::general::systems::map_systems::TileDefinitions;
 use crate::gore::components::DamageKind;
 use crate::player::components::IsObstacle;
-use avian3d::prelude::{Position, Rotation};
+use crate::physics::prelude::{Position, Rotation};
 use bevy::prelude::*;
 use itertools::Itertools;
 use pathfinding::directed::astar::astar;

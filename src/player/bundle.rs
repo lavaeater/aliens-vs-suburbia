@@ -7,7 +7,7 @@ use crate::general::components::map_components::CurrentTile;
 use crate::general::systems::coin_system::PickupRange;
 use crate::player::components::{AutoAim, Player};
 use crate::player::systems::abilities::{AbilityCooldown, SpecialAbility};
-use avian3d::prelude::{
+use crate::physics::prelude::{
     AngularDamping, CollisionLayers, Friction, LayerMask, LinearDamping, LockedAxes, RigidBody,
 };
 use bevy::math::Vec3;
