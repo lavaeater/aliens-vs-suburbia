@@ -10,7 +10,7 @@
     land_cover: Some("assets/osm/map-01.markytor.json"),
     // Ground heights, fetched with tools/fetch_heights.py, and world units to the metre.
     elevation: Some("assets/osm/map-01.heights.asc"),
-    height_scale: 0.4,
+    height_scale: 0.8,
     // Where the level goes. Default: assets/maps/<this file's stem>.map
     // The `gis` campaign's level. Re-importing overwrites it (with --force); add back
     // `escape_limit: 10` under [properties], the spec has no field for it.
@@ -21,7 +21,7 @@
     size: Some((700.0, 700.0)),
     // Degrees counter-clockwise. None = line the streets up with the grid automatically.
     rotation_deg: None,
-    metres_per_tile: 4.0,
+    metres_per_tile: 3.0,
     // Fences and hedges: BlocksEnemies (players hop over) | BlocksEveryone | Ignore
     fences: BlocksEnemies,
     // What the aliens are after, (lat, lon). Default: the middle of the level.
