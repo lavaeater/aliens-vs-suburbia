@@ -1,5 +1,5 @@
 (
-    projection: Perspective,
+    projection: Orthographic,
     zoom: 1.0,
     pitch_degrees: -49.0,
     yaw_degrees: 180.0,
