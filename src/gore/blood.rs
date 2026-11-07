@@ -22,6 +22,7 @@ use crate::fx::{FxKind, SpawnFx};
 use crate::general::damage::Faction;
 use crate::general::systems::map_systems::TileDefinitions;
 use crate::gore::components::{DECAL_LIFT, DamageDealt, DamageKind, GoreBudget};
+use crate::map::ground::GroundHeight;
 
 /// Shared, pre-built blood art.
 #[derive(Resource)]
@@ -151,6 +152,7 @@ pub fn spawn_blood_on_damage(
     factions: Query<&Faction>,
     blood: Option<Res<BloodAssets>>,
     tile_defs: Res<TileDefinitions>,
+    ground: Res<GroundHeight>,
 ) {
     let Some(blood) = blood else { return };
 
@@ -179,8 +181,8 @@ pub fn spawn_blood_on_damage(
         fx.write(SpawnFx::at(kind, hit.position).along(spray));
 
         // ── Ground stain: persistent, budget-capped. Flat quad just above the floor,
-        //    directly under the hit (maps are flat, so the floor plane works without a
-        //    raycast -- but that plane is `floor_level`, not 0). ───────────────────────
+        //    directly under the hit (the ground is known, so no raycast -- it starts at
+        //    `floor_level`, not 0). ───────────────────────────────────────────────────
         let yaw = (hit.position.x * 12.9898 + hit.position.z * 78.233).sin() * 43_758.547;
         let yaw = (yaw - yaw.floor()) * std::f32::consts::TAU;
         // Tiles are one unit wide: a normal hit leaves a stain under half a tile, a
@@ -195,8 +197,14 @@ pub fn spawn_blood_on_damage(
                 Mesh3d(blood.decal_mesh.clone()),
                 MeshMaterial3d(blood.decal_material.clone()),
                 NotShadowCaster,
-                Transform::from_xyz(hit.position.x, tile_defs.floor_level + lift, hit.position.z)
-                    .with_rotation(Quat::from_rotation_y(yaw))
+                Transform::from_xyz(
+                    hit.position.x,
+                    tile_defs.floor_level + ground.height(hit.position.x, hit.position.z) + lift,
+                    hit.position.z,
+                )
+                .with_rotation(
+                    ground.lie(hit.position.x, hit.position.z) * Quat::from_rotation_y(yaw),
+                )
                     .with_scale(Vec3::splat(size)),
             ))
             .id();

@@ -1,5 +1,5 @@
-//! The minimap, top right in a match: the map's tiles drawn one pixel each (walls dark,
-//! streets grey, lawns green), with a dot for everyone on it - players green, neighbours
+//! The minimap, top right in a match: the map's tiles (walls dark, streets grey, lawns
+//! green), one pixel each or averaged down where the map is bigger than the minimap, with a dot for everyone on it - players green, neighbours
 //! blue, monsters red, spawners a bigger dark red. It is turned with the camera
 //! (`GameSettings::yaw_degrees`), so up on the minimap is up on the screen.
 //!
@@ -81,6 +81,53 @@ pub fn tile_color(tile: u64) -> [u8; 4] {
     }
 }
 
+/// The tiles as RGBA pixels, each averaging as many tiles as it takes to fit `SIZE`, so
+/// that a street or a house on a big map shows instead of being skipped over. Returns the
+/// pixels and their columns and rows; the drawn map keeps the size of the whole grid.
+fn shrink(tiles: &[Vec<u64>], cols: usize, rows: usize) -> (Vec<u8>, usize, usize) {
+    let block = (cols.max(rows)).div_ceil(SIZE as usize).max(1);
+    let (width, height) = (cols.div_ceil(block), rows.div_ceil(block));
+    let mut data = Vec::with_capacity(width * height * 4);
+    for lines in tiles.chunks(block) {
+        for across in 0..width {
+            let colours = lines.iter().flat_map(|row| {
+                row.iter()
+                    .skip(across * block)
+                    .take(block)
+                    .map(|&tile| tile_color(tile))
+            });
+            data.extend(average(colours));
+        }
+    }
+    (data, width, height)
+}
+
+/// The average of some colours. Colours weigh by how opaque they are, so that the void
+/// around a map does not darken its edge.
+fn average(colours: impl Iterator<Item = [u8; 4]>) -> [u8; 4] {
+    let (mut sum, mut alpha, mut count) = ([0u32; 3], 0u32, 0u32);
+    for [r, g, b, a] in colours {
+        let weight = u32::from(a);
+        sum = [
+            sum[0] + u32::from(r) * weight,
+            sum[1] + u32::from(g) * weight,
+            sum[2] + u32::from(b) * weight,
+        ];
+        alpha += weight;
+        count += 1;
+    }
+    if alpha == 0 {
+        return [0, 0, 0, 0];
+    }
+    let [r, g, b] = sum.map(|channel| u8::try_from(channel / alpha).unwrap_or(u8::MAX));
+    [
+        r,
+        g,
+        b,
+        u8::try_from(alpha / count.max(1)).unwrap_or(u8::MAX),
+    ]
+}
+
 /// Where a world position falls on the drawn map, in pixels from its top-left (tile
 /// `(x, y)` of the padded grid is centred on world `(x, y)`).
 pub fn map_pixel(world: Vec3, tiles: Vec2, pixels: Vec2) -> Vec2 {
@@ -111,15 +158,11 @@ fn build_minimap(
     if rows == 0 || cols == 0 {
         return;
     }
-    let data: Vec<u8> = tiles
-        .iter()
-        .flatten()
-        .flat_map(|&t| tile_color(t))
-        .collect();
+    let (data, width, height) = shrink(&tiles, cols, rows);
     let mut image = Image::new(
         Extent3d {
-            width: u32::try_from(cols).unwrap_or(1),
-            height: u32::try_from(rows).unwrap_or(1),
+            width: u32::try_from(width).unwrap_or(1),
+            height: u32::try_from(height).unwrap_or(1),
             depth_or_array_layers: 1,
         },
         TextureDimension::D2,
@@ -255,6 +298,36 @@ mod tests {
                 "{yaw}: {turned}"
             );
         }
+    }
+
+    #[test]
+    fn a_big_map_shrinks_to_the_minimap_and_keeps_a_thin_street() {
+        let grass = MapFeatures::Grass as u64;
+        let floor = MapFeatures::Floor as u64;
+        let mut tiles = vec![vec![grass; 702]; 702];
+        tiles[100] = vec![floor; 702];
+        let (data, width, height) = shrink(&tiles, 702, 702);
+        assert_eq!((width, height), (176, 176));
+        assert_eq!(data.len(), 176 * 176 * 4);
+        // Row 100 falls in pixel row 25 at 4 tiles a pixel, redder than the lawn around it.
+        let red = |row: usize| data[row * width * 4];
+        assert!(red(25) > red(24) + 10, "{} {}", red(25), red(24));
+    }
+
+    #[test]
+    fn a_small_map_keeps_a_pixel_per_tile() {
+        let tiles = vec![vec![MapFeatures::Grass as u64; 40]; 30];
+        let (data, width, height) = shrink(&tiles, 40, 30);
+        assert_eq!((width, height), (40, 30));
+        assert_eq!(data[..4], tile_color(MapFeatures::Grass as u64));
+    }
+
+    #[test]
+    fn the_void_does_not_darken_what_it_borders() {
+        let grass = tile_color(MapFeatures::Grass as u64);
+        let mixed = average([grass, [0, 0, 0, 0]].into_iter());
+        assert_eq!(mixed[..3], grass[..3]);
+        assert_eq!(mixed[3], grass[3] / 2);
     }
 
     #[test]

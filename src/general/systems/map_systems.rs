@@ -4,6 +4,7 @@
 // genuinely risky spots are fixed individually.
 #![allow(clippy::arithmetic_side_effects, clippy::indexing_slicing)]
 
+use crate::map::ground::{GroundHeight, HillsPreview};
 use crate::alien::components::general::AlienCounter;
 use crate::assets::assets_plugin::GameAssets;
 use crate::building::systems::ToWorldCoordinates;
@@ -14,12 +15,9 @@ use crate::general::components::map_components::{
 use crate::general::events::map_events::{LoadMap, SpawnPlayer};
 use crate::general::resources::map_resources::MapGraph;
 use crate::map::{BitFlags, MapFeatures};
-use crate::settings::resources::GameSettings;
 use avian3d::prelude::{Collider, CollisionLayers, Position, RigidBody};
 use bevy::asset::AssetServer;
-use bevy::asset::RenderAssetUsages;
 use bevy::math::{Quat, Vec3};
-use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::pbr::StandardMaterial;
 use bevy::prelude::{
     Assets, Color, Commands, Has, Mesh, Mesh3d, MeshMaterial3d, MessageReader, MessageWriter, Name,
@@ -30,8 +28,7 @@ use bevy_wind_waker_shader::WindWakerShaderBuilder;
 use pathfinding::grid::Grid;
 use std::collections::HashSet;
 
-/// Positions, normals, UVs and indices accumulated per terrain color while building floor meshes.
-type TerrainQuadMesh = (Vec<[f32; 3]>, Vec<[f32; 3]>, Vec<[f32; 2]>, Vec<u32>);
+use crate::ai::flow_field::FlowField;
 use crate::assets::asset_definition::{AssetDefinition, ModelType};
 use crate::general::components::{Health, Indestructible};
 use crate::general::damage::{DamageResistances, Faction};
@@ -42,6 +39,11 @@ use crate::player::components::{IsBuildIndicator, IsObstacle};
 use crate::player::events::building_events::{AddTile, RemoveTile};
 use crate::towers::systems::spawn_tower_sensor;
 use crate::ui::spawn_ui::AddHealthBar;
+
+/// `--level <path>`: the map a match plays instead of the campaign's current level
+/// (`campaign::start_level`).
+#[derive(Resource)]
+pub struct StartLevel(pub String);
 
 pub fn load_map_showcase(mut send_event: MessageWriter<LoadMap>) {
     let map = crate::map::map_generator::generate_showcase_map(42);
@@ -95,23 +97,10 @@ impl TileDefinitions {
     }
 }
 
-fn terrain_color_key(mf: BitFlags<MapFeatures>) -> [u8; 3] {
-    if mf.contains(MapFeatures::Water) {
-        return [38, 90, 179];
-    }
-    if mf.contains(MapFeatures::Mud) {
-        return [115, 82, 46];
-    }
-    if mf.contains(MapFeatures::Snow) {
-        return [209, 224, 235];
-    }
-    if mf.contains(MapFeatures::Rock) {
-        return [97, 89, 77];
-    }
-    if mf.contains(MapFeatures::Grass) {
-        return [56, 140, 56];
-    }
-    [140, 133, 122] // Floor (default)
+/// Where a spawn point or the goal lies: its tile, on the ground.
+fn lying_at(tile: (usize, usize), tiles: &TileDefinitions, ground: &GroundHeight) -> Vec3 {
+    let at = tile.to_world_coords(tiles) + Vec3::new(0.0, -tiles.wall_height, 0.0);
+    at + Vec3::Y * ground.height(at.x, at.z)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -127,13 +116,14 @@ pub fn map_loader(
     game_assets: Res<GameAssets>,
     tile_defs: Res<TileDefinitions>,
     model_defs: Res<MapModelDefinitions>,
-    game_settings: Res<GameSettings>,
     mut add_health_bar_mw: MessageWriter<AddHealthBar>,
     mut wave_manager: Option<ResMut<crate::alien::wave_manager::WaveManager>>,
     mut neighbours_mw: MessageWriter<crate::infestation::SpawnNeighbour>,
+    hills: Option<Res<HillsPreview>>,
 ) {
     for load_map in load_map_event_reader.read() {
         let map_file = &load_map.map;
+        let ground = GroundHeight::for_level(map_file, hills.is_some(), tile_defs.tile_width);
         let raw = &map_file.tiles;
         let rows = raw.len() + 2;
         let cols = raw[0].len() + 2;
@@ -145,6 +135,7 @@ pub fn map_loader(
         }
         let m = &padded;
         map_graph.path_finding_grid = Grid::new(cols, rows);
+        map_graph.flow = FlowField::default();
 
         // Single pass: build tile sets and handle functional markers.
         let mut floor_set: HashSet<(i32, i32)> = HashSet::new();
@@ -184,10 +175,7 @@ pub fn map_loader(
                         RigidBody::Static,
                         WindWakerShaderBuilder::default().build(),
                         Collider::cuboid(0.5, 0.5, 0.45),
-                        Position::from(
-                            (col, row).to_world_coords(&tile_defs)
-                                + Vec3::new(0.0, -tile_defs.wall_height, 0.0),
-                        ),
+                        Position::from(lying_at((col, row), &tile_defs, &ground)),
                         CollisionLayers::new(
                             [CollisionLayer::AlienSpawnPoint],
                             [CollisionLayer::Player],
@@ -203,10 +191,7 @@ pub fn map_loader(
                         RigidBody::Static,
                         WindWakerShaderBuilder::default().build(),
                         Collider::cuboid(0.5, 0.5, 0.45),
-                        Position::from(
-                            (col, row).to_world_coords(&tile_defs)
-                                + Vec3::new(0.0, -tile_defs.wall_height, 0.0),
-                        ),
+                        Position::from(lying_at((col, row), &tile_defs, &ground)),
                         CollisionLayers::new(
                             [CollisionLayer::AlienGoal],
                             [
@@ -228,7 +213,18 @@ pub fn map_loader(
         }
 
         // ── Floor colliders (greedy rectangle merge) ──────────────────────────
-        if let Some(floor_model_def) = model_defs.definitions.get("floor") {
+        if let Some((terrain, at)) = ground.terrain() {
+            if let Some(floor_def) = model_defs.definitions.get("floor") {
+                commands.spawn((
+                    Name::from("Terrain Collider"),
+                    Floor {},
+                    RigidBody::Static,
+                    terrain,
+                    Position::from(at + Vec3::Y * tile_defs.floor_level),
+                    floor_def.create_collision_layers(),
+                ));
+            }
+        } else if let Some(floor_model_def) = model_defs.definitions.get("floor") {
             let mut covered = vec![vec![false; cols]; rows];
             for row in 0..rows {
                 for col in 0..cols {
@@ -295,73 +291,6 @@ pub fn map_loader(
             }
         } else {
             bevy::log::error!("No \"floor\" model def found; skipping floor colliders");
-        }
-
-        // ── Floor visual mesh (per-terrain-type coloured quads) ───────────────
-        {
-            let mut terrain_quads: std::collections::HashMap<[u8; 3], TerrainQuadMesh> =
-                std::collections::HashMap::default();
-            let tw = tile_defs.tile_width;
-            let y_floor = tile_defs.floor_level;
-            #[allow(clippy::needless_range_loop)]
-            for row in 0..rows {
-                for col in 0..cols {
-                    let raw = m[row][col];
-                    if raw == 0 {
-                        continue;
-                    }
-                    let mf = BitFlags::<MapFeatures>::from_bits_truncate(raw);
-                    let color_key = terrain_color_key(mf);
-                    let entry = terrain_quads.entry(color_key).or_default();
-                    let base = entry.0.len() as u32;
-                    let (x0, x1) = (tw * (col as f32 - 0.5), tw * (col as f32 + 0.5));
-                    let (z0, z1) = (tw * (row as f32 - 0.5), tw * (row as f32 + 0.5));
-                    entry.0.extend_from_slice(&[
-                        [x0, y_floor, z0],
-                        [x1, y_floor, z0],
-                        [x1, y_floor, z1],
-                        [x0, y_floor, z1],
-                    ]);
-                    entry.1.extend_from_slice(&[[0.0, 1.0, 0.0]; 4]);
-                    entry
-                        .2
-                        .extend_from_slice(&[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]);
-                    entry.3.extend_from_slice(&[
-                        base,
-                        base + 2,
-                        base + 1,
-                        base,
-                        base + 3,
-                        base + 2,
-                    ]);
-                }
-            }
-            for ([r, g, b], (positions, normals, uvs, indices)) in terrain_quads {
-                let mut mesh = Mesh::new(
-                    PrimitiveTopology::TriangleList,
-                    RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
-                );
-                mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
-                mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
-                mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
-                mesh.insert_indices(Indices::U32(indices));
-                let base_color = Color::srgb(
-                    f32::from(r) / 255.0,
-                    f32::from(g) / 255.0,
-                    f32::from(b) / 255.0,
-                );
-                commands.spawn((
-                    Name::from("Floor"),
-                    Floor {},
-                    Mesh3d(meshes.add(mesh)),
-                    MeshMaterial3d(materials.add(StandardMaterial {
-                        base_color,
-                        perceptual_roughness: 1.0,
-                        metallic: 0.0,
-                        ..Default::default()
-                    })),
-                ));
-            }
         }
 
         // ── Impassable cube colliders (greedy merge per category) ─────────────
@@ -431,14 +360,23 @@ pub fn map_loader(
                     }
                     let w = (max_col - col + 1) as f32;
                     let h = (max_row - row + 1) as f32;
+                    // Up over the highest ground under it, so anything walking into it meets
+                    // it. Flat ground adds nothing.
+                    let mut highest = 0.0_f32;
+                    for r in row..=max_row {
+                        for c in col..=max_col {
+                            let (_, high) = ground.span(tw * c as f32, tw * r as f32);
+                            highest = highest.max(high);
+                        }
+                    }
                     let center = Vec3::new(
                         tw * (col + max_col) as f32 / 2.0,
-                        block_y,
+                        block_y + highest / 2.0,
                         tw * (row + max_row) as f32 / 2.0,
                     );
                     commands.spawn((
                         RigidBody::Static,
-                        Collider::cuboid(tw * w, block_half_h, tw * h),
+                        Collider::cuboid(tw * w, block_half_h + highest, tw * h),
                         *layers,
                         Transform::from_translation(center),
                         Position::from(center),
@@ -478,11 +416,9 @@ pub fn map_loader(
             // one tile of void on every side, so they sit one tile in from it.
             let (px, py) = (placement.x + 1, placement.y + 1);
             // Raised by the def's lift, for a model whose origin is not at its base.
-            let pos = Vec3::new(
-                tile_defs.tile_width * px as f32,
-                tile_defs.floor_level + tile_defs.tile_depth + def.lift_world(),
-                tile_defs.tile_width * py as f32,
-            );
+            let (x, z) = (tile_defs.tile_width * px as f32, tile_defs.tile_width * py as f32);
+            let floor = tile_defs.floor_level + tile_defs.tile_depth + ground.height(x, z);
+            let pos = Vec3::new(x, floor + def.lift_world(), z);
             let rot = Quat::from_rotation_y(
                 f32::from(placement.rotation_steps) * std::f32::consts::FRAC_PI_4,
             );
@@ -606,24 +542,6 @@ pub fn map_loader(
             }
         }
 
-        for dec in &map_file.decorations {
-            // Map coordinates, like placements: one tile in from the padded grid.
-            let pos = Vec3::new(
-                tile_defs.tile_width * (dec.x + 1) as f32,
-                tile_defs.floor_level + tile_defs.tile_depth,
-                tile_defs.tile_width * (dec.y + 1) as f32,
-            );
-            // dec.scale is expressed in player units; multiply by player_unit to get world-unit scale
-            let world_scale = dec.scale * game_settings.player_unit;
-            commands.spawn((
-                Name::from(format!("Decoration {}:{} {}", dec.x, dec.y, dec.model)),
-                WorldAssetRoot(asset_server.load(format!("{}#Scene0", dec.model))),
-                Transform::from_translation(pos)
-                    .with_rotation(Quat::from_rotation_y(dec.rotation_y.to_radians()))
-                    .with_scale(bevy::math::Vec3::splat(world_scale)),
-            ));
-        }
-
         // Override WaveManager with map-defined waves if any are present.
         if !map_file.waves.is_empty()
             && let Some(ref mut wm) = wave_manager
@@ -657,15 +575,13 @@ pub fn remove_tile_from_map(
     mut map_graph: ResMut<MapGraph>,
 ) {
     for remove_tile_event in remove_tile_evr.read() {
-        map_graph
-            .path_finding_grid
-            .remove_vertex(remove_tile_event.0);
+        map_graph.close(remove_tile_event.0);
     }
 }
 
 pub fn add_tile_to_map(mut add_tile_evr: MessageReader<AddTile>, mut map_graph: ResMut<MapGraph>) {
     for add_tile_event in add_tile_evr.read() {
-        map_graph.path_finding_grid.add_vertex(add_tile_event.0);
+        map_graph.open(add_tile_event.0);
         map_graph.path_reopened = true;
     }
 }

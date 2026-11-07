@@ -96,6 +96,10 @@ pub struct MapEditorState {
     pub map_name: String,
     /// The map's display name (`MapFile::name`), kept through a load and save.
     pub title: String,
+    /// The loaded map's building heights (`MapFile::storeys`); kept like `stories`.
+    pub storeys: Vec<Vec<u8>>,
+    /// The loaded map's ground heights (`MapFile::elevation`); kept like `stories`.
+    pub elevation: Vec<Vec<u16>>,
     /// The loaded map's story file (`MapFile::stories`); not editable here, but kept so a
     /// save does not drop it.
     pub stories: String,
@@ -175,6 +179,8 @@ impl Default for MapEditorState {
         let mut state = Self {
             map_name: "new_map".to_string(),
             title: String::new(),
+            storeys: Vec::new(),
+            elevation: Vec::new(),
             stories: String::new(),
             loot: None,
             level_rules: (None, Vec::new(), None),
@@ -633,6 +639,8 @@ impl MapEditorState {
             map_width: self.width,
             map_height: self.height,
             tiles: self.tiles.clone(),
+            storeys: self.storeys.clone(),
+            elevation: self.elevation.clone(),
             decorations: Vec::new(),
             placements: self.placements.clone(),
             houses: self.houses.clone(),
@@ -674,6 +682,8 @@ impl MapEditorState {
         self.placements = map.placements;
         self.houses = map.houses;
         self.waves = map.waves;
+        self.storeys = map.storeys;
+        self.elevation = map.elevation;
         self.stories = map.stories;
         self.loot = map.loot;
         self.level_rules = (map.escape_limit, map.weapons, map.coins);

@@ -1,5 +1,6 @@
 use crate::game_state::GameState;
 use crate::general::components::map_components::Floor;
+use crate::map::streaming::Foliage;
 use crate::model_settings::plugin::PlayerAssetDef;
 use crate::player::components::{WEAPON_NODES, WeaponsHidden};
 use crate::player::systems::abilities::{
@@ -151,6 +152,7 @@ fn auto_outline_scenes(
             With<WorldAssetRoot>,
             Without<AsyncWorldInheritOutline>,
             Without<Floor>,
+            Without<Foliage>,
         ),
     >,
 ) {

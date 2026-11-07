@@ -8,6 +8,7 @@ use crate::ai::components::avoid_wall_components::AvoidWallsData;
 use crate::game_state::game_state_plugin::GamePlugin;
 use crate::general::components::Health;
 use crate::general::components::map_components::CurrentTile;
+use crate::player_setup::state::{InputDevice, PlayerRoster};
 use avian3d::prelude::{PhysicsDebugPlugin, PhysicsGizmos, PhysicsPlugins};
 use bevy::gizmos::AppGizmoBuilder;
 use bevy::gizmos::config::GizmoConfig;
@@ -49,14 +50,19 @@ pub(crate) mod map_editor;
 pub(crate) mod map_editor_tui;
 pub(crate) mod model_settings;
 pub(crate) mod music;
+mod perf;
 pub(crate) mod player;
 pub(crate) mod player_setup;
 pub(crate) mod poly_pizza;
+pub(crate) mod retro;
 pub(crate) mod settings;
 pub mod skein;
 pub(crate) mod towers;
 pub(crate) mod ui;
 pub(crate) mod validate;
+
+/// Who plays a match started with `--play`.
+const PLAY_FLAG_CHARACTER: &str = "assets/defs/male-hazmat.ron";
 
 fn create_map(
     seed: Option<u64>,
@@ -174,6 +180,17 @@ fn convert_map(input: Option<&String>, output: Option<&String>, force: bool) -> 
     Ok(())
 }
 
+/// `--import-osm <spec.ron | export.osm | export.json> [--force]`: an OpenStreetMap level
+/// (`docs/gis-levels.md`).
+fn parse_import_osm_args(args: &[String]) -> Option<Result<(), String>> {
+    let position = args.iter().position(|a| a == "--import-osm")?;
+    let force = args.iter().any(|a| a == "--force");
+    Some(match args.get(position + 1).filter(|a| !a.starts_with("--")) {
+        Some(input) => map::osm::run_import(std::path::Path::new(input), force).map(|_| ()),
+        None => Err("--import-osm needs an import spec (.ron) or OSM data (.osm or Overpass .json)".into()),
+    })
+}
+
 fn print_help() {
     println!("Aliens vs Suburbia\n");
     println!("USAGE:");
@@ -187,6 +204,12 @@ fn print_help() {
     println!("  cargo run -- --play [--level N]            Launch straight into a match (level 1, or N)");
     println!("  cargo run -- --campaign <name>             Play assets/campaigns/<name> (default: {})", campaign::DEFAULT_CAMPAIGN);
     println!("  cargo run -- --fullscreen                  1920x1080 fullscreen (combines with the others)");
+    println!("  cargo run -- --play --level <path>         ... into the map at <path> (.map or .ron), outside the campaign");
+    println!("  cargo run -- --play --perf                 ... logging frame and render pass timings, uncapped");
+    println!("  cargo run -- --play --hills --level <path> ... with the level's hills");
+    println!("  cargo run -- --play --retro [--palette <name>]");
+    println!("                                             ... pixelated, palette from assets/palettes (Ctrl+K/J/H/U/I)");
+    println!("  cargo run -- --play --retro-shots <dir>    ... a screenshot per palette into <dir>, then quit");
     println!("  cargo run --features map-editor -- --map-editor [--file <path>]");
     println!("                                             Launch the map editor TUI");
     println!("  cargo run -- --validate                    Check every content file and what it points at");
@@ -196,7 +219,11 @@ fn print_help() {
         "                                             Convert a map between .ron and .map text"
     );
     println!(
-        "                                             (out defaults to <in> with the other extension)\n"
+        "                                             (out defaults to <in> with the other extension)"
+    );
+    println!("  cargo run -- --import-osm <spec.ron | export.osm | export.json> [--force]");
+    println!(
+        "                                             Make a level from OpenStreetMap (docs/gis-levels.md)\n"
     );
     println!("MAP EDITOR OPTIONS:");
     println!("  --file <path>    Open an existing map file (e.g. assets/maps/map_1.ron)\n");
@@ -219,7 +246,10 @@ fn main() -> std::process::ExitCode {
         return validate::run_cli();
     }
 
-    if let Some(result) = parse_create_map_args(&args).or_else(|| parse_convert_map_args(&args)) {
+    if let Some(result) = parse_create_map_args(&args)
+        .or_else(|| parse_convert_map_args(&args))
+        .or_else(|| parse_import_osm_args(&args))
+    {
         return match result {
             Ok(()) => std::process::ExitCode::SUCCESS,
             Err(e) => {
@@ -260,6 +290,13 @@ fn main() -> std::process::ExitCode {
 
     // 1920x1080 fullscreen on the primary monitor (`fullscreen.rs`).
     let fullscreen = args.iter().any(|a| a == "--fullscreen");
+    // `--level <path>` (not a number) plays that map file instead of the campaign's level.
+    let level_path = args
+        .iter()
+        .skip_while(|a| *a != "--level")
+        .nth(1)
+        .filter(|a| a.parse::<usize>().is_err() && !a.starts_with("--"))
+        .cloned();
 
     let mut app = App::new();
     app.register_type::<CameraOffset>()
@@ -303,7 +340,27 @@ fn main() -> std::process::ExitCode {
         //         .build(),
         //))
         // .add_plugins(PixelShaderPlugin::default())
-        .add_plugins(GamePlugin);
+        .add_plugins(GamePlugin)
+        .add_plugins(retro::RetroPlugin {
+            enabled: args.iter().any(|a| a == "--retro"),
+            palette: args.iter().skip_while(|a| *a != "--palette").nth(1).cloned(),
+            shots: args
+                .iter()
+                .skip_while(|a| *a != "--retro-shots")
+                .nth(1)
+                .map(std::path::PathBuf::from),
+        });
+
+    if let Some(path) = level_path {
+        app.insert_resource(general::systems::map_systems::StartLevel(path));
+    }
+    if args.iter().any(|a| a == "--hills") {
+        app.insert_resource(map::ground::HillsPreview);
+    }
+
+    if args.iter().any(|a| a == "--perf") {
+        app.add_plugins(perf::PerfPlugin);
+    }
 
     if fullscreen {
         app.add_plugins(fullscreen::FullscreenPlugin);
@@ -339,6 +396,12 @@ fn main() -> std::process::ExitCode {
     }
 
     if straight_to_game && !straight_to_editor {
+        // The setup screen is skipped, so nobody picks a character.
+        app.insert_resource(PlayerRoster {
+            def_paths: vec![PLAY_FLAG_CHARACTER.to_string()],
+            devices: vec![InputDevice::Keyboard],
+            def_overrides: Vec::new(),
+        });
         app.add_systems(
             Startup,
             |mut next: ResMut<NextState<game_state::GameState>>| {

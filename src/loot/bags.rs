@@ -3,20 +3,22 @@
 //! table and spills the result around it (`items::pickup_items`), so a bag can hold a
 //! gun, a med-kit, some ammo, or nothing worth having.
 //!
-//! [`plan_bags`] is the pure part (which tiles), [`spawn_loot_bags`] builds them.
+//! [`plan_bags`] is the pure part (which tiles), [`plan_spread`] dresses those tiles up, and
+//! `map::streaming` keeps the result per chunk and calls [`spawn_bag`] for the chunks near
+//! the camera.
 
 use std::collections::HashSet;
 
 use bevy::prelude::*;
 use bevy::world_serialization::{WorldAsset, WorldAssetRoot};
 
+use crate::map::ground::GroundHeight;
 use crate::assets::asset_definition::{AssetDefinition, ItemKind};
-use crate::general::components::map_components::LootSpread;
-use crate::general::events::map_events::LoadMap;
+use crate::general::components::map_components::{LootSpread, MapFile};
 use crate::general::systems::map_systems::TileDefinitions;
 use crate::items::{Item, Pickup};
 use crate::loot::unit_random;
-use crate::map::walls::padded_tiles;
+use crate::map::streaming::Chunk;
 use crate::map::{BitFlags, MapFeatures};
 
 /// How far from the tile centre a bag may lie, as a share of the tile, so a row of bags
@@ -85,79 +87,125 @@ pub fn plan_bags(
     open
 }
 
-/// Scatter the map's loot bags when it loads.
-pub fn spawn_loot_bags(
-    mut loads: MessageReader<LoadMap>,
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    tile_defs: Res<TileDefinitions>,
-) {
-    for load in loads.read() {
-        let Some(spread) = &load.map.loot else {
-            continue;
-        };
-        let looks: Vec<(AssetDefinition, Handle<WorldAsset>)> = spread
-            .bags
-            .iter()
-            .filter_map(|path| {
-                let def = AssetDefinition::load_from_def_path(path);
-                if def.is_none() {
-                    warn!("loot bag def {path} not found");
-                }
-                def
-            })
-            .map(|def| {
-                let scene = asset_server
-                    .load(bevy::gltf::GltfAssetLabel::Scene(0).from_asset(def.model_path.clone()));
-                (def, scene)
-            })
-            .collect();
-        if looks.is_empty() {
-            warn!("no loot bag defs could be read; no loot bags");
-            continue;
-        }
-        // A fresh spread every time the level is played.
-        let mut seed = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map_or(1, |d| d.subsec_nanos());
-        let mut rng = || unit_random(&mut seed);
-        // Placements are in map coordinates, one tile in from the padded grid.
-        let taken: HashSet<(usize, usize)> = load
-            .map
-            .placements
-            .iter()
-            .filter_map(|p| {
-                Some((
-                    usize::try_from(p.x + 1).ok()?,
-                    usize::try_from(p.y + 1).ok()?,
-                ))
-            })
-            .collect();
-        let plan = plan_bags(&padded_tiles(&load.map), &taken, spread, &mut rng);
+/// A model a bag can be drawn with.
+pub type BagLook = (AssetDefinition, Handle<WorldAsset>);
 
-        let tw = tile_defs.tile_width;
-        let floor = tile_defs.floor_level + tile_defs.tile_depth;
-        for &(col, row) in &plan {
-            let pick = (rng() * looks.len() as f32) as usize;
-            let Some((def, scene)) = looks.get(pick).or(looks.last()) else {
-                continue;
-            };
-            let jitter = Vec3::new(rng() - 0.5, 0.0, rng() - 0.5) * 2.0 * JITTER * tw;
-            let at = Vec3::new(tw * col as f32, floor + def.lift_world(), tw * row as f32) + jitter;
-            commands.spawn((
-                Name::new(format!("Loot bag {col}:{row}")),
-                WorldAssetRoot(scene.clone()),
-                Transform::from_translation(at)
-                    .with_rotation(Quat::from_rotation_y(rng() * std::f32::consts::TAU))
-                    .with_scale(Vec3::splat(def.scale)),
-                Item(ItemKind::Loot {
-                    table: spread.table.clone(),
-                }),
-                Pickup::default(),
-            ));
-        }
-        info!("scattered {} loot bags ({})", plan.len(), spread.table);
+/// One bag of a map's spread, decided when the map loads.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PlannedBag {
+    /// Grid `(col, row)` of the padded grid.
+    pub tile: (i32, i32),
+    /// Index into [`Spread::looks`].
+    pub look: usize,
+    /// Off the tile centre, in tiles.
+    pub offset: Vec2,
+    pub yaw: f32,
+}
+
+/// A map's bags, as data.
+pub struct Spread {
+    pub looks: Vec<BagLook>,
+    pub table: String,
+    pub bags: Vec<PlannedBag>,
+}
+
+/// Marks a live bag with its place in its chunk's plan, so the plan can tell which bags are
+/// still lying there when the chunk unloads.
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct StreamedBag {
+    pub chunk: Chunk,
+    pub id: usize,
+}
+
+/// Decide a map's loot bags. `None` when it has no spread or no bag model can be read.
+pub fn plan_spread(
+    map: &MapFile,
+    tiles: &[Vec<u64>],
+    asset_server: &AssetServer,
+) -> Option<Spread> {
+    let spread = map.loot.as_ref()?;
+    let looks: Vec<BagLook> = spread
+        .bags
+        .iter()
+        .filter_map(|path| {
+            let def = AssetDefinition::load_from_def_path(path);
+            if def.is_none() {
+                warn!("loot bag def {path} not found");
+            }
+            def
+        })
+        .map(|def| {
+            let scene = asset_server
+                .load(bevy::gltf::GltfAssetLabel::Scene(0).from_asset(def.model_path.clone()));
+            (def, scene)
+        })
+        .collect();
+    if looks.is_empty() {
+        warn!("no loot bag defs could be read; no loot bags");
+        return None;
     }
+    // A fresh spread every time the level is played.
+    let mut seed = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(1, |d| d.subsec_nanos());
+    let mut rng = || unit_random(&mut seed);
+    // Placements are in map coordinates, one tile in from the padded grid.
+    let taken: HashSet<(usize, usize)> = map
+        .placements
+        .iter()
+        .filter_map(|p| {
+            Some((
+                usize::try_from(p.x + 1).ok()?,
+                usize::try_from(p.y + 1).ok()?,
+            ))
+        })
+        .collect();
+    let bags = plan_bags(tiles, &taken, spread, &mut rng)
+        .into_iter()
+        .map(|(col, row)| PlannedBag {
+            tile: (col as i32, row as i32),
+            look: ((rng() * looks.len() as f32) as usize).min(looks.len() - 1),
+            offset: Vec2::new(rng() - 0.5, rng() - 0.5) * 2.0 * JITTER,
+            yaw: rng() * std::f32::consts::TAU,
+        })
+        .collect();
+    Some(Spread {
+        looks,
+        table: spread.table.clone(),
+        bags,
+    })
+}
+
+/// Build one planned bag.
+pub fn spawn_bag(
+    parent: &mut ChildSpawnerCommands,
+    bag: &PlannedBag,
+    id: StreamedBag,
+    looks: &[BagLook],
+    table: &str,
+    tile_defs: &TileDefinitions,
+    ground: &GroundHeight,
+) {
+    let Some((def, scene)) = looks.get(bag.look) else {
+        return;
+    };
+    let tw = tile_defs.tile_width;
+    let floor = tile_defs.floor_level + tile_defs.tile_depth;
+    let (col, row) = bag.tile;
+    let (x, z) = (tw * (col as f32 + bag.offset.x), tw * (row as f32 + bag.offset.y));
+    let at = Vec3::new(x, floor + ground.height(x, z) + def.lift_world(), z);
+    parent.spawn((
+        Name::new(format!("Loot bag {col}:{row}")),
+        WorldAssetRoot(scene.clone()),
+        Transform::from_translation(at)
+            .with_rotation(Quat::from_rotation_y(bag.yaw))
+            .with_scale(Vec3::splat(def.scale)),
+        Item(ItemKind::Loot {
+            table: table.to_string(),
+        }),
+        Pickup::default(),
+        id,
+    ));
 }
 
 #[cfg(test)]

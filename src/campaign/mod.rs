@@ -246,20 +246,22 @@ pub fn start_level(
     mut wallet: ResMut<TeamWallet>,
     mut loadout: ResMut<LevelLoadout>,
     mut load_map: MessageWriter<LoadMap>,
+    start: Option<Res<crate::general::systems::map_systems::StartLevel>>,
 ) {
-    let Some(level) = campaign.level() else {
-        error!("campaign: no level {}", campaign.current);
-        return;
+    // `--level <path>` plays that map, outside the campaign.
+    let (title, path) = match &start {
+        Some(start) => (start.0.clone(), start.0.clone()),
+        None => {
+            let Some(level) = campaign.level() else {
+                error!("campaign: no level {}", campaign.current);
+                return;
+            };
+            (level.title.clone(), level.map.clone())
+        }
     };
-    let map = match crate::map::text_format::load_level(crate::assets::paths::disk_path(&level.map))
-    {
+    let map = match crate::map::text_format::load_level(crate::assets::paths::disk_path(&path)) {
         Ok((map, path)) => {
-            info!(
-                "{}: {} ({})",
-                campaign.progress(),
-                level.title,
-                path.display()
-            );
+            info!("{}: {} ({})", campaign.progress(), title, path.display());
             map
         }
         Err(e) => {
@@ -269,7 +271,7 @@ pub fn start_level(
     };
     let defaults = LevelTracker::default();
     *tracker = LevelTracker {
-        level_name: level.title.clone(),
+        level_name: title,
         aliens_win_cut_off: map
             .escape_limit
             .map_or(defaults.aliens_win_cut_off, |limit| {

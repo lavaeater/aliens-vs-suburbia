@@ -9,15 +9,16 @@
 //! lanterns (a flickering low point light), floodlights (a spot on a wall, aimed out across
 //! the floor) and neon globes (a coloured, pulsing point light).
 //!
-//! [`spawn_map_lights`] turns the plan into entities when a map loads.
+//! `map::streaming` holds the plan per chunk and calls [`spawn_light`] for the chunks near
+//! the camera.
+
+use std::collections::HashMap;
 
 use bevy::light::NotShadowCaster;
 use bevy::prelude::*;
 
-use crate::general::events::map_events::LoadMap;
+use crate::camera::components::GameCamera;
 use crate::general::systems::lights_systems::{LightAnimation, LightStyle};
-use crate::general::systems::map_systems::TileDefinitions;
-use crate::map::walls::padded_tiles;
 use crate::map::{BitFlags, MapFeatures};
 
 /// Minimum distance between two placed lights, in tiles.
@@ -113,18 +114,33 @@ pub fn plan_lights(tiles: &[Vec<u64>]) -> Vec<LightPlan> {
             .map(|(dx, dy)| (col + dx, row + dy))
             .find(|&n| is_solid_wall(tiles, n))
     };
-    open.sort_by_key(|&t| (wall_beside(t).is_none(), scatter_key(t)));
+    open.sort_by_cached_key(|&t| (wall_beside(t).is_none(), scatter_key(t)));
 
-    let far_enough = |plan: &[LightPlan], (col, row): (i32, i32)| {
-        plan.iter().all(|p| {
-            let (dx, dy) = ((p.tile.0 - col) as f32, (p.tile.1 - row) as f32);
-            dx * dx + dy * dy >= SPACING * SPACING
-        })
+    // Placed lights by `SPACING`-sized cell, so a tile only checks the lights around it: a
+    // big map plans thousands.
+    let cell = |(col, row): (i32, i32)| {
+        let size = SPACING as i32;
+        (col.div_euclid(size), row.div_euclid(size))
+    };
+    let mut placed: HashMap<(i32, i32), Vec<(i32, i32)>> = HashMap::new();
+    for light in &plan {
+        placed.entry(cell(light.tile)).or_default().push(light.tile);
+    }
+    let far_enough = |placed: &HashMap<(i32, i32), Vec<(i32, i32)>>, tile: (i32, i32)| {
+        let (cx, cy) = cell(tile);
+        (cy - 1..=cy + 1)
+            .flat_map(|y| (cx - 1..=cx + 1).map(move |x| (x, y)))
+            .filter_map(|c| placed.get(&c))
+            .flatten()
+            .all(|other| {
+                let (dx, dy) = ((other.0 - tile.0) as f32, (other.1 - tile.1) as f32);
+                dx * dx + dy * dy >= SPACING * SPACING
+            })
     };
 
     let (mut along_walls, mut in_the_open) = (0usize, 0usize);
     for tile in open {
-        if !far_enough(&plan, tile) {
+        if !far_enough(&placed, tile) {
             continue;
         }
         let kind = if let Some(wall) = wall_beside(tile) {
@@ -145,6 +161,7 @@ pub fn plan_lights(tiles: &[Vec<u64>]) -> Vec<LightPlan> {
             }
         };
         plan.push(LightPlan { kind, tile });
+        placed.entry(cell(tile)).or_default().push(tile);
     }
     plan
 }
@@ -163,13 +180,54 @@ mod lumens {
     pub const PLAYER_SPAWN: f32 = 30_000.0;
 }
 
+/// Lamps allowed a shadow map at once, the ones nearest the point under the camera. Each one
+/// is a render pass of its own, and it is their number that costs, not what they draw: 61
+/// took 26 ms a frame, 16 stays at 60 FPS. With lamps about 8 tiles apart this reaches well
+/// past the edge of the picture at normal zoom, so a shadow switching off happens off
+/// screen.
+const SHADOW_LAMPS: usize = 16;
+
+/// Which of these lamps get a shadow map: the `budget` nearest `focus`.
+fn shadow_budget(lamps: &[Vec2], focus: Vec2, budget: usize) -> Vec<bool> {
+    let mut order: Vec<usize> = (0..lamps.len()).collect();
+    order.sort_by(|&a, &b| {
+        let distance = |i: usize| lamps.get(i).map_or(f32::MAX, |p| p.distance_squared(focus));
+        distance(a).total_cmp(&distance(b))
+    });
+    let mut chosen = vec![false; lamps.len()];
+    for i in order.into_iter().take(budget) {
+        if let Some(slot) = chosen.get_mut(i) {
+            *slot = true;
+        }
+    }
+    chosen
+}
+
+/// Give the lamps near the camera their shadows and take them from the rest.
+pub fn budget_lamp_shadows(
+    mut lamps: Query<(&mut SpotLight, &GlobalTransform), With<MapLight>>,
+    cameras: Query<&GlobalTransform, With<GameCamera>>,
+) {
+    let Ok(camera) = cameras.single() else {
+        return;
+    };
+    let at: Vec<Vec2> = lamps.iter().map(|(_, lamp)| lamp.translation().xz()).collect();
+    let chosen = shadow_budget(&at, camera.translation().xz(), SHADOW_LAMPS);
+    for ((mut lamp, _), shadow) in lamps.iter_mut().zip(chosen) {
+        // Reading through `Mut` doesn't mark it changed; only a real change should.
+        if lamp.shadow_maps_enabled != shadow {
+            lamp.shadow_maps_enabled = shadow;
+        }
+    }
+}
+
 const STREET_LAMP_HEIGHT: f32 = 1.4;
 
 /// A placed light's fixture, so it can be found (and filtered out of the inspector).
 #[derive(Component)]
 pub struct MapLight;
 
-struct Fixtures {
+pub struct Fixtures {
     pole: Handle<Mesh>,
     bulb: Handle<Mesh>,
     lantern: Handle<Mesh>,
@@ -190,17 +248,9 @@ fn glow(
     })
 }
 
-pub fn spawn_map_lights(
-    mut loads: MessageReader<LoadMap>,
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    tile_defs: Res<TileDefinitions>,
-) {
-    for load in loads.read() {
-        let tiles = padded_tiles(&load.map);
-        let plan = plan_lights(&tiles);
-        let fixtures = Fixtures {
+impl Fixtures {
+    pub fn new(meshes: &mut Assets<Mesh>, materials: &mut Assets<StandardMaterial>) -> Self {
+        Self {
             pole: meshes.add(Cylinder::new(0.025, STREET_LAMP_HEIGHT)),
             bulb: meshes.add(Sphere::new(0.06)),
             lantern: meshes.add(Cuboid::new(0.08, 0.12, 0.08)),
@@ -211,22 +261,7 @@ pub fn spawn_map_lights(
                 perceptual_roughness: 0.5,
                 ..default()
             }),
-        };
-        let floor = tile_defs.floor_level;
-        let tw = tile_defs.tile_width;
-        for (i, light) in plan.iter().enumerate() {
-            let at = Vec3::new(tw * light.tile.0 as f32, floor, tw * light.tile.1 as f32);
-            spawn_light(
-                &mut commands,
-                &mut materials,
-                &fixtures,
-                light.kind,
-                at,
-                tw,
-                i as f32,
-            );
         }
-        info!("placed {} map lights", plan.len());
     }
 }
 
@@ -241,8 +276,8 @@ fn point(color: Color, intensity: f32, range: f32) -> PointLight {
 }
 
 #[allow(clippy::too_many_lines)]
-fn spawn_light(
-    commands: &mut Commands,
+pub fn spawn_light(
+    commands: &mut ChildSpawnerCommands,
     materials: &mut Assets<StandardMaterial>,
     fx: &Fixtures,
     kind: LightKind,
@@ -275,10 +310,11 @@ fn spawn_light(
                 SpotLight {
                     color: warm,
                     intensity: lumens::STREET_LAMP,
-                    range: 6.0,
+                    range: 4.8,
                     outer_angle: 0.95,
                     inner_angle: 0.6,
-                    shadow_maps_enabled: true,
+                    // `budget_lamp_shadows` hands these out.
+                    shadow_maps_enabled: false,
                     ..default()
                 },
                 Transform::from_translation(top - Vec3::Y * 0.05).looking_at(at, Vec3::Z),
@@ -298,7 +334,7 @@ fn spawn_light(
             commands.spawn((
                 Name::from("Lantern Light"),
                 MapLight,
-                point(flame, lumens::LANTERN, 3.5),
+                point(flame, lumens::LANTERN, 2.8),
                 LightAnimation {
                     base: lumens::LANTERN,
                     style: LightStyle::Flicker { seed },
@@ -328,10 +364,11 @@ fn spawn_light(
                 SpotLight {
                     color: cold,
                     intensity: lumens::FLOODLIGHT,
-                    range: 8.0,
+                    range: 6.4,
                     outer_angle: 0.7,
                     inner_angle: 0.45,
-                    shadow_maps_enabled: true,
+                    // `budget_lamp_shadows` hands these out.
+                    shadow_maps_enabled: false,
                     ..default()
                 },
                 Transform::from_translation(mount + out * 0.05).looking_at(target, Vec3::Y),
@@ -351,7 +388,7 @@ fn spawn_light(
             commands.spawn((
                 Name::from("Neon Light"),
                 MapLight,
-                point(color, lumens::NEON, 4.0),
+                point(color, lumens::NEON, 3.2),
                 LightAnimation {
                     base: lumens::NEON,
                     style: LightStyle::Pulse {
@@ -366,7 +403,7 @@ fn spawn_light(
             commands.spawn((
                 Name::from("Alien Spawn Glow"),
                 MapLight,
-                point(Color::srgb(0.45, 1.0, 0.3), lumens::ALIEN_SPAWN, 4.5),
+                point(Color::srgb(0.45, 1.0, 0.3), lumens::ALIEN_SPAWN, 3.6),
                 LightAnimation {
                     base: lumens::ALIEN_SPAWN,
                     style: LightStyle::Pulse {
@@ -381,7 +418,7 @@ fn spawn_light(
             commands.spawn((
                 Name::from("Goal Beacon"),
                 MapLight,
-                point(Color::srgb(1.0, 0.2, 0.15), lumens::GOAL, 4.5),
+                point(Color::srgb(1.0, 0.2, 0.15), lumens::GOAL, 3.6),
                 LightAnimation {
                     base: lumens::GOAL,
                     style: LightStyle::Pulse {
@@ -396,7 +433,7 @@ fn spawn_light(
             commands.spawn((
                 Name::from("Player Spawn Lamp"),
                 MapLight,
-                point(Color::srgb(0.95, 0.95, 1.0), lumens::PLAYER_SPAWN, 4.0),
+                point(Color::srgb(0.95, 0.95, 1.0), lumens::PLAYER_SPAWN, 3.2),
                 Transform::from_translation(at + Vec3::Y * 1.2),
             ));
         }
@@ -406,6 +443,27 @@ fn spawn_light(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_nearest_lamps_get_the_shadows() {
+        let lamps = [
+            Vec2::new(9.0, 0.0),
+            Vec2::new(1.0, 0.0),
+            Vec2::new(5.0, 0.0),
+            Vec2::new(2.0, 0.0),
+        ];
+        assert_eq!(
+            shadow_budget(&lamps, Vec2::ZERO, 2),
+            vec![false, true, false, true]
+        );
+    }
+
+    #[test]
+    fn a_budget_bigger_than_the_lamps_covers_them_all() {
+        let lamps = [Vec2::ZERO, Vec2::X];
+        assert_eq!(shadow_budget(&lamps, Vec2::ZERO, 16), vec![true, true]);
+        assert!(shadow_budget(&[], Vec2::ZERO, 16).is_empty());
+    }
 
     const FLOOR: u64 = MapFeatures::Floor as u64;
     const WALL: u64 =
