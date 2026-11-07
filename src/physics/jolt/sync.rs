@@ -52,6 +52,21 @@ fn parts<'a>(b: &'a BodyDataItem<'_, '_>) -> BodyParts<'a> {
     }
 }
 
+/// A new collider's `Position`/`Rotation` from its `Transform` straight away, as Avian does,
+/// so game code that runs before the next step (`ground_follow::adopt_walkers` writes only
+/// `y`) reads and edits the real spawn pose, not the origin. Unparented entities only: a
+/// child's world pose isn't known until transforms propagate, so `create_bodies` takes it then.
+pub(super) fn seed_pose(
+    add: On<Add, Collider>,
+    mut poses: Query<(&Transform, &mut Position, &mut Rotation), Without<ChildOf>>,
+) {
+    let Ok((transform, mut position, mut rotation)) = poses.get_mut(add.entity) else { return };
+    if position.0 == Vec3::ZERO && rotation.0 == Quat::IDENTITY {
+        position.0 = transform.translation;
+        rotation.0 = transform.rotation;
+    }
+}
+
 /// Bodies for new colliders. A `Position` still at its default is taken from the entity's
 /// transform (Avian's rule), so spawning with only a `Transform` works. A layer combination the
 /// world doesn't know yet rebuilds it, every body included.

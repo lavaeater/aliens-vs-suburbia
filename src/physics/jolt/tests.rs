@@ -282,3 +282,24 @@ fn despawning_removes_the_body() {
     run(&mut app, 2);
     assert_eq!(app.world().resource::<JoltWorld>().entities.len(), 1);
 }
+
+/// `ground_follow::adopt_walkers` spawns nothing; it edits `Position.y` of a character spawned
+/// with only a `Transform`, before the first step. The body must keep the spawn's x and z.
+#[test]
+fn editing_a_fresh_position_keeps_the_spawn_transform() {
+    let mut app = app();
+    let walker = app
+        .world_mut()
+        .spawn((
+            RigidBody::Dynamic,
+            Collider::capsule(0.3, 0.8),
+            Transform::from_xyz(12.0, 1.0, -7.0),
+            GravityScale(0.0),
+            CollisionLayers::new([Layer::Alien], [Layer::Floor]),
+        ))
+        .id();
+    app.world_mut().get_mut::<Position>(walker).expect("required").0.y = 3.0;
+    run(&mut app, 1);
+    let p = position(&app, walker);
+    assert!((p - Vec3::new(12.0, 3.0, -7.0)).length() < 0.01, "{p}");
+}

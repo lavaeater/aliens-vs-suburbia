@@ -72,7 +72,12 @@ Queries filter by object layer list, which is computed from the mask the same wa
    Position/velocity round trips, layers, ray and shape casts, contact events and
    `CollidingEntities`, sensors, interpolation. Sized buffers, and an incomplete `StepReport`
    logged.
-3. **The game on Jolt**: `cargo run --features physics-jolt`; fix what the facade didn't cover,
+2b. **Facade on `playtest`, hills** (done 2026-11-07): the facade was redone on `playtest` and
+   `playtest` merged in; the backend gained `Collider::heightfield`, `LayerMask::add`/`remove`
+   and the prelude `local_size(&Collider)` (both backends) for `ground_follow`.
+3. **The game on Jolt** (started 2026-11-07; the gis level plays, `--play --retro-shots <dir>`
+   on both backends gives the same picture): `cargo run --features physics-jolt`; fix what the
+   facade didn't cover,
    then tune feel (friction, damping, throw arcs, gib bounce: Jolt's defaults differ) against
    Avian side by side.
 4. **Switch**: Jolt default, playtest, Avian removed, branch merged.
@@ -99,6 +104,15 @@ Queries filter by object layer list, which is computed from the mask the same wa
 - **`Transform` writes** to a body after spawn aren't followed (only `Position`/`Rotation`
   are); nothing in the game does that today.
 - **Interpolation** is the backend's own (`interpolation.rs`), not `bevy_transform_interpolation`.
+- **Spawn pose**: a new collider's `Position`/`Rotation` are taken from its `Transform` the
+  moment the `Collider` is added (`sync::seed_pose`), as Avian does, not at body creation:
+  `ground_follow` edits `Position.y` before the first step, which put every character at the
+  map's origin. Children still get their world pose at body creation.
+- **Terrain** (`Collider::heightfield`, the hills) is a static Jolt triangle mesh with parry's
+  layout and diagonal, not Jolt's heightfield (square only, quantised heights). It has no
+  local ray cast (oxijolt has none for a lone shape), so `Collider::cast_ray` is Avian-only;
+  `map::ground`'s terrain test runs on Jolt through a world ray. Characters ignore the terrain
+  anyway (`ground_follow`); only gibs, items and the like land on it.
 
 Found on the way, true on Avian too: Avian only fills a `CollidingEntities` that is already on
 an entity, and nothing in the game adds one, so the tower sensors (`towers/systems.rs`) and

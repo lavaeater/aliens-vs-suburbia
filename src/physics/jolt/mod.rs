@@ -58,6 +58,7 @@ fn build_core(app: &mut App) {
         .init_resource::<sync::Touching>()
         .add_message::<CollisionStart>()
         .add_observer(sync::remove_body)
+        .add_observer(sync::seed_pose)
         .add_systems(
             FixedPostUpdate,
             (
