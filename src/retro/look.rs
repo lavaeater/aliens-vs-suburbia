@@ -250,6 +250,11 @@ pub fn summary(look: &RetroLook, palettes: &Palettes) -> String {
     )
 }
 
+/// With `--no-retro`, whether the file had the look on, so saving this run's other changes
+/// does not switch it off for good.
+#[derive(Resource)]
+pub struct SavedEnabled(pub bool);
+
 /// `retro-settings.ron`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(default)]

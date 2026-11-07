@@ -6,6 +6,7 @@ use enumflags2::*;
 pub mod chunk_loader;
 pub mod chunks;
 pub mod floor_mesh;
+pub mod road_mesh;
 pub mod house;
 pub mod map_generator;
 pub mod map_lights;

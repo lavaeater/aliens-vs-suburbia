@@ -109,7 +109,7 @@ point sits on the centre of every second tile (`ELEVATION_STEP`), and holds cent
 world height above the level's lowest point. The OpenStreetMap import writes it from real
 height data (`docs/gis-levels.md`). The game bends the world to it unless started with `--flat`.
 
-### `[decorations]`, `[placements]`, `[houses]`, `[waves]`
+### `[decorations]`, `[placements]`, `[houses]`, `[roads]`, `[waves]`
 
 One entry per line: `key: value` fields separated by `|`, in any order. Values can
 contain spaces (paths often do) but not `|`. An unknown key is an error.
@@ -119,6 +119,7 @@ contain spaces (paths often do) but not `|`. An unknown key is an error.
 | decorations | `at: x, y` + `model:` (path under `assets/`), optional `rotation:` (degrees) and `scale:` (default 1) |
 | placements | `at: x, y` + `def:` (a def `.ron`), optional `rotation:` (degrees, multiples of 45) |
 | houses | `house:` (a name in `assets/houses/`, made in the house editor) + `at: x, y` (the top-left tile of its footprint), optional `rotation:` (degrees clockwise, multiples of 90). The game stamps the house into the tiles when the level loads: walls block everyone, doors are floor, and anything under it is replaced. Only written when the map has houses. |
+| roads | `road:` (`major`, `street`, `service` or `path`) + `width:` (the carriageway, in tiles) + `points:` (the centreline, `x,y` pairs separated by spaces, in tiles; `3,4` is the centre of tile 3, 4, fractions allowed). Only the look (`map::road_mesh`): ribbons over the ground, pavements on streets and major roads, a dashed centre line on major roads, gravel for paths. Where one can walk is still the tiles. The OpenStreetMap import writes them. Only written when the map has roads. |
 | waves | optional `enemy:` (enemy def; omitted = the built-in alien), `count:` (default 10), `rate:` (spawns per minute, default 20) |
 
 `x` is the column and `y` the row, both counted from 0 at the top left of `[tiles]`.

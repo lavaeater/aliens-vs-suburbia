@@ -175,6 +175,8 @@ impl Plugin for RetroPlugin {
         let mut look = file.look(&palettes);
         app.insert_resource(file.light).insert_resource(file.sky);
         if self.force_off {
+            // Off for this run only: saves keep what the file said.
+            app.insert_resource(look::SavedEnabled(look.enabled));
             look.enabled = false;
         }
         if let Some(name) = &self.palette {

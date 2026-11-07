@@ -153,7 +153,7 @@ Code: `src/map/osm/` (`data.rs` reads the `.osm` XML or Overpass JSON, `geometry
 | OSM | Level |
 |-----|-------|
 | `building=*` (not `roof`, not underground) | solid wall tiles (`w`) |
-| `highway=*` lines | floor strips: 10 m (primary) / 8 m (secondary, tertiary) / 6 m (residential) / 4 m (service) / 2 m (paths); a `width` tag wins. Tunnels skipped. |
+| `highway=*` lines | roads, 10 m (primary) / 8 m (secondary, tertiary) / 6 m (residential) / 4 m (service) / 2 m (paths); a `width` tag wins. Tunnels skipped. The tiles under a road keep their ground (a bridge over water becomes floor); the centreline goes to the map's `[roads]` and is drawn as a real road over it (`map::road_mesh`): major (primary-tertiary: pavements, dashed centre line), street (residential: pavements), service (asphalt only), path (track, footway, cycleway: gravel). |
 | `highway=*` + `area=yes`, `amenity=parking`, `landuse=retail/commercial/industrial`, `place=square`, paved pitches | floor |
 | `landuse=residential/grass/meadow/forest/...`, `leisure=park/garden/playground/pitch`, `natural=wood/scrub/...` | grass. Grass is also the default ground. |
 | `natural=water`, `waterway=riverbank`, pools, streams / ditches / rivers (2 / 1 / 8 m) | water |

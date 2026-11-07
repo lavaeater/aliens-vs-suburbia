@@ -75,6 +75,43 @@ impl FloorMesh {
             .extend_from_slice(&[base, base + 2, base + 1, base, base + 3, base + 2]);
     }
 
+    /// A loose vertex on the ground at world `(x, z)`, `lift` above the floor; its index.
+    pub(crate) fn vertex(&mut self, x: f32, z: f32, lift: f32, ground: &GroundHeight) -> u32 {
+        let index = self.positions.len() as u32;
+        self.positions.push([x, lift + ground.height(x, z), z]);
+        let normal = ground.normal(x, z);
+        self.normals.push(normal.to_array());
+        self.colors.push(hill_shade(normal));
+        self.uvs.push([x, z]);
+        index
+    }
+
+    /// A triangle of earlier vertices, turned to face up whichever way they were given.
+    pub(crate) fn triangle(&mut self, a: u32, b: u32, c: u32) {
+        let at = |i: u32| {
+            self.positions
+                .get(i as usize)
+                .map_or(Vec2::ZERO, |p| Vec2::new(p[0], p[2]))
+        };
+        let (ab, ac) = (at(b) - at(a), at(c) - at(a));
+        // The y of (ab x ac) in 3D, with Vec2 holding (x, z).
+        if ab.y * ac.x - ab.x * ac.y >= 0.0 {
+            self.indices.extend_from_slice(&[a, b, c]);
+        } else {
+            self.indices.extend_from_slice(&[a, c, b]);
+        }
+    }
+
+    /// Positions and indices, for tests.
+    #[cfg(test)]
+    pub(crate) fn into_parts(&self) -> (Vec<[f32; 3]>, Vec<u32>) {
+        (self.positions.clone(), self.indices.clone())
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.indices.is_empty()
+    }
+
     pub fn into_mesh(self) -> Mesh {
         let mut mesh = Mesh::new(
             PrimitiveTopology::TriangleList,

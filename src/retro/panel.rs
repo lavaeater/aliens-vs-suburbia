@@ -7,7 +7,7 @@ use bevy::prelude::*;
 use bevy::ui_widgets::Activate;
 use lava_ui_builder::{LavaTheme, TextStyle, UIBuilder};
 
-use super::look::{LightSetting, RetroFile, Setting, summary};
+use super::look::{LightSetting, RetroFile, SavedEnabled, Setting, summary};
 use super::shots::RetroShots;
 use super::{Palettes, RetroLook};
 use crate::character_editor::state::EditorSession;
@@ -197,6 +197,7 @@ fn show_light_values(
 }
 
 /// Save lighting changes, but not the character editor's switch to daylight.
+#[allow(clippy::too_many_arguments)]
 fn save_light(
     look: Res<RetroLook>,
     palettes: Res<Palettes>,
@@ -204,6 +205,7 @@ fn save_light(
     sky: Res<SkyLightSettings>,
     editor: Option<Res<EditorSession>>,
     shots: Option<Res<RetroShots>>,
+    saved: Option<Res<SavedEnabled>>,
     mut flashes: Query<(&mut RetroFlash, &mut Text)>,
 ) {
     if preset.is_added() || sky.is_added() || editor.is_some() || shots.is_some() {
@@ -221,7 +223,7 @@ fn save_light(
         flash.left = FLASH_SECS;
         text.0.clone_from(&line);
     }
-    RetroFile::of_all(&look, &palettes, *preset, *sky).save();
+    save(&look, &palettes, *preset, *sky, saved.as_deref());
 }
 
 /// Flash and save every change after the first frame; the shots run changes palettes
@@ -231,6 +233,7 @@ fn flash_and_save(
     palettes: Res<Palettes>,
     preset: Res<LightingPreset>,
     sky: Res<SkyLightSettings>,
+    saved: Option<Res<SavedEnabled>>,
     shots: Option<Res<RetroShots>>,
     mut flashes: Query<(&mut RetroFlash, &mut Text)>,
 ) {
@@ -243,7 +246,24 @@ fn flash_and_save(
         flash.left = FLASH_SECS;
         text.0.clone_from(&line);
     }
-    RetroFile::of_all(&look, &palettes, *preset, *sky).save();
+    save(&look, &palettes, *preset, *sky, saved.as_deref());
+}
+
+fn save(
+    look: &RetroLook,
+    palettes: &Palettes,
+    preset: LightingPreset,
+    sky: SkyLightSettings,
+    saved: Option<&SavedEnabled>,
+) {
+    let mut file = RetroFile::of_all(look, palettes, preset, sky);
+    // Toggled back on in a `--no-retro` run: that sticks.
+    if let Some(saved) = saved
+        && !look.enabled
+    {
+        file.enabled = saved.0;
+    }
+    file.save();
 }
 
 fn fade_flash(time: Res<Time<Real>>, mut flashes: Query<(&mut RetroFlash, &mut TextColor)>) {
