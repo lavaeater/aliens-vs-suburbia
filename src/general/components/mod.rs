@@ -60,7 +60,6 @@ pub enum CollisionLayer {
     PlayerAimSensor,
 }
 
-// By hand rather than derived: the same impl serves the Avian and the Jolt backend.
 impl PhysicsLayer for CollisionLayer {
     fn to_bits(&self) -> u32 {
         1 << *self as u32

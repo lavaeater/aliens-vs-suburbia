@@ -5,7 +5,7 @@
 //! model in an empty scene and can take every skinned mesh in the world. The character editor has
 //! the player plus whatever else is skinned in the arena, so the overlay is scoped to the player's subtree.
 //!
-//! Physics debug is avian's own `PhysicsGizmos` config, the same one `F3` toggles globally.
+//! Physics debug is the physics backend's `PhysicsGizmos` config, the same one `F3` toggles globally.
 //! The panel button and the key stay in sync because the button reads and writes that
 //! config rather than keeping a copy of the answer.
 
@@ -28,7 +28,7 @@ use crate::player::systems::leg_ik::Legs;
 pub struct EditorOverlays {
     pub skeleton: bool,
     pub hardpoints: bool,
-    /// Mirror of avian's `PhysicsGizmos::enabled`, so the panel can show its state. Kept
+    /// Mirror of `PhysicsGizmos::enabled`, so the panel can show its state. Kept
     /// current by [`sync_physics_toggle`] — `F3` can flip it behind our back.
     pub physics: bool,
     /// The walk's footfalls: where each foot is going, where it is nailed, and how far the
@@ -152,7 +152,7 @@ fn cross(gizmos: &mut Gizmos, at: Vec3, size: f32, color: Color) {
     gizmos.line(at - Vec3::Z * size, at + Vec3::Z * size, color);
 }
 
-/// Flip avian's collider gizmos. Writes the config directly rather than a local flag, so
+/// Flip the collider gizmos. Writes the config directly rather than a local flag, so
 /// this and `F3` cannot disagree.
 pub fn toggle_physics_gizmos(store: &mut GizmoConfigStore) {
     let (config, _) = store.config_mut::<PhysicsGizmos>();

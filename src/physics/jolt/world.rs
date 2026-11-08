@@ -7,7 +7,7 @@ use oxijolt::{BodyId, BodySettings, EventSettings, PhysicsWorld, WorldSettings};
 use super::components::*;
 use super::layers::{CollisionLayers, LayerTable};
 
-/// Avian's default gravity.
+/// Earth's, as Avian's default was.
 const GRAVITY: Vec3 = Vec3::new(0.0, -9.81, 0.0);
 /// Sized well past a busy wave (the spike ran out of the default 10240 contact constraints at
 /// about 1000 crowding aliens).
@@ -132,7 +132,17 @@ pub(super) fn create_body(jolt: &mut JoltWorld, entity: Entity, parts: &BodyPart
     }
     let scaled = parts.collider.scaled(parts.scale);
     let collider = scaled.as_ref().unwrap_or(parts.collider);
-    match jolt.world.create_body(collider.shape(), &settings) {
+    let made = match jolt.world.create_body(collider.shape(), &settings) {
+        // Avian takes a body of any mass; Jolt only 1 g to 1000 t. A tiny or huge one (a
+        // creature capsule at a small model's scale) gets its mass held to the range.
+        Err(e) if e.to_string().contains(MASS_RULE) => {
+            let mass = held_mass(collider.local_size());
+            debug!("Jolt: {entity}'s mass is out of range, holding it at {mass} kg");
+            jolt.world.create_body(collider.shape(), &settings.mass(mass))
+        }
+        made => made,
+    };
+    match made {
         Ok(id) => {
             jolt.entities.insert(id, entity);
             Some(id)
@@ -142,4 +152,14 @@ pub(super) fn create_body(jolt: &mut JoltWorld, entity: Entity, parts: &BodyPart
             None
         }
     }
+}
+
+/// Part of oxijolt's error for a mass out of range.
+const MASS_RULE: &str = "mass must be between";
+/// Jolt's own density, kg/m^3.
+const DENSITY: f32 = 1000.0;
+
+/// A mass for a body of `size` that Jolt takes: its bounding box's, held to Jolt's range.
+fn held_mass(size: Vec3) -> f32 {
+    (size.x * size.y * size.z * DENSITY).clamp(oxijolt::limits::MIN_MASS, oxijolt::limits::MAX_MASS)
 }

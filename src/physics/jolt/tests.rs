@@ -354,3 +354,24 @@ fn a_transforms_scale_applies_to_its_collider() {
     assert_eq!(hit, tall);
     assert!((top - 4.0).abs() < 0.06, "{top}");
 }
+
+/// Avian takes a body of any mass, Jolt only 1 g to 1000 t: a hunter's capsule at a small model's
+/// scale weighs less than a gram, and was refused every step. Its mass is held to the range.
+#[test]
+fn a_body_too_light_for_jolt_is_made_anyway() {
+    let mut app = app();
+    floor(&mut app);
+    let speck = app
+        .world_mut()
+        .spawn((
+            RigidBody::Dynamic,
+            Collider::capsule(0.23, 0.04),
+            Transform::from_xyz(0.0, 2.0, 0.0).with_scale(Vec3::splat(0.01)),
+            CollisionLayers::new([Layer::Ball], [Layer::Floor]),
+        ))
+        .id();
+    run(&mut app, 40);
+    assert!(app.world().get::<JoltBody>(speck).is_some(), "Jolt took the body");
+    let y = position(&app, speck).y;
+    assert!(y < 1.0, "it fell: {y}");
+}

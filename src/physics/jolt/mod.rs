@@ -1,4 +1,4 @@
-//! The Jolt backend (oxijolt), behind feature `physics-jolt`: Avian's names over a Jolt world.
+//! The physics engine: Jolt (oxijolt), under Avian's names (the game's first engine).
 //! Plan and open ends: `docs/jolt-port.md`.
 //!
 //! The types carry Avian's API whole (constructors, constants, builder methods) even where the

@@ -8,7 +8,7 @@
 //! ends it with [`StopFx`]: emission stops at once, the entity goes once the last
 //! particle has had time to die.
 //!
-//! Particles collide with sprinkles' own colliders, not with avian's. There is one,
+//! Particles collide with sprinkles' own colliders, not with the physics engine's. There is one,
 //! [`FloorParticleCollider`], a box under the whole map whose top is the floor plane
 //! (sprinkles allows 32 in the scene, so no per-wall colliders).
 

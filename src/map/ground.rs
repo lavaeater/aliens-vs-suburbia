@@ -221,33 +221,7 @@ mod tests {
 
     const PROBES: [(f32, f32); 4] = [(2.0, 2.0), (6.0, 3.0), (4.0, 9.0), (1.5, 10.5)];
 
-    #[cfg(not(feature = "physics-jolt"))]
-    #[test]
-    fn the_terrain_collider_lies_where_the_ground_is() {
-        let hill = tilted_hill();
-        let (collider, at) = hill.terrain().unwrap();
-        for (x, z) in PROBES {
-            let (toi, _) = collider
-                .cast_ray(
-                    at,
-                    Quat::IDENTITY,
-                    Vec3::new(x, 50.0, z),
-                    Vec3::NEG_Y,
-                    100.0,
-                    true,
-                )
-                .expect("the ray hits the terrain");
-            let height = 50.0 - toi;
-            let wanted = hill.height(x, z);
-            assert!(
-                (height - wanted).abs() < 0.02,
-                "({x}, {z}): {height}, not {wanted}"
-            );
-        }
-    }
-
-    /// The same on Jolt, where a lone shape can't be ray cast: the terrain in a world.
-    #[cfg(feature = "physics-jolt")]
+    /// A lone shape can't be ray cast on Jolt: the terrain in a world.
     #[test]
     fn the_terrain_collider_lies_where_the_ground_is() {
         use crate::physics::jolt::tests::{app, run};

@@ -1,18 +1,11 @@
-//! The physics backend, behind one prelude. Game code imports `crate::physics::prelude` and never
-//! `avian3d` directly, so the engine underneath can change without touching the call sites:
-//! Avian by default, Jolt (oxijolt) with `--features physics-jolt` (`docs/jolt-port.md`).
+//! Physics: Jolt (oxijolt) behind one prelude, `crate::physics::prelude`, which is all game code
+//! imports. The names are Avian's, the engine the game started on (`docs/jolt-port.md`), so the
+//! game's physics code reads as it always has.
 //!
-//! The prelude lists every name the game uses, one by one: it is the contract a backend has to
-//! meet. A name missing here is a name the game doesn't use yet; add it to every backend.
+//! The prelude lists every name the game uses, one by one. A name missing here is a name the game
+//! doesn't use yet; add it to `jolt` and here.
 
-#[cfg(not(feature = "physics-jolt"))]
-mod avian;
-#[cfg(not(feature = "physics-jolt"))]
-use avian as backend;
-
-#[cfg(feature = "physics-jolt")]
 pub mod jolt;
-#[cfg(feature = "physics-jolt")]
 use jolt as backend;
 
 pub mod prelude {

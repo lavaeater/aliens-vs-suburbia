@@ -142,16 +142,16 @@ impl Collider {
             scale.z / (rows - 1) as f32,
         );
         // Vertex `i + j * rows` is row `i` (z), column `j` (x), as parry stores them.
-        let vertices: Vec<Vec3> = (0..columns)
-            .flat_map(|j| {
-                let data = &data;
-                (0..rows).map(move |i| {
-                    Vec3::new(
-                        -scale.x / 2.0 + j as f32 * step.x,
-                        data[i + j * rows] * step.y,
-                        -scale.z / 2.0 + i as f32 * step.z,
-                    )
-                })
+        let vertices: Vec<Vec3> = data
+            .iter()
+            .enumerate()
+            .map(|(k, height)| {
+                let (i, j) = (k % rows, k / rows);
+                Vec3::new(
+                    -scale.x / 2.0 + j as f32 * step.x,
+                    height * step.y,
+                    -scale.z / 2.0 + i as f32 * step.z,
+                )
             })
             .collect();
         let id = |i: usize, j: usize| (i + j * rows) as u32;
@@ -242,7 +242,7 @@ pub(super) fn bounds(points: &[Vec3]) -> (Vec3, Vec3) {
 
 /// `triangle` in the order that makes it face up (counter-clockwise seen from above).
 fn upward(vertices: &[Vec3], triangle: [u32; 3]) -> [u32; 3] {
-    let [a, b, c] = triangle.map(|i| vertices[i as usize]);
+    let [a, b, c] = triangle.map(|i| vertices.get(i as usize).copied().unwrap_or_default());
     if (b - a).cross(c - a).y >= 0.0 {
         triangle
     } else {
