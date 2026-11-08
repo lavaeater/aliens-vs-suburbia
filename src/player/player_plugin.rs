@@ -1,5 +1,6 @@
 use crate::game_state::GameState;
 use crate::general::components::map_components::Floor;
+use crate::map::streaming::Foliage;
 use crate::model_settings::plugin::PlayerAssetDef;
 use crate::player::components::{WEAPON_NODES, WeaponsHidden};
 use crate::player::systems::abilities::{
@@ -102,12 +103,25 @@ impl Plugin for PlayerPlugin {
                     .run_if(in_state(GameState::InGame)),
             )
             // After propagation, from where the player really is this frame; the light sets
-            // its own `GlobalTransform` (flashlight.rs).
+            // its own `GlobalTransform` (flashlight.rs). Before Bevy's light bounds, which read
+            // that transform and would otherwise race the despawn of a flashlight whose player
+            // is gone (an editor model swap panicked inserting bounds on the despawned light).
             .add_systems(
                 PostUpdate,
-                crate::player::systems::flashlight::update_flashlights
+                (
+                    crate::player::systems::flashlight::update_flashlights,
+                    crate::player::systems::player_ring::update_rings,
+                )
                     .after(TransformSystems::Propagate)
+                    .before(bevy::light::SimulationLightSystems::UpdateBounds)
                     .run_if(in_state(GameState::InGame)),
+            )
+            // Not in the character editor, where it would sit in the way of the model.
+            .add_systems(
+                Update,
+                crate::player::systems::player_ring::give_rings
+                    .run_if(in_state(GameState::InGame))
+                    .run_if(crate::character_editor::state::in_normal_game),
             )
             .add_systems(
                 Update,
@@ -141,6 +155,7 @@ fn auto_outline_scenes(
             With<WorldAssetRoot>,
             Without<AsyncWorldInheritOutline>,
             Without<Floor>,
+            Without<Foliage>,
         ),
     >,
 ) {

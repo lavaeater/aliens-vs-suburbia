@@ -1,0 +1,15 @@
+// gis_04's own stories, loaded on top of the base level-flow ones (`MapFile::stories`).
+// Format: see assets/campaigns/main/level_01/level_01_story.ron. Placeholder texts.
+[
+    (
+        name: "gis_04 intro",
+        repeat: false,
+        init_facts: [
+            ("ObjectiveText", Text("Build towers. Only 6 may get through")),
+        ],
+        rules: [
+            (name: "started", criteria: [BoolIs(key: "LevelStarted", expected: true)]),
+        ],
+        consequences: [Emit(effect: "crawl:gis_04_crawl_intro")],
+    ),
+]

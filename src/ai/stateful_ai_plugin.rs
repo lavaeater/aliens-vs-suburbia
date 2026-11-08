@@ -4,7 +4,7 @@ use crate::ai::systems::destroy_the_map_systems::{
     agent_cant_find_path, destroy_the_map_action_system, recheck_path_after_tile_opened,
 };
 use crate::ai::systems::move_towards_goal_systems::{
-    agent_reached_goal_handler, move_towards_goal_system,
+    agent_reached_goal_handler, move_towards_goal_system, refresh_flow_field,
 };
 use crate::game_state::GameState;
 use bevy::app::{App, FixedUpdate, Plugin, Update};
@@ -35,7 +35,7 @@ impl Plugin for StatefulAiPlugin {
                     avoid_walls_action_system,
                     // approach_player_system,
                     // attack_player_system,
-                    move_towards_goal_system,
+                    (refresh_flow_field, move_towards_goal_system).chain(),
                     // move_forward_system,
                     destroy_the_map_action_system,
                     recheck_path_after_tile_opened,

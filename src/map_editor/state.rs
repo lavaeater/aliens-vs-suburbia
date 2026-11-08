@@ -1,14 +1,14 @@
 use crate::assets::asset_definition::{AssetDefinition, ModelType};
 use crate::general::components::map_components::{
-    HousePlacement, MapFile, TilePlacement, WaveDef,
+    HousePlacement, MapFile, MapGenerator, TilePlacement, WaveDef,
 };
 use crate::map::MapFeatures;
 use crate::map::house::{self, HouseDef};
 use crate::map::procgen::{HouseResolveResult, HouseSpec, Polygon, apply_house, resolve_house};
-use std::collections::BTreeMap;
 use crate::map::text_format;
 use crate::map_editor::modal::{History, Mode};
 use bevy::prelude::Resource;
+use std::collections::BTreeMap;
 
 pub const TILE_SPECIAL_FLOOR: u64 = MapFeatures::Floor as u64;
 pub const TILE_ALIEN_SPAWN: u64 = MapFeatures::Floor as u64 | MapFeatures::EnemySpawn as u64;
@@ -94,11 +94,23 @@ impl PaletteItem {
 #[derive(Resource)]
 pub struct MapEditorState {
     pub map_name: String,
+    /// The map's display name (`MapFile::name`), kept through a load and save.
+    pub title: String,
+    /// The loaded map's building heights (`MapFile::storeys`); kept like `stories`.
+    pub storeys: Vec<Vec<u8>>,
+    /// The loaded map's ground heights (`MapFile::elevation`); kept like `stories`.
+    pub elevation: Vec<Vec<u16>>,
+    /// The loaded map's road centrelines (`MapFile::roads`); kept like `stories`.
+    pub roads: Vec<crate::general::components::map_components::RoadLine>,
     /// The loaded map's story file (`MapFile::stories`); not editable here, but kept so a
     /// save does not drop it.
     pub stories: String,
     /// The loaded map's random loot (`MapFile::loot`); kept like `stories`.
     pub loot: Option<crate::general::components::map_components::LootSpread>,
+    /// The loaded map's level rules (`escape_limit`, `weapons`, `coins`); kept like `stories`.
+    pub level_rules: (Option<u32>, Vec<String>, Option<u32>),
+    /// The map's infestation rules, kept as they were (no editor for them yet).
+    pub infestation: Option<crate::general::components::map_components::InfestationRules>,
     pub width: usize,
     pub height: usize,
     /// Row-major tile grid; each cell is a `BitFlags<MapFeatures>` stored as u64.
@@ -168,8 +180,14 @@ impl Default for MapEditorState {
         let house_library = house::house_library();
         let mut state = Self {
             map_name: "new_map".to_string(),
+            title: String::new(),
+            storeys: Vec::new(),
+            elevation: Vec::new(),
+            roads: Vec::new(),
             stories: String::new(),
             loot: None,
+            level_rules: (None, Vec::new(), None),
+            infestation: None,
             width,
             height,
             tiles: vec![vec![TILE_SPECIAL_FLOOR; width]; height],
@@ -618,60 +636,68 @@ impl MapEditorState {
 
     pub fn to_map_file(&self) -> MapFile {
         MapFile {
-            name: String::new(),
+            name: self.title.clone(),
             generated: false,
             seed: 0,
             map_width: self.width,
             map_height: self.height,
             tiles: self.tiles.clone(),
+            storeys: self.storeys.clone(),
+            elevation: self.elevation.clone(),
+            roads: self.roads.clone(),
             decorations: Vec::new(),
             placements: self.placements.clone(),
             houses: self.houses.clone(),
             waves: self.waves.clone(),
             stories: self.stories.clone(),
             loot: self.loot.clone(),
+            escape_limit: self.level_rules.0,
+            weapons: self.level_rules.1.clone(),
+            coins: self.level_rules.2,
+            generator: MapGenerator::default(),
+            infestation: self.infestation.clone(),
+            townsfolk: None,
+            // The map editor edits whole maps, not levels on a base map.
+            base: String::new(),
+            region: None,
+            markers: Vec::new(),
         }
     }
 
-    /// Write the map as `.ron` and say how it went in the status line.
-    ///
-    /// A `.map` text file beside the `.ron` is what the game loads for that level
-    /// (`text_format::load_level`), so the save is called out as shadowed when one exists.
+    /// Write the map as `.map` text, the format the levels are kept in, and say how it
+    /// went in the status line. (`text_format` still reads and writes `.ron`; it is just
+    /// not what the editor saves.)
     pub fn save(&mut self) {
         let map = self.to_map_file();
-        let path = format!("assets/maps/{}.ron", self.map_name);
-        let written = ron::ser::to_string_pretty(&map, ron::ser::PrettyConfig::default())
+        let path = format!("assets/maps/{}.{}", self.map_name, text_format::EXTENSION);
+        let written = std::fs::create_dir_all("assets/maps")
             .map_err(|e| e.to_string())
-            .and_then(|text| {
-                std::fs::create_dir_all("assets/maps").map_err(|e| e.to_string())?;
-                std::fs::write(&path, text).map_err(|e| e.to_string())
-            });
-        if let Err(e) = written {
-            self.status = format!("save failed: {e}");
-            return;
-        }
-        bevy::log::info!("Map saved to {path}");
-        let text_map = text_format::converted_path(std::path::Path::new(&path));
-        self.status = if text_map.exists() {
-            format!(
-                "saved {path} - but {} exists and the game loads that instead",
-                text_map.display()
-            )
-        } else {
-            format!("saved {path}")
+            .and_then(|()| text_format::write_map_file(&path, &map));
+        self.status = match written {
+            Ok(()) => {
+                bevy::log::info!("Map saved to {path}");
+                format!("saved {path}")
+            }
+            Err(e) => format!("save failed: {e}"),
         };
     }
 
     pub fn load_from_map_file(&mut self, map: MapFile) {
         self.checkpoint();
+        self.title = map.name;
         self.width = map.map_width;
         self.height = map.map_height;
         self.tiles = map.tiles;
         self.placements = map.placements;
         self.houses = map.houses;
         self.waves = map.waves;
+        self.storeys = map.storeys;
+        self.elevation = map.elevation;
+        self.roads = map.roads;
         self.stories = map.stories;
         self.loot = map.loot;
+        self.level_rules = (map.escape_limit, map.weapons, map.coins);
+        self.infestation = map.infestation;
         self.cursor = (
             self.cursor.0.clamp(0, self.width as i32 - 1),
             self.cursor.1.clamp(0, self.height as i32 - 1),

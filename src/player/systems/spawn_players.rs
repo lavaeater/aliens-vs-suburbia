@@ -12,7 +12,6 @@ use crate::player::ammo::AmmoPouch;
 use crate::player::bundle::PlayerBundle;
 pub use crate::player::components::WeaponsHidden;
 use crate::player::components::{Lives, PlayerSlot};
-use crate::player::systems::death_revive::RespawnQueue;
 use crate::player::systems::equip::PendingEquip;
 use crate::player::systems::leg_ik::PendingLegs;
 use crate::player::systems::loadout::Weapons;
@@ -20,8 +19,8 @@ use crate::player::systems::torso_twist::PendingTorsoTwist;
 use crate::player_setup::state::InputDevice;
 use crate::settings::resources::GameSettings;
 use crate::ui::spawn_ui::AddHealthBar;
-use avian3d::interpolation::TransformInterpolation;
-use avian3d::prelude::Collider;
+use crate::physics::prelude::TransformInterpolation;
+use crate::physics::prelude::Collider;
 use bevy::asset::AssetServer;
 use bevy::gltf::GltfAssetLabel;
 use bevy::math::{Quat, Vec3};
@@ -58,7 +57,7 @@ pub fn spawn_players(
     mut add_health_bar_mw: MessageWriter<AddHealthBar>,
     mut player_added_mw: MessageWriter<GameTrackingEvent>,
     settings: Res<GameSettings>,
-    mut respawn_queue: ResMut<RespawnQueue>,
+    level_loadout: Option<Res<crate::campaign::LevelLoadout>>,
 ) {
     let max_players = roster.as_ref().map_or(1, |r| r.def_paths.len().max(1));
     let occupied: Vec<usize> = existing_players.iter().map(|s| s.0).collect();
@@ -66,7 +65,6 @@ pub fn spawn_players(
     let assignments = assign_spawns(&requests, &occupied, max_players);
 
     for (slot, spawn_player) in assignments {
-        respawn_queue.started = true;
         let pos = Transform::from_xyz(
             spawn_player.position.x,
             spawn_player.position.y,
@@ -106,9 +104,14 @@ pub fn spawn_players(
         );
 
         // Everything this character carries; the first is snapped onto the `grip`
-        // hardpoint now, the rest wait in the loadout for a switch.
+        // hardpoint now, the rest wait in the loadout for a switch. A level can hand
+        // everyone the same weapons instead (`MapFile::weapons`).
         let roster_def_path = roster.as_ref().and_then(|r| r.def_paths.get(slot)).cloned();
+        let level_weapons = level_loadout.as_ref().map_or(&[][..], |l| l.0.as_slice());
         let loadout = match (player_props.as_ref(), roster_def_path.as_ref()) {
+            (Some(_), Some(def_path)) if !level_weapons.is_empty() => {
+                Weapons::new(def_path.clone(), level_weapons.iter().cloned())
+            }
             (Some(props), Some(def_path)) => Weapons::new(
                 def_path.clone(),
                 props
@@ -158,7 +161,10 @@ pub fn spawn_players(
                     ),
                     WorldAssetRoot(scene),
                     pos,
-                    Collider::cuboid(0.5, 0.5, 0.45),
+                    // Round, not a box: the body turns with the walk, and a box's corners
+                    // and bottom edges snagged on wall corners and on the seams between
+                    // floor slabs, stopping the player dead for a moment. Same 0.5 height.
+                    Collider::capsule(0.23, 0.04),
                     // Physics ticks at 20 Hz; without easing the body (and the camera that
                     // follows it) visibly steps between ticks.
                     TransformInterpolation,

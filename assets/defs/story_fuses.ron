@@ -1,0 +1,13 @@
+(
+    model_path: "packs/space/Pickup Crate.glb",
+    scale: 0.55,
+    model_type: Item((
+        kind: Key(id: "fuses"),
+    )),
+    hidden_nodes: [],
+    animations: {},
+    animation_sources: [],
+    attachments: [],
+    hardpoints: {},
+    aim_bones: [],
+)

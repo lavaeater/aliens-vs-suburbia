@@ -4,13 +4,14 @@ use crate::general::damage::ApplyDamage;
 use crate::gore::components::DamageKind;
 use crate::player::components::Player;
 use crate::player::components::PlayerDead;
-use avian3d::prelude::{CollidingEntities, Position};
+use crate::physics::prelude::{CollidingEntities, Position};
 use bevy::math::Vec3;
 use bevy::prelude::{Entity, MessageWriter, Or, Query, Res, Time, With, Without};
 
 /// Anything with [`TouchDamage`] grinds down the creatures it overlaps. Which creatures
 /// it may hurt (an alien mauling a player, a whirlwinding player shredding aliens, never a
-/// teammate) is the damage rules' decision, not this system's.
+/// teammate) is the damage rules' decision, not this system's. Neighbours
+/// (`infestation`) can be mauled too.
 #[allow(clippy::type_complexity)]
 pub fn touch_damage_system(
     time: Res<Time>,
@@ -19,7 +20,11 @@ pub fn touch_damage_system(
         Option<&Position>,
         (
             With<Health>,
-            Or<(With<Player>, With<Alien>)>,
+            Or<(
+                With<Player>,
+                With<Alien>,
+                With<crate::infestation::Neighbour>,
+            )>,
             Without<PlayerDead>,
         ),
     >,
@@ -58,7 +63,7 @@ mod tests {
     use crate::general::damage::{ApplyDamage, DamageRules, apply_damage};
     use crate::gore::components::{DamageDealt, DamageKind};
     use crate::player::components::Player;
-    use avian3d::prelude::{CollidingEntities, Position};
+    use crate::physics::prelude::{CollidingEntities, Position};
     use bevy::ecs::entity::EntityHashSet;
     use bevy::prelude::*;
     use std::time::Duration;

@@ -1,0 +1,14 @@
+// Shown when Juniper Close starts. Format: see campaigns/main/level_01/level_01_crawl_intro.ron.
+(
+    title: "JUNIPER CLOSE",
+    lines: [
+        "The lawns of Juniper Close have started to bulge.",
+        "Something is pushing up from underneath, and it is not moles.",
+        "",
+        "The neighbours are still out in their gardens. Keep them alive.",
+        "Find the spawners as they break through, and put them down.",
+    ],
+    style: Scroll(tilt: 0.0),
+    speed: 55.0,
+    backdrop: 0.85,
+)

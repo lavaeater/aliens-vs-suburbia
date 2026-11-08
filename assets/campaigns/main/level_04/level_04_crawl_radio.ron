@@ -1,0 +1,14 @@
+// A non-modal typewriter: the match keeps running behind it.
+(
+    title: "Neighbourhood watch radio",
+    lines: [
+        "Unit two, unit two, we have golems on the lawn. Repeat: golems on the lawn.",
+        "Hit the barrels. And check the trash bags - the Hendersons never throw anything away.",
+    ],
+    style: Typewriter,
+    speed: 45.0,
+    backdrop: 0.0,
+    modal: false,
+    auto_advance: 2.5,
+    hint: "E / Circle",
+)

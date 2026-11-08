@@ -1,12 +1,19 @@
 # The `.map` text format
 
-A hand-editable companion to the RON maps in `assets/maps/`. Same data (`MapFile`), one
-letter per tile, editable in any text editor. Code: `src/map/text_format.rs`.
+The format the levels are kept in (`assets/maps/*.map`): the same data as a RON map
+(`MapFile`), one letter per tile, editable in any text editor. Code:
+`src/map/text_format.rs`. The map editor saves `.map`; RON still reads and writes, for
+tools and for later.
+
+Paths in a map (defs, stories, weapons, loot bags) are inside `assets/`, without the
+prefix: `defs/Barrel.ron`, like a def's `model_path`. Older maps wrote
+`assets/defs/Barrel.ron`; that still reads, and is saved in the short form
+(`src/assets/paths.rs`). `cargo run -- --validate` checks every one of them.
 
 ## Using it
 
-- **Convert:** `cargo run -- --convert-map assets/maps/level_01.ron` writes
-  `assets/maps/level_01.map` (and the other way round for a `.map`). Pass an output path
+- **Convert:** `cargo run -- --convert-map assets/campaigns/main/level_01/level_01.map`
+  writes `level_01.ron` next to it (and the other way round for a `.ron`). Pass an output path
   as a second argument to put it elsewhere. Existing files are never overwritten without
   `--force`. Conversion is lossless both ways.
 - **Drop-in:** when the game loads a level by its `.ron` path (`level_01`, the editor's
@@ -35,13 +42,13 @@ A: grass + blocks_enemies
 at: 3, 1 | model: packs/nature/Pine.glb | rotation: 90 | scale: 1.2
 
 [placements]
-at: 2, 2 | def: assets/defs/door.ron | rotation: 45
+at: 2, 2 | def: defs/door.ron | rotation: 45
 
 [houses]
 house: bungalow | at: 4, 6 | rotation: 90
 
 [waves]
-enemy: assets/defs/Alien.ron | count: 5 | rate: 10
+enemy: defs/Alien.ron | count: 5 | rate: 10
 count: 20 | rate: 30
 ```
 
@@ -50,13 +57,23 @@ count: 20 | rate: 30
 | key | meaning |
 |-----|---------|
 | `name` | display name (optional) |
-| `stories` | the level's turbofacts story file, e.g. `assets/stories/level_01.ron` (optional; see `docs/crawls.md`) |
+| `stories` | the level's turbofacts story file, next to the map, e.g. `campaigns/main/level_01/level_01_story.ron` (optional; see `docs/crawls.md`) |
 | `loot` | random loot bags on the open floor: `1-5 per 20` = 1 to 5 bags for every 20 open tiles (`3 per 20` for an exact count). A fresh spread every time the level loads; never on spawns, goals, water, walls or placements (optional) |
 | `loot_table` | the loot table the bags roll, a file stem in `assets/loot/` (default `trash_bag`) |
-| `loot_bags` | the defs the bags are drawn with, comma separated, one picked per bag (default `assets/defs/Trash Bag.ron, assets/defs/Trash Bags.ron`) |
-| `seed` | random seed (optional) |
-| `generated` | `true` = ignore `[tiles]` and generate the map from `seed` |
+| `loot_bags` | the defs the bags are drawn with, comma separated, one picked per bag (default `defs/Trash Bag.ron, defs/Trash Bags.ron`) |
+| `escape_limit` | how many aliens may reach the goal before the level is lost (default 10) |
+| `weapons` | weapon defs every player carries on this level instead of their own, comma separated, the first one held (e.g. `defs/Snowball.ron` for a snowballs-only level) |
+| `coins` | the team starts the level with at least this many coins (for towers) |
+| `townsfolk` | people who live on the level (`src/townsfolk/`): this many, each at a front door (an open tile next to a building with storeys), going about their day - errands to doors and down the streets, home, indoors for a while - and running when monsters come. Drawn from `assets/defs/people` |
+| `seed` | random seed (optional); for a generated map, 0 = a new layout every time it is played |
+| `generated` | `true` = ignore `[tiles]` and generate the map from `seed` (`text_format::load_level` runs the generator, keeping the level's rules, stories, waves and loot) |
+| `generator` | which generator a `generated` map uses: `suburb` (default, `map::map_generator`) or `neighbourhood` (`map::neighbourhood`: streets and lots by model synthesis, 4-8 houses with neighbours in their yards; `width`/`height` round down to 10-tile lots) |
+| `spawners` | makes the level an infestation (`docs/infestation.md`): this many spawners open over the level |
+| `spawner_every` | seconds between spawners opening, `min-max` (default `20-40`) |
+| `spawner_waves` | waves each spawner sends out, drawn from `[waves]`, before it trickles (default 3) |
 | `width`, `height` | size of a *generated* map only. A hand-made map's size comes from `[tiles]`: the longest row and the number of rows. |
+| `base` | makes the map a **level on a base map** (`map::compose`, see below): the base map, inside `assets/` (`campaigns/gis/world/world.map`) |
+| `region` | the part of the base the level is played on, `x, y, width, height` in base map tiles (default: all of it). Its origin moves down to an even tile (the `[elevation]` lattice); the far edges stay |
 
 ### `[tiles]`
 
@@ -66,7 +83,7 @@ line things up); rows shorter than the longest are padded with void. Everything 
 
 | letter | tile |
 |--------|------|
-| `v` | void (nothing) |
+| `v` | void (nothing; only outside the walls - a hole inside the map shows the background, so fill it with `w`) |
 | `f` | floor |
 | `w` | wall (floor, blocks everyone) |
 | `e` | enemy spawn |
@@ -82,7 +99,20 @@ raw tile number (`A: 261`). Flags: `nothing`, `water`, `grass`, `floor`, `mud`, 
 Converting a RON map writes one of these for every tile value that has no built-in
 letter.
 
-### `[decorations]`, `[placements]`, `[houses]`, `[waves]`
+### `[storeys]`
+
+Optional, the same shape as `[tiles]`: `.` for an ordinary tile, or a digit for how many
+storeys a solid wall tile stands. Short rows mean `.`. Only the look changes:
+walking and colliders are as for any wall. The OpenStreetMap import writes it.
+
+### `[elevation]`
+
+Optional: ground height on a lattice, one line per row of numbers separated by spaces. A
+point sits on the centre of every second tile (`ELEVATION_STEP`), and holds centimetres of
+world height above the level's lowest point. The OpenStreetMap import writes it from real
+height data (`docs/gis-levels.md`). The game bends the world to it unless started with `--flat`.
+
+### `[decorations]`, `[placements]`, `[houses]`, `[roads]`, `[waves]`
 
 One entry per line: `key: value` fields separated by `|`, in any order. Values can
 contain spaces (paths often do) but not `|`. An unknown key is an error.
@@ -92,6 +122,36 @@ contain spaces (paths often do) but not `|`. An unknown key is an error.
 | decorations | `at: x, y` + `model:` (path under `assets/`), optional `rotation:` (degrees) and `scale:` (default 1) |
 | placements | `at: x, y` + `def:` (a def `.ron`), optional `rotation:` (degrees, multiples of 45) |
 | houses | `house:` (a name in `assets/houses/`, made in the house editor) + `at: x, y` (the top-left tile of its footprint), optional `rotation:` (degrees clockwise, multiples of 90). The game stamps the house into the tiles when the level loads: walls block everyone, doors are floor, and anything under it is replaced. Only written when the map has houses. |
+| roads | `road:` (`major`, `street`, `service` or `path`) + `width:` (the carriageway, in tiles) + `points:` (the centreline, `x,y` pairs separated by spaces, in tiles; `3,4` is the centre of tile 3, 4, fractions allowed). Only the look (`map::road_mesh`): ribbons over the ground, pavements on streets and major roads, a dashed centre line on major roads, gravel for paths. Where one can walk is still the tiles. The OpenStreetMap import writes them. Only written when the map has roads. |
 | waves | optional `enemy:` (enemy def; omitted = the built-in alien), `count:` (default 10), `rate:` (spawns per minute, default 20) |
 
 `x` is the column and `y` the row, both counted from 0 at the top left of `[tiles]`.
+
+### Levels on a base map: `base`, `region`, `[markers]`
+
+One imported suburb can hold several levels (`map::compose`, the campaign editor). The
+**base map** is an ordinary `.map`: tiles, storeys, elevation, roads, decorations. A level
+on it names it with `base:` and has **no `[tiles]`** of its own: the game cuts `region` out
+of the base, walls it round, clears the base's own `e`/`p`/`x` and stamps the level's
+markers in. Everything else (rules, `[waves]`, `stories`, `[placements]`) is the level's.
+
+```text
+[properties]
+name: The Blocks
+base: campaigns/gis/world/world.map
+region: 60, 20, 100, 90
+escape_limit: 8
+
+[markers]
+marker: goal | at: 110, 63
+marker: player | at: 112, 63
+marker: spawn | at: 60, 40
+```
+
+| section | fields |
+|---------|--------|
+| markers | `marker:` (`player`, `spawn` or `goal`) + `at: x, y`, in **base map** tiles (so moving the region does not move them). A marker opens its tile (a goal on a wall becomes floor). At most one goal; up to four player starts. |
+
+In a level on a base map, `[placements]` and `[decorations]` are in base map tiles too.
+`cargo run -- --split-level <level.map> <base.map> <out-level.map>` turns a whole level (an
+OpenStreetMap import) into a base and a level that composes back to the same tiles.

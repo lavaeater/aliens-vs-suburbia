@@ -12,6 +12,7 @@ use bevy::window::PrimaryWindow;
 use crate::camera::components::GameCamera;
 use crate::control::components::{GameInputBlock, InputKeyboard};
 use crate::player::components::{AutoAim, Player, PlayerDead};
+use crate::retro::RetroView;
 
 /// Project the cursor onto the ground plane and point the keyboard player's `AutoAim`
 /// from the player toward it.
@@ -24,6 +25,7 @@ pub fn mouse_aim(
         (With<Player>, With<InputKeyboard>, Without<PlayerDead>),
     >,
     block: Option<Res<GameInputBlock>>,
+    retro: Res<RetroView>,
 ) {
     if block.is_some_and(|b| b.mouse_aim) {
         return;
@@ -32,10 +34,11 @@ pub fn mouse_aim(
     let Some(cursor) = window.cursor_position() else {
         return;
     };
-    // The active window-rendering game camera (the pixelated render-texture cam is dead code).
     let Some((camera, cam_tf)) = cameras.iter().find(|(c, _)| c.is_active) else {
         return;
     };
+    // Under the retro look the camera renders into a small image drawn shifted on screen.
+    let cursor = retro.cursor_to_viewport(cursor, window);
     let Ok(ray) = camera.viewport_to_world(cam_tf, cursor) else {
         return;
     };

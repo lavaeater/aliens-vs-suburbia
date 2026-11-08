@@ -7,7 +7,7 @@
 //! [`DamageDealt`] with [`DamageKind::Fire`], which the blood system skips (burns
 //! don't spray) while still feeding death/score.
 
-use avian3d::prelude::Position;
+use crate::physics::prelude::Position;
 use bevy::prelude::*;
 use bevy_sprinkles::prelude::Particles3d;
 
@@ -17,6 +17,7 @@ use crate::general::components::Health;
 use crate::general::damage::ApplyDamage;
 use crate::general::systems::map_systems::TileDefinitions;
 use crate::gore::components::{DECAL_LIFT, DamageKind, GoreBudget};
+use crate::map::ground::GroundHeight;
 use crate::player::components::Player;
 
 /// Start a fire field. Position is on the ground; radius/duration/dps shape it.
@@ -39,6 +40,8 @@ pub struct FireField {
     /// The flames' particle system, its own entity so it can outlive the field by
     /// the time its last flames take to die out.
     flames: Option<Entity>,
+    /// The smoke over it (`assets/fx/smoke.ron`), likewise.
+    smoke: Option<Entity>,
 }
 
 impl FireField {
@@ -47,6 +50,8 @@ impl FireField {
     /// How long the flames keep going after the field burns out: the longest particle
     /// lifetime in `fire.ron` (embers).
     const FLAME_LINGER: f32 = 1.2;
+    /// How long the smoke goes on after: its longest puff in `smoke.ron`.
+    const SMOKE_LINGER: f32 = 4.4;
 
     pub fn new(duration: f32, dps: f32, radius: f32) -> Self {
         Self {
@@ -55,6 +60,7 @@ impl FireField {
             dps,
             radius,
             flames: None,
+            smoke: None,
         }
     }
 }
@@ -109,6 +115,17 @@ pub fn spawn_fire_fields(
                 ))
                 .id()
         });
+        field.smoke = fx.as_ref().map(|fx| {
+            commands
+                .spawn((
+                    Name::new("Smoke"),
+                    Particles3d(fx.smoke.clone()),
+                    Transform::from_translation(fire.position + Vec3::Y * 0.4).with_scale(
+                        Vec3::new(fire.radius.max(0.6), 1.0, fire.radius.max(0.6)),
+                    ),
+                ))
+                .id()
+        });
         let base_mat = materials.add(StandardMaterial {
             base_color: Color::srgba(1.0, 0.35, 0.05, 0.5),
             emissive: LinearRgba::new(5.0, 1.6, 0.2, 1.0),
@@ -137,6 +154,7 @@ pub fn tick_fire_fields(
     targets: Query<(Entity, &Position, Has<Alien>, Has<Player>), With<Health>>,
     mut damage_mw: MessageWriter<ApplyDamage>,
     tile_defs: Res<TileDefinitions>,
+    ground: Res<GroundHeight>,
 ) {
     let dt = time.delta();
     for (entity, mut field, transform) in fields.iter_mut() {
@@ -173,13 +191,23 @@ pub fn tick_fire_fields(
                     .entity(flames)
                     .insert(StopFx::after(FireField::FLAME_LINGER));
             }
+            if let Some(smoke) = field.smoke {
+                commands
+                    .entity(smoke)
+                    .insert(StopFx::after(FireField::SMOKE_LINGER));
+            }
             if let Some(fa) = fire_assets.as_ref() {
                 let scorch = commands
                     .spawn((
                         Mesh3d(fa.scorch_mesh.clone()),
                         MeshMaterial3d(fa.scorch_material.clone()),
-                        Transform::from_xyz(center.x, tile_defs.floor_level + DECAL_LIFT, center.z)
-                            .with_scale(Vec3::splat(field.radius * 2.2)),
+                        Transform::from_xyz(
+                            center.x,
+                            tile_defs.floor_level + ground.height(center.x, center.z) + DECAL_LIFT,
+                            center.z,
+                        )
+                        .with_rotation(ground.lie(center.x, center.z))
+                        .with_scale(Vec3::splat(field.radius * 2.2)),
                     ))
                     .id();
                 if let Some(evicted) = budget.push_decal(scorch) {
@@ -199,8 +227,9 @@ mod tests {
     use crate::general::components::Health;
     use crate::general::damage::{ApplyDamage, DamageRules, apply_damage};
     use crate::general::systems::map_systems::TileDefinitions;
+    use crate::map::ground::GroundHeight;
     use crate::gore::components::{DamageDealt, DamageKind, GoreBudget};
-    use avian3d::prelude::Position;
+    use crate::physics::prelude::Position;
     use bevy::prelude::*;
     use std::time::Duration;
 
@@ -225,6 +254,7 @@ mod tests {
         app.init_resource::<GoreBudget>();
         // Scorch marks are placed on the floor plane, so the tile metrics have to exist.
         app.insert_resource(TileDefinitions::new(1.0, 32.0, 9.5, 1.0));
+        app.init_resource::<GroundHeight>();
         // No FireAssets / FxAssets -> no scorch, no flames; the burning is what's tested.
         app.add_systems(Update, (tick_fire_fields, apply_damage, catch).chain());
 

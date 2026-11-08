@@ -8,7 +8,7 @@
 //! so their tile re-opens no matter who destroyed them — a bullet, an explosion, or an
 //! alien chewing through (aliens already re-open the tiles they personally break).
 
-use avian3d::prelude::{AngularVelocity, Collider, CollisionLayers, LinearVelocity, RigidBody};
+use crate::physics::prelude::{AngularVelocity, Collider, CollisionLayers, LinearVelocity, RigidBody};
 use bevy::prelude::*;
 
 use crate::fx::{FxKind, SpawnFx};
@@ -86,7 +86,7 @@ pub fn destroy_damaged_terrain(
         // that broke it already did this). `recheck_path_after_tile_opened` reacts. This
         // happens even before art is loaded — pathing must not depend on FX assets.
         if let Some(tile) = tile {
-            map_graph.path_finding_grid.add_vertex(tile.tile);
+            map_graph.open(tile.tile);
             map_graph.path_reopened = true;
         }
 
@@ -171,6 +171,7 @@ mod tests {
             occupied_tiles: HashSet::new(),
             goal: (0, 0),
             path_reopened: false,
+            flow: crate::ai::flow_field::FlowField::default(),
         });
         // No DebrisAssets -> FX skipped, but reopen + despawn still run.
         app.add_systems(Update, destroy_damaged_terrain);

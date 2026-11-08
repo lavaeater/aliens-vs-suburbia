@@ -6,6 +6,7 @@
 //! `asset_browser::viewer::sync_viewer_viewport`. That keeps every gameplay system,
 //! including the camera follow, working exactly as it does full-screen.
 
+use crate::assets::paths::same;
 use bevy::gizmos::config::GizmoConfigStore;
 use bevy::prelude::*;
 use bevy::ui_widgets::Activate;
@@ -1000,8 +1001,8 @@ pub fn rebuild_weapon_list(
         });
 
         for weapon_path in weapons {
-            let is_equipped = equipped.as_deref() == Some(weapon_path.as_str());
-            let is_held = held.as_deref() == Some(weapon_path.as_str());
+            let is_equipped = equipped.as_deref().is_some_and(|p| same(p, &weapon_path));
+            let is_held = held.as_deref().is_some_and(|p| same(p, &weapon_path));
             // `*` is what the character carries in its def; "(held)" is a weapon opened
             // from the library and only borrowed — equipping it makes it the character's.
             let label = format!(

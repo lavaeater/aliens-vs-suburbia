@@ -7,7 +7,7 @@ use crate::general::components::{Attack, CollisionLayer, Health};
 use crate::general::damage::ApplyDamage;
 use crate::gore::components::DamageKind;
 use crate::player::components::Player;
-use avian3d::prelude::{Position, Rotation, SpatialQuery, SpatialQueryFilter};
+use crate::physics::prelude::{Position, Rotation, SpatialQuery, SpatialQueryFilter};
 use bevy::math::Vec2;
 use bevy::prelude::*;
 
@@ -28,7 +28,7 @@ pub fn can_agent_see_player_system(
             position.0,
             sight_shape.rotation,
             Dir3::new(direction).unwrap_or(Dir3::NEG_Z),
-            &avian3d::prelude::ShapeCastConfig {
+            &crate::physics::prelude::ShapeCastConfig {
                 max_distance: sight_shape.range,
                 ..default()
             },

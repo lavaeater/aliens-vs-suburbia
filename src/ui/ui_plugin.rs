@@ -1,5 +1,6 @@
 use crate::game_state::GameState;
 use crate::ui::gait_panel::{toggle_gait_panel, update_gait_panel};
+use crate::ui::minimap::MinimapPlugin;
 use crate::ui::player_hud::{
     PickupToasts, spawn_player_bar, track_pickup_toasts, update_player_bar,
 };
@@ -21,7 +22,7 @@ pub struct UiPlugin;
 
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((LavaUiPlugin, FeathersPlugins))
+        app.add_plugins((LavaUiPlugin, FeathersPlugins, MinimapPlugin))
             .insert_resource(UiTheme(create_dark_theme()))
             .insert_resource(game_theme())
             .init_resource::<PickupToasts>()

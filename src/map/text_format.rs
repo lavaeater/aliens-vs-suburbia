@@ -7,7 +7,7 @@
 //! ```text
 //! [properties]
 //! name: Backyard
-//! stories: assets/stories/backyard.ron
+//! stories: stories/backyard.ron
 //! loot: 1-5 per 20
 //!
 //! [tiles]
@@ -19,14 +19,25 @@
 //! [legend]
 //! A: grass + blocks_enemies
 //!
+//! [elevation]
+//! 0 40 85
+//! 12 60 110
+//!
+//! [storeys]
+//! ........
+//! .2......
+//!
 //! [decorations]
 //! at: 3, 1 | model: packs/nature/Pine.glb | rotation: 90 | scale: 1.2
 //!
 //! [placements]
-//! at: 2, 2 | def: assets/defs/door.ron | rotation: 45
+//! at: 2, 2 | def: defs/door.ron | rotation: 45
+//!
+//! [roads]
+//! road: street | width: 1.5 | points: 1,2 6.5,2 9,4.25
 //!
 //! [waves]
-//! enemy: assets/defs/Alien.ron | count: 5 | rate: 10
+//! enemy: defs/Alien.ron | count: 5 | rate: 10
 //! ```
 //!
 //! The width and height are never written: they are the longest row and the number of
@@ -40,7 +51,8 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use crate::general::components::map_components::{
-    DecorationItem, HousePlacement, LootSpread, MapFile, TilePlacement, WaveDef,
+    DecorationItem, HousePlacement, InfestationRules, LootSpread, MapFile, MapGenerator,
+    Marker, MarkerKind, Region, RoadKind, RoadLine, TilePlacement, WaveDef,
 };
 use crate::map::{BitFlags, MapFeatures, house};
 
@@ -98,10 +110,14 @@ enum Section {
     Properties,
     Tiles,
     Legend,
+    Storeys,
+    Elevation,
     Decorations,
     Placements,
     Houses,
+    Roads,
     Waves,
+    Markers,
 }
 
 impl Section {
@@ -110,10 +126,14 @@ impl Section {
             "properties" => Self::Properties,
             "tiles" => Self::Tiles,
             "legend" => Self::Legend,
+            "storeys" => Self::Storeys,
+            "elevation" => Self::Elevation,
             "decorations" => Self::Decorations,
             "placements" => Self::Placements,
             "houses" => Self::Houses,
+            "roads" => Self::Roads,
             "waves" => Self::Waves,
+            "markers" => Self::Markers,
             _ => return None,
         })
     }
@@ -161,10 +181,14 @@ pub fn parse(text: &str) -> Result<MapFile, String> {
             Some(Section::Legend) => legend_entry(line).map(|(letter, value)| {
                 legend.insert(letter, value);
             }),
+            Some(Section::Storeys) => storeys_row(line).map(|row| map.storeys.push(row)),
+            Some(Section::Elevation) => elevation_row(line).map(|row| map.elevation.push(row)),
             Some(Section::Decorations) => decoration(line).map(|d| map.decorations.push(d)),
             Some(Section::Placements) => placement(line).map(|p| map.placements.push(p)),
             Some(Section::Houses) => house(line).map(|h| map.houses.push(h)),
+            Some(Section::Roads) => road(line).map(|r| map.roads.push(r)),
             Some(Section::Waves) => wave(line).map(|w| map.waves.push(w)),
+            Some(Section::Markers) => marker(line).map(|m| map.markers.push(m)),
         };
         result.map_err(|e| at_line(line_no, e))?;
     }
@@ -236,13 +260,83 @@ fn property(
             map.loot.get_or_insert_with(LootSpread::default).bags =
                 value.split(',').map(|b| b.trim().to_string()).collect();
         }
+        "escape_limit" => map.escape_limit = Some(number(key, value)?),
+        "weapons" => {
+            map.weapons = value
+                .split(',')
+                .map(|w| w.trim().to_string())
+                .filter(|w| !w.is_empty())
+                .collect();
+        }
+        "coins" => map.coins = Some(number(key, value)?),
+        "townsfolk" => map.townsfolk = Some(number(key, value)?),
         "generated" => map.generated = number(key, value)?,
+        "generator" => {
+            map.generator = MapGenerator::from_name(value).ok_or_else(|| {
+                format!("generator: `{value}` is not one of suburb, neighbourhood")
+            })?;
+        }
+        "spawners" => {
+            map.infestation
+                .get_or_insert_with(InfestationRules::default)
+                .spawners = number(key, value)?;
+        }
+        "spawner_every" => {
+            let (min, max) = value
+                .split_once('-')
+                .ok_or_else(|| format!("spawner_every: expected `<min>-<max>`, got `{value}`"))?;
+            map.infestation
+                .get_or_insert_with(InfestationRules::default)
+                .every = (number(key, min.trim())?, number(key, max.trim())?);
+        }
+        "spawner_waves" => {
+            map.infestation
+                .get_or_insert_with(InfestationRules::default)
+                .waves = number(key, value)?;
+        }
         "seed" => map.seed = number(key, value)?,
+        "base" => map.base = value.to_string(),
+        "region" => {
+            let parts: Vec<&str> = value.split(',').map(str::trim).collect();
+            let [x, y, width, height] = parts.as_slice() else {
+                return Err(format!("region: expected `x, y, width, height`, got `{value}`"));
+            };
+            map.region = Some(Region::new(
+                number(key, x)?,
+                number(key, y)?,
+                number(key, width)?,
+                number(key, height)?,
+            ));
+        }
         "width" => size.0 = Some(number(key, value)?),
         "height" => size.1 = Some(number(key, value)?),
         _ => return Err(format!("unknown property `{key}`")),
     }
     Ok(())
+}
+
+/// A row of `[storeys]`: `.` for an ordinary tile, or a digit.
+fn storeys_row(line: &str) -> Result<Vec<u8>, String> {
+    line.chars()
+        .filter(|c| !c.is_whitespace())
+        .map(|c| match c {
+            '.' => Ok(0),
+            _ => c
+                .to_digit(10)
+                .and_then(|d| u8::try_from(d).ok())
+                .ok_or_else(|| format!("'{c}' is not a storey count (`.` or a digit)")),
+        })
+        .collect()
+}
+
+/// A row of `[elevation]`: centimetres, separated by spaces.
+fn elevation_row(line: &str) -> Result<Vec<u16>, String> {
+    line.split_whitespace()
+        .map(|n| {
+            n.parse()
+                .map_err(|_| format!("'{n}' is not a height in centimetres"))
+        })
+        .collect()
 }
 
 /// `A: grass + blocks_enemies`, or a raw tile value: `A: 261`.
@@ -360,6 +454,34 @@ fn decoration(line: &str) -> Result<DecorationItem, String> {
     })
 }
 
+/// `road: street | width: 1.5 | points: 1,2 6.5,2 9,4.25`.
+fn road(line: &str) -> Result<RoadLine, String> {
+    let mut fields = Fields::parse(line)?;
+    let kind_name = fields.require("road")?;
+    let kind = RoadKind::from_name(kind_name)
+        .ok_or_else(|| format!("road: `{kind_name}` is not major, street, service or path"))?;
+    let width = number("width", fields.require("width")?)?;
+    let points = fields
+        .require("points")?
+        .split_whitespace()
+        .map(|pair| {
+            let (x, y) = pair
+                .split_once(',')
+                .ok_or_else(|| format!("points: expected `x,y`, got `{pair}`"))?;
+            Ok([number("points", x)?, number("points", y)?])
+        })
+        .collect::<Result<Vec<_>, String>>()?;
+    if points.len() < 2 {
+        return Err("points: a road needs at least two".to_string());
+    }
+    fields.finish()?;
+    Ok(RoadLine {
+        kind,
+        width,
+        points,
+    })
+}
+
 fn placement(line: &str) -> Result<TilePlacement, String> {
     let mut fields = Fields::parse(line)?;
     let (x, y) = coordinates(fields.require("at")?)?;
@@ -407,6 +529,16 @@ fn rotation_steps(degrees: i32) -> Result<u8, String> {
         ));
     }
     u8::try_from(degrees.div_euclid(45)).map_err(|e| e.to_string())
+}
+
+fn marker(line: &str) -> Result<Marker, String> {
+    let mut fields = Fields::parse(line)?;
+    let name = fields.require("marker")?;
+    let kind = MarkerKind::from_name(name)
+        .ok_or_else(|| format!("marker: `{name}` is not one of player, spawn, goal"))?;
+    let (x, y) = coordinates(fields.require("at")?)?;
+    fields.finish()?;
+    Ok(Marker { kind, x, y })
 }
 
 fn wave(line: &str) -> Result<WaveDef, String> {
@@ -473,22 +605,65 @@ pub fn to_text(map: &MapFile) -> Result<String, String> {
             lines.push(format!("loot_bags: {}", loot.bags.join(", ")));
         }
     }
+    if let Some(limit) = map.escape_limit {
+        lines.push(format!("escape_limit: {limit}"));
+    }
+    if !map.weapons.is_empty() {
+        lines.push(format!("weapons: {}", map.weapons.join(", ")));
+    }
+    if let Some(coins) = map.coins {
+        lines.push(format!("coins: {coins}"));
+    }
+    if let Some(townsfolk) = map.townsfolk {
+        lines.push(format!("townsfolk: {townsfolk}"));
+    }
+    if let Some(rules) = &map.infestation {
+        lines.push(format!("spawners: {}", rules.spawners));
+        lines.push(format!(
+            "spawner_every: {}-{}",
+            rules.every.0, rules.every.1
+        ));
+        lines.push(format!("spawner_waves: {}", rules.waves));
+    }
     if map.generated {
         lines.push("generated: true".into());
+        if !map.generator.is_default() {
+            lines.push(format!("generator: {}", map.generator.name()));
+        }
         lines.push(format!("width: {}", map.map_width));
         lines.push(format!("height: {}", map.map_height));
     }
     if map.generated || map.seed != 0 {
         lines.push(format!("seed: {}", map.seed));
     }
+    if !map.base.is_empty() {
+        lines.push(format!("base: {}", map.base));
+    }
+    if let Some(r) = map.region {
+        lines.push(format!("region: {}, {}, {}, {}", r.x, r.y, r.width, r.height));
+    }
 
-    lines.extend([String::new(), "[tiles]".into()]);
+    // A level on a base map has no tiles of its own.
+    if map.base.is_empty() || !map.tiles.is_empty() {
+        lines.extend([String::new(), "[tiles]".into()]);
+    }
     for row in &map.tiles {
         lines.push(
             row.iter()
                 .map(|value| letters.get(value).copied().unwrap_or('v'))
                 .collect(),
         );
+    }
+
+    if !map.markers.is_empty() {
+        lines.extend([
+            String::new(),
+            "[markers]".into(),
+            "# marker: player | spawn | goal | at: <x, y in the base map's tiles>".into(),
+        ]);
+    }
+    for m in &map.markers {
+        lines.push(format!("marker: {} | at: {}, {}", m.kind.name(), m.x, m.y));
     }
 
     if !legend.is_empty() {
@@ -498,11 +673,36 @@ pub fn to_text(map: &MapFile) -> Result<String, String> {
         }
     }
 
-    lines.extend([
-        String::new(),
-        "[decorations]".into(),
-        "# at: x, y | model: <path under assets/> | rotation: <degrees> | scale: <s>".into(),
-    ]);
+    if !map.elevation.is_empty() {
+        lines.extend([String::new(), "[elevation]".into()]);
+        for row in &map.elevation {
+            let row: Vec<String> = row.iter().map(u16::to_string).collect();
+            lines.push(row.join(" "));
+        }
+    }
+
+    if !map.storeys.is_empty() {
+        lines.extend([String::new(), "[storeys]".into()]);
+        for row in &map.storeys {
+            lines.push(
+                row.iter()
+                    .map(|&n| match n {
+                        0 => '.',
+                        n => char::from_digit(u32::from(n.min(9)), 10).unwrap_or('9'),
+                    })
+                    .collect(),
+            );
+        }
+    }
+
+    // A level on a base map gets the section only when it has some of its own.
+    if map.base.is_empty() || !map.decorations.is_empty() {
+        lines.extend([
+            String::new(),
+            "[decorations]".into(),
+            "# at: x, y | model: <path under assets/> | rotation: <degrees> | scale: <s>".into(),
+        ]);
+    }
     for d in &map.decorations {
         let mut line = format!("at: {}, {} | model: {}", d.x, d.y, field_value(&d.model)?);
         if d.rotation_y.to_bits() != 0.0f32.to_bits() {
@@ -517,7 +717,7 @@ pub fn to_text(map: &MapFile) -> Result<String, String> {
     lines.extend([
         String::new(),
         "[placements]".into(),
-        "# at: x, y | def: <def .ron path> | rotation: <degrees, steps of 45>".into(),
+        "# at: x, y | def: <def under assets/, e.g. defs/Barrel.ron> | rotation: <degrees, steps of 45>".into(),
     ]);
     for p in &map.placements {
         let mut line = format!("at: {}, {} | def: {}", p.x, p.y, field_value(&p.def_path)?);
@@ -544,10 +744,28 @@ pub fn to_text(map: &MapFile) -> Result<String, String> {
         lines.push(line);
     }
 
+    // Only maps with roads get the section, so older maps write back unchanged.
+    if !map.roads.is_empty() {
+        lines.extend([
+            String::new(),
+            "[roads]".into(),
+            "# road: major | street | service | path | width: <tiles> | points: <x,y in tiles> ...".into(),
+        ]);
+    }
+    for r in &map.roads {
+        let points: Vec<String> = r.points.iter().map(|[x, y]| format!("{x},{y}")).collect();
+        lines.push(format!(
+            "road: {} | width: {} | points: {}",
+            r.kind.name(),
+            r.width,
+            points.join(" ")
+        ));
+    }
+
     lines.extend([
         String::new(),
         "[waves]".into(),
-        "# enemy: <enemy def path, omit for the built-in alien> | count: <n> | rate: <per minute>"
+        "# enemy: <enemy def under assets/, omit for the built-in alien> | count: <n> | rate: <per minute>"
             .into(),
     ]);
     for w in &map.waves {
@@ -602,12 +820,17 @@ pub fn read_map_file(path: impl AsRef<Path>) -> Result<MapFile, String> {
     } else {
         ron::from_str::<MapFile>(&text).map_err(|e| e.to_string())
     };
-    map.map_err(|e| format!("cannot parse {}: {e}", path.display()))
+    let mut map = map.map_err(|e| format!("cannot parse {}: {e}", path.display()))?;
+    map.normalize_paths();
+    Ok(map)
 }
 
 /// Write a map in whichever format its extension says.
 pub fn write_map_file(path: impl AsRef<Path>, map: &MapFile) -> Result<(), String> {
     let path = path.as_ref();
+    let mut map = map.clone();
+    map.normalize_paths();
+    let map = &map;
     let text = if is_text_map(path) {
         to_text(map)?
     } else {
@@ -621,8 +844,9 @@ pub fn write_map_file(path: impl AsRef<Path>, map: &MapFile) -> Result<(), Strin
 /// it wins, so a level can be reworked as text without touching the code that names it.
 /// Returns the file actually read.
 ///
-/// The map comes back as the game plays it: its houses are stamped into the tiles
-/// (`house::bake_houses`).
+/// The map comes back as the game plays it: a level on a base map (`base:`) is cut from
+/// its base (`map::compose`), a `generated` map is generated (see [`generate`]) and its
+/// houses are stamped into the tiles (`house::bake_houses`).
 pub fn load_level(path: impl AsRef<Path>) -> Result<(MapFile, PathBuf), String> {
     let path = path.as_ref();
     let text_sibling = path.with_extension(EXTENSION);
@@ -632,15 +856,65 @@ pub fn load_level(path: impl AsRef<Path>) -> Result<(MapFile, PathBuf), String> 
         path.to_path_buf()
     };
     let mut map = read_map_file(&chosen)?;
+    if !map.base.is_empty() {
+        if map.generated {
+            return Err(format!("{}: a level on a base map cannot be generated", chosen.display()));
+        }
+        let base_path = crate::assets::paths::disk_path(&map.base);
+        let base = read_map_file(&base_path)?;
+        map = crate::map::compose::compose_level(&base, &map)
+            .map_err(|e| format!("{} on {}: {e}", chosen.display(), base_path.display()))?;
+    }
+    if map.generated {
+        map = generate(map).map_err(|e| format!("{}: {e}", chosen.display()))?;
+    }
     if !map.houses.is_empty() {
-        let wall_def = house::default_wall_def().unwrap_or_default();
-        for error in house::bake_houses(&mut map, &wall_def, |name| {
+        // No wall model: the walls are drawn with the rest of the map's (`spawn_walls`,
+        // one merged mesh), until houses get their own. A model per wall tile was both
+        // slow and, with a mis-scaled def, a wall of giants.
+        for error in house::bake_houses(&mut map, "", |name| {
             house::HouseDef::load(&house::house_path(name))
         }) {
             bevy::log::warn!("{}: house skipped: {error}", chosen.display());
         }
     }
     Ok((map, chosen))
+}
+
+/// A `generated: true` map built by its generator, keeping the level's own rules
+/// (stories, waves, loot, weapons, coins, escape limit, infestation). Seed 0 lays out a
+/// new map every time.
+pub fn generate(map: MapFile) -> Result<MapFile, String> {
+    use crate::map::{map_generator, neighbourhood};
+    let seed = if map.seed == 0 {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(1, |d| d.as_nanos() as u64)
+    } else {
+        map.seed
+    };
+    let built = match map.generator {
+        MapGenerator::Suburb => {
+            map_generator::generate_suburb_map(seed, map.map_width, map.map_height)
+        }
+        MapGenerator::Neighbourhood => {
+            neighbourhood::generate_from_assets(seed, map.map_width, map.map_height)
+                .ok_or("the neighbourhood generator found no layout")?
+        }
+    };
+    Ok(MapFile {
+        name: map.name,
+        generator: map.generator,
+        stories: map.stories,
+        waves: map.waves,
+        loot: map.loot,
+        escape_limit: map.escape_limit,
+        weapons: map.weapons,
+        coins: map.coins,
+        infestation: map.infestation,
+        townsfolk: map.townsfolk,
+        ..built
+    })
 }
 
 /// The other format's path for `path`: `foo.ron` <-> `foo.map`.
@@ -712,6 +986,41 @@ count: 3
         assert_eq!(map.waves[1].enemy_def, "");
         assert_eq!(map.waves[1].count, 3);
         assert_eq!(map.waves[1].spawn_rate_per_minute, 20.0);
+    }
+
+    #[test]
+    fn storeys_survive_a_round_trip() {
+        let map = parse("[tiles]\nwww\n[storeys]\n.3 9\n").unwrap();
+        assert_eq!(map.storeys, vec![vec![0, 3, 9]]);
+        let written = to_text(&map).unwrap();
+        assert!(written.contains("[storeys]\n.39\n"), "{written}");
+        assert_eq!(parse(&written).unwrap().storeys, map.storeys);
+    }
+
+    #[test]
+    fn elevation_survives_a_round_trip() {
+        let map = parse("[tiles]\nww\n[elevation]\n0 125\n40 7\n").unwrap();
+        assert_eq!(map.elevation, vec![vec![0, 125], vec![40, 7]]);
+        let written = to_text(&map).unwrap();
+        assert!(written.contains("[elevation]\n0 125\n40 7\n"), "{written}");
+        assert_eq!(parse(&written).unwrap().elevation, map.elevation);
+    }
+
+    #[test]
+    fn a_bad_height_is_an_error() {
+        assert!(parse("[tiles]\nww\n[elevation]\n0 up\n").unwrap_err().contains("'up'"));
+    }
+
+    #[test]
+    fn a_map_without_storeys_writes_no_section() {
+        let map = parse("[tiles]\nwww\n").unwrap();
+        assert!(!to_text(&map).unwrap().contains("[storeys]"));
+    }
+
+    #[test]
+    fn a_bad_storey_names_its_line() {
+        let err = parse("[tiles]\nww\n[storeys]\n.x\n").unwrap_err();
+        assert!(err.contains("line 4") && err.contains("'x'"), "{err}");
     }
 
     #[test]
@@ -797,21 +1106,56 @@ count: 3
     }
 
     #[test]
+    fn level_rules_are_properties() {
+        let map = parse(
+            "[properties]\nescape_limit: 3\nweapons: assets/defs/Snowball.ron, assets/defs/Pistol.ron\ncoins: 200\n",
+        )
+        .unwrap();
+        assert_eq!(map.escape_limit, Some(3));
+        assert_eq!(
+            map.weapons,
+            vec!["assets/defs/Snowball.ron", "assets/defs/Pistol.ron"]
+        );
+        assert_eq!(map.coins, Some(200));
+        let again = parse(&to_text(&map).unwrap()).unwrap();
+        assert_eq!(
+            (again.escape_limit, again.weapons, again.coins),
+            (map.escape_limit, map.weapons, map.coins)
+        );
+    }
+
+    #[test]
     fn houses_are_named_placed_and_turned_in_quarters() {
-        let map = parse("[houses]\nhouse: bungalow | at: 3, 4 | rotation: -90\nhouse: shed | at: 0, 0\n").unwrap();
+        let map =
+            parse("[houses]\nhouse: bungalow | at: 3, 4 | rotation: -90\nhouse: shed | at: 0, 0\n")
+                .unwrap();
         assert_eq!(
             map.houses,
             vec![
-                HousePlacement { house: "bungalow".into(), x: 3, y: 4, turns: 3 },
-                HousePlacement { house: "shed".into(), x: 0, y: 0, turns: 0 },
+                HousePlacement {
+                    house: "bungalow".into(),
+                    x: 3,
+                    y: 4,
+                    turns: 3
+                },
+                HousePlacement {
+                    house: "shed".into(),
+                    x: 0,
+                    y: 0,
+                    turns: 0
+                },
             ]
         );
         assert!(parse("[houses]\nhouse: shed | at: 0, 0 | rotation: 45\n").is_err());
         assert!(parse("[houses]\nat: 0, 0\n").is_err());
         let text = to_text(&map).unwrap();
-        assert!(text.contains("house: bungalow | at: 3, 4 | rotation: 270"), "{text}");
+        assert!(
+            text.contains("house: bungalow | at: 3, 4 | rotation: 270"),
+            "{text}"
+        );
         assert_eq!(parse(&text).unwrap().houses, map.houses);
         assert!(!to_text(&MapFile::default()).unwrap().contains("[houses]"));
+        assert!(!to_text(&MapFile::default()).unwrap().contains("[roads]"));
     }
 
     #[test]
@@ -829,10 +1173,19 @@ count: 3
         let (map, _) = load_level(&path).unwrap();
         let _ = std::fs::remove_dir_all(&dir);
         assert!(map.houses.is_empty());
-        let wall = (MapFeatures::ImpassableForPlayers as u64) | (MapFeatures::ImpassableForEnemies as u64);
-        let blocked = map.tiles.iter().flatten().filter(|&&t| t & wall == wall).count();
+        let wall =
+            (MapFeatures::ImpassableForPlayers as u64) | (MapFeatures::ImpassableForEnemies as u64);
+        let blocked = map
+            .tiles
+            .iter()
+            .flatten()
+            .filter(|&&t| t & wall == wall)
+            .count();
         assert!(blocked > 10, "the bungalow's walls block: {blocked}");
-        assert_eq!(map.placements.len(), blocked, "a wall model on each");
+        assert!(
+            map.placements.is_empty(),
+            "no wall models: the wall mesh draws them"
+        );
         assert_eq!(map.tiles[0][0] & wall, 0, "the missing house is skipped");
     }
 
@@ -841,5 +1194,37 @@ count: 3
         let map = parse(EXAMPLE).unwrap();
         let back = parse(&to_text(&map).unwrap()).unwrap();
         assert_eq!(as_ron(&back), as_ron(&map));
+    }
+
+    #[test]
+    fn a_level_on_a_base_map_round_trips_without_tiles() {
+        let text = "[properties]\nname: Corner\nbase: campaigns/x/world/world.map\nregion: 4, 6, 30, 20\n\n[markers]\nmarker: spawn | at: 4, 10\nmarker: goal | at: 12, 12\nmarker: player | at: 13, 12\n";
+        let map = parse(text).unwrap();
+        assert_eq!(map.base, "campaigns/x/world/world.map");
+        assert_eq!(map.region, Some(Region::new(4, 6, 30, 20)));
+        assert_eq!(map.markers.len(), 3);
+        assert_eq!(map.markers[1], Marker { kind: MarkerKind::Goal, x: 12, y: 12 });
+        assert!(map.tiles.is_empty());
+        let written = to_text(&map).unwrap();
+        assert!(!written.contains("[tiles]"), "{written}");
+        assert!(!written.contains("[decorations]"), "{written}");
+        let again = parse(&written).unwrap();
+        assert_eq!(again.markers, map.markers);
+        assert_eq!(again.region, map.region);
+        assert!(parse("[markers]\nmarker: boss | at: 1, 1\n").is_err());
+        assert!(parse("[properties]\nregion: 1, 2, 3\n").is_err());
+    }
+
+    #[test]
+    fn roads_round_trip() {
+        let text = "[tiles]\nfff\n[roads]\nroad: major | width: 2.5 | points: 0,0 1.25,0.5 2,1\nroad: path | width: 0.5 | points: 0,1 2,1\n";
+        let map = parse(text).unwrap();
+        assert_eq!(map.roads.len(), 2);
+        assert_eq!(map.roads[0].kind, RoadKind::Major);
+        assert_eq!(map.roads[0].points[1], [1.25, 0.5]);
+        let back = parse(&to_text(&map).unwrap()).unwrap();
+        assert_eq!(back.roads, map.roads);
+        assert!(parse("[roads]\nroad: lane | width: 1 | points: 0,0 1,1\n").is_err());
+        assert!(parse("[roads]\nroad: path | width: 1 | points: 0,0\n").is_err());
     }
 }

@@ -1,6 +1,6 @@
 (
     model_path: "packs/toon-shooter/map/Barrier Large.glb",
-    scale: 62.82819,
+    scale: 0.628282,
     model_type: Terrain((
         blocks_enemies: true,
         blocks_players: false,

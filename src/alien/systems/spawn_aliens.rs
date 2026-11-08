@@ -15,8 +15,8 @@ use crate::general::components::{Health, TouchDamage};
 use crate::general::damage::DamageResistances;
 use crate::general::explosion::ExplodesOnDeath;
 use crate::player::systems::spawn_players::FixSceneTransform;
-use avian3d::prelude::Collider;
-use avian3d::prelude::Position;
+use crate::physics::prelude::Collider;
+use crate::physics::prelude::Position;
 use bevy::math::{Quat, Vec3};
 use bevy::prelude::{
     AssetServer, Commands, Entity, MessageReader, MessageWriter, Name, Query, Res, ResMut, Time,
@@ -50,6 +50,7 @@ pub fn alien_spawner_system(
             spawn_alien_mw.write(SpawnAlien {
                 enemy_def: enemy_def.clone(),
                 position: position.0,
+                hunts: false,
             });
         }
     }
@@ -68,7 +69,7 @@ fn spawn_from_def(
     let mut ec = commands.spawn((
         Alien,
         Faction::Alien,
-        EnemyDef(path.to_string()),
+        EnemyDef,
         Name::new(format!(
             "Enemy {}",
             std::path::Path::new(path)
@@ -125,6 +126,9 @@ pub fn spawn_aliens(
             && let Some(loaded) = def_cache.get_or_load(path, &asset_server)
         {
             let id = spawn_from_def(&mut commands, path, loaded, spawn_alien.position);
+            if spawn_alien.hunts {
+                crate::infestation::make_hunter(&mut commands.entity(id), loaded);
+            }
             add_health_bar_mw.write(AddHealthBar {
                 entity: id,
                 name: "ALIEN",
@@ -168,7 +172,7 @@ pub fn spawn_aliens(
                CurrentAnimationKey::new("aliens".into(), AnimationKey::Walk),
                AvoidWallsData::new(0.125, 0.125, 0.125, 5.0),
                ApproachAndAttackPlayerData::default(),
-               MoveTowardsGoalData { path: None },
+               MoveTowardsGoalData { next: None },
                AlienSightShape::default(),
                Attack::default(),
                Health::default(),
@@ -190,6 +194,9 @@ pub fn spawn_aliens(
             ))
             .id();
 
+        if spawn_alien.hunts {
+            crate::infestation::make_builtin_hunter(&mut commands.entity(id));
+        }
         add_health_bar_mw.write(AddHealthBar {
             entity: id,
             name: "ALIEN",

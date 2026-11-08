@@ -4,8 +4,10 @@
 //! The crawl itself (layout, scrolling, typing, fades, queueing) is generic and lives in
 //! `lava_ui_builder::crawl`. This module is the game's side of it:
 //!
-//! - **Library.** Every `assets/crawls/<name>.ron` is a [`CrawlSpec`]; `<name>` is its id.
-//!   Re-read on entering `InGame`, so a crawl can be edited between matches.
+//! - **Library.** Every crawl file is a [`CrawlSpec`] whose id is its file stem: a level's
+//!   own sit beside its map (`assets/campaigns/main/level_01/level_01_crawl_intro.ron`),
+//!   shared ones in `assets/crawls/` (`assets::content`). Re-read on entering `InGame`, so
+//!   a crawl can be edited between matches.
 //! - **Trigger.** A story consequence `Emit(effect: "crawl:<name>")` shows crawl `<name>`
 //!   ([`keys::crawl_effect`]). Anything that can become a fact can therefore start one:
 //!   the level being won, a story item picked up (`ItemFound.<id>`), a kill count...
@@ -21,6 +23,7 @@
 //!   Interact (E / Circle) and Enter advance it - Fire is for shooting.
 
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 use bevy::input::gamepad::Gamepad;
 use bevy::prelude::*;
@@ -28,30 +31,28 @@ use lava_ui_builder::crawl::{
     AdvanceCrawl, ClearCrawls, CrawlFinished, CrawlPlugin, CrawlQueue, CrawlSpec,
 };
 
+use crate::assets::content;
 use crate::control::bindings::{ControlBindings, PlayerAction};
 use crate::facts::facts_resource::Facts;
 use crate::facts::keys;
 use crate::facts::messages::StoryEffect;
 use crate::game_state::{GameState, PauseState};
 
-/// Where the crawl files live.
-pub const CRAWL_DIR: &str = "assets/crawls";
-
 /// Every crawl the stories can ask for, by id (file stem).
 #[derive(Resource, Debug, Default)]
 pub struct CrawlLibrary(pub HashMap<String, CrawlSpec>);
 
 impl CrawlLibrary {
-    /// Reads every `.ron` in `dir`. A file that does not parse is skipped with a warning.
-    pub fn load_dir(dir: &str) -> Self {
+    /// Reads every crawl file (`assets::content::crawl_files`: `assets/crawls/` and the
+    /// levels' `_crawl_` files). A file that does not parse is skipped with a warning; of
+    /// two files with the same id, the later one wins, also with a warning.
+    pub fn load() -> Self {
+        Self::load_files(content::crawl_files())
+    }
+
+    pub fn load_files(files: impl IntoIterator<Item = PathBuf>) -> Self {
         let mut crawls = HashMap::new();
-        let Ok(entries) = std::fs::read_dir(dir) else {
-            return Self(crawls);
-        };
-        for path in entries.flatten().map(|entry| entry.path()) {
-            if path.extension().and_then(|e| e.to_str()) != Some("ron") {
-                continue;
-            }
+        for path in files {
             let Some(stem) = path.file_stem().and_then(|s| s.to_str()) else {
                 continue;
             };
@@ -60,7 +61,9 @@ impl CrawlLibrary {
                 .and_then(|text| parse_crawl(stem, &text))
             {
                 Ok(spec) => {
-                    crawls.insert(stem.to_string(), spec);
+                    if crawls.insert(stem.to_string(), spec).is_some() {
+                        warn!("crawl '{stem}' is defined twice; using {}", path.display());
+                    }
                 }
                 Err(e) => warn!("crawl {} failed to load: {e}", path.display()),
             }
@@ -81,7 +84,7 @@ pub struct CrawlsPlugin;
 impl Plugin for CrawlsPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(CrawlPlugin)
-            .insert_resource(CrawlLibrary::load_dir(CRAWL_DIR))
+            .insert_resource(CrawlLibrary::load())
             .add_systems(OnEnter(GameState::InGame), reload_library)
             .add_systems(OnExit(GameState::InGame), clear_crawls)
             .add_systems(OnEnter(PauseState::Cutscene), freeze_time)
@@ -101,7 +104,7 @@ impl Plugin for CrawlsPlugin {
 }
 
 fn reload_library(mut library: ResMut<CrawlLibrary>) {
-    *library = CrawlLibrary::load_dir(CRAWL_DIR);
+    *library = CrawlLibrary::load();
 }
 
 fn clear_crawls(mut clear: MessageWriter<ClearCrawls>) {
@@ -122,7 +125,7 @@ fn show_story_crawls(
         if let Some(spec) = library.0.get(id) {
             queue.push(spec.clone());
         } else {
-            warn!("story asked for crawl '{id}', but {CRAWL_DIR}/{id}.ron is missing");
+            warn!("story asked for crawl '{id}', but there is no crawl file '{id}.ron'");
         }
     }
 }
@@ -211,13 +214,8 @@ mod tests {
 
     #[test]
     fn every_crawl_in_assets_parses() {
-        let dir = std::path::Path::new(CRAWL_DIR);
         let mut count = 0;
-        for entry in std::fs::read_dir(dir).unwrap().flatten() {
-            let path = entry.path();
-            if path.extension().and_then(|e| e.to_str()) != Some("ron") {
-                continue;
-            }
+        for path in content::crawl_files() {
             let stem = path.file_stem().unwrap().to_str().unwrap();
             let text = std::fs::read_to_string(&path).unwrap();
             let spec = parse_crawl(stem, &text)
@@ -231,9 +229,8 @@ mod tests {
     /// Every shipped story file parses, and every crawl a story asks for exists.
     #[test]
     fn every_story_crawl_effect_names_a_shipped_crawl() {
-        let library = CrawlLibrary::load_dir(CRAWL_DIR);
-        for entry in std::fs::read_dir("assets/stories").unwrap().flatten() {
-            let path = entry.path();
+        let library = CrawlLibrary::load();
+        for path in content::story_files() {
             let stories = crate::facts::persistence::load_stories(&path)
                 .unwrap_or_else(|e| panic!("{} does not parse: {e}", path.display()));
             for story in &stories {

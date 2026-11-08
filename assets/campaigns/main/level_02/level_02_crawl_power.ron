@@ -1,0 +1,14 @@
+// A non-modal typewriter: the match keeps running behind it.
+(
+    title: "The caretaker, over the PA",
+    lines: [
+        "Is this thing on? Lights are back! Lovely job.",
+        "Now would you kindly remove the aliens from the car park. They are not members.",
+    ],
+    style: Typewriter,
+    speed: 45.0,
+    backdrop: 0.0,
+    modal: false,
+    auto_advance: 2.5,
+    hint: "E / Circle",
+)

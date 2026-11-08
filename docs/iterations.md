@@ -27,11 +27,30 @@ Worked like a charm, bro.
 
 ## 5th iteration
 
-What about that house editor?
+What about that house editor? <- not entirely clear
 
+## 6th iteration
+
+Cooler gibs? Yes, we shall dismember using bones or some or another.
 
 ## Thoughts and for later iterations
+
 the rest is just map stuff, to make the maps more interesting. 
 
 We could add a height map in the map-files so that we can describe the entire map as a height field somehow!
 
+Terrain, more beautiful textures for floor tiles and stuff, hooow?
+
+Other game mode, like a part of the suburb being invaded by aliens / zombies going house to house and killing folks, we have got to stop that.
+
+Behavior trees, my man, that's the trick, for cooler alien behavior. Or is it really necessary? Perhaps use: [Bevy Behave](https://github.com/RJ/bevy_behave)
+
+[Motion GFX](https://github.com/voxell-tech/motiongfx/tree/main/crates/bevy_motiongfx)
+
+VFX on screen, like CRT and stuff, much needed. Use our fork of Bevy VFX Bag if necessary. - but I think most of it can be done with [post-processing](https://bevy.org/examples/3d-rendering/post-processing/) these days.
+
+Saving and loading the game, obviously. Perhaps [Moonshine Save](https://github.com/Zeenobit/moonshine_save)?
+
+Procedurally generated maps: [GHX ProcGen](https://github.com/Henauxg/ghx_proc_gen)
+
+[Smoke screen](https://github.com/VagabondTech/smokescreen)

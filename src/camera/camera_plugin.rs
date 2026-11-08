@@ -12,6 +12,8 @@ pub struct StatefulCameraPlugin;
 impl Plugin for StatefulCameraPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<CameraFocus>()
+            .init_resource::<crate::camera::fog::FogLevel>()
+            .init_resource::<crate::camera::fog::SceneFog>()
             .init_resource::<CameraShake>()
             .add_systems(
                 OnEnter(GameState::InGame),
@@ -30,6 +32,13 @@ impl Plugin for StatefulCameraPlugin {
                     .before(TransformSystems::Propagate)
                     .run_if(in_state(GameState::InGame))
                     .run_if(not(crate::character_editor::inspect::orbit_camera_active)),
+            )
+            .add_systems(
+                Update,
+                (crate::camera::fog::cycle_fog, crate::camera::fog::apply_fog)
+                    .chain()
+                    .run_if(in_state(GameState::InGame))
+                    .run_if(crate::character_editor::state::in_normal_game),
             )
             .add_systems(
                 Update,

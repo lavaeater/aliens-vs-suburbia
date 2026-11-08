@@ -1,4 +1,4 @@
-use avian3d::prelude::{CollisionLayers, LayerMask, RigidBody};
+use crate::physics::prelude::{CollisionLayers, LayerMask, RigidBody};
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -82,10 +82,7 @@ pub fn default_loot_table() -> String {
 }
 
 pub fn default_loot_bags() -> Vec<String> {
-    vec![
-        "assets/defs/Trash Bag.ron".into(),
-        "assets/defs/Trash Bags.ron".into(),
-    ]
+    vec!["defs/Trash Bag.ron".into(), "defs/Trash Bags.ron".into()]
 }
 
 impl Default for LootSpread {
@@ -111,6 +108,50 @@ const fn default_map_height() -> usize {
     24
 }
 
+/// What a [`RoadLine`] is drawn as (`map::road_mesh`).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub enum RoadKind {
+    /// A through road: asphalt, pavements, a dashed centre line.
+    Major,
+    /// A residential street: asphalt and pavements.
+    #[default]
+    Street,
+    /// A driveway or service road: asphalt only.
+    Service,
+    /// A footway, cycleway or track: a gravel strip.
+    Path,
+}
+
+impl RoadKind {
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Major => "major",
+            Self::Street => "street",
+            Self::Service => "service",
+            Self::Path => "path",
+        }
+    }
+
+    pub fn from_name(name: &str) -> Option<Self> {
+        [Self::Major, Self::Street, Self::Service, Self::Path]
+            .into_iter()
+            .find(|k| k.name() == name)
+    }
+}
+
+/// A road's centreline, drawn as a ribbon over the ground. Only the look: the tiles under
+/// it say where one can walk. Points are in map tile coordinates (`(3.0, 4.0)` is the
+/// centre of tile 3, 4, like decorations), `width` in tiles, the carriageway only.
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
+pub struct RoadLine {
+    pub kind: RoadKind,
+    pub width: f32,
+    pub points: Vec<[f32; 2]>,
+}
+
+/// Tiles between the points of [`MapFile::elevation`].
+pub const ELEVATION_STEP: usize = 2;
+
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct MapFile {
     /// Display name. Optional; the `.map` text format writes it under `[properties]`.
@@ -119,6 +160,10 @@ pub struct MapFile {
     /// When true, `tiles` and `decorations` are ignored and the map is procedurally generated from `seed`.
     #[serde(default)]
     pub generated: bool,
+    /// Which generator, when `generated`.
+    #[serde(default, skip_serializing_if = "MapGenerator::is_default")]
+    pub generator: MapGenerator,
+    /// The generator's seed; 0 = a new layout every time the level is played.
     #[serde(default)]
     pub seed: u64,
     /// Procedural map dimensions. Only used when `generated: true`.
@@ -130,11 +175,23 @@ pub struct MapFile {
     /// 0 = void (Nothing), non-zero = tile with feature flags set.
     #[serde(default)]
     pub tiles: Vec<Vec<u64>>,
+    /// How many storeys tall a solid wall tile stands, same shape as `tiles`. 0, or a tile
+    /// past the end, is an ordinary wall. Empty = none. Only the look: colliders don't care.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub storeys: Vec<Vec<u8>>,
+    /// Ground height on a lattice: point `(i, j)` (`elevation[j][i]`) sits on the centre of
+    /// tile `(i * ELEVATION_STEP, j * ELEVATION_STEP)`, in centimetres of world height above
+    /// the level's lowest point. Empty = flat.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub elevation: Vec<Vec<u16>>,
     #[serde(default)]
     pub decorations: Vec<DecorationItem>,
     /// Items placed by the map editor (def-driven models on specific tiles).
     #[serde(default)]
     pub placements: Vec<TilePlacement>,
+    /// Road centrelines (`map::road_mesh`); OSM imports write them.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub roads: Vec<RoadLine>,
     /// Houses placed in the map (`assets/houses`), stamped into `tiles` on load.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub houses: Vec<HousePlacement>,
@@ -142,13 +199,193 @@ pub struct MapFile {
     #[serde(default)]
     pub waves: Vec<WaveDef>,
     /// The level's own turbofacts stories (a RON list of `Story`), e.g.
-    /// `"assets/stories/level_01.ron"`. Loaded on top of the base level-flow stories when
-    /// the map loads. Empty = none.
+    /// `"campaigns/main/level_01/level_01_story.ron"` (next to the map; `assets::content`).
+    /// Loaded on top of the base level-flow stories when the map loads. Empty = none.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub stories: String,
     /// Random loot bags on the floor. `None` = none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub loot: Option<LootSpread>,
+    /// How many aliens may reach the goal before the level is lost. `None` = the default
+    /// (`LevelTracker`'s 10).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub escape_limit: Option<u32>,
+    /// Weapon defs every player carries on this level instead of their own (the first is
+    /// held). Empty = each character's own loadout.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub weapons: Vec<String>,
+    /// The team starts the level with at least this many coins (for towers).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub coins: Option<u32>,
+    /// Play the level as an infestation (`crate::infestation`): spawners open up around
+    /// the map and send out the `waves`, instead of aliens walking to a goal.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub infestation: Option<InfestationRules>,
+    /// People who live on the level (`townsfolk`): this many, each at a front door,
+    /// going about their day until the monsters come. `None` = nobody.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub townsfolk: Option<u32>,
+    /// A level cut from a base map (`map::compose`): the base map, inside `assets/`
+    /// (`"campaigns/gis/world/world.map"`). Such a level has no tiles of its own; the
+    /// game plays [`MapFile::region`] of the base with [`MapFile::markers`] on it. Empty =
+    /// an ordinary map.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub base: String,
+    /// The part of the base map the level is played on, in base map tiles. `None` with a
+    /// `base` = all of it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub region: Option<Region>,
+    /// Player starts, alien spawns and the goal of a level on a base map, in base map
+    /// tiles (so moving the region does not move them). Stamped into the tiles on load.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub markers: Vec<Marker>,
+}
+
+/// A rectangle of tiles: top-left `x`, `y`, and its size.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Region {
+    pub x: i32,
+    pub y: i32,
+    pub width: i32,
+    pub height: i32,
+}
+
+impl Region {
+    pub const fn new(x: i32, y: i32, width: i32, height: i32) -> Self {
+        Self {
+            x,
+            y,
+            width,
+            height,
+        }
+    }
+
+    /// Whether tile `(x, y)` is inside.
+    pub const fn contains(&self, x: i32, y: i32) -> bool {
+        x >= self.x
+            && y >= self.y
+            && x < self.x.saturating_add(self.width)
+            && y < self.y.saturating_add(self.height)
+    }
+
+    /// Whether tile `(x, y)` is on the edge.
+    pub const fn on_edge(&self, x: i32, y: i32) -> bool {
+        self.contains(x, y)
+            && (x == self.x
+                || y == self.y
+                || x == self.x.saturating_add(self.width).saturating_sub(1)
+                || y == self.y.saturating_add(self.height).saturating_sub(1))
+    }
+}
+
+/// What a [`Marker`] puts on its tile.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum MarkerKind {
+    /// Where a player starts (`p`).
+    Player,
+    /// Where aliens come from (`e`).
+    Spawn,
+    /// What the aliens are after (`x`).
+    Goal,
+}
+
+impl MarkerKind {
+    pub const ALL: [Self; 3] = [Self::Player, Self::Spawn, Self::Goal];
+
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Player => "player",
+            Self::Spawn => "spawn",
+            Self::Goal => "goal",
+        }
+    }
+
+    pub fn from_name(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|k| k.name() == name)
+    }
+}
+
+/// A player start, alien spawn or goal on a tile of a level's base map.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Marker {
+    pub kind: MarkerKind,
+    pub x: i32,
+    pub y: i32,
+}
+
+/// What builds a `generated: true` map.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum MapGenerator {
+    /// `map::map_generator`: houses in a field, spawns on the left, the goal on the right.
+    #[default]
+    Suburb,
+    /// `map::neighbourhood`: streets and lots by model synthesis, houses with people in
+    /// their yards. `width` / `height` are rounded down to whole lots.
+    Neighbourhood,
+}
+
+impl MapGenerator {
+    pub fn is_default(&self) -> bool {
+        *self == Self::default()
+    }
+
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Suburb => "suburb",
+            Self::Neighbourhood => "neighbourhood",
+        }
+    }
+
+    pub fn from_name(name: &str) -> Option<Self> {
+        [Self::Suburb, Self::Neighbourhood]
+            .into_iter()
+            .find(|g| g.name() == name)
+    }
+}
+
+/// How an infestation level plays (`crate::infestation`). In a `.map`:
+/// `spawners: 6`, `spawner_every: 20-40`, `spawner_waves: 3`.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct InfestationRules {
+    /// Spawners over the whole level; destroy them all (and what they sent) to win.
+    pub spawners: u32,
+    /// Seconds between one spawner opening and the next, picked anew each time.
+    pub every: (f32, f32),
+    /// Waves each spawner sends (drawn from the map's `waves`) before it slows to a
+    /// trickle; it keeps going until it is destroyed.
+    pub waves: u32,
+}
+
+impl Default for InfestationRules {
+    fn default() -> Self {
+        Self {
+            spawners: 6,
+            every: (20.0, 40.0),
+            waves: 3,
+        }
+    }
+}
+
+impl MapFile {
+    /// Every path the map names (placements, wave enemies, weapons, loot bags, stories)
+    /// in the short content form, `"defs/Bunny.ron"` (`assets::paths`). Done on every
+    /// read and write, so an older map with `assets/` prefixes reads the same and
+    /// saves without them.
+    pub fn normalize_paths(&mut self) {
+        use crate::assets::paths::normalize;
+        self.placements
+            .iter_mut()
+            .for_each(|p| normalize(&mut p.def_path));
+        self.waves
+            .iter_mut()
+            .for_each(|w| normalize(&mut w.enemy_def));
+        self.weapons.iter_mut().for_each(normalize);
+        if let Some(loot) = &mut self.loot {
+            loot.bags.iter_mut().for_each(normalize);
+        }
+        normalize(&mut self.stories);
+        normalize(&mut self.base);
+    }
 }
 
 #[derive(Component, Default, Reflect)]

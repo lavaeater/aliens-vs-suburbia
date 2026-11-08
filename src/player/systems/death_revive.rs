@@ -11,7 +11,7 @@
 //!    cycles the anchor) or on the nearest walkable tile to where they fell that has no
 //!    alien nearby. With no lives left they are out; when everyone is out the level fails.
 
-use avian3d::prelude::{LinearVelocity, Position};
+use crate::physics::prelude::{LinearVelocity, Position};
 use bevy::prelude::*;
 use lava_ui_builder::{WorldFollower, progress_bar};
 
@@ -55,7 +55,10 @@ pub struct Respawning {
 pub struct RespawnQueue {
     pub pending: Vec<Respawning>,
     pub out: Vec<usize>,
-    /// Set once any player has spawned this level, so an empty map is not a team wipe.
+    /// Set once a player entity has been seen this level (by `check_team_wipe`), so an
+    /// empty map is not a team wipe. Not when the spawn is requested: the entity only
+    /// exists once the commands apply, and a check in between saw "someone played, nobody
+    /// is here" - a wipe at the very start of the level.
     pub started: bool,
 }
 
@@ -70,6 +73,12 @@ impl RespawnQueue {
 
     pub fn is_out(&self, slot: usize) -> bool {
         self.out.contains(&slot)
+    }
+
+    /// The team is wiped: someone played, no player body is left (downed ones still count,
+    /// they can be revived or bleed out into a respawn) and nobody is waiting to respawn.
+    pub fn team_wiped(&self, any_player_left: bool) -> bool {
+        self.started && !any_player_left && self.pending.is_empty()
     }
 }
 
@@ -105,12 +114,13 @@ pub fn detect_player_death(
                     Color::srgb(0.2, 0.6, 1.0),
                     Color::srgba(0.0, 0.0, 0.0, 0.6),
                 ),
-                Node {
-                    position_type: PositionType::Absolute,
-                    ..default()
-                },
             ))
             .id();
+        // `progress_bar` brings its own `Node`; a second one in the bundle panics.
+        commands
+            .entity(bar)
+            .entry::<Node>()
+            .and_modify(|mut n| n.position_type = PositionType::Absolute);
 
         commands.entity(entity).insert(PlayerDead {
             revive_progress: 0.0,
@@ -406,14 +416,17 @@ pub fn respawn_position(death: Vec3, walkable: &[Vec3], aliens: &[Vec3]) -> Vec3
 
 /// Fail the level once nobody is alive, nobody is coming back, and someone did play.
 pub fn check_team_wipe(
-    queue: Res<RespawnQueue>,
+    mut queue: ResMut<RespawnQueue>,
     players: Query<(), With<Player>>,
     mut tracker: Option<ResMut<LevelTracker>>,
 ) {
+    if !players.is_empty() && !queue.started {
+        queue.started = true;
+    }
     let Some(tracker) = tracker.as_mut() else {
         return;
     };
-    if !queue.started || !players.is_empty() || !queue.pending.is_empty() {
+    if !queue.team_wiped(!players.is_empty()) {
         return;
     }
     if matches!(tracker.level_state, LevelState::InProgress) {
@@ -429,6 +442,98 @@ pub fn reset_respawn_queue(mut queue: ResMut<RespawnQueue>) {
 mod tests {
     use super::*;
     use crate::assets::asset_definition::AmmoKind;
+
+    fn wipe_app() -> App {
+        let mut app = App::new();
+        app.init_resource::<RespawnQueue>();
+        app.insert_resource(LevelTracker {
+            level_state: LevelState::InProgress,
+            ..default()
+        });
+        app.add_systems(Update, check_team_wipe);
+        app
+    }
+
+    fn level_state(app: &App) -> LevelState {
+        app.world().resource::<LevelTracker>().level_state
+    }
+
+    /// The first frame of a level: the spawn is queued, the entity not there yet.
+    #[test]
+    fn a_player_who_has_not_arrived_yet_is_not_a_team_wipe() {
+        let mut app = wipe_app();
+        app.update();
+        assert!(matches!(level_state(&app), LevelState::InProgress));
+    }
+
+    #[test]
+    fn the_last_player_gone_is_a_team_wipe() {
+        let mut app = wipe_app();
+        let player = app.world_mut().spawn(Player).id();
+        app.update();
+        assert!(matches!(level_state(&app), LevelState::InProgress));
+
+        app.world_mut().despawn(player);
+        app.update();
+        assert!(matches!(level_state(&app), LevelState::Failed));
+    }
+
+    #[test]
+    fn a_player_waiting_to_respawn_keeps_the_level_going() {
+        let mut app = wipe_app();
+        let player = app.world_mut().spawn(Player).id();
+        app.update();
+        app.world_mut().despawn(player);
+        app.world_mut().resource_mut::<RespawnQueue>().pending.push(Respawning {
+            slot: 0,
+            lives_left: 1,
+            timer: Timer::from_seconds(1.0, TimerMode::Once),
+            death_position: Vec3::ZERO,
+            anchor: None,
+        });
+        app.update();
+        assert!(matches!(level_state(&app), LevelState::InProgress));
+    }
+
+    #[test]
+    fn going_down_spawns_a_revive_bar() {
+        let mut app = App::new();
+        app.insert_resource(GameSettings::default())
+            .add_message::<AnimationEvent>()
+            .add_systems(Update, detect_player_death);
+        let player = app
+            .world_mut()
+            .spawn((
+                Player,
+                Health { health: 0, max_health: 100 },
+                LinearVelocity(Vec3::X),
+            ))
+            .id();
+        app.update();
+        let downed = app.world().get::<PlayerDead>(player).expect("downed");
+        let bar = downed.revive_bar.expect("a revive bar");
+        let node = app.world().get::<Node>(bar).expect("the bar is a UI node");
+        assert_eq!(node.position_type, PositionType::Absolute);
+    }
+
+    #[test]
+    fn only_nobody_left_and_nobody_coming_back_is_a_wipe() {
+        let mut queue = RespawnQueue::default();
+        assert!(!queue.team_wiped(false), "nobody has spawned yet");
+        queue.started = true;
+        assert!(!queue.team_wiped(true), "a downed player is still a body");
+        queue.pending.push(Respawning {
+            slot: 0,
+            lives_left: 2,
+            timer: Timer::from_seconds(3.0, TimerMode::Once),
+            death_position: Vec3::ZERO,
+            anchor: None,
+        });
+        assert!(!queue.team_wiped(false), "bled out but respawning");
+        queue.pending.clear();
+        queue.out.push(0);
+        assert!(queue.team_wiped(false));
+    }
 
     #[test]
     fn anchor_cycles_through_fell_here_and_each_living_player() {

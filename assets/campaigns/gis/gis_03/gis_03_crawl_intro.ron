@@ -1,0 +1,15 @@
+// gis_03's intro crawl (placeholder). Fields: see
+// assets/campaigns/main/level_01/level_01_crawl_intro.ron. Plain ASCII only.
+(
+    title: "PLACEHOLDER: FIRE DOWN BELOW",
+    lines: [
+        "Down by the old road the houses stand close together.",
+        "",
+        "Someone left a crate of grenade launchers at the scout hall.",
+        "",
+        "Mind the houses. Or do not...",
+    ],
+    style: Scroll(tilt: 0.0),
+    speed: 55.0,
+    backdrop: 0.85,
+)

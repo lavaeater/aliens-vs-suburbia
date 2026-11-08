@@ -9,6 +9,14 @@ pub const GOTO_NEXT_LEVEL: &str = "GotoNextLevel";
 pub const BOSS_IS_DEAD: &str = "BossIsDead";
 pub const ALL_OBJECTIVES_TOUCHED: &str = "AllObjectivesAreTouched";
 
+/// Prefix of a level's own objectives: a bool fact `Objective.<name>` per objective, false
+/// until done. Clearing the aliens only wins once every one is true.
+pub const OBJECTIVE_PREFIX: &str = "Objective.";
+/// True when every `Objective.*` fact is true (or there are none); derived by the game.
+pub const OBJECTIVES_DONE: &str = "ObjectivesDone";
+/// Text the HUD shows as the current objective, set by a level's stories. Empty = none.
+pub const OBJECTIVE_TEXT: &str = "ObjectiveText";
+
 pub const ENEMY_KILL_COUNT: &str = "EnemyKillCount";
 pub const TARGET_ENEMY_KILL_COUNT: &str = "TargetEnemyKillCount";
 pub const ENEMY_COUNT: &str = "EnemyCount";

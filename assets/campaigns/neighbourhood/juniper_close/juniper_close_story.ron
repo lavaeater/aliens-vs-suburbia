@@ -1,0 +1,62 @@
+// Juniper Close's stories (`MapFile::stories`). The infestation keeps the facts
+// (`infestation::keys`): SpawnersLeft, SpawnersDestroyed, NeighboursAlive, NeighboursLost,
+// and the ObjectiveText line itself. The base `Aliens Cleared` story wins the level once
+// the objective below is done and every monster is dead.
+[
+    (
+        name: "Juniper Close intro",
+        repeat: false,
+        init_facts: [
+            ("Objective.spawners", Bool(false)),
+        ],
+        rules: [
+            (name: "started", criteria: [BoolIs(key: "LevelStarted", expected: true)]),
+        ],
+        consequences: [Emit(effect: "crawl:juniper_close_crawl_intro")],
+    ),
+    (
+        name: "Every spawner destroyed",
+        repeat: false,
+        rules: [
+            (
+                name: "none left",
+                criteria: [
+                    BoolIs(key: "LevelStarted", expected: true),
+                    IntCmp(key: "SpawnersLeft", op: Eq, value: 0),
+                ],
+            ),
+        ],
+        consequences: [SetFact(key: "Objective.spawners", value: Bool(true))],
+    ),
+    (
+        name: "The neighbours are gone",
+        repeat: false,
+        rules: [
+            (
+                name: "nobody left",
+                criteria: [
+                    BoolIs(key: "LevelStarted", expected: true),
+                    BoolIs(key: "NeighboursLost", expected: true),
+                ],
+            ),
+        ],
+        consequences: [
+            SetFact(key: "LevelFailed", value: Bool(true)),
+            Emit(effect: "level_failed"),
+        ],
+    ),
+    (
+        name: "Juniper Close outro",
+        repeat: false,
+        rules: [
+            (
+                name: "won",
+                criteria: [
+                    BoolIs(key: "LevelComplete", expected: true),
+                    BoolIs(key: "LevelFailed", expected: false),
+                ],
+            ),
+        ],
+        consequences: [Emit(effect: "crawl:juniper_close_crawl_outro")],
+    ),
+]

@@ -1,0 +1,24 @@
+# An infestation on a generated suburb: a new layout every time (seed 0), streets and
+# lots from `map::neighbourhood`, 4-8 houses with neighbours in their yards. Spawners open
+# around it (`spawners`, one every `spawner_every` seconds), each sending out
+# `spawner_waves` of the [waves] below. Destroy them all and clear what they sent to win;
+# lose every neighbour and the level is lost (juniper_close_story.ron).
+
+[properties]
+name: Juniper Close
+stories: campaigns/neighbourhood/juniper_close/juniper_close_story.ron
+loot: 1-3 per 60
+spawners: 6
+spawner_every: 25-45
+spawner_waves: 3
+generated: true
+generator: neighbourhood
+width: 62
+height: 42
+seed: 0
+
+[waves]
+enemy: defs/Monster.ron | count: 3 | rate: 20
+enemy: defs/Spider.ron | count: 6 | rate: 40
+enemy: defs/Monster.ron | count: 5 | rate: 24
+enemy: defs/Spider.ron | count: 4 | rate: 30

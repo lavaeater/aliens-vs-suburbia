@@ -1,0 +1,20 @@
+(
+    enabled: true,
+    palette: "rover-dusk-128",
+    pixel_size: 2,
+    dither: 0.7,
+    exposure: 1.3,
+    contrast: 1.1,
+    saturation: 1.2,
+    shadow_tint: 0.7,
+    warmth: 0.8,
+    ink: 0.75,
+    ink_threshold: 0.28,
+    light: Night,
+    sky: (
+        elevation_deg: 50.0,
+        azimuth_deg: 345.0,
+        strength: 0.5,
+        ambient: 50.0,
+    ),
+)

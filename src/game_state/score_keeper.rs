@@ -1,9 +1,10 @@
+use crate::campaign::Campaign;
 use crate::facts::StoryEffect;
 use crate::game_state::GameState;
 use crate::ui::spawn_ui::GotoState;
 use bevy::app::{App, Plugin, Update};
 use bevy::prelude::{
-    Component, Entity, IntoScheduleConfigs, Message, MessageReader, MessageWriter, Query, Res,
+    Commands, Component, Entity, IntoScheduleConfigs, Message, MessageReader, MessageWriter, Query, Res,
     ResMut, Resource, in_state,
 };
 use bevy::time::Time;
@@ -29,6 +30,9 @@ impl Score {
         }
     }
 }
+
+/// Seconds between a level's verdict (after its crawls) and the card between levels.
+const END_DELAY: f32 = 2.0;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LevelState {
@@ -167,9 +171,12 @@ pub fn game_tracking_event_system(
 /// Drives [`LevelState`] from the facts engine instead of computing win/lose inline. The
 /// level-flow stories (`crate::facts::stories`) own the verdict and surface it as named
 /// [`StoryEffect`]s; this system just maps those effects onto the tracker's state and runs
-/// the brief end-screen delay. See `docs/turbofacts.md` section 5. The delay only starts
+/// the brief end-screen delay, then hands over to the campaign (`campaign::Campaign::finish`)
+/// and its card between levels. See `docs/turbofacts.md` section 5. The delay only starts
 /// once every story crawl (say, a level outro) has played out.
 pub fn level_state_system(
+    mut commands: Commands,
+    mut campaign: ResMut<Campaign>,
     mut level_tracker: ResMut<LevelTracker>,
     mut goto_state_mw: MessageWriter<GotoState>,
     mut story_effects: MessageReader<StoryEffect>,
@@ -198,10 +205,15 @@ pub fn level_state_system(
             LevelState::Completed | LevelState::Failed
         )
     {
+        let was_waiting = level_tracker.end_delay < END_DELAY;
         level_tracker.end_delay += time.delta_secs();
-        if level_tracker.end_delay >= 2.0 {
+        if was_waiting && level_tracker.end_delay >= END_DELAY {
+            // Once: the campaign moves on (or not) and the card between levels says how.
+            let won = level_tracker.level_state == LevelState::Completed;
+            campaign.last_kills = level_tracker.aliens_killed;
+            commands.insert_resource(campaign.finish(won));
             goto_state_mw.write(GotoState {
-                state: GameState::Menu,
+                state: GameState::Intermission,
             });
         }
     }

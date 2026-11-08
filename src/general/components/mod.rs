@@ -1,6 +1,6 @@
 pub(crate) mod map_components;
 
-use avian3d::prelude::PhysicsLayer;
+use crate::physics::prelude::PhysicsLayer;
 use bevy::prelude::*;
 
 /// Entities with this component deal damage per second to any Player they collide with.
@@ -43,7 +43,7 @@ impl Ball {
 #[type_path = "avs"]
 pub struct HittableTarget {}
 
-#[derive(PhysicsLayer, Default, PartialEq, Eq, Clone, Copy)]
+#[derive(Default, PartialEq, Eq, Clone, Copy)]
 pub enum CollisionLayer {
     #[default]
     Floor,
@@ -58,6 +58,16 @@ pub enum CollisionLayer {
     BuildIndicator,
     Sensor,
     PlayerAimSensor,
+}
+
+impl PhysicsLayer for CollisionLayer {
+    fn to_bits(&self) -> u32 {
+        1 << *self as u32
+    }
+
+    fn all_bits() -> u32 {
+        (1 << (Self::PlayerAimSensor as u32 + 1)) - 1
+    }
 }
 
 #[derive(Component, Clone, Debug, PartialEq, Eq, Reflect)]

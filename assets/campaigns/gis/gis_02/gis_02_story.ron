@@ -1,0 +1,15 @@
+// The Blocks's own stories, loaded on top of the base level-flow ones (`MapFile::stories`).
+// Format: see assets/campaigns/main/level_01/level_01_story.ron. Placeholder texts.
+[
+    (
+        name: "Gis 02 intro",
+        repeat: false,
+        init_facts: [
+            ("ObjectiveText", Text("Hold the courtyard. Do not let 8 of them through")),
+        ],
+        rules: [
+            (name: "started", criteria: [BoolIs(key: "LevelStarted", expected: true)]),
+        ],
+        consequences: [Emit(effect: "crawl:gis_02_crawl_intro")],
+    ),
+]

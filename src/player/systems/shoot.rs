@@ -7,7 +7,7 @@
 //! Guns replace throwing while equipped — `throwing` is gated `Without<EquippedWeapon>`
 //! and this system requires it, so the same fire button does one or the other.
 
-use avian3d::prelude::{Position, SpatialQuery, SpatialQueryFilter};
+use crate::physics::prelude::{Position, SpatialQuery, SpatialQueryFilter};
 use bevy::prelude::*;
 
 use crate::animation::animation_plugin::{AnimationEvent, AnimationEventType, AnimationKey};
@@ -19,6 +19,7 @@ use crate::general::components::CollisionLayer;
 use crate::general::damage::{ApplyDamage, Faction};
 use crate::general::projectiles::{self, ProjectileProps};
 use crate::gore::components::{DamageKind, Ephemeral};
+use crate::map::ground::GroundHeight;
 use crate::player::ammo::AmmoPouch;
 use crate::player::components::{AutoAim, Player, PlayerDead};
 use crate::player::systems::equip::EquippedWeapon;
@@ -245,6 +246,7 @@ pub fn shoot_weapons(
     mut fx_mw: MessageWriter<SpawnFx>,
     factions: Query<&Faction>,
     mut rng_seed: Local<u32>,
+    ground: Res<GroundHeight>,
 ) {
     let dt = time.delta_secs();
 
@@ -307,7 +309,7 @@ pub fn shoot_weapons(
                 &mut materials,
                 player,
                 origin,
-                aim_dir * props.speed,
+                ground.along(origin, aim_dir) * props.speed,
                 props,
             );
             continue;
@@ -325,7 +327,7 @@ pub fn shoot_weapons(
 
             let end = if let Some(hit) = spatial.cast_ray(origin, dir3, weapon.range, true, &filter)
             {
-                let point = origin + dir * hit.distance;
+                let point = ground.carried(origin, origin + dir * hit.distance);
                 // Whatever it is — alien, wall, tower — `apply_damage` decides if it hurts.
                 damage_mw.write(
                     ApplyDamage::at(hit.entity, weapon.damage, DamageKind::Ballistic, point)
@@ -346,7 +348,7 @@ pub fn shoot_weapons(
                 }
                 point
             } else {
-                origin + dir * weapon.range
+                ground.carried(origin, origin + dir * weapon.range)
             };
 
             spawn_tracer(&mut commands, &mut meshes, &mut materials, origin, end);

@@ -1,0 +1,28 @@
+(
+    model_path: "packs/monsters/spider.glb",
+    // About 0.9 across and knee high to a player.
+    scale: 0.3,
+    model_type: Enemy((
+        // Fast and fragile; comes in numbers.
+        health: 45.0,
+        speed: 2.8,
+        coin_drop: 2,
+        touch_dps: 8.0,
+        attack: Melee,
+        loot_table: Some("alien"),
+    )),
+    hidden_nodes: [],
+    animations: {
+        Idle: "Idle",
+        Walk: "Walk",
+        Run: "Walk",
+        Punch: "Bite",
+        Death: "Death",
+        HitReact: "Hit",
+        Jump: "Jump",
+    },
+    animation_sources: [],
+    attachments: [],
+    hardpoints: {},
+    aim_bones: [],
+)

@@ -1,0 +1,15 @@
+// gis_03's own stories, loaded on top of the base level-flow ones (`MapFile::stories`).
+// Format: see assets/campaigns/main/level_01/level_01_story.ron. Placeholder texts.
+[
+    (
+        name: "gis_03 intro",
+        repeat: false,
+        init_facts: [
+            ("ObjectiveText", Text("Hold the low road. Do not let 8 of them through")),
+        ],
+        rules: [
+            (name: "started", criteria: [BoolIs(key: "LevelStarted", expected: true)]),
+        ],
+        consequences: [Emit(effect: "crawl:gis_03_crawl_intro")],
+    ),
+]

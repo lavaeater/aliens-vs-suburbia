@@ -5,7 +5,7 @@ use crate::animation::animation_plugin::{AnimationKey, CurrentAnimationKey};
 use crate::control::components::{CharacterControl, KinematicMovement};
 use crate::general::components::{Attack, CollisionLayer, Health, HittableTarget, TouchDamage};
 use crate::player::systems::spawn_players::FixSceneTransform;
-use avian3d::prelude::{
+use crate::physics::prelude::{
     AngularDamping, Collider, CollisionLayers, Friction, LinearDamping, LockedAxes, RigidBody,
 };
 use bevy::math::{EulerRot, Quat};
@@ -54,7 +54,7 @@ const fn locked_axes() -> LockedAxes {
     CurrentTile::default(),
     CurrentAnimationKey::new("aliens".into(), AnimationKey::Walk),
     AvoidWallsData::new(0.125, 0.125, 0.125, 5.0),
-    MoveTowardsGoalData { path: None },
+    MoveTowardsGoalData { next: None },
     AlienSightShape::default(),
     Attack::default(),
     Health::default(),

@@ -19,7 +19,7 @@ use leafwing_input_manager::prelude::*;
 use crate::animation::animation_plugin::{AnimationEvent, AnimationEventType, AnimationKey};
 use crate::control::bindings::{ControlBindings, PlayerAction};
 use crate::control::components::{CharacterControl, ControlCommand, GameInputBlock, InputKeyboard};
-use crate::control::gamepad_input::{InputGamepad, stick_to_world};
+use crate::control::gamepad_input::{InputGamepad, steer_aim, stick_to_world};
 use crate::game_state::PauseState;
 use crate::player::components::{AutoAim, Player, PlayerDead};
 use crate::player::events::building_events::{
@@ -154,6 +154,7 @@ fn move_buttons(actions: &ActionState<PlayerAction>) -> Vec2 {
 
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn player_input(
+    time: Res<Time>,
     settings: Res<GameSettings>,
     bindings: Res<ControlBindings>,
     mut players: Query<
@@ -210,13 +211,19 @@ pub fn player_input(
 
         // ── Aim: right stick if deflected, else follow the walk direction ───
         // Keyboard players aim with the mouse instead (`mouse_aim`, later in the chain).
+        // Eased toward the stick (`steer_aim`), and a stick only part way out holds the
+        // last aim: that is where it passes on its way back to the centre.
         if let Some(mut pad) = pad {
             let right = actions.axis_pair(&PlayerAction::Aim);
             pad.aim_active = right.length_squared() > 1e-4;
-            if pad.aim_active {
-                aim.0 = stick_to_world(right, yaw).normalize();
-            } else if moving {
-                aim.0 = move_dir.normalize();
+            let target = if pad.aim_active {
+                (right.length() >= bindings.aim_hold)
+                    .then(|| stick_to_world(right, yaw).normalize())
+            } else {
+                moving.then(|| move_dir.normalize())
+            };
+            if let Some(target) = target {
+                aim.0 = steer_aim(aim.0, target, bindings.aim_smoothing, time.delta_secs());
             }
         }
 

@@ -245,7 +245,9 @@ fn build_player_anim_graph(
         model_settings.anim_mapping,
         def_sig
     );
-    if *last_sig == sig {
+    // The store too: `load_animations` replaces it on every entry to `InGame`, so the
+    // second level starts without a "players" graph while the signature is unchanged.
+    if *last_sig == sig && store.graphs.contains_key("players") {
         return;
     }
 
