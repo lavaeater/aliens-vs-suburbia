@@ -71,6 +71,8 @@ count: 20 | rate: 30
 | `spawner_every` | seconds between spawners opening, `min-max` (default `20-40`) |
 | `spawner_waves` | waves each spawner sends out, drawn from `[waves]`, before it trickles (default 3) |
 | `width`, `height` | size of a *generated* map only. A hand-made map's size comes from `[tiles]`: the longest row and the number of rows. |
+| `base` | makes the map a **level on a base map** (`map::compose`, see below): the base map, inside `assets/` (`campaigns/gis/world/world.map`) |
+| `region` | the part of the base the level is played on, `x, y, width, height` in base map tiles (default: all of it). Its origin moves down to an even tile (the `[elevation]` lattice); the far edges stay |
 
 ### `[tiles]`
 
@@ -123,3 +125,32 @@ contain spaces (paths often do) but not `|`. An unknown key is an error.
 | waves | optional `enemy:` (enemy def; omitted = the built-in alien), `count:` (default 10), `rate:` (spawns per minute, default 20) |
 
 `x` is the column and `y` the row, both counted from 0 at the top left of `[tiles]`.
+
+### Levels on a base map: `base`, `region`, `[markers]`
+
+One imported suburb can hold several levels (`map::compose`, the campaign editor). The
+**base map** is an ordinary `.map`: tiles, storeys, elevation, roads, decorations. A level
+on it names it with `base:` and has **no `[tiles]`** of its own: the game cuts `region` out
+of the base, walls it round, clears the base's own `e`/`p`/`x` and stamps the level's
+markers in. Everything else (rules, `[waves]`, `stories`, `[placements]`) is the level's.
+
+```text
+[properties]
+name: The Blocks
+base: campaigns/gis/world/world.map
+region: 60, 20, 100, 90
+escape_limit: 8
+
+[markers]
+marker: goal | at: 110, 63
+marker: player | at: 112, 63
+marker: spawn | at: 60, 40
+```
+
+| section | fields |
+|---------|--------|
+| markers | `marker:` (`player`, `spawn` or `goal`) + `at: x, y`, in **base map** tiles (so moving the region does not move them). A marker opens its tile (a goal on a wall becomes floor). At most one goal; up to four player starts. |
+
+In a level on a base map, `[placements]` and `[decorations]` are in base map tiles too.
+`cargo run -- --split-level <level.map> <base.map> <out-level.map>` turns a whole level (an
+OpenStreetMap import) into a base and a level that composes back to the same tiles.

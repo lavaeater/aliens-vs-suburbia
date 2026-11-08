@@ -66,6 +66,51 @@ pub struct CampaignDoc {
     pub status: String,
 }
 
+/// A new level's story file (shows its intro crawl when the level starts, sets the
+/// objective line) and the crawl, for a level whose files are named `stem`.
+pub fn story_templates(stem: &str, title: &str) -> (String, String) {
+    let title: String = title
+        .chars()
+        .filter(|c| c.is_ascii() && *c != '"' && *c != '\\')
+        .collect();
+    let story = format!(
+        r#"// {stem}'s own stories, loaded on top of the base level-flow ones (`MapFile::stories`).
+// Made by the campaign editor; format: assets/campaigns/main/level_01/level_01_story.ron.
+[
+    (
+        name: "{stem} intro",
+        repeat: false,
+        init_facts: [
+            ("ObjectiveText", Text("Do not let them reach the goal")),
+        ],
+        rules: [
+            (name: "started", criteria: [BoolIs(key: "LevelStarted", expected: true)]),
+        ],
+        consequences: [Emit(effect: "crawl:{stem}_crawl_intro")],
+    ),
+]
+"#
+    );
+    let crawl = format!(
+        r#"// {stem}'s intro crawl, made by the campaign editor. Fields: see
+// assets/campaigns/main/level_01/level_01_crawl_intro.ron. Plain ASCII only.
+(
+    title: "{upper}",
+    lines: [
+        "Placeholder: what happens here, and why it matters.",
+        "",
+        "Hold the line...",
+    ],
+    style: Scroll(tilt: 0.0),
+    speed: 55.0,
+    backdrop: 0.85,
+)
+"#,
+        upper = title.to_uppercase()
+    );
+    (story, crawl)
+}
+
 /// The rectangle spanned by two tiles, both inside it.
 pub fn spanning(a: (i32, i32), b: (i32, i32)) -> Region {
     let (x0, x1) = (a.0.min(b.0), a.0.max(b.0));
@@ -385,6 +430,34 @@ impl CampaignDoc {
         }
     }
 
+    /// Give level `index` a story file and an intro crawl next to its map (from a template,
+    /// titled after the level), and name the story in the level. Files that exist are kept.
+    pub fn create_story(&mut self, index: usize) -> Result<(), String> {
+        let (Some(level), Some(entry)) = (self.levels.get(index), self.file.levels.get(index))
+        else {
+            return Ok(());
+        };
+        let map_path = disk_path(&level.path);
+        let stem = map_path
+            .file_stem()
+            .map(|s| s.to_string_lossy().into_owned())
+            .ok_or("the level has no file name")?;
+        let dir = map_path.parent().ok_or("the level has no folder")?;
+        std::fs::create_dir_all(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+        let (story_file, crawl_file) = story_templates(&stem, &entry.title);
+        let story = dir.join(format!("{stem}_story.ron"));
+        let crawl = dir.join(format!("{stem}_crawl_intro.ron"));
+        for (path, text) in [(&story, story_file), (&crawl, crawl_file)] {
+            if !path.exists() {
+                std::fs::write(path, text).map_err(|e| format!("{}: {e}", path.display()))?;
+            }
+        }
+        let story_ref = content_ref(&story.to_string_lossy());
+        self.edit_map(index, |map| map.stories = story_ref);
+        self.status = format!("Story and intro crawl in {}", dir.display());
+        Ok(())
+    }
+
     /// Write every dirty level and the campaign file.
     pub fn save(&mut self) -> Result<usize, String> {
         let mut written = 0;
@@ -493,6 +566,16 @@ mod tests {
         assert!(doc.levels[i].map.markers.iter().any(|m| m.kind == MarkerKind::Goal && (m.x, m.y) == (14, 14)));
         assert!(doc.remove_marker(i, 14, 14));
         assert_eq!(doc.levels[i].count(MarkerKind::Goal), 0);
+    }
+
+    #[test]
+    fn the_story_templates_parse() {
+        let (story, crawl) = story_templates("gis_09", "The \"Mall\"");
+        let stories = turbofacts::persistence::stories_from_ron(&story).expect("story parses");
+        assert_eq!(stories.len(), 1);
+        assert!(story.contains("crawl:gis_09_crawl_intro"));
+        let crawl: lava_ui_builder::crawl::CrawlSpec = ron::from_str(&crawl).expect("crawl parses");
+        assert_eq!(crawl.title, "THE MALL");
     }
 
     #[test]

@@ -198,6 +198,64 @@ fn stepper(
     });
 }
 
+/// The level's waves: count and rate steppers each, add (a copy of the last) and remove.
+fn waves(
+    parent: &mut ChildSpawnerCommands,
+    index: usize,
+    waves: &[crate::general::components::map_components::WaveDef],
+) {
+    use crate::general::components::map_components::WaveDef;
+    if waves.is_empty() {
+        text(parent, "Waves: the game's defaults", 11.0, LABEL);
+    }
+    for (n, wave) in waves.iter().enumerate() {
+        let enemy = if wave.enemy_def.is_empty() {
+            "alien".to_string()
+        } else {
+            std::path::Path::new(&wave.enemy_def)
+                .file_stem()
+                .map_or_else(|| wave.enemy_def.clone(), |s| s.to_string_lossy().into_owned())
+        };
+        strip(parent).with_children(|line| {
+            text(line, format!("{}. {enemy}", n + 1), 11.0, LABEL);
+            for (label, count, rate) in [("-", -2i32, 0i32), ("+", 2, 0), ("slower", 0, -2), ("faster", 0, 2)] {
+                button(line, label, false, move |doc, _, _| {
+                    doc.edit_map(index, |map| {
+                        if let Some(w) = map.waves.get_mut(n) {
+                            w.count = w.count.saturating_add_signed(count).max(1);
+                            w.spawn_rate_per_minute = (w.spawn_rate_per_minute + rate as f32).max(1.0);
+                        }
+                    });
+                });
+            }
+            text(
+                line,
+                format!("{} at {}/min", wave.count, wave.spawn_rate_per_minute),
+                11.0,
+                VALUE,
+            );
+        });
+    }
+    strip(parent).with_children(|line| {
+        button(line, "Add wave", false, move |doc, _, _| {
+            doc.edit_map(index, |map| {
+                let next = map.waves.last().cloned().unwrap_or_default();
+                map.waves.push(WaveDef {
+                    count: next.count.saturating_add(4),
+                    ..next
+                });
+            });
+        });
+        if !waves.is_empty() {
+            button(line, "Remove last", false, move |doc, _, _| {
+                doc.edit_map(index, |map| {
+                    map.waves.pop();
+                });
+            });
+        }
+    });
+}
+
 /// What the panel shows; it rebuilds when this changes.
 #[derive(PartialEq, Default)]
 pub struct PanelKey {
@@ -392,17 +450,21 @@ pub fn rebuild_panel(
                 level.map.escape_limit,
             );
             stepper(p, "Coins", i, 50, |m| m.coins, |m, v| m.coins = v, level.map.coins);
-            text(
-                p,
-                format!(
-                    "{} wave(s){}  stories: {}",
-                    level.map.waves.len(),
-                    if level.map.waves.is_empty() { " (the defaults)" } else { "" },
-                    if level.map.stories.is_empty() { "none" } else { level.map.stories.as_str() }
-                ),
-                10.0,
-                HELP,
-            );
+            waves(p, i, &level.map.waves);
+
+            heading(p, "STORY");
+            if level.map.stories.is_empty() {
+                strip(p).with_children(|line| {
+                    button(line, "Create story + intro crawl", false, move |doc, _, _| {
+                        if let Err(e) = doc.create_story(i) {
+                            doc.status = format!("No story: {e}");
+                        }
+                    });
+                });
+            } else {
+                text(p, level.map.stories.clone(), 10.0, HELP);
+                text(p, "Edit it (and its crawls) in a text editor.", 10.0, HELP);
+            }
         }
 
         heading(p, "CAMPAIGN");
