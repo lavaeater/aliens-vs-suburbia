@@ -8,10 +8,12 @@
 //! - `view.rs`: the world view, its camera and the mouse tools.
 //! - `analysis.rs`: the selected level composed and walked from its goal.
 //! - `panel.rs`: the side panel and the keys.
+//! - `play.rs`: F5 plays the selected level and comes back here afterwards.
 
 pub mod analysis;
 pub mod doc;
 pub mod panel;
+pub mod play;
 pub mod view;
 
 use bevy::prelude::*;
@@ -34,14 +36,23 @@ impl Plugin for CampaignEditorPlugin {
             .init_resource::<panel::Confirm>()
             .add_systems(
                 OnEnter(GameState::CampaignEditor),
-                (open_campaign, view::spawn_world, panel::spawn_panel).chain(),
+                (
+                    open_campaign,
+                    play::reselect_played,
+                    view::spawn_world,
+                    panel::spawn_panel,
+                )
+                    .chain(),
             )
+            .add_systems(OnEnter(GameState::Menu), play::back_to_editor)
+            .add_systems(OnEnter(GameState::Intermission), play::back_to_editor)
             .add_systems(OnExit(GameState::CampaignEditor), cleanup_state)
             .add_systems(
                 Update,
                 (
                     view::track_hover,
                     panel::handle_keys,
+                    play::play_key,
                     view::pan_and_zoom,
                     view::use_tool,
                     analysis::update_analysis,

@@ -80,6 +80,7 @@ pub fn spawn_panel(commands: Commands, theme: Res<LavaTheme>) {
             "1 player  2 spawn  3 goal  Esc: select tool",
             "S: suggest spawns  F: frame  PgUp/PgDn: order",
             "Del: remove level  Ctrl+S: save  Esc: leave",
+            "F5: save and play the selected level",
         ] {
             left.label(line, 11.0, HELP);
         }
@@ -317,6 +318,15 @@ pub fn rebuild_panel(
                 LABEL,
             );
             strip(p).with_children(|line| {
+                row(line, "Play (F5)".into(), false, OK).observe(
+                    |_: On<Activate>,
+                     mut commands: Commands,
+                     mut doc: ResMut<CampaignDoc>,
+                     mut roster: ResMut<crate::player_setup::state::PlayerRoster>,
+                     mut next: ResMut<NextState<GameState>>| {
+                        super::play::play_selected(&mut commands, &mut doc, &mut roster, &mut next);
+                    },
+                );
                 button(line, "Up", false, move |doc, _, _| doc.move_level(i, true));
                 button(line, "Down", false, move |doc, _, _| doc.move_level(i, false));
                 button(line, "Frame", false, move |doc, _, frame| {

@@ -53,9 +53,11 @@ fn take_shot(
                 .spawn(Screenshot::primary_window())
                 .observe(save_to_disk(shot.path.clone()));
             shot.taken_at = Some(now);
+            info!("--shot: {} at {now:.1} s", shot.path.display());
         }
-        // Give the screenshot a moment to reach the disk.
-        Some(taken) if now - taken > 1.5 => {
+        // Quit once the screenshot is on disk (a slow frame rate takes a while to read it
+        // back), or give up after a while.
+        Some(taken) if shot.path.is_file() || now - taken > 20.0 => {
             exit.write(AppExit::Success);
         }
         _ => {}
