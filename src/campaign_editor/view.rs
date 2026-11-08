@@ -583,6 +583,7 @@ pub fn marker_color(kind: MarkerKind, slot: usize) -> Color {
 }
 
 /// Regions, the selected level's markers and path check, and the drag preview.
+#[allow(clippy::too_many_arguments)]
 pub fn draw(
     mut gizmos: Gizmos,
     doc: Res<CampaignDoc>,

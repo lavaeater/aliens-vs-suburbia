@@ -1,0 +1,32 @@
+# A level cut from the gis base map (map::compose). Edit with:
+# cargo run -- --campaign-editor gis --level 3
+
+[properties]
+name: Fire Down Below
+stories: campaigns/gis/gis_03/gis_03_story.ron
+loot: 1-3 per 50
+escape_limit: 8
+weapons: defs/Grenade Launcher.ron, defs/Pistol.ron
+coins: 150
+townsfolk: 14
+base: campaigns/gis/world/world.map
+region: 40, 130, 96, 96
+
+[markers]
+# marker: player | spawn | goal | at: <x, y in the base map's tiles>
+marker: goal | at: 88, 178
+marker: player | at: 90, 178
+marker: spawn | at: 135, 161
+marker: spawn | at: 40, 221
+marker: spawn | at: 125, 130
+marker: spawn | at: 135, 217
+
+[placements]
+# at: x, y | def: <def under assets/, e.g. defs/Barrel.ron> | rotation: <degrees, steps of 45>
+
+[waves]
+# enemy: <enemy def under assets/, omit for the built-in alien> | count: <n> | rate: <per minute>
+enemy: defs/Bunny.ron | count: 12 | rate: 14
+enemy: defs/Spider.ron | count: 10 | rate: 10
+enemy: defs/Blue Demon.ron | count: 6 | rate: 6
+count: 24 | rate: 20

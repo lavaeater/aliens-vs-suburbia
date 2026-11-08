@@ -1,8 +1,9 @@
-// The GIS campaign: levels imported from OpenStreetMap (`src/map/osm`, docs/gis-levels.md),
-// played with their hills. The default campaign (`campaign::DEFAULT_CAMPAIGN`); the others
-// with `cargo run -- --campaign neighbourhood` or `--campaign main`. Format: see
-// `assets/campaigns/main/campaign.ron`. Placeholder texts for now. Plain ASCII only.
+// The GIS campaign: one OpenStreetMap import (`world/world.map`, from
+// assets/osm/map-01.osm.ron) cut into levels with the campaign editor
+// (cargo run -- --campaign-editor gis). The default campaign (`campaign::DEFAULT_CAMPAIGN`).
+// Placeholder texts. Plain ASCII only.
 (
+    base: "campaigns/gis/world/world.map",
     levels: [
         (
             map: "campaigns/gis/map_01/map_01.map",
@@ -14,10 +15,25 @@
             title: "The Blocks",
             tagline: "Placeholder: the same town, further north.",
         ),
+        (
+            map: "campaigns/gis/gis_03/gis_03.map",
+            title: "Fire Down Below",
+            tagline: "Placeholder: grenade launchers, and houses that burn.",
+        ),
+        (
+            map: "campaigns/gis/gis_04/gis_04.map",
+            title: "The Long Road",
+            tagline: "Placeholder: 300 coins of towers against everything.",
+        ),
+        (
+            map: "campaigns/gis/gis_05/gis_05.map",
+            title: "The Whole Town",
+            tagline: "Placeholder: they are everywhere now.",
+        ),
     ],
-    victory_title: "THE HILL IS HELD",
+    victory_title: "THE TOWN IS HELD",
     victory_lines: [
-        "Placeholder: the last of them rolls back down the slope.",
+        "Placeholder: the last spawner gutters out behind the shopping centre.",
         "The neighbourhood goes back to arguing about parking.",
     ],
 )

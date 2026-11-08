@@ -1,0 +1,15 @@
+// gis_04's intro crawl (placeholder). Fields: see
+// assets/campaigns/main/level_01/level_01_crawl_intro.ron. Plain ASCII only.
+(
+    title: "PLACEHOLDER: THE LONG ROAD",
+    lines: [
+        "The east side. Long streets, nowhere to hide.",
+        "",
+        "The council found 300 coins for defences. Spend them well.",
+        "",
+        "They are coming down every road at once...",
+    ],
+    style: Scroll(tilt: 0.0),
+    speed: 55.0,
+    backdrop: 0.85,
+)

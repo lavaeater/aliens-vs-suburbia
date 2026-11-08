@@ -1,0 +1,15 @@
+// gis_05's intro crawl (placeholder). Fields: see
+// assets/campaigns/main/level_01/level_01_crawl_intro.ron. Plain ASCII only.
+(
+    title: "PLACEHOLDER: THE WHOLE TOWN",
+    lines: [
+        "They are not coming down the roads any more.",
+        "",
+        "They are coming up out of the lawns, all over town.",
+        "",
+        "Find the spawners. Burn them out. Save who you can...",
+    ],
+    style: Scroll(tilt: 0.0),
+    speed: 55.0,
+    backdrop: 0.85,
+)

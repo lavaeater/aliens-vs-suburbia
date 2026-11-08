@@ -1,0 +1,49 @@
+// gis_05's own stories, loaded on top of the base level-flow ones (`MapFile::stories`).
+// Format: see assets/campaigns/main/level_01/level_01_story.ron. Placeholder texts.
+[
+    (
+        name: "gis_05 intro",
+        repeat: false,
+        init_facts: [
+            ("ObjectiveText", Text("Destroy every spawner. Keep the townsfolk alive")),
+        ],
+        rules: [
+            (name: "started", criteria: [BoolIs(key: "LevelStarted", expected: true)]),
+        ],
+        consequences: [Emit(effect: "crawl:gis_05_crawl_intro")],
+    ),
+    (
+        name: "Every spawner destroyed",
+        repeat: false,
+        init_facts: [
+            ("Objective.spawners", Bool(false)),
+        ],
+        rules: [
+            (
+                name: "none left",
+                criteria: [
+                    BoolIs(key: "LevelStarted", expected: true),
+                    IntCmp(key: "SpawnersLeft", op: Eq, value: 0),
+                ],
+            ),
+        ],
+        consequences: [SetFact(key: "Objective.spawners", value: Bool(true))],
+    ),
+    (
+        name: "The town is lost",
+        repeat: false,
+        rules: [
+            (
+                name: "nobody left",
+                criteria: [
+                    BoolIs(key: "LevelStarted", expected: true),
+                    BoolIs(key: "NeighboursLost", expected: true),
+                ],
+            ),
+        ],
+        consequences: [
+            SetFact(key: "LevelFailed", value: Bool(true)),
+            Emit(effect: "level_failed"),
+        ],
+    ),
+]
