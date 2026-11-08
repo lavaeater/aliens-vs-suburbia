@@ -36,6 +36,8 @@ pub(crate) mod game_state;
 pub(crate) mod general;
 pub(crate) mod gore;
 pub(crate) mod house_editor;
+pub(crate) mod campaign_editor;
+mod shot;
 pub(crate) mod infestation;
 pub(crate) mod items;
 pub(crate) mod loot;
@@ -188,6 +190,53 @@ fn parse_import_osm_args(args: &[String]) -> Option<Result<(), String>> {
     })
 }
 
+/// `--split-level <level.map> <base.map> <out-level.map> [--force]`: a whole level (an
+/// OpenStreetMap import) as a base map plus a level on it (`map::compose`), which a
+/// campaign can cut more levels from. Paths from the project root; the base has to be
+/// inside `assets/`, since the level names it.
+fn parse_split_level_args(args: &[String]) -> Option<Result<(), String>> {
+    let position = args.iter().position(|a| a == "--split-level")?;
+    let paths: Vec<&String> = args
+        .iter()
+        .skip(position.saturating_add(1))
+        .take_while(|a| !a.starts_with("--"))
+        .collect();
+    let force = args.iter().any(|a| a == "--force");
+    let [input, base, level] = paths.as_slice() else {
+        return Some(Err(
+            "--split-level needs <level.map> <base.map> <out-level.map>".into(),
+        ));
+    };
+    Some(split_level(input, base, level, force))
+}
+
+fn split_level(input: &str, base: &str, level: &str, force: bool) -> Result<(), String> {
+    use map::text_format;
+    let base_ref = assets::paths::content_ref(base);
+    if !base.trim_start_matches("./").starts_with("assets/") {
+        return Err(format!("{base}: the base map has to be under assets/"));
+    }
+    for out in [base, level] {
+        if std::path::Path::new(out).exists() && !force && out != input {
+            return Err(format!("{out} already exists; pass --force to overwrite it"));
+        }
+    }
+    let map = text_format::read_map_file(input)?;
+    let (base_map, level_map) = map::compose::split_level(&map, &base_ref);
+    for out in [base, level] {
+        if let Some(dir) = std::path::Path::new(out).parent() {
+            std::fs::create_dir_all(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+        }
+    }
+    text_format::write_map_file(base, &base_map)?;
+    text_format::write_map_file(level, &level_map)?;
+    println!(
+        "Split {input}: base {base}, level {level} ({} markers)",
+        level_map.markers.len()
+    );
+    Ok(())
+}
+
 fn print_help() {
     println!("Aliens vs Suburbia\n");
     println!("USAGE:");
@@ -198,6 +247,9 @@ fn print_help() {
     println!("                                             (--playground still works as an alias)");
     println!("  cargo run -- --asset-browser               Launch straight into the asset browser");
     println!("  cargo run -- --house-editor                Launch straight into the house editor");
+    println!("  cargo run -- --campaign-editor [name]      Launch straight into the campaign editor");
+    println!("  cargo run -- --shot <secs> <file.png>      Save a screenshot after <secs>, then quit");
+    println!("                                             (cut a base map into levels; default: the --campaign)");
     println!("  cargo run -- --play [--level N]            Launch straight into a match (level 1, or N)");
     println!("  cargo run -- --campaign <name>             Play assets/campaigns/<name> (default: {})", campaign::DEFAULT_CAMPAIGN);
     println!("  cargo run -- --fullscreen                  1920x1080 fullscreen (combines with the others)");
@@ -219,6 +271,10 @@ fn print_help() {
     );
     println!(
         "                                             (out defaults to <in> with the other extension)"
+    );
+    println!("  cargo run -- --split-level <level.map> <base.map> <out-level.map> [--force]");
+    println!(
+        "                                             A whole level as a base map + a level on it"
     );
     println!("  cargo run -- --import-osm <spec.ron | export.osm | export.json> [--force]");
     println!(
@@ -248,6 +304,7 @@ fn main() -> std::process::ExitCode {
     if let Some(result) = parse_create_map_args(&args)
         .or_else(|| parse_convert_map_args(&args))
         .or_else(|| parse_import_osm_args(&args))
+        .or_else(|| parse_split_level_args(&args))
     {
         return match result {
             Ok(()) => std::process::ExitCode::SUCCESS,
@@ -277,6 +334,8 @@ fn main() -> std::process::ExitCode {
     // Same idea for the asset browser: it is a tool screen you open, tweak in, and reload.
     let straight_to_asset_browser = args.iter().any(|a| a == "--asset-browser");
     let straight_to_house_editor = args.iter().any(|a| a == "--house-editor");
+    // `--campaign-editor [name]`: the name, if given, is the campaign to edit.
+    let campaign_editor_at = args.iter().position(|a| a == "--campaign-editor");
     // And into a match, skipping the menu and the player setup (one keyboard player, with a
     // connected pad handed to them by `assign_gamepads`' fallback).
     let straight_to_game = args.iter().any(|a| a == "--play");
@@ -360,6 +419,10 @@ fn main() -> std::process::ExitCode {
         app.add_plugins(fullscreen::FullscreenPlugin);
     }
 
+    if let Some(shot) = shot::from_args(&args) {
+        app.add_plugins(shot);
+    }
+
     if straight_to_asset_browser {
         app.add_systems(
             Startup,
@@ -381,6 +444,29 @@ fn main() -> std::process::ExitCode {
     // `--campaign main` plays `assets/campaigns/main` instead of the default.
     if let Some(name) = args.iter().skip_while(|a| *a != "--campaign").nth(1) {
         app.insert_resource(campaign::CampaignChoice(name.clone()));
+    }
+
+    if let Some(at) = campaign_editor_at {
+        if let Some(name) = args
+            .get(at.saturating_add(1))
+            .filter(|a| !a.starts_with("--"))
+        {
+            app.insert_resource(campaign::CampaignChoice(name.clone()));
+        }
+        if let Some(n) = args
+            .iter()
+            .skip_while(|a| *a != "--level")
+            .nth(1)
+            .and_then(|n| n.parse().ok())
+        {
+            app.insert_resource(campaign_editor::OpenAtLevel(n));
+        }
+        app.add_systems(
+            Startup,
+            |mut next: ResMut<NextState<game_state::GameState>>| {
+                next.set(game_state::GameState::CampaignEditor);
+            },
+        );
     }
 
     if let Some(number) = start_level {

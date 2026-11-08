@@ -42,6 +42,9 @@ pub fn check_all(report: &mut Report, defs: &Defs, tables: &Tables) {
                     stories_used.insert(content_ref(&map.stories));
                 }
                 check_map(report, path, &map, defs, tables);
+                if !map.base.is_empty() {
+                    check_on_base(report, path, &map);
+                }
             }
             Err(e) => report.error(path, format!("does not parse: {e}")),
         }
@@ -131,6 +134,57 @@ fn check_campaign(report: &mut Report, campaign_file: &str) {
                 campaign_file,
                 format!(
                     "{what}: title/tagline must be plain ASCII (the game font has nothing else)"
+                ),
+            );
+        }
+    }
+}
+
+/// A level on a base map (`map::compose`): the base is there, the level cuts from it, and
+/// it has what it needs to be played.
+fn check_on_base(report: &mut Report, file: &str, level: &MapFile) {
+    use crate::general::components::map_components::MarkerKind;
+    let base_path = disk_path(&level.base);
+    let base = match text_format::read_map_file(&base_path) {
+        Ok(base) => base,
+        Err(e) => {
+            report.error(file, format!("base map '{}': {e}", level.base));
+            return;
+        }
+    };
+    if let Err(e) = crate::map::compose::compose_level(&base, level) {
+        report.error(file, format!("cannot be cut from '{}': {e}", level.base));
+        return;
+    }
+    let count = |kind| level.markers.iter().filter(|m| m.kind == kind).count();
+    if count(MarkerKind::Player) == 0 {
+        report.error(file, "no player marker (`marker: player | at: x, y`)");
+    }
+    if level.infestation.is_none() {
+        if count(MarkerKind::Spawn) == 0 {
+            report.error(file, "no alien spawn marker (`marker: spawn | at: x, y`)");
+        }
+        if count(MarkerKind::Goal) != 1 {
+            report.error(
+                file,
+                format!("needs one goal marker, has {}", count(MarkerKind::Goal)),
+            );
+        }
+    }
+    for m in &level.markers {
+        let blocked = base
+            .tiles
+            .get(m.y as usize)
+            .and_then(|r| r.get(m.x as usize))
+            .is_none_or(|&t| !crate::map::reach::player_passable(t));
+        if blocked && m.kind != MarkerKind::Spawn {
+            report.warn(
+                file,
+                format!(
+                    "{} marker at {}, {} stands on a wall or nothing in the base; the tile is opened",
+                    m.kind.name(),
+                    m.x,
+                    m.y
                 ),
             );
         }

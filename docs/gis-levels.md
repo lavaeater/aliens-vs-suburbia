@@ -145,6 +145,32 @@ Then touch it up like any level: the `.map` in a text editor, or
 `cargo run --features map-editor -- --map-editor --file assets/maps/granvagen.map`.
 Rerunning the import overwrites hand edits, so settle the spec first.
 
+### 4. Cut it into levels (campaign editor)
+
+An import is a whole area. To play several levels on it, make it a campaign's **base
+map** and cut levels from it (`map::compose`, `docs/map-text-format.md`):
+
+```bash
+# A whole level -> base map + a level on all of it (lossless):
+cargo run -- --split-level assets/maps/granvagen.map \
+    assets/campaigns/granvagen/world/world.map \
+    assets/campaigns/granvagen/granvagen_01/granvagen_01.map
+# (write assets/campaigns/granvagen/campaign.ron listing that level, then)
+cargo run -- --campaign-editor granvagen
+```
+
+Or point the spec's `output` at the base map (`assets/osm/map-01.osm.ron` writes
+`campaigns/gis/world/world.map`): re-importing then updates every level cut from it, and
+the importer's own spawns, goal and start are ignored. Check that the levels' markers
+still stand where they should.
+
+In the editor (`src/campaign_editor/`): Shift+drag on the map draws a new level, click
+selects, drag moves, edges resize. With a level selected, 1 / 2 / 3 place player starts,
+alien spawns and the goal (right click removes), S puts spawns where roads leave the
+region, and the panel says whether every spawn reaches the goal and every player can walk
+to it. Titles, the escape limit and coins are in the panel. Ctrl+S saves; F5 saves and
+plays the level, and you come back to the editor when the match ends.
+
 ### What becomes what
 
 Code: `src/map/osm/` (`data.rs` reads the `.osm` XML or Overpass JSON, `geometry.rs` projects and rasterises,

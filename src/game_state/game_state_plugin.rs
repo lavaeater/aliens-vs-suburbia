@@ -33,6 +33,7 @@ use crate::general::systems::lights_systems::{
 use crate::general::systems::throwing_system::throwing;
 use crate::general::systems::touch_damage_system::touch_damage_system;
 use crate::gore::plugin::GorePlugin;
+use crate::campaign_editor::CampaignEditorPlugin;
 use crate::house_editor::plugin::HouseEditorPlugin;
 use crate::items::ItemsPlugin;
 use crate::loot::{LootPlugin, spawn_loot_on_death};
@@ -91,6 +92,7 @@ impl Plugin for GamePlugin {
                 PlayerSetupPlugin,
                 MapEditorPlugin,
                 HouseEditorPlugin,
+
                 CharacterEditorPlugin,
                 FactsPlugin,
                 FactsGameIntegrationPlugin,
@@ -100,7 +102,7 @@ impl Plugin for GamePlugin {
                 crate::ui::pause_menu::PauseMenuPlugin,
                 crate::campaign::CampaignPlugin,
             ))
-            .add_plugins(crate::infestation::InfestationPlugin)
+            .add_plugins((crate::infestation::InfestationPlugin, CampaignEditorPlugin))
             .init_resource::<LightingPreset>()
             .init_resource::<crate::general::systems::lights_systems::SkyLightSettings>()
             .add_systems(OnEnter(GameState::InGame), spawn_lights)

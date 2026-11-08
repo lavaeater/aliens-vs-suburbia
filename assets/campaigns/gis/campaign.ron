@@ -9,6 +9,11 @@
             title: "Up The Hill",
             tagline: "Placeholder: a real place, real hills, unreal visitors.",
         ),
+        (
+            map: "campaigns/gis/gis_02/gis_02.map",
+            title: "The Blocks",
+            tagline: "Placeholder: the same town, further north.",
+        ),
     ],
     victory_title: "THE HILL IS HELD",
     victory_lines: [

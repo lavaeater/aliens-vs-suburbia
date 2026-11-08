@@ -1,0 +1,15 @@
+// The Blocks's intro crawl (placeholder). Fields: see
+// assets/campaigns/main/level_01/level_01_crawl_intro.ron. Plain ASCII only.
+(
+    title: "PLACEHOLDER: THE BLOCKS",
+    lines: [
+        "Same town, further north: the apartment blocks.",
+        "",
+        "They came down four streets last time. They will again.",
+        "",
+        "Hold the courtyard...",
+    ],
+    style: Scroll(tilt: 0.0),
+    speed: 55.0,
+    backdrop: 0.85,
+)
