@@ -19,6 +19,16 @@ pub struct GroundHeight {
     /// World height at each lattice point. Empty = flat.
     points: Vec<Vec<f32>>,
     tile: f32,
+    /// The lowest and highest of `points`.
+    range: (f32, f32),
+}
+
+fn lowest_and_highest(points: &[Vec<f32>]) -> (f32, f32) {
+    let mut all = points.iter().flatten().copied();
+    let Some(first) = all.next() else {
+        return (0.0, 0.0);
+    };
+    all.fold((first, first), |(lo, hi), h| (lo.min(h), hi.max(h)))
 }
 
 impl GroundHeight {
@@ -32,12 +42,22 @@ impl GroundHeight {
     }
 
     pub fn new(map: &MapFile, tile: f32) -> Self {
-        let points = map
+        let points: Vec<Vec<f32>> = map
             .elevation
             .iter()
             .map(|row| row.iter().map(|cm| f32::from(*cm) / 100.0).collect())
             .collect();
-        Self { points, tile }
+        let range = lowest_and_highest(&points);
+        Self {
+            points,
+            tile,
+            range,
+        }
+    }
+
+    /// The lowest and highest ground, `(0, 0)` when flat.
+    pub const fn range(&self) -> (f32, f32) {
+        self.range
     }
 
     fn point(&self, col: usize, row: usize) -> f32 {

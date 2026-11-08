@@ -41,9 +41,29 @@ const HILL_LIGHT: Vec2 = Vec2::new(-0.71, -0.71);
 /// How much brighter a slope gets per unit of its normal leaning towards [`HILL_LIGHT`].
 const HILL_CONTRAST: f32 = 8.0;
 
+/// How much darker the lowest ground and lighter the highest is than the middle: valleys
+/// sink and hilltops lift, which reads even where the slope light doesn't (a broad rise, a
+/// plateau).
+const ALTITUDE_CONTRAST: f32 = 0.15;
+
 fn hill_shade(normal: Vec3) -> [f32; 4] {
     let lean = normal.xz().dot(HILL_LIGHT);
     let shade = (1.0_f32 + lean * HILL_CONTRAST).clamp(0.4, 1.6);
+    [shade, shade, shade, 1.0]
+}
+
+/// [`hill_shade`], times the altitude tint: `height` between `range`'s lowest (darker by
+/// [`ALTITUDE_CONTRAST`]) and highest (lighter by as much). Flat ground is untouched.
+fn ground_shade(normal: Vec3, height: f32, (lowest, highest): (f32, f32)) -> [f32; 4] {
+    let [slope, _, _, _] = hill_shade(normal);
+    let span = highest - lowest;
+    let altitude = if span > f32::EPSILON {
+        let at = ((height - lowest) / span).clamp(0.0, 1.0);
+        1.0 + ALTITUDE_CONTRAST * (2.0 * at - 1.0)
+    } else {
+        1.0
+    };
+    let shade = slope * altitude;
     [shade, shade, shade, 1.0]
 }
 
@@ -64,10 +84,11 @@ impl FloorMesh {
         let (x0, x1) = (tile * (col as f32 - 0.5), tile * (col as f32 + 0.5));
         let (z0, z1) = (tile * (row as f32 - 0.5), tile * (row as f32 + 0.5));
         for (x, z) in [(x0, z0), (x1, z0), (x1, z1), (x0, z1)] {
-            self.positions.push([x, y + ground.height(x, z), z]);
+            let height = ground.height(x, z);
+            self.positions.push([x, y + height, z]);
             let normal = ground.normal(x, z);
             self.normals.push(normal.to_array());
-            self.colors.push(hill_shade(normal));
+            self.colors.push(ground_shade(normal, height, ground.range()));
         }
         self.uvs
             .extend_from_slice(&[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]);
@@ -78,10 +99,11 @@ impl FloorMesh {
     /// A loose vertex on the ground at world `(x, z)`, `lift` above the floor; its index.
     pub(crate) fn vertex(&mut self, x: f32, z: f32, lift: f32, ground: &GroundHeight) -> u32 {
         let index = self.positions.len() as u32;
-        self.positions.push([x, lift + ground.height(x, z), z]);
+        let height = ground.height(x, z);
+        self.positions.push([x, lift + height, z]);
         let normal = ground.normal(x, z);
         self.normals.push(normal.to_array());
-        self.colors.push(hill_shade(normal));
+        self.colors.push(ground_shade(normal, height, ground.range()));
         self.uvs.push([x, z]);
         index
     }
@@ -186,6 +208,18 @@ mod tests {
         let south_east = Vec3::new(0.1, 1.0, 0.1).normalize();
         assert!(hill_shade(north_west)[0] > 1.2);
         assert!(hill_shade(south_east)[0] < 0.8);
+    }
+
+    #[test]
+    fn higher_ground_is_lighter_and_lower_darker() {
+        let range = (0.0, 4.0);
+        let low = ground_shade(Vec3::Y, 0.0, range)[0];
+        let middle = ground_shade(Vec3::Y, 2.0, range)[0];
+        let high = ground_shade(Vec3::Y, 4.0, range)[0];
+        assert!((middle - 1.0).abs() < 1e-6);
+        assert!((low - (1.0 - ALTITUDE_CONTRAST)).abs() < 1e-6);
+        assert!((high - (1.0 + ALTITUDE_CONTRAST)).abs() < 1e-6);
+        assert_eq!(ground_shade(Vec3::Y, 3.0, (0.0, 0.0)), [1.0; 4], "flat: no tint");
     }
 
     #[test]
