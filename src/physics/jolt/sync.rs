@@ -34,9 +34,10 @@ pub(super) struct BodyData {
     gravity: Option<&'static GravityScale>,
 }
 
-fn parts<'a>(b: &'a BodyDataItem<'_, '_>) -> BodyParts<'a> {
+fn parts<'a>(b: &'a BodyDataItem<'_, '_>, scale: Vec3) -> BodyParts<'a> {
     BodyParts {
         collider: b.collider,
+        scale,
         rigid_body: b.rigid_body.copied(),
         position: b.position.0,
         rotation: b.rotation.0,
@@ -93,7 +94,7 @@ pub(super) fn create_bodies(
             body.position.0 = translation;
             body.rotation.0 = rotation;
         }
-        let parts = parts(&body);
+        let parts = parts(&body, Vec3::ONE);
         rebuild |= jolt.layers.learn(parts.layers, parts.moving());
     }
     if rebuild {
@@ -102,20 +103,30 @@ pub(super) fn create_bodies(
         touching.after_rebuild();
         for entity in &existing {
             let Ok(body) = bodies.get_mut(entity) else { continue };
-            if let Some(id) = create_body(&mut jolt, entity, &parts(&body)) {
+            let scale = global_scale(&helper, entity);
+            if let Some(id) = create_body(&mut jolt, entity, &parts(&body, scale)) {
                 commands.entity(entity).insert(JoltBody(id));
             }
         }
     }
     for entity in &fresh {
         let Ok(body) = bodies.get_mut(entity) else { continue };
-        if let Some(id) = create_body(&mut jolt, entity, &parts(&body)) {
+        let scale = global_scale(&helper, entity);
+        if let Some(id) = create_body(&mut jolt, entity, &parts(&body, scale)) {
             commands.entity(entity).insert(JoltBody(id));
         }
     }
     if rebuild || fresh.iter().len() > 32 {
         jolt.world.optimize_broad_phase();
     }
+}
+
+/// What a body's collider is scaled by: its entity's global scale, as Avian's. Taken when the
+/// body is made; a scale changed later isn't followed.
+fn global_scale(helper: &TransformHelper, entity: Entity) -> Vec3 {
+    helper
+        .compute_global_transform(entity)
+        .map_or(Vec3::ONE, |global| global.to_scale_rotation_translation().0)
 }
 
 /// A collider removed (or its entity despawned) takes its body with it.

@@ -6,6 +6,7 @@ use bevy::prelude::*;
 use bevy::time::TimeUpdateStrategy;
 
 use super::*;
+use super::world::JoltBody;
 
 #[derive(Default, Clone, Copy)]
 enum Layer {
@@ -302,4 +303,54 @@ fn editing_a_fresh_position_keeps_the_spawn_transform() {
     run(&mut app, 1);
     let p = position(&app, walker);
     assert!((p - Vec3::new(12.0, 3.0, -7.0)).length() < 0.01, "{p}");
+}
+
+/// A transform's scale applies to its collider, as on Avian: `adopt_walkers` makes a collider
+/// `1 / scale` tall for a small-scaled character, which unscaled is a body hundreds of metres tall,
+/// heavier than Jolt takes. A static box under a scaled parent, a scaled dynamic tall box.
+#[test]
+fn a_transforms_scale_applies_to_its_collider() {
+    let mut app = app();
+    let parent = app
+        .world_mut()
+        .spawn(Transform::from_scale(Vec3::splat(0.5)))
+        .id();
+    let block = app
+        .world_mut()
+        .spawn((
+            RigidBody::Static,
+            Collider::cuboid(4.0, 4.0, 4.0),
+            Transform::from_xyz(0.0, 0.0, 10.0).with_scale(Vec3::new(1.0, 0.5, 1.0)),
+            ChildOf(parent),
+        ))
+        .id();
+    let tall = app
+        .world_mut()
+        .spawn((
+            RigidBody::Dynamic,
+            GravityScale(0.0),
+            Collider::cuboid(0.5, 800.0, 0.5),
+            Transform::from_xyz(20.0, 0.0, 0.0).with_scale(Vec3::splat(0.01)),
+        ))
+        .id();
+    run(&mut app, 2);
+    assert!(app.world().get::<JoltBody>(tall).is_some(), "Jolt took the tall body");
+    let tops = app
+        .world_mut()
+        .run_system_cached(|spatial: SpatialQuery| {
+            [Vec3::new(0.0, 50.0, 5.0), Vec3::new(20.0, 50.0, 0.0)].map(|origin| {
+                spatial
+                    .cast_ray(origin, Dir3::NEG_Y, 100.0, true, &SpatialQueryFilter::default())
+                    .map(|hit| (hit.entity, 50.0 - hit.distance))
+            })
+        })
+        .expect("the system runs");
+    // The block: world scale (0.5, 0.25, 0.5), so 1 m high around y = 0, at z = 5 and 1 m deep.
+    let (hit, top) = tops[0].expect("the ray hits the block");
+    assert_eq!(hit, block);
+    assert!((top - 0.5).abs() < 0.06, "{top}");
+    // The tall body: 8 m high, not 800.
+    let (hit, top) = tops[1].expect("the ray hits the tall body");
+    assert_eq!(hit, tall);
+    assert!((top - 4.0).abs() < 0.06, "{top}");
 }

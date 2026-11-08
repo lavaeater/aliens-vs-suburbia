@@ -46,6 +46,7 @@ pub(crate) mod map_editor_tui;
 pub(crate) mod model_settings;
 pub(crate) mod music;
 mod perf;
+mod smoke;
 pub(crate) mod physics;
 pub(crate) mod player;
 pub(crate) mod player_setup;
@@ -209,6 +210,7 @@ fn print_help() {
     println!("  cargo run -- --play --retro-shots <dir>    ... a screenshot per palette into <dir>, then quit");
     println!("  cargo run --features map-editor -- --map-editor [--file <path>]");
     println!("                                             Launch the map editor TUI");
+    println!("  cargo run -- --play --smoke                Kill, blow up and build on their own (a crash / load test)");
     println!("  cargo run -- --validate                    Check every content file and what it points at");
     println!("  cargo run -- --create-map [OPTIONS]        Generate a map file");
     println!("  cargo run -- --convert-map <in> [<out>] [--force]");
@@ -349,6 +351,9 @@ fn main() -> std::process::ExitCode {
 
     if args.iter().any(|a| a == "--perf") {
         app.add_plugins(perf::PerfPlugin);
+    }
+    if args.iter().any(|a| a == "--smoke") {
+        app.add_plugins(smoke::SmokePlugin);
     }
 
     if fullscreen {

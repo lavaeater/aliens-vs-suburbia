@@ -72,6 +72,8 @@ fn make_world(layers: &LayerTable) -> PhysicsWorld {
 /// Everything a body is made from.
 pub(super) struct BodyParts<'a> {
     pub collider: &'a Collider,
+    /// The entity's global scale, which the collider is built at.
+    pub scale: Vec3,
     pub rigid_body: Option<RigidBody>,
     pub position: Vec3,
     pub rotation: Quat,
@@ -128,7 +130,9 @@ pub(super) fn create_body(jolt: &mut JoltWorld, entity: Entity, parts: &BodyPart
             settings = settings.allowed_dofs(locked.allowed());
         }
     }
-    match jolt.world.create_body(parts.collider.shape(), &settings) {
+    let scaled = parts.collider.scaled(parts.scale);
+    let collider = scaled.as_ref().unwrap_or(parts.collider);
+    match jolt.world.create_body(collider.shape(), &settings) {
         Ok(id) => {
             jolt.entities.insert(id, entity);
             Some(id)

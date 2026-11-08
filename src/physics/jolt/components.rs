@@ -187,6 +187,42 @@ impl Collider {
         }
     }
 
+    /// The collider at `scale`, as Avian scales a collider by its entity's global scale (a
+    /// transform's scale applies to its collider). Round shapes take the largest scale across
+    /// them. `None` at scale one.
+    pub(super) fn scaled(&self, scale: Vec3) -> Option<Self> {
+        let scale = scale.abs();
+        if scale.abs_diff_eq(Vec3::ONE, 1e-4) {
+            return None;
+        }
+        let across = scale.x.max(scale.z);
+        let points = |points: &[Vec3]| Arc::new(points.iter().map(|p| *p * scale).collect());
+        let kind = match &self.kind {
+            ColliderKind::Cuboid(half) => {
+                ColliderKind::Cuboid((*half * scale).max(Vec3::splat(MIN_EXTENT)))
+            }
+            ColliderKind::Sphere(r) => ColliderKind::Sphere(r * scale.max_element()),
+            ColliderKind::Capsule { radius, half_length } => ColliderKind::Capsule {
+                radius: radius * across,
+                half_length: half_length * scale.y,
+            },
+            ColliderKind::Cylinder { radius, half_height } => ColliderKind::Cylinder {
+                radius: radius * across,
+                half_height: half_height * scale.y,
+            },
+            ColliderKind::Cone { radius, half_height } => ColliderKind::Cone {
+                radius: radius * across,
+                half_height: half_height * scale.y,
+            },
+            ColliderKind::ConvexHull(hull) => ColliderKind::ConvexHull(points(hull)),
+            ColliderKind::TriangleMesh { vertices, triangles } => ColliderKind::TriangleMesh {
+                vertices: points(vertices),
+                triangles: Arc::clone(triangles),
+            },
+        };
+        Some(Self::new(kind))
+    }
+
     pub fn kind(&self) -> &ColliderKind {
         &self.kind
     }
