@@ -296,7 +296,7 @@ plan works on 0.19.
 | 5 | C4 rules, waves, story stubs, validation panel | 3 | **Done** except weapons, loot and picking a wave's enemy (edit the `.map` for those) |
 | 6 | Cut 4-6 levels, write their stories, playtest the campaign | 4, 5 | Started: `map_01` (all of it) and `gis_02` (the blocks). Consider making level 1 a smaller region: all 236 x 236 is a big first level |
 | - | Height tint (any time, about an hour) | - | **Done** (`floor_mesh::ground_shade`, +/-15%) |
-| 7 | Smoke from fires + house fires (sprinkles) | - |
+| 7 | Smoke from fires + house fires (sprinkles) | - | **Done**: `smoke.ron` over every fire field, `gore::house_fire` (a fire next to a building sets it alight: roof flames, `smoke_column.ron`, glow). Not yet: a smoke grenade, smoke that blocks sight (`bevy_smokescreen`, Bevy 0.20) |
 | 8 | NPCs: places, walking, `bevy_behave` tree v1 | - | **Done** (`src/townsfolk/`): doors and street spots from the map, errands, lingering, home, indoors, fleeing. Not yet: schedules, traits, hiding from danger in the nearest door, stories about who survived |
 | 9 | Fog: distance fog, then valley fog | - |
 | 10 | Bevy 0.20 (after seedling), then `bevy_grass`, `bevy_smokescreen` | seedling |

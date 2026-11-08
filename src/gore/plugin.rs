@@ -31,6 +31,7 @@ impl Plugin for GorePlugin {
             .add_message::<SpawnFire>()
             .add_message::<PlaySfx>()
             .init_resource::<GoreBudget>()
+            .init_resource::<crate::gore::house_fire::Buildings>()
             .init_resource::<AtrocityMeter>()
             .init_resource::<BarkState>()
             .init_resource::<DespairSettings>()
@@ -61,6 +62,9 @@ impl Plugin for GorePlugin {
                     cycle_gib_style,
                     destroy_damaged_terrain,
                     spawn_fire_fields,
+                    crate::gore::house_fire::remember_buildings,
+                    crate::gore::house_fire::catch_fire,
+                    crate::gore::house_fire::burn_houses,
                     tick_fire_fields,
                     tick_ephemeral,
                     emit_combat_sfx,

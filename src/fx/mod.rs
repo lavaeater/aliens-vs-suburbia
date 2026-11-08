@@ -65,6 +65,10 @@ pub struct FxAssets {
     dust_burst: Handle<ParticlesAsset>,
     /// Looping; spawned by `gore::fire` for each fire field.
     pub fire: Handle<ParticlesAsset>,
+    /// Looping; over every fire field (`gore::fire`).
+    pub smoke: Handle<ParticlesAsset>,
+    /// Looping; a burning house's column (`gore::house_fire`).
+    pub smoke_column: Handle<ParticlesAsset>,
 }
 
 impl FxAssets {
@@ -123,6 +127,8 @@ fn setup_fx_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
         explosion: asset_server.load("fx/explosion.ron"),
         dust_burst: asset_server.load("fx/dust_burst.ron"),
         fire: asset_server.load("fx/fire.ron"),
+        smoke: asset_server.load("fx/smoke.ron"),
+        smoke_column: asset_server.load("fx/smoke_column.ron"),
     });
 }
 
@@ -212,7 +218,7 @@ mod tests {
             }
         }
         assert!(
-            checked >= 7,
+            checked >= 9,
             "expected every effect in assets/fx, found {checked}"
         );
     }

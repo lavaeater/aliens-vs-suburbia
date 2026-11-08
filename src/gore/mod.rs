@@ -10,6 +10,7 @@ pub(crate) mod components;
 pub(crate) mod despair;
 pub(crate) mod dismember;
 pub(crate) mod fire;
+pub(crate) mod house_fire;
 pub(crate) mod gibs;
 pub(crate) mod plugin;
 pub(crate) mod sfx;

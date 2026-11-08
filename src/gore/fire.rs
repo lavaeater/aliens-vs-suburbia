@@ -40,6 +40,8 @@ pub struct FireField {
     /// The flames' particle system, its own entity so it can outlive the field by
     /// the time its last flames take to die out.
     flames: Option<Entity>,
+    /// The smoke over it (`assets/fx/smoke.ron`), likewise.
+    smoke: Option<Entity>,
 }
 
 impl FireField {
@@ -48,6 +50,8 @@ impl FireField {
     /// How long the flames keep going after the field burns out: the longest particle
     /// lifetime in `fire.ron` (embers).
     const FLAME_LINGER: f32 = 1.2;
+    /// How long the smoke goes on after: its longest puff in `smoke.ron`.
+    const SMOKE_LINGER: f32 = 4.4;
 
     pub fn new(duration: f32, dps: f32, radius: f32) -> Self {
         Self {
@@ -56,6 +60,7 @@ impl FireField {
             dps,
             radius,
             flames: None,
+            smoke: None,
         }
     }
 }
@@ -107,6 +112,17 @@ pub fn spawn_fire_fields(
                         1.0,
                         fire.radius,
                     )),
+                ))
+                .id()
+        });
+        field.smoke = fx.as_ref().map(|fx| {
+            commands
+                .spawn((
+                    Name::new("Smoke"),
+                    Particles3d(fx.smoke.clone()),
+                    Transform::from_translation(fire.position + Vec3::Y * 0.4).with_scale(
+                        Vec3::new(fire.radius.max(0.6), 1.0, fire.radius.max(0.6)),
+                    ),
                 ))
                 .id()
         });
@@ -174,6 +190,11 @@ pub fn tick_fire_fields(
                 commands
                     .entity(flames)
                     .insert(StopFx::after(FireField::FLAME_LINGER));
+            }
+            if let Some(smoke) = field.smoke {
+                commands
+                    .entity(smoke)
+                    .insert(StopFx::after(FireField::SMOKE_LINGER));
             }
             if let Some(fa) = fire_assets.as_ref() {
                 let scorch = commands
