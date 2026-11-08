@@ -211,26 +211,45 @@ mod tests {
         assert!(normal.z.abs() < 1e-6, "{normal}");
     }
 
-    #[test]
-    fn the_terrain_collider_lies_where_the_ground_is() {
-        // Different slopes along the two axes, so a swapped grid can't pass.
+    /// Different slopes along the two axes, so a swapped grid can't pass.
+    fn tilted_hill() -> GroundHeight {
         let elevation = (0..6)
             .map(|row| (0..4).map(|col| col * 30 + row * 110).collect())
             .collect();
-        let hill = ground(elevation);
+        ground(elevation)
+    }
+
+    const PROBES: [(f32, f32); 4] = [(2.0, 2.0), (6.0, 3.0), (4.0, 9.0), (1.5, 10.5)];
+
+    /// A lone shape can't be ray cast on Jolt: the terrain in a world.
+    #[test]
+    fn the_terrain_collider_lies_where_the_ground_is() {
+        use crate::physics::jolt::tests::{app, run};
+        use crate::physics::prelude::{RigidBody, SpatialQuery, SpatialQueryFilter};
+        use bevy::ecs::system::RunSystemOnce;
+        use bevy::prelude::{Dir3, Transform};
+
+        let hill = tilted_hill();
         let (collider, at) = hill.terrain().unwrap();
-        for (x, z) in [(2.0, 2.0), (6.0, 3.0), (4.0, 9.0), (1.5, 10.5)] {
-            let (toi, _) = collider
-                .cast_ray(
-                    at,
-                    Quat::IDENTITY,
-                    Vec3::new(x, 50.0, z),
-                    Vec3::NEG_Y,
-                    100.0,
-                    true,
-                )
+        let mut app = app();
+        app.world_mut()
+            .spawn((RigidBody::Static, collider, Transform::from_translation(at)));
+        run(&mut app, 2);
+        for (x, z) in PROBES {
+            let hit = app
+                .world_mut()
+                .run_system_once(move |spatial: SpatialQuery| {
+                    spatial.cast_ray(
+                        Vec3::new(x, 50.0, z),
+                        Dir3::NEG_Y,
+                        100.0,
+                        true,
+                        &SpatialQueryFilter::default(),
+                    )
+                })
+                .expect("the system runs")
                 .expect("the ray hits the terrain");
-            let height = 50.0 - toi;
+            let height = 50.0 - hit.distance;
             let wanted = hill.height(x, z);
             assert!(
                 (height - wanted).abs() < 0.02,

@@ -194,7 +194,7 @@ both clips; Back always is: with no `WalkBack` clip, `AnimationStore::nodes`/`sp
 
 ### Physics & Collision
 
-Uses **avian3d 0.7**, always through `crate::physics::prelude` (`src/physics/`), never `avian3d` directly: the Jolt port (`docs/jolt-port.md`, branch `jolt`) swaps the backend behind it. A new physics name goes into the prelude of every backend. Collision layers in `src/general/components/mod.rs`: `ImpassableAll`, `Floor`, `Ball`, `Alien`, `Player`, `BuildIndicator`, `Sensor`, `PlayerAimSensor`, `AlienSpawnPoint`, `AlienGoal`.
+Uses **Jolt** (`oxijolt` 1.4, Jolt 5.6), always through `crate::physics::prelude` (`src/physics/`), under Avian's names (the game ran on avian3d until 2026-11-08; `docs/jolt-port.md`): `Collider`, `RigidBody`, `Position`, `LinearVelocity`, `SpatialQuery`, `CollisionLayers`, ... as before, backed by `src/physics/jolt/`. A new physics name goes into the backend and the prelude. Differences from Avian worth knowing (friction combines by geometric mean, density 1000, rounded boxes, a scale changed after spawn isn't followed) are listed in `docs/jolt-port.md`. The physics step runs in `FixedPostUpdate` in the `PhysicsStep` set; `--perf` logs `physics/step`; `--smoke` drives towers, kills, blasts and throws on its own (a crash / load test). Collision layers in `src/general/components/mod.rs`: `ImpassableAll`, `Floor`, `Ball`, `Alien`, `Player`, `BuildIndicator`, `Sensor`, `PlayerAimSensor`, `AlienSpawnPoint`, `AlienGoal`.
 
 ### AI Pattern
 
@@ -207,14 +207,13 @@ Each behavior has its own submodule under `src/ai/`. When the flow field has no 
 - **`ChildOf`** replaces `Parent` for parent traversal.
 - **`despawn()`** recursively despawns children by default.
 - **`Query::single()`** returns `Result` (replaces `get_single()`).
-- **`PhysicsSystems::Writeback`** replaces `PhysicsSet::Sync` for camera ordering.
 - **`AnimationTarget` / `AnimationGraph`**: clips are driven via UUID-based target IDs. External animation files only work if the target model shares identical bone paths (no automatic retargeting).
 - **Font**: Bevy's default embedded font is ASCII-only. All UI text must use plain ASCII — no Unicode arrows, em-dashes, emoji, etc.
 
 ### Key Dependencies
 
 - `bevy 0.19` — game engine
-- `avian3d 0.7` — 3D physics (`parry-f32` feature required)
+- `oxijolt 1.4` — Jolt physics (`glam032` feature), behind `src/physics/`
 - `pathfinding 4.6.0` — the `Grid` type, and A* for `DestroyTheMap`
 - `bevy_mod_outline 0.13` — entity outlines
 - `bevy-inspector-egui 0.37` — runtime debug inspector

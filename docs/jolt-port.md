@@ -1,10 +1,11 @@
 # Porting physics to Jolt
 
-Plan for moving the game from Avian 0.7 to Jolt (oxijolt 1.4), in parallel with the gameplay
-work on `playtest`. Why: `docs/jolt-spike.md` (step 4-6 times faster on a game-shaped scene) and,
+**Done 2026-11-08: the game runs on Jolt only; Avian is gone.** This was the plan for moving the
+game from Avian 0.7 to Jolt (oxijolt 1.4), in parallel with the gameplay work on `playtest`; it is
+kept for the history and the differences below. Why: `docs/jolt-spike.md` (step 4-6 times faster on a game-shaped scene) and,
 later, Jolt's wheeled and tracked vehicles and its `CharacterVirtual`.
 
-## How it runs in parallel
+## How it ran in parallel
 
 - Branch `jolt`, cut from `playtest`. `playtest` is merged *into* `jolt` often (not the other
   way, until the end), so gameplay never waits on the port.
@@ -72,10 +73,31 @@ Queries filter by object layer list, which is computed from the mask the same wa
    Position/velocity round trips, layers, ray and shape casts, contact events and
    `CollidingEntities`, sensors, interpolation. Sized buffers, and an incomplete `StepReport`
    logged.
-3. **The game on Jolt**: `cargo run --features physics-jolt`; fix what the facade didn't cover,
+2b. **Facade on `playtest`, hills** (done 2026-11-07): the facade was redone on `playtest` and
+   `playtest` merged in; the backend gained `Collider::heightfield`, `LayerMask::add`/`remove`
+   and the prelude `local_size(&Collider)` (both backends) for `ground_follow`.
+3. **The game on Jolt** (started 2026-11-07; the gis level plays, `--play --retro-shots <dir>`
+   on both backends gives the same picture): `cargo run --features physics-jolt`; fix what the
+   facade didn't cover,
    then tune feel (friction, damping, throw arcs, gib bounce: Jolt's defaults differ) against
-   Avian side by side.
-4. **Switch**: Jolt default, playtest, Avian removed, branch merged.
+   Avian side by side. Feel: looks fine in a first playtest (2026-11-08).
+   **Measured 2026-11-08** (release, `--perf`, the gis level with its waves raised to 300 aliens
+   at 600 a minute, about 2100 static bodies; median of 5 s averages once the aliens are out):
+
+   | Aliens alive | Avian step | Jolt step | Avian frame | Jolt frame |
+   |---|---|---|---|---|
+   | 100 (the game's cap, `map_systems.rs`) | 2.14 ms | 0.41 ms | 16.7 ms | 16.7 ms |
+   | 300 (cap raised for the test) | 38.0 ms | 1.29 ms | 220 ms | 20.6 ms |
+
+   5x at the cap, 29x at 300, where Avian's step nears the 50 ms it covers and the fixed loop
+   runs several steps a frame (4-5 fps); Jolt stays near 50 fps. The 100 cap is no longer a
+   physics limit on Jolt.
+4. **Switch** (done 2026-11-08): checked first with `--smoke` (towers, kills, blasts, throws)
+   on the gis level, `main` levels 1 and 3 and the infestation level, and the character editor,
+   on both backends. That found the backend ignoring a transform's scale (fixed: colliders are
+   built at the entity's global scale), bodies too light for Jolt (masses held to its range) and
+   an editor panic (the flashlight's despawn racing Bevy's light bounds; not physics). Then `avian3d` and the `physics-jolt` feature were
+   removed: Jolt is the only engine, `src/physics/jolt/` behind the same prelude.
 5. **Jolt-only features**: `CharacterVirtual` for players and neighbours (stairs, slopes, no
    hand-rolled capsule); vehicles (`WheeledVehicleSettings::car`, tracked, motorcycles); ragdolls
    for kills as an alternative to `gore::dismember`.
@@ -99,6 +121,21 @@ Queries filter by object layer list, which is computed from the mask the same wa
 - **`Transform` writes** to a body after spawn aren't followed (only `Position`/`Rotation`
   are); nothing in the game does that today.
 - **Interpolation** is the backend's own (`interpolation.rs`), not `bevy_transform_interpolation`.
+- **Mass limits**: Jolt takes a dynamic body of 1 g to 1000 t, Avian any. A body outside gets
+  its bounding box's mass held to that range (`world::held_mass`): a hunter's capsule at a small
+  model's scale was refused every step before.
+- **Scale**: a collider is built at its entity's global scale when its body is made, as Avian
+  does (`Collider::scaled`); a scale changed afterwards isn't followed. Round shapes take the
+  largest scale across them.
+- **Spawn pose**: a new collider's `Position`/`Rotation` are taken from its `Transform` the
+  moment the `Collider` is added (`sync::seed_pose`), as Avian does, not at body creation:
+  `ground_follow` edits `Position.y` before the first step, which put every character at the
+  map's origin. Children still get their world pose at body creation.
+- **Terrain** (`Collider::heightfield`, the hills) is a static Jolt triangle mesh with parry's
+  layout and diagonal, not Jolt's heightfield (square only, quantised heights). It has no
+  local ray cast (oxijolt has none for a lone shape), so `Collider::cast_ray` is Avian-only;
+  `map::ground`'s terrain test runs on Jolt through a world ray. Characters ignore the terrain
+  anyway (`ground_follow`); only gibs, items and the like land on it.
 
 Found on the way, true on Avian too: Avian only fills a `CollidingEntities` that is already on
 an entity, and nothing in the game adds one, so the tower sensors (`towers/systems.rs`) and

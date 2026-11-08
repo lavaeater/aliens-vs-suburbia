@@ -103,7 +103,9 @@ impl Plugin for PlayerPlugin {
                     .run_if(in_state(GameState::InGame)),
             )
             // After propagation, from where the player really is this frame; the light sets
-            // its own `GlobalTransform` (flashlight.rs).
+            // its own `GlobalTransform` (flashlight.rs). Before Bevy's light bounds, which read
+            // that transform and would otherwise race the despawn of a flashlight whose player
+            // is gone (an editor model swap panicked inserting bounds on the despawned light).
             .add_systems(
                 PostUpdate,
                 (
@@ -111,6 +113,7 @@ impl Plugin for PlayerPlugin {
                     crate::player::systems::player_ring::update_rings,
                 )
                     .after(TransformSystems::Propagate)
+                    .before(bevy::light::SimulationLightSystems::UpdateBounds)
                     .run_if(in_state(GameState::InGame)),
             )
             // Not in the character editor, where it would sit in the way of the model.

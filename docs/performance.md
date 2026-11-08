@@ -178,7 +178,10 @@ cargo run --release -- --play --perf --level assets/campaigns/gis/map_01/map_01.
 ```
 
 `--perf` (`src/perf.rs`) logs frame time, entity count and render pass timings every 5 seconds.
-It also presents uncapped and skips story crawls.
+It also presents uncapped and skips story crawls. `physics/step` is the wall time of one fixed
+physics step (the backend's `PhysicsStep` set; interpolation and the game's own ray and shape
+casts are outside it), next to `physics/bodies` and `aliens`. At 20 Hz a frame pays for a step
+every third frame or so; a step longer than the 50 ms it covers and the game falls behind.
 
 Uncapped matters: with vsync, a window the compositor wasn't showing ran at exactly 1.000 fps.
 That was probably a hidden window, though not confirmed. It makes the game look far slower than

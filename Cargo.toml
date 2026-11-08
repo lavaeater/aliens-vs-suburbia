@@ -11,7 +11,7 @@ workspace = true
 [workspace]
 members = ["turbofacts", "bevy_mod_inverse_kinematics"]
 # rusty_music is its own workspace (path dependency via the submodule).
-exclude = ["rusty_music"]
+exclude = ["rusty_music", "spikes"]
 resolver = "2"
 
 [workspace.lints.clippy]
@@ -72,7 +72,8 @@ wildcard_imports = "allow"
 
 [dependencies]
 bevy = { version = "0.19.1", features = ["wayland", "3d", "ui", "bevy_feathers", "webp"] }
-avian3d = { version = "0.7.0", default-features = false, features = ["3d", "parry-f32", "debug-plugin", "collider-from-mesh", "simd", "parallel", "serialize", "bevy_scene", "bevy_picking", "xpbd_joints"] }
+# Physics: Jolt, through `src/physics/` (`docs/jolt-port.md`).
+oxijolt = { version = "1.4", features = ["glam032"] }
 pathfinding = "4.6"
 itertools = "0.15.0"
 bevy_mod_outline = "0.13.0"

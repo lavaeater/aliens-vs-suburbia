@@ -27,7 +27,7 @@ use crate::gore::fire::SpawnFire;
 use crate::player::ammo::AmmoPouch;
 use crate::player::components::{AutoAim, Player, PlayerDead};
 
-/// Gravity magnitude used for lob arcs; matches avian's default.
+/// Gravity magnitude used for lob arcs; the physics world's (`physics::jolt::world`).
 const GRAVITY: f32 = 9.81;
 /// How far a lobbed throwable lands from the thrower on flat ground.
 const THROW_RANGE: f32 = 7.0;

@@ -1,12 +1,11 @@
 use crate::game_state::GameState;
-use crate::physics::prelude::{Collider, RigidBody};
 use bevy::app::{App, Plugin};
 use bevy::ecs::observer::Observer;
 use bevy::ecs::resource::IsResource;
 use bevy::ecs::system::SystemIdMarker;
 use bevy::input::gamepad::Gamepad;
 use bevy::picking::pointer::PointerId;
-use bevy::prelude::{Commands, Component, Entity, OnExit, Query, Window, With, Without};
+use bevy::prelude::{Commands, Component, Entity, OnExit, Query, Window, Without};
 use bevy::window::Monitor;
 use bevy_seedling::prelude::FirewheelNode;
 
@@ -48,13 +47,8 @@ type EngineOwned = (
 pub fn clear_game_entities(
     mut commands: Commands,
     query: Query<Entity, EngineOwned>,
-    physics_query: Query<Entity, (EngineOwned, With<RigidBody>)>,
 ) {
-    // Strip colliders from physics bodies first so avian3d can clear contacts
-    // before the entity is despawned — otherwise a debug_assert fires inside avian3d.
-    for entity in physics_query.iter() {
-        commands.entity(entity).remove::<(Collider, RigidBody)>();
-    }
+    // A despawned collider takes its Jolt body with it (`physics::jolt::sync::remove_body`).
     for entity in query.iter() {
         commands.entity(entity).try_despawn();
     }

@@ -4,7 +4,9 @@
 //! ground where that step will end. Sideways, physics is as on a flat map: colliders are tall
 //! enough to always meet, so walls and other characters block as before.
 
-use crate::physics::prelude::{Collider, CollisionLayers, GravityScale, LinearVelocity, Position};
+use crate::physics::prelude::{
+    Collider, CollisionLayers, GravityScale, LinearVelocity, Position, local_size,
+};
 use bevy::prelude::*;
 
 use crate::alien::components::general::Alien;
@@ -47,7 +49,7 @@ pub fn adopt_walkers(
 ) {
     for (entity, collider, layers, transform, position) in &mut walkers {
         // The unscaled shape: a transform's scale applies to the new collider as well.
-        let size = collider.shape().compute_local_aabb().half_extents() * 2.0;
+        let size = local_size(collider);
         let scale = transform.scale;
         let standing = size.y * scale.y / 2.0;
         let (x, z) = (transform.translation.x, transform.translation.z);
