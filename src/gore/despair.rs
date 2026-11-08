@@ -13,7 +13,7 @@ use bevy::render::view::ColorGrading;
 
 use crate::camera::components::GameCamera;
 use crate::general::components::Health;
-use crate::general::systems::lights_systems::LightingPreset;
+use crate::general::systems::lights_systems::{LightingPreset, SkyLightSettings};
 use crate::gore::sfx::{PlaySfx, SfxKind};
 use crate::music::game_music_plugin::MusicMoods;
 use crate::player::components::{Player, PlayerDead};
@@ -53,6 +53,7 @@ pub fn apply_despair(
     moods: Option<Res<MusicMoods>>,
     ambient: Option<ResMut<GlobalAmbientLight>>,
     preset: Res<LightingPreset>,
+    sky: Res<SkyLightSettings>,
     mut cameras: Query<
         (Entity, Option<&mut ColorGrading>, Option<&mut DistanceFog>),
         With<GameCamera>,
@@ -63,7 +64,7 @@ pub fn apply_despair(
 
     // ── Ambient light: the room dims as dread rises. ──────────────────────────
     if let Some(mut ambient) = ambient {
-        ambient.brightness = preset.ambient() * lerp(1.0, settings.ambient_dread_factor, d);
+        ambient.brightness = sky.ambient_for(*preset) * lerp(1.0, settings.ambient_dread_factor, d);
     }
 
     // ── Camera color grade + fog. ─────────────────────────────────────────────

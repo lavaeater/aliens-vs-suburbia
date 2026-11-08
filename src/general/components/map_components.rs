@@ -108,6 +108,47 @@ const fn default_map_height() -> usize {
     24
 }
 
+/// What a [`RoadLine`] is drawn as (`map::road_mesh`).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub enum RoadKind {
+    /// A through road: asphalt, pavements, a dashed centre line.
+    Major,
+    /// A residential street: asphalt and pavements.
+    #[default]
+    Street,
+    /// A driveway or service road: asphalt only.
+    Service,
+    /// A footway, cycleway or track: a gravel strip.
+    Path,
+}
+
+impl RoadKind {
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Major => "major",
+            Self::Street => "street",
+            Self::Service => "service",
+            Self::Path => "path",
+        }
+    }
+
+    pub fn from_name(name: &str) -> Option<Self> {
+        [Self::Major, Self::Street, Self::Service, Self::Path]
+            .into_iter()
+            .find(|k| k.name() == name)
+    }
+}
+
+/// A road's centreline, drawn as a ribbon over the ground. Only the look: the tiles under
+/// it say where one can walk. Points are in map tile coordinates (`(3.0, 4.0)` is the
+/// centre of tile 3, 4, like decorations), `width` in tiles, the carriageway only.
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
+pub struct RoadLine {
+    pub kind: RoadKind,
+    pub width: f32,
+    pub points: Vec<[f32; 2]>,
+}
+
 /// Tiles between the points of [`MapFile::elevation`].
 pub const ELEVATION_STEP: usize = 2;
 
@@ -148,6 +189,9 @@ pub struct MapFile {
     /// Items placed by the map editor (def-driven models on specific tiles).
     #[serde(default)]
     pub placements: Vec<TilePlacement>,
+    /// Road centrelines (`map::road_mesh`); OSM imports write them.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub roads: Vec<RoadLine>,
     /// Houses placed in the map (`assets/houses`), stamped into `tiles` on load.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub houses: Vec<HousePlacement>,

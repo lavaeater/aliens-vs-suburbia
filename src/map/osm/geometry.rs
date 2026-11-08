@@ -117,6 +117,61 @@ pub fn fill_rings(rings: &[Vec<Point>], width: usize, height: usize) -> Vec<(usi
     cells
 }
 
+/// The parts of a polyline inside the box `lo..=hi` (Liang-Barsky per segment). A line
+/// that leaves and comes back comes out as several pieces.
+pub fn clip_polyline(points: &[Point], lo: Point, hi: Point) -> Vec<Vec<Point>> {
+    let mut pieces: Vec<Vec<Point>> = Vec::new();
+    let mut current: Vec<Point> = Vec::new();
+    for pair in points.windows(2) {
+        let [a, b] = [pair[0], pair[1]];
+        let (dx, dy) = (b.0 - a.0, b.1 - a.1);
+        let (mut t0, mut t1) = (0.0f64, 1.0f64);
+        let mut inside = true;
+        for (p, q) in [
+            (-dx, a.0 - lo.0),
+            (dx, hi.0 - a.0),
+            (-dy, a.1 - lo.1),
+            (dy, hi.1 - a.1),
+        ] {
+            if p == 0.0 {
+                if q < 0.0 {
+                    inside = false;
+                }
+            } else {
+                let r = q / p;
+                if p < 0.0 {
+                    t0 = t0.max(r);
+                } else {
+                    t1 = t1.min(r);
+                }
+            }
+        }
+        if !inside || t0 > t1 {
+            if current.len() > 1 {
+                pieces.push(std::mem::take(&mut current));
+            }
+            current.clear();
+            continue;
+        }
+        let start = (a.0 + dx * t0, a.1 + dy * t0);
+        let end = (a.0 + dx * t1, a.1 + dy * t1);
+        if current.last() != Some(&start) {
+            if current.len() > 1 {
+                pieces.push(std::mem::take(&mut current));
+            }
+            current = vec![start];
+        }
+        current.push(end);
+        if t1 < 1.0 {
+            pieces.push(std::mem::take(&mut current));
+        }
+    }
+    if current.len() > 1 {
+        pieces.push(current);
+    }
+    pieces
+}
+
 /// Every cell whose centre is within `width / 2` of the polyline. The radius never drops
 /// below half a cell's diagonal, so even a thin fence comes out as an unbroken (4-connected)
 /// line of cells that nothing slips through diagonally.
@@ -287,5 +342,15 @@ mod tests {
     fn ring_area_in_square_metres() {
         let ring = [(0.0, 0.0), (4.0, 0.0), (4.0, 3.0), (0.0, 3.0), (0.0, 0.0)];
         assert!((ring_area(&ring) - 12.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn clipping_keeps_the_inside_pieces() {
+        let line = [(-2.0, 1.0), (2.0, 1.0), (2.0, 5.0), (2.0, 8.0), (2.0, 2.0)];
+        let pieces = clip_polyline(&line, (0.0, 0.0), (4.0, 4.0));
+        assert_eq!(pieces.len(), 2, "{pieces:?}");
+        assert_eq!(pieces[0], vec![(0.0, 1.0), (2.0, 1.0), (2.0, 4.0)]);
+        assert_eq!(pieces[1], vec![(2.0, 4.0), (2.0, 2.0)]);
+        assert!(clip_polyline(&[(5.0, 5.0), (6.0, 6.0)], (0.0, 0.0), (4.0, 4.0)).is_empty());
     }
 }

@@ -102,6 +102,7 @@ impl Plugin for GamePlugin {
             ))
             .add_plugins(crate::infestation::InfestationPlugin)
             .init_resource::<LightingPreset>()
+            .init_resource::<crate::general::systems::lights_systems::SkyLightSettings>()
             .add_systems(OnEnter(GameState::InGame), spawn_lights)
             .add_systems(OnExit(GameState::InGame), restore_ambient)
             .add_systems(

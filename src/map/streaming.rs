@@ -26,6 +26,7 @@ use crate::general::events::map_events::LoadMap;
 use crate::general::systems::map_systems::TileDefinitions;
 use crate::loot::bags::{self, PlannedBag, StreamedBag};
 use crate::map::floor_mesh::{TerrainColor, build_floors};
+use crate::map::road_mesh::{RoadLayer, build_roads};
 use crate::map::ground::{GroundHeight, Hills};
 use crate::map::map_lights::{Fixtures, LightPlan, plan_lights, spawn_light};
 use crate::map::walls::{WallKind, padded_tiles, plan_walls};
@@ -156,6 +157,7 @@ struct Surface {
 #[derive(Clone, Copy)]
 enum SurfaceKind {
     Floor,
+    Road,
     Wall(WallKind),
 }
 
@@ -240,6 +242,20 @@ fn plan_surfaces(
         });
     }
 
+    // Roads over the floor, one material per layer.
+    let mut road_looks: HashMap<RoadLayer, Handle<StandardMaterial>> = HashMap::new();
+    for ((chunk, layer), road) in build_roads(&load.map.roads, tile, floor_y, ground) {
+        let material = road_looks
+            .entry(layer)
+            .or_insert_with(|| floor_material(layer.color(), materials))
+            .clone();
+        planned.entry(chunk).or_default().surfaces.push(Surface {
+            kind: SurfaceKind::Road,
+            mesh: meshes.add(road.into_mesh()),
+            material,
+        });
+    }
+
     let mut wall_looks: HashMap<WallKind, Handle<StandardMaterial>> = HashMap::new();
     for (chunk, kind, wall) in plan_walls(&load.map, tiles, tile, floor_y, ground) {
         let material = wall_looks
@@ -264,6 +280,9 @@ fn spawn_surface(parent: &mut ChildSpawnerCommands, surface: &Surface) {
         // otherwise redraw it into its shadow map.
         SurfaceKind::Floor => {
             spawned.insert((Name::from("Floor"), Floor {}, NotShadowCaster));
+        }
+        SurfaceKind::Road => {
+            spawned.insert((Name::from("Road"), NotShadowCaster));
         }
         SurfaceKind::Wall(WallKind::Solid) => {
             spawned.insert(Name::from(WallKind::Solid.label()));

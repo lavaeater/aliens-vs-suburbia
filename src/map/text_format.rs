@@ -33,6 +33,9 @@
 //! [placements]
 //! at: 2, 2 | def: defs/door.ron | rotation: 45
 //!
+//! [roads]
+//! road: street | width: 1.5 | points: 1,2 6.5,2 9,4.25
+//!
 //! [waves]
 //! enemy: defs/Alien.ron | count: 5 | rate: 10
 //! ```
@@ -49,7 +52,7 @@ use std::path::{Path, PathBuf};
 
 use crate::general::components::map_components::{
     DecorationItem, HousePlacement, InfestationRules, LootSpread, MapFile, MapGenerator,
-    TilePlacement, WaveDef,
+    RoadKind, RoadLine, TilePlacement, WaveDef,
 };
 use crate::map::{BitFlags, MapFeatures, house};
 
@@ -112,6 +115,7 @@ enum Section {
     Decorations,
     Placements,
     Houses,
+    Roads,
     Waves,
 }
 
@@ -126,6 +130,7 @@ impl Section {
             "decorations" => Self::Decorations,
             "placements" => Self::Placements,
             "houses" => Self::Houses,
+            "roads" => Self::Roads,
             "waves" => Self::Waves,
             _ => return None,
         })
@@ -179,6 +184,7 @@ pub fn parse(text: &str) -> Result<MapFile, String> {
             Some(Section::Decorations) => decoration(line).map(|d| map.decorations.push(d)),
             Some(Section::Placements) => placement(line).map(|p| map.placements.push(p)),
             Some(Section::Houses) => house(line).map(|h| map.houses.push(h)),
+            Some(Section::Roads) => road(line).map(|r| map.roads.push(r)),
             Some(Section::Waves) => wave(line).map(|w| map.waves.push(w)),
         };
         result.map_err(|e| at_line(line_no, e))?;
@@ -431,6 +437,34 @@ fn decoration(line: &str) -> Result<DecorationItem, String> {
     })
 }
 
+/// `road: street | width: 1.5 | points: 1,2 6.5,2 9,4.25`.
+fn road(line: &str) -> Result<RoadLine, String> {
+    let mut fields = Fields::parse(line)?;
+    let kind_name = fields.require("road")?;
+    let kind = RoadKind::from_name(kind_name)
+        .ok_or_else(|| format!("road: `{kind_name}` is not major, street, service or path"))?;
+    let width = number("width", fields.require("width")?)?;
+    let points = fields
+        .require("points")?
+        .split_whitespace()
+        .map(|pair| {
+            let (x, y) = pair
+                .split_once(',')
+                .ok_or_else(|| format!("points: expected `x,y`, got `{pair}`"))?;
+            Ok([number("points", x)?, number("points", y)?])
+        })
+        .collect::<Result<Vec<_>, String>>()?;
+    if points.len() < 2 {
+        return Err("points: a road needs at least two".to_string());
+    }
+    fields.finish()?;
+    Ok(RoadLine {
+        kind,
+        width,
+        points,
+    })
+}
+
 fn placement(line: &str) -> Result<TilePlacement, String> {
     let mut fields = Fields::parse(line)?;
     let (x, y) = coordinates(fields.require("at")?)?;
@@ -655,6 +689,24 @@ pub fn to_text(map: &MapFile) -> Result<String, String> {
             line = format!("{line} | rotation: {}", u32::from(h.turns % 4) * 90);
         }
         lines.push(line);
+    }
+
+    // Only maps with roads get the section, so older maps write back unchanged.
+    if !map.roads.is_empty() {
+        lines.extend([
+            String::new(),
+            "[roads]".into(),
+            "# road: major | street | service | path | width: <tiles> | points: <x,y in tiles> ...".into(),
+        ]);
+    }
+    for r in &map.roads {
+        let points: Vec<String> = r.points.iter().map(|[x, y]| format!("{x},{y}")).collect();
+        lines.push(format!(
+            "road: {} | width: {} | points: {}",
+            r.kind.name(),
+            r.width,
+            points.join(" ")
+        ));
     }
 
     lines.extend([
@@ -1039,6 +1091,7 @@ count: 3
         );
         assert_eq!(parse(&text).unwrap().houses, map.houses);
         assert!(!to_text(&MapFile::default()).unwrap().contains("[houses]"));
+        assert!(!to_text(&MapFile::default()).unwrap().contains("[roads]"));
     }
 
     #[test]
@@ -1077,5 +1130,18 @@ count: 3
         let map = parse(EXAMPLE).unwrap();
         let back = parse(&to_text(&map).unwrap()).unwrap();
         assert_eq!(as_ron(&back), as_ron(&map));
+    }
+
+    #[test]
+    fn roads_round_trip() {
+        let text = "[tiles]\nfff\n[roads]\nroad: major | width: 2.5 | points: 0,0 1.25,0.5 2,1\nroad: path | width: 0.5 | points: 0,1 2,1\n";
+        let map = parse(text).unwrap();
+        assert_eq!(map.roads.len(), 2);
+        assert_eq!(map.roads[0].kind, RoadKind::Major);
+        assert_eq!(map.roads[0].points[1], [1.25, 0.5]);
+        let back = parse(&to_text(&map).unwrap()).unwrap();
+        assert_eq!(back.roads, map.roads);
+        assert!(parse("[roads]\nroad: lane | width: 1 | points: 0,0 1,1\n").is_err());
+        assert!(parse("[roads]\nroad: path | width: 1 | points: 0,0\n").is_err());
     }
 }

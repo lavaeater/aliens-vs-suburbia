@@ -27,7 +27,9 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use crate::general::components::map_components::{DecorationItem, LootSpread, MapFile, WaveDef};
+use crate::general::components::map_components::{
+    DecorationItem, LootSpread, MapFile, RoadLine, WaveDef,
+};
 use crate::map::{BitFlags, MapFeatures};
 pub use classify::FenceRule;
 use classify::{Ground, Paint, classify};
@@ -444,13 +446,28 @@ pub fn import(
             }
         }
     }
+    // Roads keep the ground under them (the ribbon `map::road_mesh` draws covers it, and
+    // its ragged tile edges are then lawn, not grey squares), except water: a bridge.
+    let mut roads = Vec::new();
+    let (lo, hi) = ((0.0, 0.0), (width as f64, height as f64));
     for f in &projected {
-        if let Paint::Road { width: w } = f.paint {
+        if let Paint::Road { width: w, kind } = f.paint {
             counts[1] += 1;
             for line in in_tiles(f) {
                 for (col, row) in geometry::stroke_line(&line, tiles_wide(w), width, height) {
-                    ground[row][col] = Ground::Floor;
+                    if ground[row][col] == Ground::Water {
+                        ground[row][col] = Ground::Floor;
+                    }
                     layer[row][col] = Layer::Road;
+                }
+                for piece in geometry::clip_polyline(&line, lo, hi) {
+                    // Grid cells span [col, col + 1); map coordinates put the centre on col.
+                    let round = |v: f64| ((v - 0.5) * 100.0).round() as f32 / 100.0;
+                    roads.push(RoadLine {
+                        kind,
+                        width: (tiles_wide(w) * 100.0).round() as f32 / 100.0,
+                        points: piece.iter().map(|&(x, y)| [round(x), round(y)]).collect(),
+                    });
                 }
             }
         }
@@ -532,9 +549,9 @@ pub fn import(
                 .map(|col| match layer[row][col] {
                     Layer::Building | Layer::Wall => wall_bits(),
                     Layer::Tree => ground_bits(ground[row][col]) | blocks_everyone(),
-                    Layer::Road => ground_bits(Ground::Floor),
                     Layer::Fence => ground_bits(ground[row][col]) | fence_bits,
-                    Layer::Open => ground_bits(ground[row][col]),
+                    // A road is drawn over its ground (`map::road_mesh`).
+                    Layer::Road | Layer::Open => ground_bits(ground[row][col]),
                 })
                 .collect()
         })
@@ -678,6 +695,7 @@ pub fn import(
             storeys,
             elevation,
             decorations,
+            roads,
             waves: spec.waves.clone(),
             stories: spec.stories.clone(),
             loot: spec.loot.clone(),
@@ -964,8 +982,13 @@ mod tests {
         // Two houses of ~11 x 11 m.
         let walls = count(map, wall_bits()) - perimeter(82, 62).len();
         assert!((180..=300).contains(&walls), "{walls} wall tiles");
-        // The road, the goal and the start.
-        assert!(count(map, ground_bits(Ground::Floor)) > 300);
+        // The road is a line over the lawn, the tiles under it stay grass.
+        assert_eq!(map.roads.len(), 1, "{:?}", map.roads);
+        let road = &map.roads[0];
+        assert!(road.points.len() >= 2 && road.width > 1.0);
+        let (xs, ys): (Vec<f32>, Vec<f32>) = road.points.iter().map(|p| (p[0], p[1])).unzip();
+        assert!(xs.iter().all(|x| (-0.5..=81.5).contains(x)), "clipped to the map: {xs:?}");
+        assert!(ys.iter().all(|y| (29.0..=33.0).contains(y)), "along the middle row: {ys:?}");
         assert_eq!(count(map, bits(MapFeatures::Floor | MapFeatures::EnemyExit)), 1);
         assert_eq!(count(map, bits(MapFeatures::Floor | MapFeatures::PlayerSpawn)), 1);
         // The road leaves the level on both sides: two spawns, on the edge.

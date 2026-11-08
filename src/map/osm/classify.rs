@@ -1,6 +1,7 @@
 //! What an OSM feature becomes in a level, from its tags alone. Pure and table-like, so a
 //! rule is easy to find and change.
 
+use crate::general::components::map_components::RoadKind;
 use super::data::Tags;
 
 /// For turning a mapped `height` into storeys.
@@ -35,7 +36,7 @@ pub enum Paint {
     Strip { ground: Ground, width: f64 },
     /// A road or path: floor, kept open through fences, and where it leaves the level the
     /// aliens come in.
-    Road { width: f64 },
+    Road { width: f64, kind: RoadKind },
     /// A building: solid wall tiles for now, as tall as [`storeys`] says (`docs/gis-levels.md`,
     /// phase 4 makes houses).
     Building,
@@ -72,10 +73,11 @@ pub fn classify(tags: &Tags, area: bool) -> Option<Paint> {
         if area {
             return Some(Paint::Ground(Ground::Floor));
         }
+        let (default_width, kind) = road_width(highway)?;
         let width = get("width")
             .and_then(|w| w.trim_end_matches(" m").trim().parse::<f64>().ok())
-            .or_else(|| road_width(highway))?;
-        return Some(Paint::Road { width });
+            .unwrap_or(default_width);
+        return Some(Paint::Road { width, kind });
     }
 
     if !area {
@@ -138,16 +140,21 @@ pub fn storeys(tags: &Tags) -> u8 {
     }
 }
 
-/// Default carriageway widths, metres, by `highway` class.
-fn road_width(highway: &str) -> Option<f64> {
+/// Default carriageway width (metres) and look, by `highway` class.
+fn road_width(highway: &str) -> Option<(f64, RoadKind)> {
     Some(match highway {
-        "motorway" | "trunk" | "primary" | "motorway_link" | "trunk_link" | "primary_link" => 10.0,
-        "secondary" | "tertiary" | "secondary_link" | "tertiary_link" => 8.0,
-        "residential" | "unclassified" | "living_street" | "road" | "busway" => 6.0,
-        "service" => 4.0,
-        "track" => 3.0,
-        "pedestrian" => 4.0,
-        "footway" | "cycleway" | "path" | "bridleway" | "steps" | "corridor" => 2.0,
+        "motorway" | "trunk" | "primary" | "motorway_link" | "trunk_link" | "primary_link" => {
+            (10.0, RoadKind::Major)
+        }
+        "secondary" | "tertiary" | "secondary_link" | "tertiary_link" => (8.0, RoadKind::Major),
+        "residential" | "unclassified" | "living_street" | "road" | "busway" => {
+            (6.0, RoadKind::Street)
+        }
+        "service" | "pedestrian" => (4.0, RoadKind::Service),
+        "track" => (3.0, RoadKind::Path),
+        "footway" | "cycleway" | "path" | "bridleway" | "steps" | "corridor" => {
+            (2.0, RoadKind::Path)
+        }
         _ => return None,
     })
 }
@@ -221,11 +228,17 @@ mod tests {
     fn roads_have_widths() {
         assert_eq!(
             classify(&tags(&[("highway", "residential")]), false),
-            Some(Paint::Road { width: 6.0 })
+            Some(Paint::Road {
+                width: 6.0,
+                kind: RoadKind::Street
+            })
         );
         assert_eq!(
             classify(&tags(&[("highway", "footway"), ("width", "3.5")]), false),
-            Some(Paint::Road { width: 3.5 })
+            Some(Paint::Road {
+                width: 3.5,
+                kind: RoadKind::Path
+            })
         );
         assert_eq!(classify(&tags(&[("highway", "service"), ("tunnel", "yes")]), false), None);
         assert_eq!(
