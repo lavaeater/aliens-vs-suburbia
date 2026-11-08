@@ -187,16 +187,17 @@ impl CampaignDoc {
         Some(level.map.region.unwrap_or(Region::new(0, 0, w, h)))
     }
 
-    /// A level folder name not used yet: `level_01`, `level_02`, ...
+    /// A level folder name not used yet, after the campaign: `gis_01`, `gis_02`, ... (crawl ids
+    /// are file stems, shared by every campaign, so `level_02` would clash with `main`'s).
     fn free_slug(&self) -> String {
         let campaign_dir = Path::new(crate::assets::content::CAMPAIGNS).join(&self.name);
         (1..1000)
-            .map(|n| format!("level_{n:02}"))
+            .map(|n| format!("{}_{n:02}", self.name))
             .find(|slug| {
                 let path = format!("campaigns/{}/{slug}/{slug}.map", self.name);
                 !campaign_dir.join(slug).exists() && !self.levels.iter().any(|l| l.path == path)
             })
-            .unwrap_or_else(|| "level_new".into())
+            .unwrap_or_else(|| format!("{}_new", self.name))
     }
 
     /// A new level on the base, played on `region`, added last and selected.
