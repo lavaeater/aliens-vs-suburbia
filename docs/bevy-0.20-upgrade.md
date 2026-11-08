@@ -1,5 +1,22 @@
 # Bevy 0.19 -> 0.20 upgrade analysis
 
+## Plan (2026-11-08): doing it
+
+Both blockers are gone: `bevy_mod_outline` 0.14 is out, and `bevy_seedling` is ported in
+our fork (`lavaeater/bevy_seedling`, branch `bevy-0.20`). Work happens on the game's branch
+`bevy-0.20-upgrade`, and on a `bevy-0.20` branch in each submodule.
+
+| # | What | How |
+|---|------|-----|
+| 1 | `turbofacts` (in tree), `bevy_mod_inverse_kinematics` | version bump, fix what breaks |
+| 2 | `lava_ui_builder` | the heaviest: `BorderRadius` 2D fields, `Interaction`/`Button` deprecations, `Name` from `&'static str`, BSN syntax, text font size |
+| 3 | `bevy_wind_waker_shader` | port its three shaders to WESL (`.wesl`, `import ...;`, `@if`) |
+| 4 | `rusty_music` | onto the seedling fork |
+| 5 | The game's dependencies | bevy 0.20.1; oxijolt `glam033`; outline 0.14; inspector 0.38; leafwing 0.22; `ghx_proc_gen` 0.10; `bevy_skein` 0.7; sprinkles `bevy-0.20` (pinned rev); seedling patched to the fork (pinned rev); `bevy_behave` has no 0.20 release or branch, so a copy goes in `vendor/bevy_behave` with only the version bump and fixes, until upstream (or our fork) has one |
+| 6 | The game's code | the compile errors; `assets/shaders/retro_canvas.wgsl` to WESL; `chain_weak` system sets in `PostUpdate` (playtest the twist, leg IK, weapon snap); `Sprite` is now `Mesh2d` (health bars) |
+| 7 | Check it | `cargo test`, `--validate`, and every screen through `--shot` (menu, a match, the GIS levels, the campaign editor, the character editor) |
+| 8 | `bevy_psx` (`lavaeater/bevy_psx`, `bevy-0.20`) | try it as an alternative to the retro look: `--psx` puts `PsxCamera` on the game camera with the retro look off; compare screenshots |
+
 Written 2026-10-21. Bevy 0.20.0 shipped 2026-10-08
 ([migration guide](https://bevy.org/learn/migration-guides/0-19-to-0-20/)).
 
