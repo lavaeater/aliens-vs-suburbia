@@ -37,6 +37,7 @@ pub(crate) mod general;
 pub(crate) mod gore;
 pub(crate) mod house_editor;
 pub(crate) mod campaign_editor;
+pub(crate) mod townsfolk;
 mod shot;
 pub(crate) mod infestation;
 pub(crate) mod items;

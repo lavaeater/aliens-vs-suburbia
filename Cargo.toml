@@ -99,6 +99,8 @@ leafwing-input-manager = "0.21"
 # GPU particles. `main` is the Bevy 0.19 branch (no release yet); pinned so it cannot move under us.
 bevy_sprinkles = { git = "https://github.com/doceazedo/sprinkles", rev = "0e978f5a9afc6b456b3693c8761e73a6c7e155bd" }
 ghx_proc_gen = "0.9"
+# Behaviour trees for the townsfolk (`src/townsfolk/`). 0.6 (Bevy 0.19) is on git only; pinned.
+bevy_behave = { git = "https://github.com/RJ/bevy_behave", rev = "dbf968079d2b8af518ca96b6d7a1bff7bcd2fdd9" }
 
 # Enabled here only for its features; bevy_seedling depends on the same cpal. `default_host`
 # then opens a native PipeWire stream, on a realtime thread via rtkit, and falls back to ALSA

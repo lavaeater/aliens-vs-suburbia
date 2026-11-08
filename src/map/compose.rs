@@ -250,6 +250,7 @@ pub fn compose_level(base: &MapFile, level: &MapFile) -> Result<MapFile, String>
         weapons: level.weapons.clone(),
         coins: level.coins,
         infestation: level.infestation.clone(),
+        townsfolk: level.townsfolk,
         ..MapFile::default()
     })
 }
@@ -349,6 +350,7 @@ pub fn split_level(map: &MapFile, base_ref: &str) -> (MapFile, MapFile) {
         weapons: map.weapons.clone(),
         coins: map.coins,
         infestation: map.infestation.clone(),
+        townsfolk: map.townsfolk,
         map_width: 0,
         map_height: 0,
         ..MapFile::default()

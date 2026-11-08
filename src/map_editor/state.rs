@@ -656,6 +656,7 @@ impl MapEditorState {
             coins: self.level_rules.2,
             generator: MapGenerator::default(),
             infestation: self.infestation.clone(),
+            townsfolk: None,
             // The map editor edits whole maps, not levels on a base map.
             base: String::new(),
             region: None,

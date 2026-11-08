@@ -269,6 +269,7 @@ fn property(
                 .collect();
         }
         "coins" => map.coins = Some(number(key, value)?),
+        "townsfolk" => map.townsfolk = Some(number(key, value)?),
         "generated" => map.generated = number(key, value)?,
         "generator" => {
             map.generator = MapGenerator::from_name(value).ok_or_else(|| {
@@ -613,6 +614,9 @@ pub fn to_text(map: &MapFile) -> Result<String, String> {
     if let Some(coins) = map.coins {
         lines.push(format!("coins: {coins}"));
     }
+    if let Some(townsfolk) = map.townsfolk {
+        lines.push(format!("townsfolk: {townsfolk}"));
+    }
     if let Some(rules) = &map.infestation {
         lines.push(format!("spawners: {}", rules.spawners));
         lines.push(format!(
@@ -908,6 +912,7 @@ pub fn generate(map: MapFile) -> Result<MapFile, String> {
         weapons: map.weapons,
         coins: map.coins,
         infestation: map.infestation,
+        townsfolk: map.townsfolk,
         ..built
     })
 }

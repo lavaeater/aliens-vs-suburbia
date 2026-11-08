@@ -123,7 +123,10 @@ pub fn choose_prey(
     time: Res<Time>,
     map_graph: Res<MapGraph>,
     mut hunters: Query<(Entity, &mut Hunter, &Position, &CurrentTile)>,
-    neighbours: Query<(Entity, &Position, &Health), With<Neighbour>>,
+    neighbours: Query<
+        (Entity, &Position, &Health),
+        (With<Neighbour>, Without<crate::townsfolk::Indoors>),
+    >,
     players: Query<(Entity, &Position), (With<Player>, Without<PlayerDead>)>,
 ) {
     let dt = time.delta_secs();

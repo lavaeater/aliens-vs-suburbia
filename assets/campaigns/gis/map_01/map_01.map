@@ -5,6 +5,7 @@ name: Example Area
 stories: campaigns/gis/map_01/map_01_story.ron
 loot: 1-3 per 40
 escape_limit: 10
+townsfolk: 24
 base: campaigns/gis/world/world.map
 region: 0, 0, 236, 236
 

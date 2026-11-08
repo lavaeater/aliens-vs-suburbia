@@ -297,7 +297,7 @@ plan works on 0.19.
 | 6 | Cut 4-6 levels, write their stories, playtest the campaign | 4, 5 | Started: `map_01` (all of it) and `gis_02` (the blocks). Consider making level 1 a smaller region: all 236 x 236 is a big first level |
 | - | Height tint (any time, about an hour) | - | **Done** (`floor_mesh::ground_shade`, +/-15%) |
 | 7 | Smoke from fires + house fires (sprinkles) | - |
-| 8 | NPCs: places, walking, `bevy_behave` tree v1 | - |
+| 8 | NPCs: places, walking, `bevy_behave` tree v1 | - | **Done** (`src/townsfolk/`): doors and street spots from the map, errands, lingering, home, indoors, fleeing. Not yet: schedules, traits, hiding from danger in the nearest door, stories about who survived |
 | 9 | Fog: distance fog, then valley fog | - |
 | 10 | Bevy 0.20 (after seedling), then `bevy_grass`, `bevy_smokescreen` | seedling |
 

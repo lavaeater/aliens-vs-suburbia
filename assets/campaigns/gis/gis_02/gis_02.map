@@ -7,6 +7,7 @@ stories: campaigns/gis/gis_02/gis_02_story.ron
 loot: 1-3 per 40
 escape_limit: 8
 coins: 100
+townsfolk: 12
 base: campaigns/gis/world/world.map
 region: 60, 20, 100, 90
 

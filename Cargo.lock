@@ -125,6 +125,7 @@ dependencies = [
  "avian3d",
  "bevy",
  "bevy-inspector-egui",
+ "bevy_behave",
  "bevy_mod_outline",
  "bevy_seedling",
  "bevy_skein",
@@ -797,6 +798,16 @@ dependencies = [
  "bevy_transform",
  "rodio",
  "tracing",
+]
+
+[[package]]
+name = "bevy_behave"
+version = "0.6.0"
+source = "git+https://github.com/RJ/bevy_behave?rev=dbf968079d2b8af518ca96b6d7a1bff7bcd2fdd9#dbf968079d2b8af518ca96b6d7a1bff7bcd2fdd9"
+dependencies = [
+ "bevy",
+ "dyn-clone",
+ "ego-tree",
 ]
 
 [[package]]
@@ -3460,6 +3471,12 @@ dependencies = [
  "bytemuck",
  "emath",
 ]
+
+[[package]]
+name = "ego-tree"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7bd50d24b1b75aa817bb0339cb9f2e0e664bdfab1e160a69a0fda9145b77fab2"
 
 [[package]]
 name = "egui"

@@ -450,6 +450,15 @@ pub fn rebuild_panel(
                 level.map.escape_limit,
             );
             stepper(p, "Coins", i, 50, |m| m.coins, |m, v| m.coins = v, level.map.coins);
+            stepper(
+                p,
+                "Townsfolk",
+                i,
+                4,
+                |m| m.townsfolk,
+                |m, v| m.townsfolk = v,
+                level.map.townsfolk,
+            );
             waves(p, i, &level.map.waves);
 
             heading(p, "STORY");

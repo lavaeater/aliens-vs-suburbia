@@ -51,6 +51,9 @@ pub struct SpawnNeighbour {
     pub def: String,
     pub position: Vec3,
     pub yaw: f32,
+    /// A townsperson's front door (padded-grid tile) and their seed (`townsfolk`); `None`
+    /// for someone placed on the map, who stays put.
+    pub home: Option<((usize, usize), u64)>,
 }
 
 pub fn spawn_neighbours(
@@ -106,6 +109,11 @@ pub fn spawn_neighbours(
                 ),
             ))
             .id();
+        if let Some((home, seed)) = request.home {
+            commands
+                .entity(id)
+                .insert(crate::townsfolk::Townsfolk::new(home, seed));
+        }
         health_bars.write(AddHealthBar {
             entity: id,
             name: "NEIGHBOUR",
@@ -136,6 +144,8 @@ pub fn flee(
             &mut AngularVelocity,
             &mut Rotation,
             &mut CreatureAnim,
+            Has<crate::townsfolk::Townsfolk>,
+            Has<crate::townsfolk::Indoors>,
         ),
         Without<Alien>,
     >,
@@ -143,11 +153,25 @@ pub fn flee(
     players: Query<&Position, (With<Player>, Without<PlayerDead>, Without<Neighbour>)>,
 ) {
     let dt = time.delta_secs();
-    for (mut neighbour, health, position, mut velocity, mut spin, mut rotation, mut anim) in
-        &mut neighbours
+    for (
+        mut neighbour,
+        health,
+        position,
+        mut velocity,
+        mut spin,
+        mut rotation,
+        mut anim,
+        townsfolk,
+        indoors,
+    ) in &mut neighbours
     {
         spin.0 = Vec3::ZERO;
         if health.health <= 0 {
+            continue;
+        }
+        // Indoors nothing frightens them (the townsfolk's `StayIn`).
+        if indoors {
+            neighbour.scared_for = 0.0;
             continue;
         }
         let here = position.0.xz();
@@ -168,6 +192,10 @@ pub fn flee(
             .filter(|_| running)
             .and_then(|m| run_direction(here, m, player));
         let Some(dir) = dir else {
+            // A townsperson's walking is their tree's (`townsfolk`), not ours.
+            if townsfolk {
+                continue;
+            }
             velocity.0 = Vec3::new(0.0, velocity.0.y, 0.0);
             anim.set_if_neq(CreatureAnim(AnimationKey::Idle));
             continue;

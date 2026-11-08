@@ -102,7 +102,11 @@ impl Plugin for GamePlugin {
                 crate::ui::pause_menu::PauseMenuPlugin,
                 crate::campaign::CampaignPlugin,
             ))
-            .add_plugins((crate::infestation::InfestationPlugin, CampaignEditorPlugin))
+            .add_plugins((
+                crate::infestation::InfestationPlugin,
+                CampaignEditorPlugin,
+                crate::townsfolk::TownsfolkPlugin,
+            ))
             .init_resource::<LightingPreset>()
             .init_resource::<crate::general::systems::lights_systems::SkyLightSettings>()
             .add_systems(OnEnter(GameState::InGame), spawn_lights)

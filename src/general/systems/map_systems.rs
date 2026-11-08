@@ -527,6 +527,7 @@ pub fn map_loader(
                         def: placement.def_path.clone(),
                         position: Vec3::new(pos.x, 1.0, pos.z),
                         yaw: f32::from(placement.rotation_steps) * std::f32::consts::FRAC_PI_4,
+                        home: None,
                     });
                 }
                 ModelType::Enemy(_) | ModelType::Weapon(_) => {

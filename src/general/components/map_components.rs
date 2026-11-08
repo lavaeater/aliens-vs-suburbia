@@ -221,6 +221,10 @@ pub struct MapFile {
     /// the map and send out the `waves`, instead of aliens walking to a goal.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub infestation: Option<InfestationRules>,
+    /// People who live on the level (`townsfolk`): this many, each at a front door,
+    /// going about their day until the monsters come. `None` = nobody.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub townsfolk: Option<u32>,
     /// A level cut from a base map (`map::compose`): the base map, inside `assets/`
     /// (`"campaigns/gis/world/world.map"`). Such a level has no tiles of its own; the
     /// game plays [`MapFile::region`] of the base with [`MapFile::markers`] on it. Empty =

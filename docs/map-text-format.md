@@ -64,6 +64,7 @@ count: 20 | rate: 30
 | `escape_limit` | how many aliens may reach the goal before the level is lost (default 10) |
 | `weapons` | weapon defs every player carries on this level instead of their own, comma separated, the first one held (e.g. `defs/Snowball.ron` for a snowballs-only level) |
 | `coins` | the team starts the level with at least this many coins (for towers) |
+| `townsfolk` | people who live on the level (`src/townsfolk/`): this many, each at a front door (an open tile next to a building with storeys), going about their day - errands to doors and down the streets, home, indoors for a while - and running when monsters come. Drawn from `assets/defs/people` |
 | `seed` | random seed (optional); for a generated map, 0 = a new layout every time it is played |
 | `generated` | `true` = ignore `[tiles]` and generate the map from `seed` (`text_format::load_level` runs the generator, keeping the level's rules, stories, waves and loot) |
 | `generator` | which generator a `generated` map uses: `suburb` (default, `map::map_generator`) or `neighbourhood` (`map::neighbourhood`: streets and lots by model synthesis, 4-8 houses with neighbours in their yards; `width`/`height` round down to 10-tile lots) |
