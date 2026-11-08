@@ -79,7 +79,18 @@ Queries filter by object layer list, which is computed from the mask the same wa
    on both backends gives the same picture): `cargo run --features physics-jolt`; fix what the
    facade didn't cover,
    then tune feel (friction, damping, throw arcs, gib bounce: Jolt's defaults differ) against
-   Avian side by side.
+   Avian side by side. Feel: looks fine in a first playtest (2026-11-08).
+   **Measured 2026-11-08** (release, `--perf`, the gis level with its waves raised to 300 aliens
+   at 600 a minute, about 2100 static bodies; median of 5 s averages once the aliens are out):
+
+   | Aliens alive | Avian step | Jolt step | Avian frame | Jolt frame |
+   |---|---|---|---|---|
+   | 100 (the game's cap, `map_systems.rs`) | 2.14 ms | 0.41 ms | 16.7 ms | 16.7 ms |
+   | 300 (cap raised for the test) | 38.0 ms | 1.29 ms | 220 ms | 20.6 ms |
+
+   5x at the cap, 29x at 300, where Avian's step nears the 50 ms it covers and the fixed loop
+   runs several steps a frame (4-5 fps); Jolt stays near 50 fps. The 100 cap is no longer a
+   physics limit on Jolt.
 4. **Switch**: Jolt default, playtest, Avian removed, branch merged.
 5. **Jolt-only features**: `CharacterVirtual` for players and neighbours (stairs, slopes, no
    hand-rolled capsule); vehicles (`WheeledVehicleSettings::car`, tracked, motorcycles); ragdolls

@@ -23,8 +23,13 @@ pub mod prelude {
         Sensor, ShapeCastConfig, SpatialQuery, SpatialQueryFilter, TransformInterpolation,
         local_size,
     };
-    pub use super::GamePhysicsPlugin;
+    pub use super::{GamePhysicsPlugin, PhysicsStep};
 }
+
+/// Everything the backend runs for one fixed step, in `FixedPostUpdate`: what `--perf` times.
+/// Interpolation and the game's own spatial queries are outside it.
+#[derive(bevy::prelude::SystemSet, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct PhysicsStep;
 
 /// The backend's plugins, its debug drawing (off until F3 / the editor turns it on) and its
 /// gizmo config.

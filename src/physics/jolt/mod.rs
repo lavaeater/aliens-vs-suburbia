@@ -71,6 +71,7 @@ fn build_core(app: &mut App) {
                 .chain()
                 .in_set(JoltSystems),
         )
+        .configure_sets(FixedPostUpdate, JoltSystems.in_set(super::PhysicsStep))
         .add_systems(FixedFirst, interpolation::restore)
         .add_systems(FixedLast, interpolation::capture)
         .add_systems(
