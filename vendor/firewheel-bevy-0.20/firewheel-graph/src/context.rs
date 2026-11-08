@@ -1,0 +1,1472 @@
+use bevy_platform::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
+use core::cell::RefCell;
+use core::error::Error;
+use core::num::NonZeroU32;
+use core::time::Duration;
+use core::{any::Any, f64};
+use firewheel_core::node::{NodeError, ProcStore};
+use firewheel_core::{
+    StreamInfo,
+    channel_config::{ChannelConfig, ChannelCount},
+    diff::EventQueue,
+    dsp::declick::DeclickValues,
+    event::{NodeEvent, NodeEventType},
+    node::{AudioNode, DynAudioNode, NodeID},
+};
+use firewheel_core::{
+    dsp::volume::Volume,
+    log::{RealtimeLogger, RealtimeLoggerConfig, RealtimeLoggerMainThread},
+};
+use ringbuf::traits::{Consumer, Producer, Split};
+use smallvec::SmallVec;
+
+#[cfg(not(feature = "std"))]
+use num_traits::Float;
+
+#[cfg(feature = "scheduled_events")]
+use bevy_platform::time::Instant;
+#[cfg(feature = "scheduled_events")]
+use firewheel_core::clock::{AudioClock, DurationSeconds};
+
+#[cfg(all(not(feature = "std"), feature = "musical_transport"))]
+use bevy_platform::prelude::Box;
+#[cfg(not(feature = "std"))]
+use bevy_platform::prelude::Vec;
+
+use crate::{
+    error::{
+        ActivateError, AddEdgeError, CompileGraphError, DeactivateError, RemoveNodeError,
+        UpdateError,
+    },
+    graph::{AudioGraph, Edge, EdgeID, NodeEntry, PortIdx},
+    processor::{
+        BufferOutOfSpaceMode, ContextToProcessorMsg, FirewheelProcessor, FirewheelProcessorConfig,
+        FirewheelProcessorInner, ProcessorToContextMsg, ProfilingData, SharedClock, SharedFlags,
+        profiling::{ProfilerRx, ProfilerTx},
+    },
+};
+
+#[cfg(feature = "scheduled_events")]
+use crate::processor::ClearScheduledEventsEvent;
+#[cfg(feature = "scheduled_events")]
+use firewheel_core::clock::EventInstant;
+
+#[cfg(feature = "musical_transport")]
+use firewheel_core::clock::TransportState;
+
+/// Information about the running audio stream.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ActivateInfo {
+    /// The sample rate of the audio stream.
+    pub sample_rate: NonZeroU32,
+    /// The maximum number of frames that can appear in a single process cyle.
+    pub max_block_frames: NonZeroU32,
+    /// The number of input audio channels in the stream.
+    pub num_stream_in_channels: u32,
+    /// The number of output audio channels in the stream.
+    pub num_stream_out_channels: u32,
+    /// The latency of the input to output stream in seconds.
+    pub input_to_output_latency_seconds: f64,
+}
+
+/// The configuration of a Firewheel context.
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "bevy_reflect", derive(bevy_reflect::Reflect))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct FirewheelConfig {
+    /// The number of input channels in the audio graph.
+    pub num_graph_inputs: ChannelCount,
+    /// The number of output channels in the audio graph.
+    pub num_graph_outputs: ChannelCount,
+
+    /// Extra configuration flags.
+    ///
+    /// By default, no flags are set.
+    pub flags: FirewheelFlags,
+
+    /// An initial capacity to allocate for the nodes in the audio graph.
+    ///
+    /// By default this is set to `128`.
+    pub initial_node_capacity: u32,
+    /// An initial capacity to allocate for the edges in the audio graph.
+    ///
+    /// By default this is set to `256`.
+    pub initial_edge_capacity: u32,
+    /// The amount of time in seconds to fade in/out when pausing/resuming
+    /// to avoid clicks and pops.
+    ///
+    /// By default this is set to `10.0 / 1_000.0`.
+    pub declick_seconds: f32,
+    /// The initial capacity for a group of events.
+    ///
+    /// By default this is set to `128`.
+    pub initial_event_group_capacity: u32,
+    /// The capacity of the engine's internal message channel.
+    ///
+    /// By default this is set to `64`.
+    pub channel_capacity: u32,
+    /// The maximum number of events that can be sent in a single call
+    /// to [`AudioNodeProcessor::process`].
+    ///
+    /// By default this is set to `128`.
+    ///
+    /// [`AudioNodeProcessor::process`]: firewheel_core::node::AudioNodeProcessor::process
+    pub event_queue_capacity: usize,
+    /// The maximum number of immediate events (events that do *NOT* have a
+    /// scheduled time component) that can be stored at once in the audio
+    /// thread.
+    ///
+    /// By default this is set to `512`.
+    pub immediate_event_capacity: usize,
+    /// The maximum number of scheduled events (events that have a scheduled
+    /// time component) that can be stored at once in the audio thread.
+    ///
+    /// This can be set to `0` to save some memory if you do not plan on using
+    /// scheduled events.
+    ///
+    /// This has no effect if the `scheduled_events` feature is disabled.
+    ///
+    /// By default this is set to `512`.
+    pub scheduled_event_capacity: usize,
+    /// How to handle event buffers on the audio thread running out of space.
+    ///
+    /// By default this is set to [`BufferOutOfSpaceMode::AllocateOnAudioThread`].
+    pub buffer_out_of_space_mode: BufferOutOfSpaceMode,
+
+    /// The configuration of the realtime safe logger.
+    pub logger_config: RealtimeLoggerConfig,
+
+    /// The initial number of slots to allocate for the [`ProcStore`].
+    ///
+    /// By default this is set to `8`.
+    pub proc_store_capacity: usize,
+
+    /// If `Some`, then inputs to the audio graph will be clamped to silence if the
+    /// max peak amplitude is less than the given volume. This can help improve the
+    /// performance of processing chains which use the graph inputs.
+    ///
+    /// If this is `None`, then no clamping will occur.
+    ///
+    /// Note, while this is functionally a noise gate, it is not a good noise gate,
+    /// and values above -70dB may cause audible clicking. If you need to increase
+    /// the threshold, it is recommended to instead use a dedicated noise gate node.
+    ///
+    /// By default this is set to `Some(Volume::Decibels(-70.0)`.
+    pub clamp_graph_inputs_below: Option<Volume>,
+}
+
+impl Default for FirewheelConfig {
+    fn default() -> Self {
+        Self {
+            num_graph_inputs: ChannelCount::ZERO,
+            num_graph_outputs: ChannelCount::STEREO,
+            flags: FirewheelFlags::default(),
+            initial_node_capacity: 128,
+            initial_edge_capacity: 256,
+            declick_seconds: DeclickValues::DEFAULT_FADE_SECONDS,
+            initial_event_group_capacity: 128,
+            channel_capacity: 64,
+            event_queue_capacity: 128,
+            immediate_event_capacity: 512,
+            scheduled_event_capacity: 512,
+            buffer_out_of_space_mode: BufferOutOfSpaceMode::AllocateOnAudioThread,
+            logger_config: RealtimeLoggerConfig::default(),
+            proc_store_capacity: 8,
+            clamp_graph_inputs_below: Some(Volume::Decibels(-70.0)),
+        }
+    }
+}
+
+/// Configuration flags for a [`FirewheelContext`]
+///
+/// Unlike [`FirewheelConfig`], these flags can be changed after the context has
+/// been created.
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "bevy_reflect", derive(bevy_reflect::Reflect))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct FirewheelFlags {
+    /// Hard clip all samples in the final output buffer to the range `[-1.0, 1.0]`.
+    ///
+    /// This usually isn't necessary since the OS itself generally hard clips the
+    /// output, but it is here if you need it.
+    ///
+    /// By default this is set to `false`.
+    pub hard_clip_outputs: bool,
+
+    /// Detect when a sample in the final output buffer falls outside the range
+    /// `[-1.0, 1.0]`. If a sample falls outside this range, then
+    /// [`FirewheelContext::clipping_occurred`] will return `true`.
+    ///
+    /// This check takes place before hard clipping if the
+    /// [`FirewheelFlags::hard_clip_outputs`] is set to `true`.
+    ///
+    /// By default this is set to `false`.
+    pub detect_clipping_on_output: bool,
+
+    /// Validate that all samples in the final output buffer are a valid finite
+    /// number. If a non finite number is detected, then the sample will will be
+    /// set to `0.0` and an error is logged.
+    ///
+    /// By default this is set to `false`.
+    pub validate_output_is_finite: bool,
+
+    /// Force all of a node's output buffers to be cleared before processing.
+    /// This shouldn't be necessary, but it can be used to debug nodes that
+    /// are misusing the silence flag feature.
+    ///
+    /// By default this is set to `false`.
+    pub force_clear_buffers: bool,
+
+    /// Enables performance profiling for engine bookkeeping operations on the
+    /// audio thread such as message handling, event sorting, event searching,
+    /// and final output processing.
+    ///
+    /// By default this is set to `false`.
+    pub profile_engine_bookkeeping: bool,
+
+    /// Enable per-node performance profiling.
+    ///
+    /// This has no effect when the `node_profiling` feature is disabled.
+    ///
+    /// By default this is set to `false`.
+    pub profile_nodes: bool,
+}
+
+bitflags::bitflags! {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+    pub struct FirewheelBitFlags: u32 {
+        const HARD_CLIP_OUTPUTS = 1 << 0;
+        const DETECT_CLIPPING_ON_OUTPUT = 1 << 1;
+        const VALIDATE_OUTPUT_IS_FINITE = 1 << 2;
+        const FORCE_CLEAR_BUFFERS = 1 << 3;
+        const PROFILE_ENGINE_BOOKKEEPING = 1 << 4;
+        const PROFILE_NODES = 1 << 5;
+    }
+}
+
+impl From<FirewheelFlags> for FirewheelBitFlags {
+    fn from(value: FirewheelFlags) -> Self {
+        let mut b = Self::empty();
+        b.set(Self::HARD_CLIP_OUTPUTS, value.hard_clip_outputs);
+        b.set(
+            Self::DETECT_CLIPPING_ON_OUTPUT,
+            value.detect_clipping_on_output,
+        );
+        b.set(
+            Self::VALIDATE_OUTPUT_IS_FINITE,
+            value.validate_output_is_finite,
+        );
+        b.set(Self::FORCE_CLEAR_BUFFERS, value.force_clear_buffers);
+        b.set(
+            Self::PROFILE_ENGINE_BOOKKEEPING,
+            value.profile_engine_bookkeeping,
+        );
+        b.set(Self::PROFILE_NODES, value.profile_nodes);
+        b
+    }
+}
+
+pub(crate) struct ProcessorChannel {
+    pub(crate) shared_flags: Arc<SharedFlags>,
+    pub(crate) from_context_rx: ringbuf::HeapCons<ContextToProcessorMsg>,
+    pub(crate) to_context_tx: ringbuf::HeapProd<ProcessorToContextMsg>,
+    pub(crate) logger: RealtimeLogger,
+    pub(crate) store: ProcStore,
+    pub(crate) profiler_tx: ProfilerTx,
+    pub(crate) shared_clock_input: triple_buffer::Input<SharedClock>,
+}
+
+/// A Firewheel context
+pub struct FirewheelContext {
+    graph: AudioGraph,
+
+    to_processor_tx: ringbuf::HeapProd<ContextToProcessorMsg>,
+    from_processor_rx: ringbuf::HeapCons<ProcessorToContextMsg>,
+    processor_drop_flag: Option<Arc<AtomicBool>>,
+    profiler_rx: ProfilerRx,
+    logger_rx: RealtimeLoggerMainThread,
+
+    pending_processor_channel: Option<ProcessorChannel>,
+    processor_drop_rx: Option<ringbuf::HeapCons<FirewheelProcessorInner>>,
+
+    shared_clock_output: RefCell<triple_buffer::Output<SharedClock>>,
+
+    sample_rate: NonZeroU32,
+    sample_rate_recip: f64,
+    stream_info: Option<StreamInfo>,
+    shared_flags: Arc<SharedFlags>,
+
+    #[cfg(feature = "musical_transport")]
+    transport_state: Box<TransportState>,
+    #[cfg(feature = "musical_transport")]
+    transport_state_alloc_reuse: Option<Box<TransportState>>,
+
+    // Re-use the allocations for groups of events.
+    event_group_pool: Vec<Vec<NodeEvent>>,
+    event_group: Vec<NodeEvent>,
+    initial_event_group_capacity: usize,
+
+    #[cfg(feature = "scheduled_events")]
+    queued_clear_scheduled_events: Vec<ClearScheduledEventsEvent>,
+
+    config: FirewheelConfig,
+}
+
+impl FirewheelContext {
+    /// Create a new Firewheel context.
+    pub fn new(config: FirewheelConfig) -> Self {
+        let (to_processor_tx, from_context_rx) =
+            ringbuf::HeapRb::<ContextToProcessorMsg>::new(config.channel_capacity as usize).split();
+        let (to_context_tx, from_processor_rx) =
+            ringbuf::HeapRb::<ProcessorToContextMsg>::new(config.channel_capacity as usize * 2)
+                .split();
+
+        let initial_event_group_capacity = config.initial_event_group_capacity as usize;
+        let mut event_group_pool = Vec::with_capacity(16);
+        for _ in 0..3 {
+            event_group_pool.push(Vec::with_capacity(initial_event_group_capacity));
+        }
+
+        let graph = AudioGraph::new(&config);
+
+        let (shared_clock_input, shared_clock_output) =
+            triple_buffer::triple_buffer(&SharedClock::default());
+
+        let (logger, logger_rx) = firewheel_core::log::realtime_logger(config.logger_config);
+        let (profiler_tx, profiler_rx) = crate::processor::profiling::profiler_channel(
+            config.initial_node_capacity as usize,
+            #[cfg(feature = "node_profiling")]
+            graph.graph_out_node(),
+        );
+        let shared_flags = Arc::new(SharedFlags::default());
+
+        let store = ProcStore::with_capacity(config.proc_store_capacity);
+
+        Self {
+            graph,
+            to_processor_tx,
+            from_processor_rx,
+            processor_drop_flag: None,
+            profiler_rx,
+            logger_rx,
+            pending_processor_channel: Some(ProcessorChannel {
+                shared_flags: Arc::clone(&shared_flags),
+                from_context_rx,
+                to_context_tx,
+                logger,
+                store,
+                profiler_tx,
+                shared_clock_input,
+            }),
+            processor_drop_rx: None,
+            shared_clock_output: RefCell::new(shared_clock_output),
+            sample_rate: NonZeroU32::new(44100).unwrap(),
+            sample_rate_recip: 44100.0f64.recip(),
+            stream_info: None,
+            shared_flags,
+            #[cfg(feature = "musical_transport")]
+            transport_state: Box::new(TransportState::default()),
+            #[cfg(feature = "musical_transport")]
+            transport_state_alloc_reuse: None,
+            event_group_pool,
+            event_group: Vec::with_capacity(initial_event_group_capacity),
+            initial_event_group_capacity,
+            #[cfg(feature = "scheduled_events")]
+            queued_clear_scheduled_events: Vec::new(),
+            config,
+        }
+    }
+
+    /// Try to modify the graph. If the given closure returns an error (or
+    /// if a cycle is detected), then any changes made to the graph inside
+    /// the closure will be reverted.
+    ///
+    /// Any custom error type can be used, though
+    /// [`ModifyGraphError`](crate::error::ModifyGraphError) is provided
+    /// for convenience.
+    pub fn try_modify_graph<E: Error>(
+        &mut self,
+        f: impl FnOnce(&mut Self) -> Result<(), E>,
+    ) -> Result<(), E> {
+        self.graph.begin_modify_guard();
+
+        let res = (f)(self);
+
+        self.graph.end_modify_guard(res.is_err());
+
+        res
+    }
+
+    /// Get an immutable reference to the processor store.
+    ///
+    /// If an audio stream is currently running, this will return `None`.
+    pub fn proc_store(&self) -> Option<&ProcStore> {
+        if let Some(proc_channel) = &self.pending_processor_channel {
+            Some(&proc_channel.store)
+        } else if let Some(processor) = self.processor_drop_rx.as_ref() {
+            if let Some(processor) = processor.last() {
+                if processor.poisoned {
+                    panic!("The audio thread has panicked!");
+                }
+
+                Some(&processor.extra.store)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    /// Get a mutable reference to the processor store.
+    ///
+    /// If an audio stream is currently running, this will return `None`.
+    pub fn proc_store_mut(&mut self) -> Option<&mut ProcStore> {
+        if let Some(proc_channel) = &mut self.pending_processor_channel {
+            Some(&mut proc_channel.store)
+        } else if let Some(processor) = self.processor_drop_rx.as_mut() {
+            if let Some(processor) = processor.last_mut() {
+                if processor.poisoned {
+                    panic!("The audio thread has panicked!");
+                }
+
+                Some(&mut processor.extra.store)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    /// Returns `true` if the context is currently active (the [`FirewheelProcessor`]
+    /// counterpart is still alive).
+    pub fn is_active(&self) -> bool {
+        if let Some(rx) = &self.processor_drop_rx {
+            rx.try_peek().is_none()
+        } else {
+            false
+        }
+    }
+
+    /// Activate the context with the given audio stream.
+    ///
+    /// Use [`FirewheelContext::is_active`] to check if the context is ready to
+    /// be activated.
+    ///
+    /// Note, in rare cases where the audio thread crashes without cleanly dropping
+    /// its contents, this may never succeed. Consider adding a timeout to avoid
+    /// deadlocking.
+    pub fn activate(&mut self, info: ActivateInfo) -> Result<FirewheelProcessor, ActivateError> {
+        let ActivateInfo {
+            sample_rate,
+            max_block_frames,
+            num_stream_in_channels,
+            num_stream_out_channels,
+            input_to_output_latency_seconds,
+        } = info;
+
+        if self.is_active() {
+            return Err(ActivateError::AlreadyActive);
+        }
+
+        let maybe_proc_channel = self.pending_processor_channel.take();
+
+        let prev_sample_rate = if maybe_proc_channel.is_some() {
+            sample_rate
+        } else {
+            self.sample_rate
+        };
+
+        let stream_info = StreamInfo {
+            sample_rate,
+            sample_rate_recip: (sample_rate.get() as f64).recip(),
+            prev_sample_rate,
+            max_block_frames,
+            num_stream_in_channels,
+            num_stream_out_channels,
+            input_to_output_latency_seconds,
+            declick_frames: NonZeroU32::new(
+                (self.config.declick_seconds * sample_rate.get() as f32).round() as u32,
+            )
+            .unwrap_or(NonZeroU32::MIN),
+        };
+
+        self.sample_rate = stream_info.sample_rate;
+        self.sample_rate_recip = stream_info.sample_rate_recip;
+
+        let schedule = self.graph.compile(&stream_info)?;
+
+        let (drop_tx, drop_rx) = ringbuf::HeapRb::<FirewheelProcessorInner>::new(1).split();
+
+        let processor = if let Some(proc_channel) = maybe_proc_channel {
+            FirewheelProcessorInner::new(
+                FirewheelProcessorConfig {
+                    flags: self.config.flags.into(),
+                    immediate_event_buffer_capacity: self.config.immediate_event_capacity,
+                    buffer_out_of_space_mode: self.config.buffer_out_of_space_mode,
+                    clamp_graph_inputs_below_amp: self
+                        .config
+                        .clamp_graph_inputs_below
+                        .map(|v| v.amp()),
+                    node_event_buffer_capacity: self.config.event_queue_capacity,
+                    #[cfg(feature = "scheduled_events")]
+                    scheduled_event_buffer_capacity: self.config.scheduled_event_capacity,
+                },
+                proc_channel,
+                &stream_info,
+            )
+        } else {
+            let mut processor = self.processor_drop_rx.as_mut().unwrap().try_pop().unwrap();
+
+            if processor.poisoned {
+                panic!("The audio thread has panicked!");
+            }
+
+            processor.new_stream(&stream_info);
+
+            processor
+        };
+
+        if self
+            .send_message_to_processor(ContextToProcessorMsg::NewSchedule(schedule))
+            .is_err()
+        {
+            panic!("Firewheel message channel is full!");
+        }
+
+        self.processor_drop_rx = Some(drop_rx);
+        self.stream_info = Some(stream_info);
+
+        let drop_flag = Arc::new(AtomicBool::new(false));
+        self.processor_drop_flag = Some(drop_flag.clone());
+
+        Ok(FirewheelProcessor::new(processor, drop_tx, drop_flag))
+    }
+
+    /// Request the context to be deactivated if it is active.
+    ///
+    /// This does not block the current thread. It might take a while for the
+    /// context to deactivate. Use [`FirewheelContext::is_active`] to check when
+    /// the context has been deactivated.
+    ///
+    /// Note, another way to deactivate the context is to drop the [`FirewheelProcessor`]
+    /// counterpart in the audio thread.
+    pub fn request_deactivate(&mut self) {
+        if let Some(flag) = &self.processor_drop_flag {
+            flag.store(true, Ordering::Relaxed);
+        }
+    }
+
+    /// If the context is active, request the context to be deactivated and wait
+    /// for the context to be deactivated before returning.
+    ///
+    /// If the `timeout` duration has been reached and the context is still not
+    /// deactivated, then an error is returned.
+    #[cfg(not(target_family = "wasm"))]
+    pub fn deactivate_blocking(&mut self, timeout: Duration) -> Result<(), DeactivateError> {
+        self.request_deactivate();
+
+        let now = bevy_platform::time::Instant::now();
+
+        while self.is_active() {
+            if now.elapsed() > timeout {
+                return Err(DeactivateError::TimedOut);
+            }
+
+            bevy_platform::thread::sleep(core::time::Duration::from_millis(1));
+        }
+
+        Ok(())
+    }
+
+    /// Information about the running audio stream.
+    ///
+    /// Returns `None` if the context is not currently active.
+    pub fn stream_info(&self) -> Option<&StreamInfo> {
+        if self.is_active() {
+            self.stream_info.as_ref()
+        } else {
+            None
+        }
+    }
+
+    /// Get the "heartbeat" of the processor. This is equal to the total number of samples
+    /// that the processor has processed.
+    ///
+    /// This can be used to detect when the processor stalls. For example, if this counter
+    /// doesn't change for half a second or so, then the processor is stalled, and events
+    /// should not be sent until it is resumed to avoid filling up the message channel.
+    pub fn heartbeat(&self) -> i64 {
+        // Reading the latest value of the clock doesn't meaningfully mutate
+        // state, so treat it as an immutable operation with interior mutability.
+        //
+        // PANIC SAFETY: This struct is the only place this is ever borrowed, so this
+        // will never panic.
+        let mut clock_borrowed = self.shared_clock_output.borrow_mut();
+        let clock = clock_borrowed.read();
+
+        clock.clock_samples.0
+    }
+
+    /// Get the current time of the audio clock, without accounting for the delay
+    /// between when the clock was last updated and now.
+    ///
+    /// For most use cases you probably want to use [`FirewheelContext::audio_clock_corrected`]
+    /// instead, but this method is provided if needed.
+    ///
+    /// Note, due to the nature of audio processing, this clock is is *NOT* synced with
+    /// the system's time (`Instant::now`). (Instead it is based on the amount of data
+    /// that has been processed.) For applications where the timing of audio events is
+    /// critical (i.e. a rhythm game), sync the game to this audio clock instead of the
+    /// OS's clock (`Instant::now()`).
+    ///
+    /// Note, calling this method is not super cheap, so avoid calling it many
+    /// times within the same game loop iteration if possible.
+    #[cfg(feature = "scheduled_events")]
+    pub fn audio_clock(&self) -> AudioClock {
+        // Reading the latest value of the clock doesn't meaningfully mutate
+        // state, so treat it as an immutable operation with interior mutability.
+        //
+        // PANIC SAFETY: This struct is the only place this is ever borrowed, so this
+        // will never panic.
+        let mut clock_borrowed = self.shared_clock_output.borrow_mut();
+        let clock = clock_borrowed.read();
+
+        AudioClock {
+            samples: clock.clock_samples,
+            seconds: clock
+                .clock_samples
+                .to_seconds(self.sample_rate, self.sample_rate_recip),
+            #[cfg(feature = "musical_transport")]
+            musical: clock.current_playhead,
+            #[cfg(feature = "musical_transport")]
+            transport_is_playing: clock.transport_is_playing,
+            update_instant: self.is_active().then_some(clock.update_instant),
+        }
+    }
+
+    /// Get the current time of the audio clock.
+    ///
+    /// Unlike, [`FirewheelContext::audio_clock`], this method accounts for the delay
+    /// between when the audio clock was last updated and now, leading to a more
+    /// accurate result for games and other applications.
+    ///
+    /// If the delay could not be determined (i.e. an audio stream is not currently
+    /// running), then this will assume there was no delay between when the audio
+    /// clock was last updated and now.
+    ///
+    /// Note, due to the nature of audio processing, this clock is is *NOT* synced with
+    /// the system's time (`Instant::now`). (Instead it is based on the amount of data
+    /// that has been processed.) For applications where the timing of audio events is
+    /// critical (i.e. a rhythm game), sync the game to this audio clock instead of the
+    /// OS's clock (`Instant::now()`).
+    ///
+    /// Note, calling this method is not super cheap, so avoid calling it many
+    /// times within the same game loop iteration if possible.
+    #[cfg(feature = "scheduled_events")]
+    pub fn audio_clock_corrected(&self) -> AudioClock {
+        // Reading the latest value of the clock doesn't meaningfully mutate
+        // state, so treat it as an immutable operation with interior mutability.
+        //
+        // PANIC SAFETY: This struct is the only place this is ever borrowed, so this
+        // will never panic.
+        let mut clock_borrowed = self.shared_clock_output.borrow_mut();
+        let clock = clock_borrowed.read();
+
+        if !self.is_active() {
+            // The audio thread is not currently running, so just return the
+            // latest value of the clock.
+            return AudioClock {
+                samples: clock.clock_samples,
+                seconds: clock
+                    .clock_samples
+                    .to_seconds(self.sample_rate, self.sample_rate_recip),
+                #[cfg(feature = "musical_transport")]
+                musical: clock.current_playhead,
+                #[cfg(feature = "musical_transport")]
+                transport_is_playing: clock.transport_is_playing,
+                update_instant: None,
+            };
+        }
+
+        let update_instant = clock.update_instant;
+        let delay = update_instant.elapsed();
+
+        // Account for the delay between when the clock was last updated and now.
+        let delta_seconds = DurationSeconds(delay.as_secs_f64());
+
+        let samples = clock.clock_samples + delta_seconds.to_samples(self.sample_rate);
+
+        #[cfg(feature = "musical_transport")]
+        let musical = clock.current_playhead.map(|musical_time| {
+            if clock.transport_is_playing
+                && let Some(transport) = &self.transport_state.transport
+            {
+                transport.delta_seconds_from(musical_time, delta_seconds, clock.speed_multiplier)
+            } else {
+                musical_time
+            }
+        });
+
+        AudioClock {
+            samples,
+            seconds: samples.to_seconds(self.sample_rate, self.sample_rate_recip),
+            #[cfg(feature = "musical_transport")]
+            musical,
+            #[cfg(feature = "musical_transport")]
+            transport_is_playing: clock.transport_is_playing,
+            update_instant: Some(update_instant),
+        }
+    }
+
+    /// Get the instant the audio clock was last updated.
+    ///
+    /// If the audio thread is not currently running, or if the instant could not
+    /// be determined for any other reason, then this will return `None`.
+    ///
+    /// Note, calling this method is not super cheap, so avoid calling it many
+    /// times within the same game loop iteration if possible.
+    #[cfg(feature = "scheduled_events")]
+    pub fn audio_clock_instant(&self) -> Option<Instant> {
+        // Reading the latest value of the clock doesn't meaningfully mutate
+        // state, so treat it as an immutable operation with interior mutability.
+        //
+        // PANIC SAFETY: This struct is the only place this is ever borrowed, so this
+        // will never panic.
+        let mut clock_borrowed = self.shared_clock_output.borrow_mut();
+        let clock = clock_borrowed.read();
+
+        self.is_active().then_some(clock.update_instant)
+    }
+
+    /// Sync the state of the musical transport.
+    ///
+    /// If the message channel is full, then this will return an error.
+    #[cfg(feature = "musical_transport")]
+    pub fn sync_transport(&mut self, transport: &TransportState) -> Result<(), UpdateError> {
+        if &*self.transport_state != transport {
+            let transport_msg = if let Some(mut t) = self.transport_state_alloc_reuse.take() {
+                *t = transport.clone();
+                t
+            } else {
+                Box::new(transport.clone())
+            };
+
+            self.send_message_to_processor(ContextToProcessorMsg::SetTransportState(transport_msg))
+                .map_err(|(_, e)| e)?;
+
+            *self.transport_state = transport.clone();
+        }
+
+        Ok(())
+    }
+
+    /// Get the current transport state.
+    #[cfg(feature = "musical_transport")]
+    pub fn transport_state(&self) -> &TransportState {
+        &self.transport_state
+    }
+
+    /// Get the current transport state.
+    #[cfg(feature = "musical_transport")]
+    pub fn transport(&self) -> &TransportState {
+        &self.transport_state
+    }
+
+    /// The current configuration flags being used by this context.
+    pub fn flags(&self) -> &FirewheelFlags {
+        &self.config.flags
+    }
+
+    /// Set the configuration flags.
+    ///
+    /// This can be set while the context is active or inactive.
+    ///
+    /// If the message channel is full, then this will return an error.
+    pub fn set_flags(&mut self, flags: FirewheelFlags) -> Result<(), UpdateError> {
+        if self.config.flags == flags {
+            return Ok(());
+        }
+        self.config.flags = flags;
+
+        self.send_message_to_processor(ContextToProcessorMsg::SetFlags(flags.into()))
+            .map_err(|(_, e)| e)
+    }
+
+    /// Returns `true` if both the `FirewheelFlags::VALIDATE_OUTPUT_DOES_NOT_CLIP`
+    /// flag is set and a sample in the final output buffer fell outside the range
+    /// `[-1.0, 1.0]`.
+    ///
+    /// Calling this method resets the internal flag.
+    pub fn clipping_occurred(&self) -> bool {
+        self.shared_flags
+            .clipping_occurred
+            .swap(false, Ordering::Relaxed)
+    }
+
+    /// Retrieve the latest performance profiling data.
+    pub fn profiling_data(&mut self) -> &ProfilingData {
+        self.profiler_rx.fetch_info()
+    }
+
+    /// Update the firewheel context.
+    ///
+    /// This must be called regularly (i.e. once every frame).
+    pub fn update(&mut self) -> Result<(), UpdateError> {
+        self.logger_rx.flush(
+            |msg| {
+                #[cfg(feature = "tracing")]
+                tracing::error!("{}", msg);
+
+                #[cfg(all(feature = "log", not(feature = "tracing")))]
+                log::error!("{}", msg);
+
+                let _ = msg;
+            },
+            |msg| {
+                #[cfg(feature = "tracing")]
+                tracing::debug!("{}", msg);
+
+                #[cfg(all(feature = "log", not(feature = "tracing")))]
+                log::debug!("{}", msg);
+
+                let _ = msg;
+            },
+        );
+
+        firewheel_core::collector::GlobalRtGc::collect();
+
+        for msg in self.from_processor_rx.pop_iter() {
+            match msg {
+                ProcessorToContextMsg::DropEventGroup(mut event_group) => {
+                    event_group.clear();
+                    self.event_group_pool.push(event_group);
+                }
+                ProcessorToContextMsg::DropSchedule(schedule_data) => {
+                    self.graph.drop_old_schedule_data(schedule_data);
+                }
+                #[cfg(feature = "musical_transport")]
+                ProcessorToContextMsg::DropTransportState(transport_state) => {
+                    if self.transport_state_alloc_reuse.is_none() {
+                        self.transport_state_alloc_reuse = Some(transport_state);
+                    }
+                }
+                #[cfg(feature = "scheduled_events")]
+                ProcessorToContextMsg::DropClearScheduledEvents(msgs) => {
+                    let _ = msgs;
+                }
+            }
+        }
+
+        self.graph
+            .update(self.stream_info.as_ref(), &mut self.event_group);
+
+        if self.is_active() {
+            if self.graph.needs_compile() {
+                let schedule_data = self.graph.compile(self.stream_info.as_ref().unwrap())?;
+
+                if let Err((msg, e)) = self
+                    .send_message_to_processor(ContextToProcessorMsg::NewSchedule(schedule_data))
+                {
+                    let ContextToProcessorMsg::NewSchedule(schedule) = msg else {
+                        unreachable!();
+                    };
+
+                    self.graph.on_schedule_send_failed(schedule);
+
+                    return Err(e);
+                }
+            }
+
+            #[cfg(feature = "scheduled_events")]
+            if !self.queued_clear_scheduled_events.is_empty() {
+                let msgs: SmallVec<[ClearScheduledEventsEvent; 1]> =
+                    self.queued_clear_scheduled_events.drain(..).collect();
+
+                if let Err((msg, e)) = self
+                    .send_message_to_processor(ContextToProcessorMsg::ClearScheduledEvents(msgs))
+                {
+                    let ContextToProcessorMsg::ClearScheduledEvents(mut msgs) = msg else {
+                        unreachable!();
+                    };
+
+                    self.queued_clear_scheduled_events = msgs.drain(..).collect();
+
+                    return Err(e);
+                }
+            }
+
+            if !self.event_group.is_empty() {
+                let mut next_event_group = self
+                    .event_group_pool
+                    .pop()
+                    .unwrap_or_else(|| Vec::with_capacity(self.initial_event_group_capacity));
+                core::mem::swap(&mut next_event_group, &mut self.event_group);
+
+                if let Err((msg, e)) = self
+                    .send_message_to_processor(ContextToProcessorMsg::EventGroup(next_event_group))
+                {
+                    let ContextToProcessorMsg::EventGroup(mut event_group) = msg else {
+                        unreachable!();
+                    };
+
+                    core::mem::swap(&mut event_group, &mut self.event_group);
+                    self.event_group_pool.push(event_group);
+
+                    return Err(e);
+                }
+            }
+        } else {
+            self.stream_info = None;
+            self.graph.deactivate();
+        }
+
+        Ok(())
+    }
+
+    /// The ID of the graph input node
+    pub fn graph_in_node_id(&self) -> NodeID {
+        self.graph.graph_in_node()
+    }
+
+    /// The ID of the graph output node
+    pub fn graph_out_node_id(&self) -> NodeID {
+        self.graph.graph_out_node()
+    }
+
+    /// Add a node to the audio graph.
+    pub fn add_node<T: AudioNode + 'static>(
+        &mut self,
+        node: T,
+        config: Option<T::Configuration>,
+    ) -> Result<NodeID, NodeError> {
+        self.graph.add_node(node, config)
+    }
+
+    /// Add a node to the audio graph which implements the type-erased [`DynAudioNode`] trait.
+    pub fn add_dyn_node<T: DynAudioNode + 'static>(
+        &mut self,
+        node: T,
+    ) -> Result<NodeID, NodeError> {
+        self.graph.add_dyn_node(node)
+    }
+
+    /// Add a node to the audio graph with the given bypass state.
+    pub fn add_node_bypassed<T: AudioNode + 'static>(
+        &mut self,
+        node: T,
+        config: Option<T::Configuration>,
+        bypassed: bool,
+    ) -> Result<NodeID, NodeError> {
+        let node_id = self.add_node(node, config)?;
+        if bypassed {
+            self.queue_event_for(node_id, NodeEventType::SetBypassed(true));
+        }
+        Ok(node_id)
+    }
+
+    /// Add a node with the given bypass state to the audio graph which implements
+    /// the type-erased [`DynAudioNode`] trait.
+    pub fn add_dyn_node_bypassed<T: DynAudioNode + 'static>(
+        &mut self,
+        node: T,
+        bypassed: bool,
+    ) -> Result<NodeID, NodeError> {
+        let node_id = self.graph.add_dyn_node(node)?;
+        if bypassed {
+            self.queue_event_for(node_id, NodeEventType::SetBypassed(true));
+        }
+        Ok(node_id)
+    }
+
+    /// Remove the given node from the audio graph.
+    ///
+    /// This will automatically remove all edges from the graph that
+    /// were connected to this node.
+    ///
+    /// On success, this returns a list of all edges that were removed
+    /// from the graph as a result of removing this node.
+    ///
+    /// This will return an error if the ID is of the graph input or graph
+    /// output node.
+    pub fn remove_node(&mut self, node_id: NodeID) -> Result<SmallVec<[Edge; 4]>, RemoveNodeError> {
+        self.graph.remove_node(node_id, false)
+    }
+
+    /// Returns `true` if the node exists in the graph.
+    pub fn contains_node(&self, id: NodeID) -> bool {
+        self.graph.contains_node(id)
+    }
+
+    /// Get information about a node in the graph.
+    ///
+    /// If the node does not exist in the graph, then `None` will be returned.
+    pub fn node_info(&self, id: NodeID) -> Option<&NodeEntry> {
+        self.graph.node_info(id)
+    }
+
+    /// Get the [`ChannelConfig`] of a node in the graph.
+    ///
+    /// If the node does not exist in the graph, then `None` will be returned.
+    pub fn node_channel_config(&self, id: NodeID) -> Option<ChannelConfig> {
+        self.graph.node_info(id).map(|n| n.info.channel_config)
+    }
+
+    /// Get an immutable reference to the custom state of a node.
+    ///
+    /// If the node does not exist in the graph, then `None` will be returned.
+    pub fn node_state<T: 'static>(&self, id: NodeID) -> Option<&T> {
+        self.graph.node_state(id)
+    }
+
+    /// Get a type-erased, immutable reference to the custom state of a node.
+    ///
+    /// If the node does not exist in the graph, then `None` will be returned.
+    pub fn node_state_dyn(&self, id: NodeID) -> Option<&dyn Any> {
+        self.graph.node_state_dyn(id)
+    }
+
+    /// Get a mutable reference to the custom state of a node.
+    ///
+    /// If the node does not exist in the graph, then `None` will be returned.
+    pub fn node_state_mut<T: 'static>(&mut self, id: NodeID) -> Option<&mut T> {
+        self.graph.node_state_mut(id)
+    }
+
+    /// Get a type-erased, mutable reference to the custom state of a node.
+    ///
+    /// If the node does not exist in the graph, then `None` will be returned.
+    pub fn node_state_dyn_mut(&mut self, id: NodeID) -> Option<&mut dyn Any> {
+        self.graph.node_state_dyn_mut(id)
+    }
+
+    /// Get a list of all the existing nodes in the graph.
+    pub fn nodes(&self) -> impl Iterator<Item = &NodeEntry> {
+        self.graph.nodes()
+    }
+
+    /// Get a list of all the existing edges in the graph.
+    pub fn edges(&self) -> impl Iterator<Item = &Edge> {
+        self.graph.edges()
+    }
+
+    /// Set the number of input and output channels to and from the audio graph.
+    ///
+    /// Returns the list of edges that were removed.
+    pub fn set_graph_channel_config(
+        &mut self,
+        channel_config: ChannelConfig,
+    ) -> SmallVec<[Edge; 4]> {
+        self.graph.set_graph_channel_config(channel_config, false)
+    }
+
+    /// Add connections (edges) between two nodes to the graph.
+    ///
+    /// * `src_node` - The ID of the source node.
+    /// * `dst_node` - The ID of the destination node.
+    /// * `ports_src_dst` - The port indices for each connection to make,
+    ///   where the first value in a tuple is the output port on `src_node`,
+    ///   and the second value in that tuple is the input port on `dst_node`.
+    /// * `check_for_cycles` - If `true`, then this will run a check to
+    ///   see if adding these edges will create a cycle in the graph, and
+    ///   return an error if it does. Note, checking for cycles can be quite
+    ///   expensive, so avoid enabling this when calling this method many times
+    ///   in a row.
+    ///
+    /// If successful, then this returns a list of edge IDs in order.
+    ///
+    /// If this returns an error, then the audio graph has not been
+    /// modified.
+    pub fn connect(
+        &mut self,
+        src_node: NodeID,
+        dst_node: NodeID,
+        ports_src_dst: &[(PortIdx, PortIdx)],
+        check_for_cycles: bool,
+    ) -> Result<SmallVec<[EdgeID; 4]>, AddEdgeError> {
+        self.graph
+            .connect(src_node, dst_node, ports_src_dst, check_for_cycles, false)
+    }
+
+    /// Connect two nodes in the graph, connecting output port 0 to input port
+    /// 0, output port 1 to input port 1, etc.
+    ///
+    /// If the number of output ports on `src_node` does not equal the number
+    /// of input ports on `dst_node`, then only the first valid ports will be
+    /// connected.
+    ///
+    /// If successful, then this returns a list of edge IDs in order.
+    ///
+    /// If this returns an error, then the audio graph has not been
+    /// modified.
+    pub fn auto_connect(
+        &mut self,
+        src_node: NodeID,
+        dst_node: NodeID,
+        check_for_cycles: bool,
+    ) -> Result<SmallVec<[EdgeID; 4]>, AddEdgeError> {
+        let num_src_out_ports = self
+            .node_info(src_node)
+            .ok_or(AddEdgeError::SrcNodeNotFound(src_node))?
+            .info
+            .channel_config
+            .num_outputs
+            .get();
+        let num_dst_in_ports = self
+            .node_info(dst_node)
+            .ok_or(AddEdgeError::DstNodeNotFound(dst_node))?
+            .info
+            .channel_config
+            .num_inputs
+            .get();
+        let num_connect_ports = num_src_out_ports.min(num_dst_in_ports);
+
+        let ports_src_dst: SmallVec<[(u32, u32); 4]> =
+            (0..num_connect_ports).map(|i| (i, i)).collect();
+
+        self.graph
+            .connect(src_node, dst_node, &ports_src_dst, check_for_cycles, false)
+    }
+
+    /// Connect the first two output ports of a node to the first two input
+    /// ports of a second node.
+    ///
+    /// * `src_node` - The ID of the source node.
+    /// * `dst_node` - The ID of the destination node.
+    /// * `check_for_cycles` - If `true`, then this will run a check to
+    ///   see if adding these edges will create a cycle in the graph, and
+    ///   return an error if it does. Note, checking for cycles can be quite
+    ///   expensive, so avoid enabling this when calling this method many times
+    ///   in a row.
+    ///
+    /// ## Behavior
+    ///
+    /// * If `num_out_ports_on_src_node >= 2 && num_in_ports_on_dst_node >= 2`,
+    ///   then src port 0 will be connected to dst port 0, and src port 1 will be
+    ///   connected to dst port 1.
+    /// * If `num_out_ports_on_src_node == 1 && num_in_ports_on_dst_node >= 2`,
+    ///   then src port 0 will be connected to both dst port 0 and dst port 1.
+    /// * In all other cases, an error will be returned. (Note that converting
+    ///   a stereo signal into a mono signal should be done with the
+    ///   `StereoToMonoNode`.)
+    ///
+    /// If successful, then this returns a list of edge IDs in order.
+    ///
+    /// If this returns an error, then the audio graph has not been
+    /// modified.
+    pub fn connect_stereo(
+        &mut self,
+        src_node: NodeID,
+        dst_node: NodeID,
+        check_for_cycles: bool,
+    ) -> Result<SmallVec<[EdgeID; 4]>, AddEdgeError> {
+        let num_src_out_ports = self
+            .node_info(src_node)
+            .ok_or(AddEdgeError::SrcNodeNotFound(src_node))?
+            .info
+            .channel_config
+            .num_outputs;
+        let num_dst_in_ports = self
+            .node_info(dst_node)
+            .ok_or(AddEdgeError::DstNodeNotFound(dst_node))?
+            .info
+            .channel_config
+            .num_inputs;
+
+        let ports_src_dst = if num_src_out_ports.get() >= 2 && num_dst_in_ports.get() >= 2 {
+            &[(0, 0), (1, 1)]
+        } else if num_src_out_ports.get() == 1 && num_dst_in_ports.get() >= 2 {
+            &[(0, 0), (0, 1)]
+        } else {
+            return Err(if num_dst_in_ports.get() < 2 {
+                AddEdgeError::InPortOutOfRange {
+                    node: dst_node,
+                    port_idx: 1,
+                    num_in_ports: num_dst_in_ports,
+                }
+            } else {
+                AddEdgeError::InPortOutOfRange {
+                    node: src_node,
+                    port_idx: 0,
+                    num_in_ports: num_src_out_ports,
+                }
+            });
+        };
+
+        self.graph
+            .connect(src_node, dst_node, ports_src_dst, check_for_cycles, false)
+    }
+
+    /// Remove connections (edges) between two nodes from the graph.
+    ///
+    /// * `src_node` - The ID of the source node.
+    /// * `dst_node` - The ID of the destination node.
+    /// * `ports_src_dst` - The port indices for each connection to make,
+    ///   where the first value in a tuple is the output port on `src_node`,
+    ///   and the second value in that tuple is the input port on `dst_node`.
+    ///
+    /// Returns the list of edges that were successfully removed.
+    pub fn disconnect(
+        &mut self,
+        src_node: NodeID,
+        dst_node: NodeID,
+        ports_src_dst: &[(PortIdx, PortIdx)],
+    ) -> SmallVec<[Edge; 4]> {
+        self.graph.disconnect(src_node, dst_node, ports_src_dst)
+    }
+
+    /// Remove all connections (edges) between two nodes in the graph.
+    ///
+    /// * `src_node` - The ID of the source node.
+    /// * `dst_node` - The ID of the destination node.
+    ///
+    /// Returns the list of edges that were successfully removed.
+    pub fn disconnect_all_between(
+        &mut self,
+        src_node: NodeID,
+        dst_node: NodeID,
+    ) -> SmallVec<[Edge; 4]> {
+        self.graph.disconnect_all_between(src_node, dst_node)
+    }
+
+    /// Remove a connection (edge) via the edge's unique ID.
+    ///
+    /// If the edge did not exist in this graph, then `None` will be returned.
+    pub fn disconnect_by_edge_id(&mut self, edge_id: EdgeID) -> Option<Edge> {
+        self.graph.disconnect_by_edge_id(edge_id, false)
+    }
+
+    /// Get information about the given [Edge]
+    pub fn edge(&self, edge_id: EdgeID) -> Option<&Edge> {
+        self.graph.edge(edge_id)
+    }
+
+    /// Runs a check to see if a cycle exists in the audio graph. If a cycle
+    /// exists, an error is returned.
+    ///
+    /// Note, this method is expensive.
+    pub fn cycle_detected(&mut self) -> Result<(), CompileGraphError> {
+        if self.graph.cycle_detected() {
+            Err(CompileGraphError::CycleDetected)
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Queue an event to be sent to an audio node's processor.
+    ///
+    /// Note, this event will not be sent until the event queue is flushed
+    /// in [`FirewheelContext::update`].
+    pub fn queue_event(&mut self, event: NodeEvent) {
+        if self.contains_node(event.node_id) {
+            self.event_group.push(event);
+        }
+    }
+
+    /// Queue an event to be sent to an audio node's processor.
+    ///
+    /// Note, this event will not be sent until the event queue is flushed
+    /// in [`FirewheelContext::update`].
+    pub fn queue_event_for(&mut self, node_id: NodeID, event: NodeEventType) {
+        self.queue_event(NodeEvent {
+            node_id,
+            #[cfg(feature = "scheduled_events")]
+            time: None,
+            event,
+        });
+    }
+
+    /// Queue a [`NodeEventType::SetBypassed`] event for the given node.
+    pub fn queue_bypassed_for(&mut self, node_id: NodeID, bypassed: bool) {
+        self.queue_event(NodeEvent {
+            node_id,
+            #[cfg(feature = "scheduled_events")]
+            time: None,
+            event: NodeEventType::SetBypassed(bypassed),
+        });
+    }
+
+    /// Queue an event at a certain time, to be sent to an audio node's processor.
+    ///
+    /// If `time` is `None`, then the event will occur as soon as the node's
+    /// processor receives the event.
+    ///
+    /// Note, this event will not be sent until the event queue is flushed
+    /// in [`FirewheelContext::update`].
+    #[cfg(feature = "scheduled_events")]
+    pub fn schedule_event_for(
+        &mut self,
+        node_id: NodeID,
+        event: NodeEventType,
+        time: Option<EventInstant>,
+    ) {
+        self.queue_event(NodeEvent {
+            node_id,
+            time,
+            event,
+        });
+    }
+
+    /// Construct a [`ContextQueue`] for diffing.
+    ///
+    /// Returns `None` if the node does not exist in the graph.
+    pub fn event_queue(&mut self, id: NodeID) -> ContextQueue<'_> {
+        ContextQueue {
+            context: self,
+            id,
+            #[cfg(feature = "scheduled_events")]
+            time: None,
+        }
+    }
+
+    /// Construct a [`ContextQueue`] for diffing, along with the event instant that
+    /// any pushed events will be scheduled for.
+    ///
+    /// Returns `None` if the node does not exist in the graph.
+    #[cfg(feature = "scheduled_events")]
+    pub fn event_queue_scheduled(
+        &mut self,
+        id: NodeID,
+        time: Option<EventInstant>,
+    ) -> ContextQueue<'_> {
+        ContextQueue {
+            context: self,
+            id,
+            time,
+        }
+    }
+
+    /// Cancel scheduled events for all nodes.
+    ///
+    /// This will clear all events that have been scheduled since the last call to
+    /// [`FirewheelContext::update`]. Any events scheduled between then and the next call
+    /// to [`FirewheelContext::update`] will not be canceled.
+    ///
+    /// This only takes effect once [`FirewheelContext::update`] is called.
+    #[cfg(feature = "scheduled_events")]
+    pub fn cancel_all_scheduled_events(&mut self, event_type: ClearScheduledEventsType) {
+        self.queued_clear_scheduled_events
+            .push(ClearScheduledEventsEvent {
+                node_id: None,
+                event_type,
+            });
+    }
+
+    /// Cancel scheduled events for a specific node.
+    ///
+    /// This will clear all events that have been scheduled since the last call to
+    /// [`FirewheelContext::update`]. Any events scheduled between then and the next call
+    /// to [`FirewheelContext::update`] will not be canceled.
+    ///
+    /// This only takes effect once [`FirewheelContext::update`] is called.
+    #[cfg(feature = "scheduled_events")]
+    pub fn cancel_scheduled_events_for(
+        &mut self,
+        node_id: NodeID,
+        event_type: ClearScheduledEventsType,
+    ) {
+        self.queued_clear_scheduled_events
+            .push(ClearScheduledEventsEvent {
+                node_id: Some(node_id),
+                event_type,
+            });
+    }
+
+    fn send_message_to_processor(
+        &mut self,
+        msg: ContextToProcessorMsg,
+    ) -> Result<(), (ContextToProcessorMsg, UpdateError)> {
+        self.to_processor_tx
+            .try_push(msg)
+            .map_err(|msg| (msg, UpdateError::MsgChannelFull))
+    }
+}
+
+impl Drop for FirewheelContext {
+    fn drop(&mut self) {
+        // Wait for the processor to be drop to avoid deallocating it on
+        // the audio thread.
+        #[cfg(not(target_family = "wasm"))]
+        let _ = self.deactivate_blocking(core::time::Duration::from_secs(3));
+
+        #[cfg(target_family = "wasm")]
+        self.request_deactivate();
+
+        // Make sure all node processors are dropped before node states in
+        // order to be compatible with CLAP plugin hosting.
+        if let Some(p) = &mut self.processor_drop_rx {
+            p.clear();
+        }
+        self.from_processor_rx.clear();
+        firewheel_core::collector::GlobalRtGc::collect();
+    }
+}
+
+/// An event queue acquired from [`FirewheelContext::event_queue`].
+///
+/// This can help reduce event queue allocations
+/// when you have direct access to the context.
+///
+/// ```
+/// # use firewheel_core::{diff::{Diff, PathBuilder}, node::NodeID};
+/// # use firewheel_graph::{backend::AudioBackend, FirewheelContext, ContextQueue};
+/// # fn context_queue<B: AudioBackend, D: Diff>(
+/// #     context: &mut FirewheelContext,
+/// #     node_id: NodeID,
+/// #     params: &D,
+/// #     baseline: &D,
+/// # ) {
+/// // Get a queue that will send events directly to the provided node.
+/// let mut queue = context.event_queue(node_id);
+/// // Perform diffing using this queue.
+/// params.diff(baseline, PathBuilder::default(), &mut queue);
+/// # }
+/// ```
+pub struct ContextQueue<'a> {
+    pub context: &'a mut FirewheelContext,
+    id: NodeID,
+    #[cfg(feature = "scheduled_events")]
+    time: Option<EventInstant>,
+}
+
+impl ContextQueue<'_> {
+    /// Send an event to set the bypass state of the node.
+    pub fn push_bypassed(&mut self, bypassed: bool) {
+        self.push(NodeEventType::SetBypassed(bypassed));
+    }
+}
+
+#[cfg(feature = "scheduled_events")]
+impl ContextQueue<'_> {
+    pub fn time(&self) -> Option<EventInstant> {
+        self.time
+    }
+}
+
+impl EventQueue for ContextQueue<'_> {
+    fn push(&mut self, data: NodeEventType) {
+        self.context.queue_event(NodeEvent {
+            event: data,
+            #[cfg(feature = "scheduled_events")]
+            time: self.time,
+            node_id: self.id,
+        });
+    }
+}
+
+/// The type of scheduled events to clear
+#[cfg(feature = "scheduled_events")]
+#[derive(Default, Debug, Clone, Copy, PartialEq)]
+pub enum ClearScheduledEventsType {
+    /// Clear both musical and non-musical scheduled events.
+    #[default]
+    All,
+    /// Clear only non-musical scheduled events.
+    NonMusicalOnly,
+    /// Clear only musical scheduled events.
+    MusicalOnly,
+}

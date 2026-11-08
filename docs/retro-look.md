@@ -6,7 +6,7 @@ Return of the Obra Dinn. Built in layers, each one switchable on its own.
 ```
 3D scene (flat shading) -> small image (camera snapped to its texels)
   -> [edge pass: depth/normal outlines]           (planned)
-  -> canvas quad: grade + ink + palette + dither  (src/retro, assets/shaders/retro_canvas.wgsl)
+  -> canvas quad: grade + ink + palette + dither  (src/retro, assets/shaders/retro_canvas.wesl)
   -> window, scaled up by whole pixels, shifted by the sub-texel remainder
 ```
 
@@ -19,7 +19,7 @@ Return of the Obra Dinn. Built in layers, each one switchable on its own.
   is moved onto its own texel grid (along its right/up axes), and the quad is shifted by
   the remainder. Pixels stay on the world, the camera still glides. Orthographic only: a
   perspective camera is left unsnapped and shimmers (P switches projection).
-- **Palette + dither** (`retro_canvas.wgsl`). Each texel goes to the nearest two palette
+- **Palette + dither** (`retro_canvas.wesl`). Each texel goes to the nearest two palette
   colours in OKLab and an 8x8 Bayer threshold picks between them by how far between them
   it lies. The pattern is offset by the camera's texel index, so it does not swim when
   the camera pans.

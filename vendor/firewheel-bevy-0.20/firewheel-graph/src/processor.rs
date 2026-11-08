@@ -1,0 +1,323 @@
+use audioadapter::{Adapter, AdapterMut};
+use bevy_platform::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
+use core::num::NonZeroU32;
+use ringbuf::traits::Producer;
+use thunderdome::Arena;
+
+#[cfg(not(feature = "std"))]
+use bevy_platform::prelude::{Box, Vec};
+
+use bevy_platform::time::Instant;
+
+use firewheel_core::{
+    StreamInfo,
+    clock::InstantSamples,
+    dsp::{
+        buffer::ConstSequentialBuffer,
+        declick::{DeclickValues, Declicker},
+    },
+    event::{NodeEvent, ProcEventsIndex},
+    node::{AudioNodeProcessor, ProcExtra},
+};
+
+use crate::{
+    backend::BackendProcessInfo,
+    context::{FirewheelBitFlags, ProcessorChannel},
+    graph::ScheduleHeapData,
+    processor::{
+        event_scheduler::{EventScheduler, NodeEventSchedulerData},
+        profiling::ProfilerTx,
+    },
+};
+
+pub use profiling::ProfilingData;
+
+#[cfg(feature = "scheduled_events")]
+use crate::context::ClearScheduledEventsType;
+#[cfg(feature = "scheduled_events")]
+use firewheel_core::node::NodeID;
+#[cfg(feature = "scheduled_events")]
+use smallvec::SmallVec;
+
+#[cfg(feature = "musical_transport")]
+use firewheel_core::clock::{InstantMusical, TransportState};
+
+mod event_scheduler;
+mod handle_messages;
+mod process;
+pub(crate) mod profiling;
+
+#[cfg(feature = "musical_transport")]
+mod transport;
+#[cfg(feature = "musical_transport")]
+use transport::ProcTransportState;
+
+pub struct FirewheelProcessor {
+    inner: Option<FirewheelProcessorInner>,
+    drop_tx: ringbuf::HeapProd<FirewheelProcessorInner>,
+    drop_flag: Arc<AtomicBool>,
+}
+
+impl Drop for FirewheelProcessor {
+    fn drop(&mut self) {
+        self.drop_inner();
+    }
+}
+
+impl FirewheelProcessor {
+    pub(crate) fn new(
+        processor: FirewheelProcessorInner,
+        drop_tx: ringbuf::HeapProd<FirewheelProcessorInner>,
+        drop_flag: Arc<AtomicBool>,
+    ) -> Self {
+        Self {
+            inner: Some(processor),
+            drop_tx,
+            drop_flag,
+        }
+    }
+
+    pub fn process(
+        &mut self,
+        input: &dyn Adapter<f32>,
+        output: &mut dyn AdapterMut<f32>,
+        info: BackendProcessInfo,
+    ) {
+        self.poll_drop_flag();
+
+        if let Some(inner) = &mut self.inner {
+            inner.process(input, output, info);
+        } else {
+            output.fill_frames_with(0, info.frames, &0.0);
+        }
+    }
+
+    fn poll_drop_flag(&mut self) {
+        if self.inner.is_some() && self.drop_flag.load(Ordering::Relaxed) {
+            self.drop_inner();
+        }
+    }
+
+    fn drop_inner(&mut self) {
+        let Some(mut inner) = self.inner.take() else {
+            return;
+        };
+
+        inner.stream_stopped();
+
+        // TODO: Remove this feature gate if `bevy_platform` implements this.
+        #[cfg(feature = "std")]
+        if std::thread::panicking() {
+            inner.poisoned = true;
+        }
+
+        let _ = self.drop_tx.try_push(inner);
+    }
+}
+
+pub(crate) struct FirewheelProcessorInner {
+    nodes: Arena<NodeEntry>,
+    schedule_data: Option<Box<ScheduleHeapData>>,
+
+    from_graph_rx: ringbuf::HeapCons<ContextToProcessorMsg>,
+    to_graph_tx: ringbuf::HeapProd<ProcessorToContextMsg>,
+
+    event_scheduler: EventScheduler,
+    proc_event_queue: Vec<ProcEventsIndex>,
+
+    sample_rate: NonZeroU32,
+    sample_rate_recip: f64,
+    max_block_frames: usize,
+
+    clock_samples: InstantSamples,
+    shared_clock_input: triple_buffer::Input<SharedClock>,
+    profiler_tx: ProfilerTx,
+
+    #[cfg(feature = "musical_transport")]
+    proc_transport_state: ProcTransportState,
+
+    flags: FirewheelBitFlags,
+    shared_flags: Arc<SharedFlags>,
+    clamp_graph_inputs_below_amp: Option<f32>,
+
+    last_input_overflow_log_instant: Option<Instant>,
+    last_output_underflow_log_instant: Option<Instant>,
+
+    pub(crate) extra: ProcExtra,
+
+    /// If a panic occurs while processing, this flag is set to let the
+    /// main thread know that it shouldn't try spawning a new audio stream
+    /// with the shared `Arc<AtomicRefCell<FirewheelProcessorInner>>` object.
+    pub(crate) poisoned: bool,
+}
+
+pub(crate) struct FirewheelProcessorConfig {
+    pub flags: FirewheelBitFlags,
+    pub immediate_event_buffer_capacity: usize,
+    pub buffer_out_of_space_mode: BufferOutOfSpaceMode,
+    pub clamp_graph_inputs_below_amp: Option<f32>,
+    pub node_event_buffer_capacity: usize,
+    #[cfg(feature = "scheduled_events")]
+    pub scheduled_event_buffer_capacity: usize,
+}
+
+impl FirewheelProcessorInner {
+    /// Note, this method gets called on the main thread, not the audio thread.
+    pub(crate) fn new(
+        config: FirewheelProcessorConfig,
+        proc_channel: ProcessorChannel,
+        stream_info: &StreamInfo,
+    ) -> Self {
+        let FirewheelProcessorConfig {
+            flags,
+            immediate_event_buffer_capacity,
+            buffer_out_of_space_mode,
+            clamp_graph_inputs_below_amp,
+            node_event_buffer_capacity,
+            #[cfg(feature = "scheduled_events")]
+            scheduled_event_buffer_capacity,
+        } = config;
+
+        let ProcessorChannel {
+            shared_flags,
+            from_context_rx,
+            to_context_tx,
+            logger,
+            store,
+            profiler_tx,
+            shared_clock_input,
+        } = proc_channel;
+
+        Self {
+            nodes: Arena::new(),
+            schedule_data: None,
+            from_graph_rx: from_context_rx,
+            to_graph_tx: to_context_tx,
+            event_scheduler: EventScheduler::new(
+                immediate_event_buffer_capacity,
+                #[cfg(feature = "scheduled_events")]
+                scheduled_event_buffer_capacity,
+                buffer_out_of_space_mode,
+            ),
+            proc_event_queue: Vec::with_capacity(node_event_buffer_capacity),
+            sample_rate: stream_info.sample_rate,
+            sample_rate_recip: stream_info.sample_rate_recip,
+            max_block_frames: stream_info.max_block_frames.get() as usize,
+            clock_samples: InstantSamples(0),
+            shared_clock_input,
+            profiler_tx,
+            #[cfg(feature = "musical_transport")]
+            proc_transport_state: ProcTransportState::new(),
+            flags,
+            shared_flags,
+            clamp_graph_inputs_below_amp,
+            last_input_overflow_log_instant: None,
+            last_output_underflow_log_instant: None,
+            extra: ProcExtra {
+                scratch_buffers: ConstSequentialBuffer::new(
+                    stream_info.max_block_frames.get() as usize
+                ),
+                declick_values: DeclickValues::new(stream_info.declick_frames),
+                logger,
+                store,
+            },
+            poisoned: false,
+        }
+    }
+}
+
+pub(crate) struct NodeEntry {
+    pub processor: Box<dyn AudioNodeProcessor>,
+    pub bypass_declick: Declicker,
+    pub is_bypassed: bool,
+    pub is_first_process: bool,
+    pub in_place_buffers: bool,
+
+    event_data: NodeEventSchedulerData,
+}
+
+pub(crate) enum ContextToProcessorMsg {
+    EventGroup(Vec<NodeEvent>),
+    NewSchedule(Box<ScheduleHeapData>),
+    SetFlags(FirewheelBitFlags),
+    #[cfg(feature = "musical_transport")]
+    SetTransportState(Box<TransportState>),
+    #[cfg(feature = "scheduled_events")]
+    ClearScheduledEvents(SmallVec<[ClearScheduledEventsEvent; 1]>),
+}
+
+#[allow(clippy::enum_variant_names)]
+pub(crate) enum ProcessorToContextMsg {
+    DropEventGroup(Vec<NodeEvent>),
+    DropSchedule(Box<ScheduleHeapData>),
+    #[cfg(feature = "musical_transport")]
+    DropTransportState(Box<TransportState>),
+    #[cfg(feature = "scheduled_events")]
+    DropClearScheduledEvents(SmallVec<[ClearScheduledEventsEvent; 1]>),
+}
+
+#[cfg(feature = "scheduled_events")]
+pub(crate) struct ClearScheduledEventsEvent {
+    /// If `None`, then clear events for all nodes.
+    pub node_id: Option<NodeID>,
+    pub event_type: ClearScheduledEventsType,
+}
+
+#[derive(Clone)]
+pub(crate) struct SharedClock {
+    pub clock_samples: InstantSamples,
+    #[cfg(feature = "scheduled_events")]
+    pub update_instant: Instant,
+    #[cfg(feature = "musical_transport")]
+    pub current_playhead: Option<InstantMusical>,
+    #[cfg(feature = "musical_transport")]
+    pub speed_multiplier: f64,
+    #[cfg(feature = "musical_transport")]
+    pub transport_is_playing: bool,
+}
+
+impl Default for SharedClock {
+    fn default() -> Self {
+        Self {
+            clock_samples: InstantSamples(0),
+            #[cfg(feature = "scheduled_events")]
+            update_instant: Instant::now(),
+            #[cfg(feature = "musical_transport")]
+            current_playhead: None,
+            #[cfg(feature = "musical_transport")]
+            speed_multiplier: 1.0,
+            #[cfg(feature = "musical_transport")]
+            transport_is_playing: false,
+        }
+    }
+}
+
+/// How to handle event buffers on the audio thread running out of space.
+#[derive(Default, Debug, Clone, Copy, PartialEq, PartialOrd)]
+#[cfg_attr(feature = "bevy_reflect", derive(bevy_reflect::Reflect))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum BufferOutOfSpaceMode {
+    #[default]
+    /// If an event buffer on the audio thread ran out of space to fit new
+    /// events, reallocate on the audio thread to fit the new items. If this
+    /// happens, it may cause underruns (audio glitches), and a warning will
+    /// be logged.
+    AllocateOnAudioThread,
+    /// If an event buffer on the audio thread ran out of space to fit new
+    /// events, then panic.
+    Panic,
+    /// If an event buffer on the audio thread ran out of space to fit new
+    /// events, drop those events to avoid allocating on the audio thread.
+    /// If this happens, a warning will be logged.
+    ///
+    /// (Not generally recommended, but the option is here if you want it.)
+    DropEvents,
+}
+
+#[derive(Default)]
+pub(crate) struct SharedFlags {
+    pub clipping_occurred: AtomicBool,
+}

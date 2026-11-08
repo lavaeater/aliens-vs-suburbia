@@ -46,7 +46,7 @@ use snap::{CanvasLayout, snap_to_texels};
 
 /// The render layer only the canvas camera and its quad live on.
 const CANVAS_LAYER: usize = 31;
-const SHADER: &str = "shaders/retro_canvas.wgsl";
+const SHADER: &str = "shaders/retro_canvas.wesl";
 /// The palette the game starts with, unless `--palette` names another.
 pub const DEFAULT_PALETTE: &str = "moebius-64";
 

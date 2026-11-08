@@ -106,7 +106,7 @@ pub fn spawn_polypizza_screen(
                 .insert(SearchLabel);
             });
         })
-        .observe(|_: On<Pointer<Click>>, mut s: ResMut<PolyPizzaState>| {
+        .observe(|_: On<PointerClick>, mut s: ResMut<PolyPizzaState>| {
             s.input_focus = crate::poly_pizza::state::InputFocus::Keyword;
         });
 
@@ -292,7 +292,7 @@ pub fn spawn_polypizza_screen(
                 .insert(UsernameLabel);
             });
         })
-        .observe(|_: On<Pointer<Click>>, mut s: ResMut<PolyPizzaState>| {
+        .observe(|_: On<PointerClick>, mut s: ResMut<PolyPizzaState>| {
             s.input_focus = crate::poly_pizza::state::InputFocus::Username;
         });
 
@@ -425,7 +425,7 @@ pub fn spawn_polypizza_screen(
                     .with_flex_grow(1.0);
                 });
             })
-            .observe(|_: On<Pointer<Click>>, mut s: ResMut<PolyPizzaState>| {
+            .observe(|_: On<PointerClick>, mut s: ResMut<PolyPizzaState>| {
                 s.input_focus = crate::poly_pizza::state::InputFocus::Tags;
             });
 

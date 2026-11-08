@@ -1,0 +1,27 @@
+# A copy of RJ/bevy_behave's main (rev dbf968079d2b8af518ca96b6d7a1bff7bcd2fdd9, 0.6.0), with
+# Bevy bumped to 0.20, until upstream has a 0.20 release. Examples and their dev-dependencies
+# left out. Licence: MIT OR Apache-2.0 (the LICENSE files here).
+[package]
+name = "bevy_behave"
+version = "0.6.0"
+edition = "2024"
+description = "A behaviour tree plugin for bevy with dynamic spawning."
+repository = "https://github.com/RJ/bevy_behave"
+documentation = "https://docs.rs/bevy_behave"
+keywords = ["bevy", "tree", "ai", "game"]
+license = "MIT OR Apache-2.0"
+authors = ["Richard Jones <rj@metabrew.com>"]
+
+[dependencies]
+bevy = { version = "0.20.1", default-features = false, features = ["bevy_log"] }
+dyn-clone = "1.0.18"
+ego-tree = "0.11.0"
+
+[dev-dependencies]
+bevy = { version = "0.20.1", default-features = false, features = ["bevy_log"] }
+
+[lints.clippy]
+type_complexity = "allow"
+
+# Its own workspace, so its tests run on their own (`cargo test --manifest-path vendor/bevy_behave/Cargo.toml`).
+[workspace]

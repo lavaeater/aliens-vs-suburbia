@@ -298,7 +298,7 @@ pub fn run_spawners(
 
 /// A spawner going (destroyed, or the level ending): count it and blow it up.
 pub fn spawner_destroyed(
-    removed: On<Remove, Spawner>,
+    removed: On<Remove<Spawner>>,
     positions: Query<(&Position, &Health)>,
     mut infestation: ResMut<Infestation>,
     mut fx: MessageWriter<SpawnFx>,

@@ -1,0 +1,105 @@
+#[cfg(not(feature = "std"))]
+use num_traits::Float;
+
+use firewheel_core::node::NodeError;
+use firewheel_core::{
+    channel_config::{ChannelConfig, ChannelCount},
+    diff::{Diff, Patch},
+    dsp::volume::{DEFAULT_MIN_AMP, Volume},
+    event::ProcEvents,
+    node::{
+        AudioNode, AudioNodeInfo, AudioNodeProcessor, ConstructProcessorContext, EmptyConfig,
+        ProcBuffers, ProcExtra, ProcInfo, ProcessStatus,
+    },
+};
+
+/// A simple node that outputs a sine wave, used for testing purposes.
+///
+/// Note that because this node is for testing purposes, it does not
+/// bother with parameter smoothing.
+#[derive(Diff, Patch, Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
+#[cfg_attr(feature = "bevy_reflect", derive(bevy_reflect::Reflect))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct BeepTestNode {
+    /// The frequency of the sine wave in the range `[20.0, 20_000.0]`. A good
+    /// value for testing is `440` (middle C).
+    pub freq_hz: f32,
+
+    /// The overall volume.
+    ///
+    /// NOTE, a sine wave at `Volume::Linear(1.0) or Volume::Decibels(0.0)` volume
+    /// is *LOUD*, prefer to use a value `Volume::Linear(0.5) or
+    /// Volume::Decibels(-12.0)`.
+    pub volume: Volume,
+}
+
+impl Default for BeepTestNode {
+    fn default() -> Self {
+        Self {
+            freq_hz: 440.0,
+            volume: Volume::Linear(0.5),
+        }
+    }
+}
+
+impl AudioNode for BeepTestNode {
+    type Configuration = EmptyConfig;
+
+    fn info(&self, _config: &Self::Configuration) -> Result<AudioNodeInfo, NodeError> {
+        Ok(AudioNodeInfo::new()
+            .debug_name("beep_test")
+            .channel_config(ChannelConfig {
+                num_inputs: ChannelCount::ZERO,
+                num_outputs: ChannelCount::MONO,
+            }))
+    }
+
+    fn construct_processor(
+        &self,
+        _config: &Self::Configuration,
+        cx: ConstructProcessorContext,
+    ) -> Result<impl AudioNodeProcessor, NodeError> {
+        Ok(Processor {
+            phasor: 0.0,
+            phasor_inc: self.freq_hz.clamp(20.0, 20_000.0)
+                * cx.stream_info.sample_rate_recip as f32,
+            gain: self.volume.amp_clamped(DEFAULT_MIN_AMP),
+        })
+    }
+}
+
+struct Processor {
+    phasor: f32,
+    phasor_inc: f32,
+    gain: f32,
+}
+
+impl AudioNodeProcessor for Processor {
+    fn events(&mut self, info: &ProcInfo, events: &mut ProcEvents, _extra: &mut ProcExtra) {
+        for patch in events.drain_patches::<BeepTestNode>() {
+            match patch {
+                BeepTestNodePatch::FreqHz(f) => {
+                    self.phasor_inc = f.clamp(20.0, 20_000.0) * info.sample_rate_recip as f32;
+                }
+                BeepTestNodePatch::Volume(v) => {
+                    self.gain = v.amp_clamped(DEFAULT_MIN_AMP);
+                }
+            }
+        }
+    }
+
+    fn process(
+        &mut self,
+        _info: &ProcInfo,
+        buffers: ProcBuffers,
+        _extra: &mut ProcExtra,
+    ) -> ProcessStatus {
+        for s in buffers.outputs[0].iter_mut() {
+            *s = (self.phasor * core::f32::consts::TAU).sin() * self.gain;
+            self.phasor = (self.phasor + self.phasor_inc).fract();
+        }
+
+        ProcessStatus::OutputsModified
+    }
+}

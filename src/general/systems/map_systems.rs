@@ -390,7 +390,7 @@ pub fn map_loader(
         let map_center_z = rows as f32 * tile_defs.tile_width * 0.5;
         let bg_size = (cols.max(rows) as f32 * tile_defs.tile_width * 4.0).max(200.0);
         let bg_y = tile_defs.floor_level - 0.05;
-        let bg_mesh = meshes.add(bevy::math::primitives::Rectangle::new(bg_size, bg_size));
+        let bg_mesh = meshes.add(bevy::shape::Rectangle::new(bg_size, bg_size));
         let bg_mat = materials.add(StandardMaterial {
             base_color: Color::srgb(0.18, 0.22, 0.18),
             perceptual_roughness: 0.95,

@@ -11,7 +11,7 @@ workspace = true
 [workspace]
 members = ["turbofacts", "bevy_mod_inverse_kinematics"]
 # rusty_music is its own workspace (path dependency via the submodule).
-exclude = ["rusty_music", "spikes"]
+exclude = ["rusty_music", "spikes", "vendor"]
 resolver = "2"
 
 [workspace.lints.clippy]
@@ -71,13 +71,13 @@ used_underscore_binding = "allow"
 wildcard_imports = "allow"
 
 [dependencies]
-bevy = { version = "0.19.1", features = ["wayland", "3d", "ui", "bevy_feathers", "webp"] }
+bevy = { version = "0.20.1", features = ["wayland", "3d", "ui", "bevy_feathers", "webp"] }
 # Physics: Jolt, through `src/physics/` (`docs/jolt-port.md`).
-oxijolt = { version = "1.4", features = ["glam032"] }
+oxijolt = { version = "1.5", features = ["glam033"] }
 pathfinding = "4.6"
 itertools = "0.15.0"
-bevy_mod_outline = "0.13.0"
-bevy-inspector-egui = "0.37.0"
+bevy_mod_outline = "0.14.0"
+bevy-inspector-egui = "0.38.0"
 lava_ui_builder = { path = "lava_ui_builder", features = ["serde"] }
 turbofacts = { path = "turbofacts" }
 serde = { version = "1", features = ["derive"] }
@@ -89,19 +89,20 @@ ureq = { version = "3.3.0", features = ["json"] }
 dotenvy = "0.15"
 urlencoding = "2"
 bevy_wind_waker_shader = { path = "bevy_wind_waker_shader" }
-bevy_skein = "0.6.0"
+bevy_skein = "0.7.0"
 ratatui = { version = "0.30", optional = true }
 crossterm = { version = "0.29", optional = true }
 enumflags2 = { version = "0.7.12", features = ["serde"] }
 # Use the submodule checkout so local edits to rusty_music take effect immediately.
 rusty_music = { path = "rusty_music", features = ["synth"] }
 bevy_seedling = { version = "0.8.0", default-features = false, features = ["wav"] }
-leafwing-input-manager = "0.21"
-# GPU particles. `main` is the Bevy 0.19 branch (no release yet); pinned so it cannot move under us.
-bevy_sprinkles = { git = "https://github.com/doceazedo/sprinkles", rev = "0e978f5a9afc6b456b3693c8761e73a6c7e155bd" }
-ghx_proc_gen = "0.9"
-# Behaviour trees for the townsfolk (`src/townsfolk/`). 0.6 (Bevy 0.19) is on git only; pinned.
-bevy_behave = { git = "https://github.com/RJ/bevy_behave", rev = "dbf968079d2b8af518ca96b6d7a1bff7bcd2fdd9" }
+leafwing-input-manager = "0.22"
+# GPU particles. Its `bevy-0.20` branch (no release yet); pinned so it cannot move under us.
+bevy_sprinkles = { git = "https://github.com/doceazedo/sprinkles", rev = "7d8cae40af1213990e2586dd20474ba4c91d8539" }
+ghx_proc_gen = "0.10"
+# Behaviour trees for the townsfolk (`src/townsfolk/`). Upstream (RJ/bevy_behave) has no Bevy 0.20
+# release or branch yet: a copy of its main (rev dbf9680, MIT/Apache) with the version bump.
+bevy_behave = { path = "vendor/bevy_behave" }
 
 # Enabled here only for its features; bevy_seedling depends on the same cpal. `default_host`
 # then opens a native PipeWire stream, on a realtime thread via rtkit, and falls back to ALSA
@@ -114,10 +115,21 @@ cpal = { version = "0.18", default-features = false, features = ["pipewire", "re
 [features]
 map-editor = ["dep:ratatui", "dep:crossterm"]
 
-# bevy_seedling has no crates.io release targeting Bevy 0.19; its `master` (0.8.0) does.
+# bevy_seedling has no crates.io release targeting Bevy 0.20; our fork's `bevy-0.20` branch does.
 # Pinned to a rev so builds stay reproducible. Drop this once 0.8 is published.
 [patch.crates-io]
-bevy_seedling = { git = "https://github.com/corvusprudens/bevy_seedling", rev = "9db62d12daa11a2ffbd9da1565154127eac0a241" }
+bevy_seedling = { git = "https://github.com/lavaeater/bevy_seedling", rev = "519c25bad4d7a36148136666f32499cececdd33b" }
+# Firewheel 0.12 with its Bevy dependency bumped to 0.20 (and a `glam-33` feature), which the
+# seedling fork needs: `vendor/firewheel-bevy-0.20` (see its README). Remove once upstream
+# Firewheel supports Bevy 0.20.
+firewheel-core = { path = "vendor/firewheel-bevy-0.20/firewheel-core" }
+firewheel-graph = { path = "vendor/firewheel-bevy-0.20/firewheel-graph" }
+firewheel-nodes = { path = "vendor/firewheel-bevy-0.20/firewheel-nodes" }
+firewheel-cpal = { path = "vendor/firewheel-bevy-0.20/firewheel-cpal" }
+firewheel-rtaudio = { path = "vendor/firewheel-bevy-0.20/firewheel-rtaudio" }
+firewheel-symphonium = { path = "vendor/firewheel-bevy-0.20/firewheel-symphonium" }
+firewheel-macros = { path = "vendor/firewheel-bevy-0.20/firewheel-macros" }
+firewheel = { path = "vendor/firewheel-bevy-0.20/firewheel" }
 
 # Enable max optimisations for dependencies, but not for our code:h
 [profile.dev.package."*"]

@@ -190,7 +190,7 @@ pub fn life() -> Tree<Behave> {
     }
 }
 
-fn give_a_life(add: On<Add, Townsfolk>, mut commands: Commands) {
+fn give_a_life(add: On<Add<Townsfolk>>, mut commands: Commands) {
     commands.entity(add.event().entity).with_child((
         Name::new("Townsfolk life"),
         BehaveTree::new(life()),
@@ -382,7 +382,7 @@ fn walk(
 
 /// A walk that ends (done, given up, or the tree moved on) leaves its walker standing.
 fn stop_walking(
-    remove: On<Remove, WalkTo>,
+    remove: On<Remove<WalkTo>>,
     tasks: Query<&BehaveCtx, With<WalkTo>>,
     mut folk: Query<(&Neighbour, &mut LinearVelocity)>,
 ) {
@@ -449,7 +449,7 @@ fn stay_in(
 
 /// Leaving `StayIn` (done or cut short) brings them back out.
 fn come_out(
-    remove: On<Remove, StayIn>,
+    remove: On<Remove<StayIn>>,
     tasks: Query<&BehaveCtx, With<StayIn>>,
     mut folk: Query<&mut Visibility, With<Indoors>>,
     mut commands: Commands,

@@ -3,7 +3,7 @@
 // highlights), inked where it is darker than a neighbour, then matched to a palette with
 // an 8x8 ordered (Bayer) dither between the two nearest colours.
 
-#import bevy_sprite::mesh2d_vertex_output::VertexOutput
+import bevy_sprite_render::mesh2d::vertex_output::VertexOutput;
 
 const MAX_COLORS: u32 = 256u;
 
@@ -27,8 +27,8 @@ struct RetroParams {
     palette_linear: array<vec4<f32>, 256>,
 }
 
-@group(#{MATERIAL_BIND_GROUP}) @binding(0) var<uniform> params: RetroParams;
-@group(#{MATERIAL_BIND_GROUP}) @binding(1) var scene: texture_2d<f32>;
+@group(constants::MATERIAL_BIND_GROUP) @binding(0) var<uniform> params: RetroParams;
+@group(constants::MATERIAL_BIND_GROUP) @binding(1) var scene: texture_2d<f32>;
 
 fn linear_to_oklab(c: vec3<f32>) -> vec3<f32> {
     let l = 0.4122214708 * c.r + 0.5363325363 * c.g + 0.0514459929 * c.b;

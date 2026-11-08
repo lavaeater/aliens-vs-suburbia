@@ -58,7 +58,7 @@ fn parts<'a>(b: &'a BodyDataItem<'_, '_>, scale: Vec3) -> BodyParts<'a> {
 /// `y`) reads and edits the real spawn pose, not the origin. Unparented entities only: a
 /// child's world pose isn't known until transforms propagate, so `create_bodies` takes it then.
 pub(super) fn seed_pose(
-    add: On<Add, Collider>,
+    add: On<Add<Collider>>,
     mut poses: Query<(&Transform, &mut Position, &mut Rotation), Without<ChildOf>>,
 ) {
     let Ok((transform, mut position, mut rotation)) = poses.get_mut(add.entity) else { return };
@@ -131,7 +131,7 @@ fn global_scale(helper: &TransformHelper, entity: Entity) -> Vec3 {
 
 /// A collider removed (or its entity despawned) takes its body with it.
 pub(super) fn remove_body(
-    remove: On<Remove, Collider>,
+    remove: On<Remove<Collider>>,
     bodies: Query<&JoltBody>,
     mut jolt: ResMut<JoltWorld>,
     mut removed: ResMut<Removed>,

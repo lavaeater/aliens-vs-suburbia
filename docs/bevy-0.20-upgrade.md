@@ -17,6 +17,38 @@ our fork (`lavaeater/bevy_seedling`, branch `bevy-0.20`). Work happens on the ga
 | 7 | Check it | `cargo test`, `--validate`, and every screen through `--shot` (menu, a match, the GIS levels, the campaign editor, the character editor) |
 | 8 | `bevy_psx` (`lavaeater/bevy_psx`, `bevy-0.20`) | try it as an alternative to the retro look: `--psx` puts `PsxCamera` on the game camera with the retro look off; compare screenshots |
 
+### Status (2026-11-08): done, on branch `bevy-0.20-upgrade`
+
+Everything builds on Bevy 0.20.1 with no warnings in the game; `cargo test` (674), the
+workspace crates', `vendor/bevy_behave`'s and `lava_ui_builder`'s tests pass; `--validate` is
+clean. Checked on screen (`--shot`): the menu, a match on a GIS level (retro look, lights,
+HUD, minimap, townsfolk, waves), the campaign editor, the character editor (outlines,
+snapped weapon, shadows), the flat toon shader (switched on for the test only). Audio opens
+its PipeWire stream through the seedling fork.
+
+What it took:
+
+- **Submodules**, each on a `bevy-0.20` branch: `lava_ui_builder` (observer generics,
+  feathers' imperative button gone so `ButtonProps`/`feathers_button_fn` are ours,
+  `EntityCursor` moved to picking, BSN `@` scene calls / no `template_value` / `--`),
+  `bevy_wind_waker_shader` (three shaders to WESL), `rusty_music` (seedling fork, Firewheel
+  0.12), `bevy_mod_inverse_kinematics` (bump).
+- **Vendored**: `vendor/firewheel-bevy-0.20` (the fork's Firewheel patch, until then only a
+  local folder next to the fork) and `vendor/bevy_behave` (no upstream 0.20 yet).
+- **Game**: `On<Add<T>>`, flat pointer events, `bevy::shape::Rectangle`, and
+  `assets/shaders/retro_canvas.wesl` (the one that mattered: as `.wgsl` the canvas failed to
+  parse and the whole 3D view was black).
+
+Still to do by hand:
+
+- **Playtest** what the weak ordering of built-in sets in `PostUpdate` could have moved: the
+  torso twist, leg IK and weapon snap all looked right standing still.
+- `lava_ui_builder`'s examples and `tests/scenes.rs` still use the old BSN list syntax
+  (commas, parentheses, `bsn_list![..]`): deprecated, about 180 warnings, works.
+- `bevy_wind_waker_shader`'s `WindWakerShaderPlugin` is not reachable from outside the crate
+  (was so before); the flat shader is.
+- Drop `vendor/bevy_behave` and `vendor/firewheel-bevy-0.20` once upstream catches up.
+
 Written 2026-10-21. Bevy 0.20.0 shipped 2026-10-08
 ([migration guide](https://bevy.org/learn/migration-guides/0-19-to-0-20/)).
 
