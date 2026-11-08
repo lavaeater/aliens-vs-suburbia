@@ -11,6 +11,7 @@
 //! - `play.rs`: F5 plays the selected level and comes back here afterwards.
 
 pub mod analysis;
+pub mod catalog;
 pub mod doc;
 pub mod panel;
 pub mod play;
@@ -28,6 +29,8 @@ impl Plugin for CampaignEditorPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<doc::CampaignDoc>()
             .init_resource::<view::Tool>()
+            .init_resource::<view::PlaceTurn>()
+            .init_resource::<catalog::Catalog>()
             .init_resource::<view::Drag>()
             .init_resource::<view::Hover>()
             .init_resource::<analysis::Analysis>()
@@ -82,7 +85,9 @@ fn open_campaign(
     mut confirm: ResMut<panel::Confirm>,
     mut frame: ResMut<panel::FrameOn>,
     open_at: Option<Res<OpenAtLevel>>,
+    mut catalog: ResMut<catalog::Catalog>,
 ) {
+    *catalog = catalog::Catalog::load();
     *doc = doc::CampaignDoc::load(&choice.0)
         .unwrap_or_else(|e| doc::CampaignDoc::failed(&choice.0, e));
     if let Some(at) = open_at {

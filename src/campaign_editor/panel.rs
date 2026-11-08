@@ -11,6 +11,7 @@ use lava_ui_builder::{LavaTheme, UIBuilder};
 
 use super::analysis::Analysis;
 use super::doc::CampaignDoc;
+use super::catalog::DefKind;
 use super::view::{CampaignCamera, TILE, Tool, tile_to_world};
 use crate::character_editor::text_field::edit_value;
 use crate::character_editor::ui::row;
@@ -81,6 +82,7 @@ pub fn spawn_panel(commands: Commands, theme: Res<LavaTheme>) {
             "S: suggest spawns  F: frame  PgUp/PgDn: order",
             "Del: remove level  Ctrl+S: save  Esc: leave",
             "F5: save and play the selected level",
+            "PLACE: pick a def, click to put it, R turns",
         ] {
             left.label(line, 11.0, HELP);
         }
@@ -203,6 +205,7 @@ fn waves(
     parent: &mut ChildSpawnerCommands,
     index: usize,
     waves: &[crate::general::components::map_components::WaveDef],
+    enemies: &[String],
 ) {
     use crate::general::components::map_components::WaveDef;
     if waves.is_empty() {
@@ -216,8 +219,19 @@ fn waves(
                 .file_stem()
                 .map_or_else(|| wave.enemy_def.clone(), |s| s.to_string_lossy().into_owned())
         };
+        let options = enemies.to_vec();
         strip(parent).with_children(|line| {
-            text(line, format!("{}. {enemy}", n + 1), 11.0, LABEL);
+            text(line, format!("{}.", n + 1), 11.0, LABEL);
+            // The enemy: click for the next (the built-in alien, then every enemy def).
+            button(line, &enemy, false, move |doc, _, _| {
+                doc.edit_map(index, |map| {
+                    if let Some(w) = map.waves.get_mut(n)
+                        && let Some(next) = super::catalog::next_of(&options, &w.enemy_def)
+                    {
+                        w.enemy_def.clone_from(next);
+                    }
+                });
+            });
             for (label, count, rate) in [("-", -2i32, 0i32), ("+", 2, 0), ("slower", 0, -2), ("faster", 0, 2)] {
                 button(line, label, false, move |doc, _, _| {
                     doc.edit_map(index, |map| {
@@ -256,6 +270,51 @@ fn waves(
     });
 }
 
+/// The loot bags: on or off, how thick, which table they roll.
+fn loot(
+    parent: &mut ChildSpawnerCommands,
+    index: usize,
+    loot: Option<&crate::general::components::map_components::LootSpread>,
+    tables: &[String],
+) {
+    use crate::general::components::map_components::LootSpread;
+    strip(parent).with_children(|line| {
+        let on = loot.is_some();
+        button(line, if on { "On" } else { "Off" }, on, move |doc, _, _| {
+            doc.edit_map(index, |map| {
+                map.loot = if map.loot.is_some() {
+                    None
+                } else {
+                    Some(LootSpread::default())
+                };
+            });
+        });
+        let Some(spread) = loot else {
+            return;
+        };
+        text(line, format!("{}-{} per {} tiles", spread.min, spread.max, spread.per_tiles), 11.0, VALUE);
+        for (label, delta) in [("fewer", 10i32), ("more", -10)] {
+            button(line, label, false, move |doc, _, _| {
+                doc.edit_map(index, |map| {
+                    if let Some(l) = map.loot.as_mut() {
+                        l.per_tiles = l.per_tiles.saturating_add_signed(delta).max(10);
+                    }
+                });
+            });
+        }
+        let options = tables.to_vec();
+        button(line, &format!("table: {}", spread.table), false, move |doc, _, _| {
+            doc.edit_map(index, |map| {
+                if let Some(l) = map.loot.as_mut()
+                    && let Some(next) = super::catalog::next_of(&options, &l.table)
+                {
+                    l.table.clone_from(next);
+                }
+            });
+        });
+    });
+}
+
 /// What the panel shows; it rebuilds when this changes.
 #[derive(PartialEq, Default)]
 pub struct PanelKey {
@@ -264,6 +323,7 @@ pub struct PanelKey {
     tool: Option<Tool>,
     focus: TextFocus,
     remove: Option<usize>,
+    turn: u8,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -274,6 +334,8 @@ pub fn rebuild_panel(
     tool: Res<Tool>,
     focus: Res<TextFocus>,
     confirm: Res<Confirm>,
+    catalog: Res<super::catalog::Catalog>,
+    turn: Res<super::view::PlaceTurn>,
     body: Query<Entity, With<PanelBody>>,
     mut key: Local<PanelKey>,
 ) {
@@ -286,6 +348,7 @@ pub fn rebuild_panel(
         tool: Some(*tool),
         focus: *focus,
         remove: confirm.remove,
+        turn: turn.0,
     };
     if *key == now {
         return;
@@ -459,7 +522,53 @@ pub fn rebuild_panel(
                 |m, v| m.townsfolk = v,
                 level.map.townsfolk,
             );
-            waves(p, i, &level.map.waves);
+            let mut enemies = vec![String::new()];
+            enemies.extend(catalog.of_kind(DefKind::Enemy).map(|(_, d)| d.path.clone()));
+            waves(p, i, &level.map.waves, &enemies);
+
+            heading(p, "WEAPONS (none = each player's own)");
+            strip(p).with_children(|line| {
+                for (_, def) in catalog.of_kind(DefKind::Weapon) {
+                    let carried = level
+                        .map
+                        .weapons
+                        .iter()
+                        .any(|w| crate::assets::paths::same(w, &def.path));
+                    let path = def.path.clone();
+                    button(line, &def.name, carried, move |doc, _, _| {
+                        doc.edit_map(i, |map| {
+                            let before = map.weapons.len();
+                            map.weapons.retain(|w| !crate::assets::paths::same(w, &path));
+                            if map.weapons.len() == before {
+                                map.weapons.push(path.clone());
+                            }
+                        });
+                    });
+                }
+            });
+
+            heading(p, "LOOT BAGS");
+            loot(p, i, level.map.loot.as_ref(), &catalog.loot_tables);
+
+            heading(p, &format!("PLACE (R turns: {} deg, right click removes)", u32::from(turn.0) * 45));
+            text(
+                p,
+                format!("{} placed in this level", level.map.placements.len()),
+                10.0,
+                HELP,
+            );
+            for kind in [DefKind::Item, DefKind::Terrain, DefKind::Tower, DefKind::Person] {
+                if catalog.of_kind(kind).next().is_none() {
+                    continue;
+                }
+                strip(p).with_children(|line| {
+                    text(line, format!("{}:", kind.label()), 10.0, HELP);
+                    for (at, def) in catalog.of_kind(kind) {
+                        let t = Tool::Place(at);
+                        button(line, &def.name, tool == t, move |_, tool, _| *tool = t);
+                    }
+                });
+            }
 
             heading(p, "STORY");
             if level.map.stories.is_empty() {
@@ -524,6 +633,7 @@ pub fn handle_keys(
     mut confirm: ResMut<Confirm>,
     analysis: Res<Analysis>,
     mut next: ResMut<NextState<GameState>>,
+    mut turn: ResMut<super::view::PlaceTurn>,
 ) {
     let ctrl = keys.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]);
     for event in keyboard.read() {
@@ -558,6 +668,7 @@ pub fn handle_keys(
             KeyCode::Digit1 => *tool = Tool::Marker(MarkerKind::Player),
             KeyCode::Digit2 => *tool = Tool::Marker(MarkerKind::Spawn),
             KeyCode::Digit3 => *tool = Tool::Marker(MarkerKind::Goal),
+            KeyCode::KeyR => turn.0 = (turn.0 + 1) % 8,
             KeyCode::KeyS => {
                 if let Some(i) = selected
                     && !analysis.suggested_spawns.is_empty()

@@ -50,13 +50,20 @@ pub enum Tool {
     #[default]
     Select,
     Marker(MarkerKind),
+    /// Place the catalog's def at this index.
+    Place(usize),
 }
+
+/// Which way the place tool puts things, in eighths of a turn (R turns it).
+#[derive(Resource, Debug, Clone, Copy, Default)]
+pub struct PlaceTurn(pub u8);
 
 impl Tool {
     pub const fn name(self) -> &'static str {
         match self {
             Self::Select => "select",
             Self::Marker(kind) => kind.name(),
+            Self::Place(_) => "place",
         }
     }
 }
@@ -423,7 +430,7 @@ fn level_at(doc: &CampaignDoc, tile: (i32, i32)) -> Option<usize> {
 }
 
 /// The left mouse button, by tool.
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 pub fn use_tool(
     mouse: Res<ButtonInput<MouseButton>>,
     keys: Res<ButtonInput<KeyCode>>,
@@ -433,8 +440,22 @@ pub fn use_tool(
     mut doc: ResMut<CampaignDoc>,
     mut drag: ResMut<Drag>,
     mut focus: ResMut<TextFocus>,
+    catalog: Res<super::catalog::Catalog>,
+    turn: Res<PlaceTurn>,
 ) {
     let scale = cameras.single().map_or(1.0, projection_scale);
+    if let (Tool::Place(def), Some(i), Some(tile)) = (*tool, doc.selected, hover.tile) {
+        if mouse.just_pressed(MouseButton::Right) {
+            doc.remove_placement(i, tile.0, tile.1);
+        }
+        if mouse.just_pressed(MouseButton::Left)
+            && let Some(def) = catalog.defs.get(def)
+        {
+            focus.0 = None;
+            doc.place_def(i, &def.path, tile, turn.0);
+        }
+        return;
+    }
     let shift = keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]);
 
     if mouse.just_pressed(MouseButton::Right)
@@ -458,8 +479,9 @@ pub fn use_tool(
                 }
                 Drag::None
             }
-            Tool::Select if shift => Drag::Draw(tile),
-            Tool::Select => {
+            // With no level selected, the place tool selects like Select.
+            Tool::Select | Tool::Place(_) if shift => Drag::Draw(tile),
+            Tool::Select | Tool::Place(_) => {
                 let selected = doc.selected.and_then(|i| doc.region_of(i).map(|r| (i, r)));
                 let edges = selected.map(|(_, r)| edges_at(r, world, (6.0 * scale).max(TILE * 0.6)));
                 match (selected, edges) {
@@ -539,6 +561,18 @@ const OFF_LEVEL: Color = Color::srgba(1.0, 1.0, 1.0, 0.25);
 const DRAWING: Color = Color::srgb(0.5, 1.0, 0.6);
 const HOVER: Color = Color::srgba(1.0, 1.0, 1.0, 0.6);
 const BAD: Color = Color::srgb(1.0, 0.15, 0.15);
+const PLACED: Color = Color::srgb(1.0, 0.6, 0.2);
+
+fn kind_color(kind: Option<super::catalog::DefKind>) -> Color {
+    use super::catalog::DefKind;
+    match kind {
+        Some(DefKind::Item) => Color::srgb(1.0, 0.9, 0.3),
+        Some(DefKind::Terrain) => Color::srgb(0.85, 0.5, 0.25),
+        Some(DefKind::Tower) => Color::srgb(0.5, 0.7, 1.0),
+        Some(DefKind::Person) => Color::srgb(0.35, 0.6, 1.0),
+        _ => Color::srgb(0.8, 0.8, 0.8),
+    }
+}
 
 pub fn marker_color(kind: MarkerKind, slot: usize) -> Color {
     match kind {
@@ -557,8 +591,21 @@ pub fn draw(
     drag: Res<Drag>,
     tool: Res<Tool>,
     cameras: Query<&Projection, With<CampaignCamera>>,
+    catalog: Res<super::catalog::Catalog>,
 ) {
     let scale = cameras.single().map_or(1.0, projection_scale);
+    if let Some(level) = doc.selected_level() {
+        for p in &level.map.placements {
+            let at = tile_to_world(p.x as f32 + 0.5, p.y as f32 + 0.5);
+            let color = kind_color(catalog.of_placement(p).map(|d| d.kind));
+            let size = (TILE * 0.7).max(4.0 * scale);
+            gizmos.rect_2d(Isometry2d::from_translation(at), Vec2::splat(size), color);
+            // Which way it faces: the turn in eighths, 0 = up the map.
+            let angle = f32::from(p.rotation_steps) * std::f32::consts::FRAC_PI_4;
+            let tip = at + Vec2::new(angle.sin(), angle.cos()) * size * 0.6;
+            gizmos.line_2d(at, tip, color);
+        }
+    }
     let (w, h) = doc.base_size();
     let (centre, size) = region_rect(Region::new(0, 0, w, h));
     gizmos.rect_2d(Isometry2d::from_translation(centre), size, OFF_LEVEL);
@@ -636,6 +683,7 @@ pub fn draw(
     if let Some((x, y)) = hover.tile {
         let color = match *tool {
             Tool::Marker(kind) => marker_color(kind, 0),
+            Tool::Place(_) => PLACED,
             Tool::Select => HOVER,
         };
         gizmos.rect_2d(

@@ -13,7 +13,7 @@ use bevy::prelude::Resource;
 use crate::assets::paths::{content_ref, disk_path};
 use crate::campaign::{CampaignFile, CampaignLevel, campaign_file};
 use crate::general::components::map_components::{
-    ELEVATION_STEP, MapFile, Marker, MarkerKind, Region,
+    ELEVATION_STEP, MapFile, Marker, MarkerKind, Region, TilePlacement,
 };
 use crate::map::compose::MIN_SIZE;
 use crate::map::text_format;
@@ -405,6 +405,46 @@ impl CampaignDoc {
         removed
     }
 
+    /// Put def `def_path` on tile `(x, y)` of level `index` (base tiles), turned
+    /// `rotation_steps` eighths; it replaces whatever was placed there.
+    pub fn place_def(&mut self, index: usize, def_path: &str, (x, y): (i32, i32), rotation_steps: u8) {
+        let Some(region) = self.region_of(index) else {
+            return;
+        };
+        if !region.contains(x, y) || region.on_edge(x, y) {
+            self.touch("Placements go inside the level's walls");
+            return;
+        }
+        let Some(level) = self.levels.get_mut(index) else {
+            return;
+        };
+        level.map.placements.retain(|p| (p.x, p.y) != (x, y));
+        level.map.placements.push(TilePlacement {
+            x,
+            y,
+            def_path: def_path.to_string(),
+            rotation_steps: rotation_steps % 8,
+        });
+        let name = std::path::Path::new(def_path)
+            .file_stem()
+            .map_or_else(String::new, |s| s.to_string_lossy().into_owned());
+        self.touch(format!("{name} at {x}, {y}"));
+    }
+
+    /// Take the placement off tile `(x, y)` of level `index`. Whether there was one.
+    pub fn remove_placement(&mut self, index: usize, x: i32, y: i32) -> bool {
+        let Some(level) = self.levels.get_mut(index) else {
+            return false;
+        };
+        let before = level.map.placements.len();
+        level.map.placements.retain(|p| (p.x, p.y) != (x, y));
+        let removed = level.map.placements.len() != before;
+        if removed {
+            self.touch(format!("Removed the placement at {x}, {y}"));
+        }
+        removed
+    }
+
     /// Replace level `index`'s alien spawns with `spawns` (base tiles).
     pub fn set_spawns(&mut self, index: usize, spawns: &[(i32, i32)]) {
         let Some(level) = self.levels.get_mut(index) else {
@@ -576,6 +616,21 @@ mod tests {
         assert!(story.contains("crawl:gis_09_crawl_intro"));
         let crawl: lava_ui_builder::crawl::CrawlSpec = ron::from_str(&crawl).expect("crawl parses");
         assert_eq!(crawl.title, "THE MALL");
+    }
+
+    #[test]
+    fn placements_go_inside_the_walls_one_per_tile() {
+        let mut doc = doc();
+        let i = doc.add_level(Region::new(10, 10, 10, 10)).unwrap();
+        doc.place_def(i, "defs/Barrel.ron", (12, 12), 9);
+        doc.place_def(i, "defs/Crate.ron", (12, 12), 0);
+        doc.place_def(i, "defs/Barrel.ron", (10, 12), 0);
+        doc.place_def(i, "defs/Barrel.ron", (1, 1), 0);
+        let placed = &doc.levels[i].map.placements;
+        assert_eq!(placed.len(), 1, "one per tile, none on the wall or outside");
+        assert_eq!(placed[0].def_path, "defs/Crate.ron");
+        assert!(doc.remove_placement(i, 12, 12));
+        assert!(!doc.remove_placement(i, 12, 12));
     }
 
     #[test]

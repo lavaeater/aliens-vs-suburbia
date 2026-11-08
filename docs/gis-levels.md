@@ -168,7 +168,9 @@ In the editor (`src/campaign_editor/`): Shift+drag on the map draws a new level,
 selects, drag moves, edges resize. With a level selected, 1 / 2 / 3 place player starts,
 alien spawns and the goal (right click removes), S puts spawns where roads leave the
 region, and the panel says whether every spawn reaches the goal and every player can walk
-to it. Titles, the escape limit and coins are in the panel. Ctrl+S saves; F5 saves and
+to it. Titles, the escape limit, coins, townsfolk, waves (count, rate, enemy), weapons and loot
+bags are in the panel, and PLACE puts items, terrain, towers and people on the map (R turns,
+right click removes). Ctrl+S saves; F5 saves and
 plays the level, and you come back to the editor when the match ends.
 
 ### What becomes what
