@@ -38,6 +38,7 @@ impl Plugin for PsxLookPlugin {
 /// `bevy_psx`'s upscale camera (the `Camera2d` drawing the low-res image on the window) and
 /// our UI camera both come with order 1, which leaves which one draws last undefined. Put
 /// the upscale camera at 0, under the HUD. It is the one 2D camera without our markers.
+#[allow(clippy::type_complexity)]
 fn upscale_under_the_ui(
     mut cameras: Query<
         &mut Camera,
