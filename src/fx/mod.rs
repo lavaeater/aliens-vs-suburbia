@@ -218,7 +218,7 @@ mod tests {
             }
         }
         assert!(
-            checked >= 9,
+            checked >= 10,
             "expected every effect in assets/fx, found {checked}"
         );
     }

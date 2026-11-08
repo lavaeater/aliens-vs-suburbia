@@ -46,7 +46,7 @@ fn lerp(a: f32, b: f32, t: f32) -> f32 {
 /// Drive the color grade, ambient light and fog off the smoothed `danger` measure.
 /// The camera may not carry `ColorGrading`/`DistanceFog` yet (it's spawned on entering
 /// the game), so we insert them on first sighting, then mutate in place after.
-#[allow(clippy::type_complexity)]
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn apply_despair(
     mut commands: Commands,
     settings: Res<DespairSettings>,
@@ -54,6 +54,7 @@ pub fn apply_despair(
     ambient: Option<ResMut<GlobalAmbientLight>>,
     preset: Res<LightingPreset>,
     sky: Res<SkyLightSettings>,
+    scene: Option<Res<crate::camera::fog::SceneFog>>,
     mut cameras: Query<
         (Entity, Option<&mut ColorGrading>, Option<&mut DistanceFog>),
         With<GameCamera>,
@@ -69,7 +70,7 @@ pub fn apply_despair(
 
     // ── Camera color grade + fog. ─────────────────────────────────────────────
     let grade = despair_grade(d);
-    let fog = despair_fog(d);
+    let fog = with_dread(scene.and_then(|s| s.0.clone()), d);
     for (entity, color_grading, distance_fog) in cameras.iter_mut() {
         match color_grading {
             Some(mut cg) => *cg = grade.clone(),
@@ -114,6 +115,31 @@ fn despair_fog(d: f32) -> DistanceFog {
             density: lerp(0.0, 0.035, d),
         },
     }
+}
+
+/// The scene's fog (`camera::fog`) with the dread in it: it closes in (starts and fills
+/// nearer) and turns the despair haze's colour as `d` rises. Without scene fog, the
+/// despair haze alone.
+fn with_dread(scene: Option<DistanceFog>, d: f32) -> DistanceFog {
+    let haze = despair_fog(d);
+    let Some(mut fog) = scene else {
+        return haze;
+    };
+    if let FogFalloff::Linear { start, end } = fog.falloff {
+        let near = lerp(1.0, 0.5, d);
+        fog.falloff = FogFalloff::Linear {
+            start: start * near,
+            end: end * near,
+        };
+    }
+    let (base, dread) = (fog.color.to_srgba(), haze.color.to_srgba());
+    fog.color = Color::srgba(
+        lerp(base.red, dread.red, d),
+        lerp(base.green, dread.green, d),
+        lerp(base.blue, dread.blue, d),
+        base.alpha.max(dread.alpha),
+    );
+    fog
 }
 
 /// Paces the heartbeat: faster as the most-hurt living player nears death.

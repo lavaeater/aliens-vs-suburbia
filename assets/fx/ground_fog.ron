@@ -1,0 +1,71 @@
+// A fog bank lying in low ground (`map::valley_fog`): wide flat puffs, pale and half
+// see-through, swelling and fading slowly. Loops for the whole level.
+// Edit with the sprinkles editor (`cargo install bevy_sprinkles_editor`) or by hand;
+// `every_fx_in_assets_parses` checks the file.
+(
+    sprinkles_version: "0.3",
+    name: "Ground fog",
+    dimension: D3,
+    despawn_on_finish: false,
+    emitters: [
+        (
+            name: "Bank",
+            time: (
+                lifetime: 9.0,
+                lifetime_randomness: 0.4,
+            ),
+            draw_pass: (
+                mesh: Sphere(radius: 0.5, segments: 8, rings: 4),
+                material: Standard((
+                    base_color: (1.0, 1.0, 1.0, 0.3),
+                    emissive: (0.0, 0.0, 0.0, 1.0),
+                    alpha_mode: Blend,
+                    unlit: true,
+                )),
+                shadow_caster: false,
+            ),
+            emission: (
+                shape: Box(extents: (3.0, 0.1, 3.0)),
+                particles_amount: 7,
+            ),
+            scale: (
+                range: (min: 1.6, max: 2.6),
+                scale_over_lifetime: Some((
+                    x: (
+                        points: [
+                            (position: 0.0, value: 0.0),
+                            (position: 0.3, value: 0.9),
+                            (position: 0.7, value: 1.0),
+                            (position: 1.0, value: 0.0),
+                        ],
+                        range: (min: 0.0, max: 1.0),
+                    ),
+                    y: Some((
+                        points: [
+                            (position: 0.0, value: 0.0),
+                            (position: 0.3, value: 0.25),
+                            (position: 0.7, value: 0.3),
+                            (position: 1.0, value: 0.0),
+                        ],
+                        range: (min: 0.0, max: 1.0),
+                    )),
+                )),
+            ),
+            colors: (
+                color_over_lifetime: (
+                    stops: [
+                        (color: (0.62, 0.68, 0.78, 0.0), position: 0.0),
+                        (color: (0.66, 0.72, 0.8, 0.35), position: 0.35),
+                        (color: (0.66, 0.72, 0.8, 0.3), position: 0.7),
+                        (color: (0.62, 0.68, 0.78, 0.0), position: 1.0),
+                    ],
+                ),
+            ),
+            velocities: (
+                initial_direction: (1.0, 0.0, 0.3),
+                spread: 40.0,
+                initial_velocity: (min: 0.05, max: 0.15),
+            ),
+        ),
+    ],
+)

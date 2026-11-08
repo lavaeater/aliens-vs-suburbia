@@ -298,6 +298,6 @@ plan works on 0.19.
 | - | Height tint (any time, about an hour) | - | **Done** (`floor_mesh::ground_shade`, +/-15%) |
 | 7 | Smoke from fires + house fires (sprinkles) | - | **Done**: `smoke.ron` over every fire field, `gore::house_fire` (a fire next to a building sets it alight: roof flames, `smoke_column.ron`, glow). Not yet: a smoke grenade, smoke that blocks sight (`bevy_smokescreen`, Bevy 0.20) |
 | 8 | NPCs: places, walking, `bevy_behave` tree v1 | - | **Done** (`src/townsfolk/`): doors and street spots from the map, errands, lingering, home, indoors, fleeing. Not yet: schedules, traits, hiding from danger in the nearest door, stories about who survived |
-| 9 | Fog: distance fog, then valley fog | - |
+| 9 | Fog: distance fog, then valley fog | - | **Done**: depth haze on the camera (`camera::fog`, Ctrl+O / `--fog`, blended with `gore::despair`'s dread haze, which already owned the camera's fog), and fog banks in the low ground of hilly levels (`map::valley_fog`). At night it reads as darkness more than mist; tune `fog_color` and `ground_fog.ron` in a playtest |
 | 10 | Bevy 0.20 (after seedling), then `bevy_grass`, `bevy_smokescreen` | seedling |
 

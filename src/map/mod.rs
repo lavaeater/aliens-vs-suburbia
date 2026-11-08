@@ -20,6 +20,7 @@ pub mod reach;
 pub mod scatter;
 pub mod stitch;
 pub mod streaming;
+pub mod valley_fog;
 pub mod text_format;
 pub mod wall_mesh;
 pub mod walls;

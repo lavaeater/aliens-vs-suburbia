@@ -190,6 +190,15 @@ impl Plugin for StatefulMapPlugin {
         app.add_plugins(NonStateMapStuff)
             // A match's map comes from the campaign (`campaign::start_level`).
             .add_systems(OnEnter(GameState::ModelShowcase), load_map_showcase)
+            .add_systems(bevy::app::Startup, crate::map::valley_fog::load_ground_fog)
+            .add_systems(
+                Update,
+                (
+                    crate::map::valley_fog::spawn_fog_banks.after(map_loader),
+                    crate::map::valley_fog::show_fog_banks,
+                )
+                    .run_if(in_state(GameState::InGame)),
+            )
             .add_systems(
                 FixedUpdate,
                 (

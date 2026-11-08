@@ -249,6 +249,7 @@ fn print_help() {
     println!("  cargo run -- --house-editor                Launch straight into the house editor");
     println!("  cargo run -- --campaign-editor [name]      Launch straight into the campaign editor");
     println!("  cargo run -- --shot <secs> <file.png>      Save a screenshot after <secs>, then quit");
+    println!("  cargo run -- --fog <off|haze|thick>        Start with this much fog (Ctrl+O cycles it)");
     println!("                                             (cut a base map into levels; default: the --campaign)");
     println!("  cargo run -- --play [--level N]            Launch straight into a match (level 1, or N)");
     println!("  cargo run -- --campaign <name>             Play assets/campaigns/<name> (default: {})", campaign::DEFAULT_CAMPAIGN);
@@ -413,6 +414,15 @@ fn main() -> std::process::ExitCode {
 
     if fullscreen {
         app.add_plugins(fullscreen::FullscreenPlugin);
+    }
+
+    if let Some(level) = args
+        .iter()
+        .skip_while(|a| *a != "--fog")
+        .nth(1)
+        .and_then(|name| camera::fog::FogLevel::from_name(name))
+    {
+        app.insert_resource(level);
     }
 
     if let Some(shot) = shot::from_args(&args) {

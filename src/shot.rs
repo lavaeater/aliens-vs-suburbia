@@ -1,5 +1,6 @@
 //! `--shot <seconds> <file.png>`: save one screenshot of whatever is on screen after that
-//! many seconds, then quit. For checking a screen without sitting in front of it
+//! many seconds, then quit. Story crawls are skipped (they pause the game), so a shot of
+//! a match shows the match. For checking a screen without sitting in front of it
 //! (`cargo run -- --campaign-editor --shot 6 shots/editor.png`).
 
 use bevy::app::AppExit;
@@ -42,7 +43,9 @@ fn take_shot(
     time: Res<Time<Real>>,
     mut shot: ResMut<Shot>,
     mut exit: MessageWriter<AppExit>,
+    mut crawls: MessageWriter<lava_ui_builder::crawl::ClearCrawls>,
 ) {
+    crawls.write(lava_ui_builder::crawl::ClearCrawls);
     let now = time.elapsed_secs();
     match shot.taken_at {
         None if now >= shot.after => {
