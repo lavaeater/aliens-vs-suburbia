@@ -39,6 +39,14 @@ What it took:
   `assets/shaders/retro_canvas.wesl` (the one that mattered: as `.wgsl` the canvas failed to
   parse and the whole 3D view was black).
 
+`bevy_psx` (step 8) runs as `--psx` (`src/psx.rs`): the game at about 427 x 240, upscaled
+pixelated, vertex snapping on every material, 32 colour steps and a light Bayer dither. Next
+to the retro look it is harsh: no palette grading, so the night's blues and greens come out
+saturated, and its own default palette (on unless turned off) maps a night level to black
+and red. It owns rendering once added (its own upscale camera, every material converted),
+so it can't be switched at runtime the way Ctrl+K switches the retro look. Worth a look in
+motion for the vertex wobble; as the default look, the retro canvas reads better.
+
 Still to do by hand:
 
 - **Playtest** what the weak ordering of built-in sets in `PostUpdate` could have moved: the

@@ -38,6 +38,7 @@ pub(crate) mod gore;
 pub(crate) mod house_editor;
 pub(crate) mod campaign_editor;
 pub(crate) mod townsfolk;
+mod psx;
 mod shot;
 pub(crate) mod infestation;
 pub(crate) mod items;
@@ -251,6 +252,7 @@ fn print_help() {
     println!("  cargo run -- --campaign-editor [name]      Launch straight into the campaign editor");
     println!("  cargo run -- --shot <secs> <file.png>      Save a screenshot after <secs>, then quit");
     println!("  cargo run -- --fog <off|haze|thick>        Start with this much fog (Ctrl+O cycles it)");
+    println!("  cargo run -- --psx                         PlayStation 1 look (bevy_psx) instead of the retro look");
     println!("                                             (cut a base map into levels; default: the --campaign)");
     println!("  cargo run -- --play [--level N]            Launch straight into a match (level 1, or N)");
     println!("  cargo run -- --campaign <name>             Play assets/campaigns/<name> (default: {})", campaign::DEFAULT_CAMPAIGN);
@@ -394,7 +396,8 @@ fn main() -> std::process::ExitCode {
         // .add_plugins(PixelShaderPlugin::default())
         .add_plugins(GamePlugin)
         .add_plugins(retro::RetroPlugin {
-            force_off: args.iter().any(|a| a == "--no-retro"),
+            // The PSX look renders the game camera its own way.
+            force_off: args.iter().any(|a| a == "--no-retro" || a == "--psx"),
             palette: args.iter().skip_while(|a| *a != "--palette").nth(1).cloned(),
             shots: args
                 .iter()
@@ -428,6 +431,10 @@ fn main() -> std::process::ExitCode {
         .and_then(|name| camera::fog::FogLevel::from_name(name))
     {
         app.insert_resource(level);
+    }
+
+    if args.iter().any(|a| a == "--psx") {
+        app.add_plugins(psx::PsxLookPlugin);
     }
 
     if let Some(shot) = shot::from_args(&args) {

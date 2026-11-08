@@ -131,6 +131,7 @@ dependencies = [
  "bevy-inspector-egui",
  "bevy_behave",
  "bevy_mod_outline",
+ "bevy_psx",
  "bevy_seedling",
  "bevy_skein",
  "bevy_sprinkles",
@@ -1716,6 +1717,14 @@ dependencies = [
  "smallvec",
  "thiserror 2.0.21",
  "tracing",
+]
+
+[[package]]
+name = "bevy_psx"
+version = "0.1.3"
+source = "git+https://github.com/lavaeater/bevy_psx?rev=96fe8947b5beaed846cce7d27debd5651954fd8e#96fe8947b5beaed846cce7d27debd5651954fd8e"
+dependencies = [
+ "bevy",
 ]
 
 [[package]]

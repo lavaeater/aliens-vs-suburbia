@@ -100,6 +100,9 @@ leafwing-input-manager = "0.22"
 # GPU particles. Its `bevy-0.20` branch (no release yet); pinned so it cannot move under us.
 bevy_sprinkles = { git = "https://github.com/doceazedo/sprinkles", rev = "7d8cae40af1213990e2586dd20474ba4c91d8539" }
 ghx_proc_gen = "0.10"
+# PlayStation 1 style rendering, tried as an alternative to the retro look (`--psx`,
+# `src/psx.rs`). Our fork's bevy-0.20 branch; pinned.
+bevy_psx = { git = "https://github.com/lavaeater/bevy_psx", rev = "96fe8947b5beaed846cce7d27debd5651954fd8e" }
 # Behaviour trees for the townsfolk (`src/townsfolk/`). Upstream (RJ/bevy_behave) has no Bevy 0.20
 # release or branch yet: a copy of its main (rev dbf9680, MIT/Apache) with the version bump.
 bevy_behave = { path = "vendor/bevy_behave" }
