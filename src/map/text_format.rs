@@ -52,7 +52,7 @@ use std::path::{Path, PathBuf};
 
 use crate::general::components::map_components::{
     DecorationItem, HousePlacement, InfestationRules, LootSpread, MapFile, MapGenerator,
-    RoadKind, RoadLine, TilePlacement, WaveDef,
+    Marker, MarkerKind, Region, RoadKind, RoadLine, TilePlacement, WaveDef,
 };
 use crate::map::{BitFlags, MapFeatures, house};
 
@@ -117,6 +117,7 @@ enum Section {
     Houses,
     Roads,
     Waves,
+    Markers,
 }
 
 impl Section {
@@ -132,6 +133,7 @@ impl Section {
             "houses" => Self::Houses,
             "roads" => Self::Roads,
             "waves" => Self::Waves,
+            "markers" => Self::Markers,
             _ => return None,
         })
     }
@@ -186,6 +188,7 @@ pub fn parse(text: &str) -> Result<MapFile, String> {
             Some(Section::Houses) => house(line).map(|h| map.houses.push(h)),
             Some(Section::Roads) => road(line).map(|r| map.roads.push(r)),
             Some(Section::Waves) => wave(line).map(|w| map.waves.push(w)),
+            Some(Section::Markers) => marker(line).map(|m| map.markers.push(m)),
         };
         result.map_err(|e| at_line(line_no, e))?;
     }
@@ -291,6 +294,19 @@ fn property(
                 .waves = number(key, value)?;
         }
         "seed" => map.seed = number(key, value)?,
+        "base" => map.base = value.to_string(),
+        "region" => {
+            let parts: Vec<&str> = value.split(',').map(str::trim).collect();
+            let [x, y, width, height] = parts.as_slice() else {
+                return Err(format!("region: expected `x, y, width, height`, got `{value}`"));
+            };
+            map.region = Some(Region::new(
+                number(key, x)?,
+                number(key, y)?,
+                number(key, width)?,
+                number(key, height)?,
+            ));
+        }
         "width" => size.0 = Some(number(key, value)?),
         "height" => size.1 = Some(number(key, value)?),
         _ => return Err(format!("unknown property `{key}`")),
@@ -514,6 +530,16 @@ fn rotation_steps(degrees: i32) -> Result<u8, String> {
     u8::try_from(degrees.div_euclid(45)).map_err(|e| e.to_string())
 }
 
+fn marker(line: &str) -> Result<Marker, String> {
+    let mut fields = Fields::parse(line)?;
+    let name = fields.require("marker")?;
+    let kind = MarkerKind::from_name(name)
+        .ok_or_else(|| format!("marker: `{name}` is not one of player, spawn, goal"))?;
+    let (x, y) = coordinates(fields.require("at")?)?;
+    fields.finish()?;
+    Ok(Marker { kind, x, y })
+}
+
 fn wave(line: &str) -> Result<WaveDef, String> {
     let mut fields = Fields::parse(line)?;
     let defaults = WaveDef::default();
@@ -606,14 +632,34 @@ pub fn to_text(map: &MapFile) -> Result<String, String> {
     if map.generated || map.seed != 0 {
         lines.push(format!("seed: {}", map.seed));
     }
+    if !map.base.is_empty() {
+        lines.push(format!("base: {}", map.base));
+    }
+    if let Some(r) = map.region {
+        lines.push(format!("region: {}, {}, {}, {}", r.x, r.y, r.width, r.height));
+    }
 
-    lines.extend([String::new(), "[tiles]".into()]);
+    // A level on a base map has no tiles of its own.
+    if map.base.is_empty() || !map.tiles.is_empty() {
+        lines.extend([String::new(), "[tiles]".into()]);
+    }
     for row in &map.tiles {
         lines.push(
             row.iter()
                 .map(|value| letters.get(value).copied().unwrap_or('v'))
                 .collect(),
         );
+    }
+
+    if !map.markers.is_empty() {
+        lines.extend([
+            String::new(),
+            "[markers]".into(),
+            "# marker: player | spawn | goal | at: <x, y in the base map's tiles>".into(),
+        ]);
+    }
+    for m in &map.markers {
+        lines.push(format!("marker: {} | at: {}, {}", m.kind.name(), m.x, m.y));
     }
 
     if !legend.is_empty() {
@@ -645,11 +691,14 @@ pub fn to_text(map: &MapFile) -> Result<String, String> {
         }
     }
 
-    lines.extend([
-        String::new(),
-        "[decorations]".into(),
-        "# at: x, y | model: <path under assets/> | rotation: <degrees> | scale: <s>".into(),
-    ]);
+    // A level on a base map gets the section only when it has some of its own.
+    if map.base.is_empty() || !map.decorations.is_empty() {
+        lines.extend([
+            String::new(),
+            "[decorations]".into(),
+            "# at: x, y | model: <path under assets/> | rotation: <degrees> | scale: <s>".into(),
+        ]);
+    }
     for d in &map.decorations {
         let mut line = format!("at: {}, {} | model: {}", d.x, d.y, field_value(&d.model)?);
         if d.rotation_y.to_bits() != 0.0f32.to_bits() {
@@ -791,8 +840,9 @@ pub fn write_map_file(path: impl AsRef<Path>, map: &MapFile) -> Result<(), Strin
 /// it wins, so a level can be reworked as text without touching the code that names it.
 /// Returns the file actually read.
 ///
-/// The map comes back as the game plays it: a `generated` map is generated (see
-/// [`generate`]) and its houses are stamped into the tiles (`house::bake_houses`).
+/// The map comes back as the game plays it: a level on a base map (`base:`) is cut from
+/// its base (`map::compose`), a `generated` map is generated (see [`generate`]) and its
+/// houses are stamped into the tiles (`house::bake_houses`).
 pub fn load_level(path: impl AsRef<Path>) -> Result<(MapFile, PathBuf), String> {
     let path = path.as_ref();
     let text_sibling = path.with_extension(EXTENSION);
@@ -802,6 +852,15 @@ pub fn load_level(path: impl AsRef<Path>) -> Result<(MapFile, PathBuf), String> 
         path.to_path_buf()
     };
     let mut map = read_map_file(&chosen)?;
+    if !map.base.is_empty() {
+        if map.generated {
+            return Err(format!("{}: a level on a base map cannot be generated", chosen.display()));
+        }
+        let base_path = crate::assets::paths::disk_path(&map.base);
+        let base = read_map_file(&base_path)?;
+        map = crate::map::compose::compose_level(&base, &map)
+            .map_err(|e| format!("{} on {}: {e}", chosen.display(), base_path.display()))?;
+    }
     if map.generated {
         map = generate(map).map_err(|e| format!("{}: {e}", chosen.display()))?;
     }
@@ -1130,6 +1189,25 @@ count: 3
         let map = parse(EXAMPLE).unwrap();
         let back = parse(&to_text(&map).unwrap()).unwrap();
         assert_eq!(as_ron(&back), as_ron(&map));
+    }
+
+    #[test]
+    fn a_level_on_a_base_map_round_trips_without_tiles() {
+        let text = "[properties]\nname: Corner\nbase: campaigns/x/world/world.map\nregion: 4, 6, 30, 20\n\n[markers]\nmarker: spawn | at: 4, 10\nmarker: goal | at: 12, 12\nmarker: player | at: 13, 12\n";
+        let map = parse(text).unwrap();
+        assert_eq!(map.base, "campaigns/x/world/world.map");
+        assert_eq!(map.region, Some(Region::new(4, 6, 30, 20)));
+        assert_eq!(map.markers.len(), 3);
+        assert_eq!(map.markers[1], Marker { kind: MarkerKind::Goal, x: 12, y: 12 });
+        assert!(map.tiles.is_empty());
+        let written = to_text(&map).unwrap();
+        assert!(!written.contains("[tiles]"), "{written}");
+        assert!(!written.contains("[decorations]"), "{written}");
+        let again = parse(&written).unwrap();
+        assert_eq!(again.markers, map.markers);
+        assert_eq!(again.region, map.region);
+        assert!(parse("[markers]\nmarker: boss | at: 1, 1\n").is_err());
+        assert!(parse("[properties]\nregion: 1, 2, 3\n").is_err());
     }
 
     #[test]

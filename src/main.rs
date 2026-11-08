@@ -187,6 +187,53 @@ fn parse_import_osm_args(args: &[String]) -> Option<Result<(), String>> {
     })
 }
 
+/// `--split-level <level.map> <base.map> <out-level.map> [--force]`: a whole level (an
+/// OpenStreetMap import) as a base map plus a level on it (`map::compose`), which a
+/// campaign can cut more levels from. Paths from the project root; the base has to be
+/// inside `assets/`, since the level names it.
+fn parse_split_level_args(args: &[String]) -> Option<Result<(), String>> {
+    let position = args.iter().position(|a| a == "--split-level")?;
+    let paths: Vec<&String> = args
+        .iter()
+        .skip(position.saturating_add(1))
+        .take_while(|a| !a.starts_with("--"))
+        .collect();
+    let force = args.iter().any(|a| a == "--force");
+    let [input, base, level] = paths.as_slice() else {
+        return Some(Err(
+            "--split-level needs <level.map> <base.map> <out-level.map>".into(),
+        ));
+    };
+    Some(split_level(input, base, level, force))
+}
+
+fn split_level(input: &str, base: &str, level: &str, force: bool) -> Result<(), String> {
+    use map::text_format;
+    let base_ref = assets::paths::content_ref(base);
+    if !base.trim_start_matches("./").starts_with("assets/") {
+        return Err(format!("{base}: the base map has to be under assets/"));
+    }
+    for out in [base, level] {
+        if std::path::Path::new(out).exists() && !force && out != input {
+            return Err(format!("{out} already exists; pass --force to overwrite it"));
+        }
+    }
+    let map = text_format::read_map_file(input)?;
+    let (base_map, level_map) = map::compose::split_level(&map, &base_ref);
+    for out in [base, level] {
+        if let Some(dir) = std::path::Path::new(out).parent() {
+            std::fs::create_dir_all(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+        }
+    }
+    text_format::write_map_file(base, &base_map)?;
+    text_format::write_map_file(level, &level_map)?;
+    println!(
+        "Split {input}: base {base}, level {level} ({} markers)",
+        level_map.markers.len()
+    );
+    Ok(())
+}
+
 fn print_help() {
     println!("Aliens vs Suburbia\n");
     println!("USAGE:");
@@ -218,6 +265,10 @@ fn print_help() {
     println!(
         "                                             (out defaults to <in> with the other extension)"
     );
+    println!("  cargo run -- --split-level <level.map> <base.map> <out-level.map> [--force]");
+    println!(
+        "                                             A whole level as a base map + a level on it"
+    );
     println!("  cargo run -- --import-osm <spec.ron | export.osm | export.json> [--force]");
     println!(
         "                                             Make a level from OpenStreetMap (docs/gis-levels.md)\n"
@@ -246,6 +297,7 @@ fn main() -> std::process::ExitCode {
     if let Some(result) = parse_create_map_args(&args)
         .or_else(|| parse_convert_map_args(&args))
         .or_else(|| parse_import_osm_args(&args))
+        .or_else(|| parse_split_level_args(&args))
     {
         return match result {
             Ok(()) => std::process::ExitCode::SUCCESS,

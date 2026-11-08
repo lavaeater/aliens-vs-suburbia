@@ -221,6 +221,92 @@ pub struct MapFile {
     /// the map and send out the `waves`, instead of aliens walking to a goal.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub infestation: Option<InfestationRules>,
+    /// A level cut from a base map (`map::compose`): the base map, inside `assets/`
+    /// (`"campaigns/gis/world/world.map"`). Such a level has no tiles of its own; the
+    /// game plays [`MapFile::region`] of the base with [`MapFile::markers`] on it. Empty =
+    /// an ordinary map.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub base: String,
+    /// The part of the base map the level is played on, in base map tiles. `None` with a
+    /// `base` = all of it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub region: Option<Region>,
+    /// Player starts, alien spawns and the goal of a level on a base map, in base map
+    /// tiles (so moving the region does not move them). Stamped into the tiles on load.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub markers: Vec<Marker>,
+}
+
+/// A rectangle of tiles: top-left `x`, `y`, and its size.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Region {
+    pub x: i32,
+    pub y: i32,
+    pub width: i32,
+    pub height: i32,
+}
+
+impl Region {
+    pub const fn new(x: i32, y: i32, width: i32, height: i32) -> Self {
+        Self {
+            x,
+            y,
+            width,
+            height,
+        }
+    }
+
+    /// Whether tile `(x, y)` is inside.
+    pub const fn contains(&self, x: i32, y: i32) -> bool {
+        x >= self.x
+            && y >= self.y
+            && x < self.x.saturating_add(self.width)
+            && y < self.y.saturating_add(self.height)
+    }
+
+    /// Whether tile `(x, y)` is on the edge.
+    pub const fn on_edge(&self, x: i32, y: i32) -> bool {
+        self.contains(x, y)
+            && (x == self.x
+                || y == self.y
+                || x == self.x.saturating_add(self.width).saturating_sub(1)
+                || y == self.y.saturating_add(self.height).saturating_sub(1))
+    }
+}
+
+/// What a [`Marker`] puts on its tile.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum MarkerKind {
+    /// Where a player starts (`p`).
+    Player,
+    /// Where aliens come from (`e`).
+    Spawn,
+    /// What the aliens are after (`x`).
+    Goal,
+}
+
+impl MarkerKind {
+    pub const ALL: [Self; 3] = [Self::Player, Self::Spawn, Self::Goal];
+
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Player => "player",
+            Self::Spawn => "spawn",
+            Self::Goal => "goal",
+        }
+    }
+
+    pub fn from_name(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|k| k.name() == name)
+    }
+}
+
+/// A player start, alien spawn or goal on a tile of a level's base map.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Marker {
+    pub kind: MarkerKind,
+    pub x: i32,
+    pub y: i32,
 }
 
 /// What builds a `generated: true` map.
@@ -294,6 +380,7 @@ impl MapFile {
             loot.bags.iter_mut().for_each(normalize);
         }
         normalize(&mut self.stories);
+        normalize(&mut self.base);
     }
 }
 

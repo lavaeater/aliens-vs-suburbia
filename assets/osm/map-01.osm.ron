@@ -12,9 +12,11 @@
     elevation: Some("assets/osm/map-01.heights.asc"),
     height_scale: 0.8,
     // Where the level goes. Default: assets/maps/<this file's stem>.map
-    // The `gis` campaign's level. Re-importing overwrites it (with --force); add back
-    // `escape_limit: 10` under [properties], the spec has no field for it.
-    output: Some("assets/campaigns/gis/map_01/map_01.map"),
+    // The `gis` campaign's base map: its levels are cut from it (`map::compose`,
+    // `base:` in their .map). Re-importing overwrites it (with --force); the levels keep
+    // their own markers, rules and stories, and the spawns, goal and start the importer
+    // writes are ignored. Check the levels' markers still stand where they should.
+    output: Some("assets/campaigns/gis/world/world.map"),
     // Middle of the level, (lat, lon). Default: the middle of the buildings.
     centre: Some((59.199295,17.753444)),
     // Width and height in metres. Default: the buildings plus 6 m each side.

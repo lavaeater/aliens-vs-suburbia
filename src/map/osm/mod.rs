@@ -16,13 +16,14 @@
 // Grid code: indices come from the grid's own ranges or are checked with `get`.
 #![allow(clippy::indexing_slicing)]
 
+use crate::map::reach::{distances, edge_runs, enemy_passable, inward, perimeter, player_passable};
+
 pub mod classify;
 pub mod data;
 pub mod geometry;
 mod elevation;
 mod land_cover;
 
-use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
@@ -210,14 +211,6 @@ fn wall_bits() -> u64 {
 
 fn blocks_everyone() -> u64 {
     bits(MapFeatures::ImpassableForEnemies | MapFeatures::ImpassableForPlayers)
-}
-
-fn enemy_passable(tile: u64) -> bool {
-    tile != 0 && !BitFlags::<MapFeatures>::from_bits_truncate(tile).contains(MapFeatures::ImpassableForEnemies)
-}
-
-fn player_passable(tile: u64) -> bool {
-    tile != 0 && !BitFlags::<MapFeatures>::from_bits_truncate(tile).contains(MapFeatures::ImpassableForPlayers)
 }
 
 /// A number that looks random and is the same every import.
@@ -568,28 +561,7 @@ pub fn import(
 
     // Wall the level in; the roads that cross the edge are where the aliens come from.
     let perimeter = perimeter(width, height);
-    let mut runs: Vec<Vec<(usize, usize)>> = Vec::new();
-    let mut previous_was_road = false;
-    for &(col, row) in &perimeter {
-        let road = layer[row][col] == Layer::Road;
-        if road {
-            match runs.last_mut() {
-                Some(run) if previous_was_road => run.push((col, row)),
-                _ => runs.push(vec![(col, row)]),
-            }
-        }
-        previous_was_road = road;
-    }
-    // A run that wraps past the start of the perimeter is one road.
-    if runs.len() > 1
-        && perimeter.first().is_some_and(|&(c, r)| layer[r][c] == Layer::Road)
-        && perimeter.last().is_some_and(|&(c, r)| layer[r][c] == Layer::Road)
-        && let Some(last) = runs.pop()
-        && let Some(first) = runs.first_mut()
-    {
-        first.splice(0..0, last);
-    }
-    runs.sort_by_key(|run| std::cmp::Reverse(run.len()));
+    let runs = edge_runs(width, height, |col, row| layer[row][col] == Layer::Road);
     for &(col, row) in &perimeter {
         tiles[row][col] = wall_bits();
     }
@@ -724,63 +696,6 @@ fn middle(points: impl Iterator<Item = LatLon>) -> Option<LatLon> {
         lat: (s + n) / 2.0,
         lon: (w + e) / 2.0,
     })
-}
-
-/// The edge tiles, clockwise from the top-left corner.
-fn perimeter(width: usize, height: usize) -> Vec<(usize, usize)> {
-    let mut cells: Vec<(usize, usize)> = (0..width).map(|c| (c, 0)).collect();
-    cells.extend((1..height).map(|r| (width - 1, r)));
-    cells.extend((0..width - 1).rev().map(|c| (c, height - 1)));
-    cells.extend((1..height - 1).rev().map(|r| (0, r)));
-    cells
-}
-
-/// The tile just inside an edge tile (none for corners).
-fn inward(col: usize, row: usize, width: usize, height: usize) -> Option<(usize, usize)> {
-    let corner = (col == 0 || col == width - 1) && (row == 0 || row == height - 1);
-    if corner {
-        return None;
-    }
-    Some(if row == 0 {
-        (col, 1)
-    } else if row == height - 1 {
-        (col, row - 1)
-    } else if col == 0 {
-        (1, row)
-    } else {
-        (col - 1, row)
-    })
-}
-
-/// Steps from `from` to every tile, 4-connected over tiles `passable` allows.
-fn distances(
-    tiles: &[Vec<u64>],
-    from: (usize, usize),
-    passable: fn(u64) -> bool,
-) -> Vec<Vec<Option<u32>>> {
-    let height = tiles.len();
-    let width = tiles.first().map_or(0, Vec::len);
-    let mut dist = vec![vec![None; width]; height];
-    let mut queue = VecDeque::from([(from, 0u32)]);
-    dist[from.1][from.0] = Some(0);
-    while let Some(((col, row), d)) = queue.pop_front() {
-        let neighbours = [
-            (col.wrapping_sub(1), row),
-            (col + 1, row),
-            (col, row.wrapping_sub(1)),
-            (col, row + 1),
-        ];
-        for (c, r) in neighbours {
-            let Some(&tile) = tiles.get(r).and_then(|t| t.get(c)) else {
-                continue;
-            };
-            if dist[r][c].is_none() && passable(tile) {
-                dist[r][c] = Some(d + 1);
-                queue.push_back(((c, r), d + 1));
-            }
-        }
-    }
-    dist
 }
 
 /// `--import-osm <spec.ron | export.osm | export.json> [--force]`: write the level and print the report.
@@ -1058,15 +973,5 @@ mod tests {
         let spec: OsmLevelSpec = ron::from_str(&text).unwrap();
         assert_eq!(spec.source, "gis-raw/example.osm");
         assert_eq!(spec.loot.map(|l| l.per_tiles), Some(40));
-    }
-
-    #[test]
-    fn perimeter_goes_round_once() {
-        let p = perimeter(5, 4);
-        assert_eq!(p.len(), 14);
-        let mut unique = p.clone();
-        unique.sort_unstable();
-        unique.dedup();
-        assert_eq!(unique.len(), 14);
     }
 }
