@@ -16,7 +16,7 @@
 use bevy::input::gamepad::Gamepad;
 use bevy::prelude::*;
 use lava_ui_builder::{LavaTheme, TextStyle, UIBuilder};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use turbofacts::facts_resource::Facts;
 use turbofacts::keys;
 
@@ -53,7 +53,7 @@ impl Default for CampaignChoice {
 const INPUT_GRACE: f32 = 0.8;
 
 /// One level of the campaign.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CampaignLevel {
     /// The map, inside `assets/` (`"campaigns/main/level_01/level_01.map"`; `assets::paths`).
     /// Given a `.ron`, a `.map` next to it wins (`text_format::load_level`).
@@ -61,13 +61,18 @@ pub struct CampaignLevel {
     /// Shown on the card before the level.
     pub title: String,
     /// One line under the title.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub tagline: String,
 }
 
 /// A campaign's `campaign.ron` ([`campaign_file`]).
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CampaignFile {
+    /// The base map the campaign editor cuts new levels from (`map::compose`), inside
+    /// `assets/`. Empty = the base of the first level that has one, if any. Only the
+    /// editor reads it: each level names its own base.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub base: String,
     pub levels: Vec<CampaignLevel>,
     /// The victory screen's heading and lines.
     #[serde(default = "default_victory_title")]
@@ -83,6 +88,7 @@ fn default_victory_title() -> String {
 impl Default for CampaignFile {
     fn default() -> Self {
         Self {
+            base: String::new(),
             levels: vec![CampaignLevel {
                 map: "campaigns/main/level_01/level_01.map".into(),
                 title: "Level 1".into(),

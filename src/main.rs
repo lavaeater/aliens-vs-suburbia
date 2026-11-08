@@ -36,6 +36,8 @@ pub(crate) mod game_state;
 pub(crate) mod general;
 pub(crate) mod gore;
 pub(crate) mod house_editor;
+pub(crate) mod campaign_editor;
+mod shot;
 pub(crate) mod infestation;
 pub(crate) mod items;
 pub(crate) mod loot;
@@ -244,6 +246,9 @@ fn print_help() {
     println!("                                             (--playground still works as an alias)");
     println!("  cargo run -- --asset-browser               Launch straight into the asset browser");
     println!("  cargo run -- --house-editor                Launch straight into the house editor");
+    println!("  cargo run -- --campaign-editor [name]      Launch straight into the campaign editor");
+    println!("  cargo run -- --shot <secs> <file.png>      Save a screenshot after <secs>, then quit");
+    println!("                                             (cut a base map into levels; default: the --campaign)");
     println!("  cargo run -- --play [--level N]            Launch straight into a match (level 1, or N)");
     println!("  cargo run -- --campaign <name>             Play assets/campaigns/<name> (default: {})", campaign::DEFAULT_CAMPAIGN);
     println!("  cargo run -- --fullscreen                  1920x1080 fullscreen (combines with the others)");
@@ -327,6 +332,8 @@ fn main() -> std::process::ExitCode {
     // Same idea for the asset browser: it is a tool screen you open, tweak in, and reload.
     let straight_to_asset_browser = args.iter().any(|a| a == "--asset-browser");
     let straight_to_house_editor = args.iter().any(|a| a == "--house-editor");
+    // `--campaign-editor [name]`: the name, if given, is the campaign to edit.
+    let campaign_editor_at = args.iter().position(|a| a == "--campaign-editor");
     // And into a match, skipping the menu and the player setup (one keyboard player, with a
     // connected pad handed to them by `assign_gamepads`' fallback).
     let straight_to_game = args.iter().any(|a| a == "--play");
@@ -407,6 +414,10 @@ fn main() -> std::process::ExitCode {
         app.add_plugins(fullscreen::FullscreenPlugin);
     }
 
+    if let Some(shot) = shot::from_args(&args) {
+        app.add_plugins(shot);
+    }
+
     if straight_to_asset_browser {
         app.add_systems(
             Startup,
@@ -428,6 +439,29 @@ fn main() -> std::process::ExitCode {
     // `--campaign main` plays `assets/campaigns/main` instead of the default.
     if let Some(name) = args.iter().skip_while(|a| *a != "--campaign").nth(1) {
         app.insert_resource(campaign::CampaignChoice(name.clone()));
+    }
+
+    if let Some(at) = campaign_editor_at {
+        if let Some(name) = args
+            .get(at.saturating_add(1))
+            .filter(|a| !a.starts_with("--"))
+        {
+            app.insert_resource(campaign::CampaignChoice(name.clone()));
+        }
+        if let Some(n) = args
+            .iter()
+            .skip_while(|a| *a != "--level")
+            .nth(1)
+            .and_then(|n| n.parse().ok())
+        {
+            app.insert_resource(campaign_editor::OpenAtLevel(n));
+        }
+        app.add_systems(
+            Startup,
+            |mut next: ResMut<NextState<game_state::GameState>>| {
+                next.set(game_state::GameState::CampaignEditor);
+            },
+        );
     }
 
     if let Some(number) = start_level {

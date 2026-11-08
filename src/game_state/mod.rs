@@ -15,6 +15,8 @@ pub enum GameState {
     AssetBrowser,
     MapEditor,
     HouseEditor,
+    /// One base map cut into a campaign's levels (`campaign_editor`).
+    CampaignEditor,
     /// Between levels: the next level's card, a retry, or the victory screen
     /// (`campaign`).
     Intermission,
