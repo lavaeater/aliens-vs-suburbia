@@ -79,7 +79,8 @@ pub fn spawn_panel(commands: Commands, theme: Res<LavaTheme>) {
             "Click: select  drag: move  edges: resize",
             "Shift+drag (or drag on empty ground): new level",
             "1 player  2 spawn  3 goal  Esc: select tool",
-            "S: suggest spawns  F: frame  PgUp/PgDn: order",
+            "S: suggest spawns  A: auto markers  F: frame",
+            "PgUp/PgDn: order",
             "Del: remove level  Ctrl+S: save  Esc: leave",
             "Ctrl+Z: undo  Ctrl+Y / Ctrl+Shift+Z: redo",
             "F5: save and play the selected level",
@@ -269,6 +270,58 @@ fn waves(
             });
         }
     });
+}
+
+/// Defend (aliens walk to the goal) or infestation (spawners open around the level and
+/// must be destroyed; `docs/infestation.md`), and the infestation's numbers.
+fn mode(
+    parent: &mut ChildSpawnerCommands,
+    index: usize,
+    rules: Option<&crate::general::components::map_components::InfestationRules>,
+) {
+    use crate::general::components::map_components::InfestationRules;
+    strip(parent).with_children(|line| {
+        text(line, "Mode:", 11.0, LABEL);
+        button(line, "Defend", rules.is_none(), move |doc, _, _| {
+            doc.edit_map(index, |map| map.infestation = None);
+        });
+        button(line, "Infestation", rules.is_some(), move |doc, _, _| {
+            doc.edit_map(index, |map| {
+                map.infestation.get_or_insert_with(InfestationRules::default);
+            });
+        });
+    });
+    let Some(rules) = rules else {
+        return;
+    };
+    for (label, value, field) in [
+        ("Spawners", rules.spawners, 0u8),
+        ("Waves each", rules.waves, 1u8),
+    ] {
+        strip(parent).with_children(|line| {
+            text(line, format!("{label}:"), 11.0, LABEL);
+            for (glyph, up) in [("<", false), (">", true)] {
+                button(line, glyph, false, move |doc, _, _| {
+                    doc.edit_map(index, |map| {
+                        if let Some(r) = map.infestation.as_mut() {
+                            let n = if field == 0 { &mut r.spawners } else { &mut r.waves };
+                            *n = if up { n.saturating_add(1) } else { n.saturating_sub(1).max(1) };
+                        }
+                    });
+                });
+            }
+            text(line, value.to_string(), 11.0, VALUE);
+        });
+    }
+    text(
+        parent,
+        format!(
+            "A spawner opens every {:.0}-{:.0} s; no goal or spawns needed",
+            rules.every.0, rules.every.1
+        ),
+        10.0,
+        HELP,
+    );
 }
 
 /// The loot bags: on or off, how thick, which table they roll.
@@ -477,6 +530,11 @@ pub fn rebuild_panel(
                     button(line, label, tool == t, move |_, tool, _| *tool = t);
                 }
             });
+            strip(p).with_children(|line| {
+                button(line, "A: auto markers (goal, start, spawns)", false, move |doc, _, _| {
+                    doc.auto_markers(i);
+                });
+            });
             if !analysis.suggested_spawns.is_empty() {
                 let spawns = analysis.suggested_spawns.clone();
                 strip(p).with_children(|line| {
@@ -489,7 +547,12 @@ pub fn rebuild_panel(
 
             heading(p, "CHECK");
             if analysis.problems.is_empty() {
-                text(p, "OK: every spawn reaches the goal.", 11.0, OK);
+                let ok = if level.map.infestation.is_some() {
+                    "OK: an infestation (spawners open around the level)."
+                } else {
+                    "OK: every spawn reaches the goal."
+                };
+                text(p, ok, 11.0, OK);
             }
             for problem in &analysis.problems {
                 text(p, problem.clone(), 11.0, PROBLEM);
@@ -504,6 +567,7 @@ pub fn rebuild_panel(
             }
 
             heading(p, "RULES");
+            mode(p, i, level.map.infestation.as_ref());
             stepper(
                 p,
                 "Escape limit",
@@ -690,6 +754,11 @@ pub fn handle_keys(
             KeyCode::Digit2 => *tool = Tool::Marker(MarkerKind::Spawn),
             KeyCode::Digit3 => *tool = Tool::Marker(MarkerKind::Goal),
             KeyCode::KeyR => turn.0 = (turn.0 + 1) % 8,
+            KeyCode::KeyA if !ctrl => {
+                if let Some(i) = selected {
+                    doc.auto_markers(i);
+                }
+            }
             KeyCode::KeyS => {
                 if let Some(i) = selected
                     && !analysis.suggested_spawns.is_empty()

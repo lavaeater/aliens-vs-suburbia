@@ -298,8 +298,7 @@ impl CampaignDoc {
                     .levels
                     .iter()
                     .find(|l| &l.path == path)
-                    .map(|l| l.saved.clone())
-                    .unwrap_or_default();
+                    .map_or_else(String::new, |l| l.saved.clone());
                 LevelDoc {
                     path: path.clone(),
                     map: map.clone(),
@@ -585,6 +584,24 @@ impl CampaignDoc {
             self.touch(format!("Removed the placement at {x}, {y}"));
         }
         removed
+    }
+
+    /// Put markers on level `index` where `analysis::auto_markers` says (all of its
+    /// markers are replaced).
+    pub fn auto_markers(&mut self, index: usize) {
+        let (Some(base), Some(level)) = (self.base.as_ref(), self.levels.get(index)) else {
+            return;
+        };
+        match super::analysis::auto_markers(base, &level.map) {
+            Ok(markers) => {
+                let spawns = markers.iter().filter(|m| m.kind == MarkerKind::Spawn).count();
+                if let Some(level) = self.levels.get_mut(index) {
+                    level.map.markers = markers;
+                }
+                self.touch(format!("Goal, player start and {spawns} spawn(s) placed"));
+            }
+            Err(e) => self.bump(format!("No markers: {e}")),
+        }
     }
 
     /// Replace level `index`'s alien spawns with `spawns` (base tiles).
