@@ -13,6 +13,7 @@
 pub mod analysis;
 pub mod catalog;
 pub mod doc;
+pub mod intro;
 pub mod panel;
 pub mod play;
 pub mod view;

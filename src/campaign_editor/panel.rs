@@ -44,6 +44,11 @@ pub enum Field {
     Tagline(usize),
     VictoryTitle,
     Name(usize),
+    /// The objective line on the HUD (the story's `ObjectiveText`).
+    Objective(usize),
+    /// The intro crawl's title, and one of its lines.
+    CrawlTitle(usize),
+    CrawlLine(usize, usize),
 }
 
 /// The field being typed into, if any.
@@ -646,7 +651,7 @@ pub fn rebuild_panel(
                 });
             } else {
                 text(p, level.map.stories.clone(), 10.0, HELP);
-                text(p, "Edit it (and its crawls) in a text editor.", 10.0, HELP);
+                story(p, i, level.intro.as_ref(), focus);
             }
         }
 
@@ -678,7 +683,13 @@ pub fn rebuild_panel(
 }
 
 fn field_value(doc: &CampaignDoc, field: Field) -> String {
+    let intro = |i: usize| doc.levels.get(i).and_then(|l| l.intro.as_ref());
     match field {
+        Field::Objective(i) => intro(i).and_then(|x| x.objective.clone()),
+        Field::CrawlTitle(i) => intro(i).and_then(|x| x.crawl.as_ref()).map(|c| c.title.clone()),
+        Field::CrawlLine(i, n) => intro(i)
+            .and_then(|x| x.crawl.as_ref())
+            .and_then(|c| c.lines.get(n).cloned()),
         Field::Title(i) => doc.file.levels.get(i).map(|l| l.title.clone()),
         Field::Tagline(i) => doc.file.levels.get(i).map(|l| l.tagline.clone()),
         Field::VictoryTitle => Some(doc.file.victory_title.clone()),
@@ -693,7 +704,62 @@ fn set_field(doc: &mut CampaignDoc, field: Field, value: String) {
         Field::Tagline(i) => doc.set_tagline(i, value),
         Field::VictoryTitle => doc.set_victory_title(value),
         Field::Name(i) => doc.edit_map(i, |map| map.name = value),
+        Field::Objective(i) => doc.edit_intro(i, |x| x.objective = Some(value)),
+        Field::CrawlTitle(i) => doc.edit_intro(i, |x| {
+            if let Some(c) = x.crawl.as_mut() {
+                c.title = value;
+            }
+        }),
+        Field::CrawlLine(i, n) => doc.edit_intro(i, |x| {
+            if let Some(line) = x.crawl.as_mut().and_then(|c| c.lines.get_mut(n)) {
+                *line = value;
+            }
+        }),
     }
+}
+
+/// The level's words: its objective line and its intro crawl, line by line.
+fn story(
+    parent: &mut ChildSpawnerCommands,
+    index: usize,
+    intro: Option<&super::intro::IntroDoc>,
+    focus: TextFocus,
+) {
+    let Some(intro) = intro else {
+        text(parent, "No intro found next to the level.", 10.0, HELP);
+        return;
+    };
+    match &intro.objective {
+        Some(objective) => field(parent, "Objective", objective, Field::Objective(index), focus),
+        None => text(parent, "The story sets no ObjectiveText.", 10.0, HELP),
+    }
+    let Some(crawl) = &intro.crawl else {
+        text(parent, "No intro crawl (<level>_crawl_intro.ron).", 10.0, HELP);
+        return;
+    };
+    field(parent, "Intro title", &crawl.title, Field::CrawlTitle(index), focus);
+    for (n, line) in crawl.lines.iter().enumerate() {
+        field(parent, &format!("{:>2}", n + 1), line, Field::CrawlLine(index, n), focus);
+    }
+    strip(parent).with_children(|line| {
+        button(line, "Add line", false, move |doc, _, _| {
+            doc.edit_intro(index, |x| {
+                if let Some(c) = x.crawl.as_mut() {
+                    c.lines.push(String::new());
+                }
+            });
+        });
+        if !crawl.lines.is_empty() {
+            button(line, "Remove last", false, move |doc, _, _| {
+                doc.edit_intro(index, |x| {
+                    if let Some(c) = x.crawl.as_mut() {
+                        c.lines.pop();
+                    }
+                });
+            });
+        }
+    });
+    text(parent, "Ctrl+S writes the crawl and the objective too.", 10.0, HELP);
 }
 
 /// Typing into a field, or the editor's keys.

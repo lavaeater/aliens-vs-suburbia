@@ -15,6 +15,7 @@ use crate::campaign::{CampaignFile, CampaignLevel, campaign_file};
 use crate::general::components::map_components::{
     ELEVATION_STEP, MapFile, Marker, MarkerKind, Region, TilePlacement,
 };
+use super::intro::{IntroDoc, IntroWords};
 use crate::map::compose::MIN_SIZE;
 use crate::map::text_format;
 
@@ -26,6 +27,8 @@ pub struct LevelDoc {
     pub map: MapFile,
     /// The `.map` text as read or last saved; empty for a level never saved.
     saved: String,
+    /// Its intro crawl and objective (`intro.rs`); `None` without a story.
+    pub intro: Option<IntroDoc>,
 }
 
 impl LevelDoc {
@@ -34,7 +37,9 @@ impl LevelDoc {
     }
 
     pub fn is_dirty(&self) -> bool {
-        self.saved.is_empty() || self.text() != self.saved
+        self.saved.is_empty()
+            || self.text() != self.saved
+            || self.intro.as_ref().is_some_and(IntroDoc::is_dirty)
     }
 
     /// Whether the level is cut from a base map (only those are edited here).
@@ -81,7 +86,7 @@ const UNDO_DEPTH: usize = 100;
 #[derive(Debug, Clone)]
 struct Snapshot {
     file: CampaignFile,
-    levels: Vec<(String, MapFile)>,
+    levels: Vec<(String, MapFile, Option<IntroWords>)>,
     selected: Option<usize>,
 }
 
@@ -95,7 +100,7 @@ impl Snapshot {
                 .levels
                 .iter()
                 .zip(&other.levels)
-                .all(|((pa, ma), (pb, mb))| pa == pb && text(ma) == text(mb))
+                .all(|((pa, ma, ia), (pb, mb, ib))| pa == pb && ia == ib && text(ma) == text(mb))
     }
 }
 
@@ -179,10 +184,12 @@ impl CampaignDoc {
         for level in &file.levels {
             let map = text_format::read_map_file(disk_path(&level.map))?;
             let saved = text_format::to_text(&map)?;
+            let intro = IntroDoc::load(&level.map, &map.stories);
             levels.push(LevelDoc {
                 path: content_ref(&level.map),
                 map,
                 saved,
+                intro,
             });
         }
         let base_ref = if file.base.is_empty() {
@@ -264,7 +271,7 @@ impl CampaignDoc {
             levels: self
                 .levels
                 .iter()
-                .map(|l| (l.path.clone(), l.map.clone()))
+                .map(|l| (l.path.clone(), l.map.clone(), l.intro.as_ref().map(IntroDoc::words)))
                 .collect(),
             selected: self.selected,
         }
@@ -293,16 +300,22 @@ impl CampaignDoc {
         self.levels = snapshot
             .levels
             .iter()
-            .map(|(path, map)| {
-                let saved = self
-                    .levels
-                    .iter()
-                    .find(|l| &l.path == path)
-                    .map_or_else(String::new, |l| l.saved.clone());
+            .map(|(path, map, words)| {
+                let now = self.levels.iter().find(|l| &l.path == path);
+                let saved = now.map_or_else(String::new, |l| l.saved.clone());
+                // The intro keeps where its files are and what they hold; only the words
+                // go back.
+                let intro = now.and_then(|l| l.intro.clone()).map(|mut intro| {
+                    if let Some(words) = words {
+                        intro.set_words(words.clone());
+                    }
+                    intro
+                });
                 LevelDoc {
                     path: path.clone(),
                     map: map.clone(),
                     saved,
+                    intro,
                 }
             })
             .collect();
@@ -412,6 +425,7 @@ impl CampaignDoc {
             path: path.clone(),
             map,
             saved: String::new(),
+            intro: None,
         });
         let index = self.levels.len() - 1;
         self.selected = Some(index);
@@ -621,6 +635,14 @@ impl CampaignDoc {
         self.touch(format!("{} alien spawn(s) where roads leave", spawns.len()));
     }
 
+    /// Edit level `index`'s intro crawl or objective in place.
+    pub fn edit_intro(&mut self, index: usize, edit: impl FnOnce(&mut IntroDoc)) {
+        if let Some(intro) = self.levels.get_mut(index).and_then(|l| l.intro.as_mut()) {
+            edit(intro);
+            self.touch(String::new());
+        }
+    }
+
     /// Edit level `index`'s map (rules and the like) in place.
     pub fn edit_map(&mut self, index: usize, edit: impl FnOnce(&mut MapFile)) {
         if let Some(level) = self.levels.get_mut(index) {
@@ -652,7 +674,10 @@ impl CampaignDoc {
             }
         }
         let story_ref = content_ref(&story.to_string_lossy());
-        self.edit_map(index, |map| map.stories = story_ref);
+        self.edit_map(index, |map| map.stories.clone_from(&story_ref));
+        if let Some(level) = self.levels.get_mut(index) {
+            level.intro = IntroDoc::load(&level.path, &story_ref);
+        }
         self.status = format!("Story and intro crawl in {}", dir.display());
         Ok(())
     }
@@ -671,6 +696,9 @@ impl CampaignDoc {
             text_format::write_map_file(&path, &level.map)?;
             level.saved = level.text();
             written += 1;
+            if let Some(intro) = level.intro.as_mut() {
+                written += intro.save()?;
+            }
         }
         if self.file != self.saved_file {
             let path = campaign_file(&self.name);
@@ -838,6 +866,7 @@ mod tests {
                 ..MapFile::default()
             },
             saved: String::new(),
+            intro: None,
         };
         assert!(level.is_dirty(), "never saved");
         level.saved = level.text();
