@@ -64,6 +64,39 @@ pub struct CampaignDoc {
     pub revision: u64,
     /// The last thing that happened, for the status line.
     pub status: String,
+    /// Undo and redo (`undo` / `redo`): the states before and after, newest last.
+    undo: Vec<Snapshot>,
+    redo: Vec<Snapshot>,
+    /// The state the last recorded edit left; what an undo goes back past.
+    last: Option<Snapshot>,
+    /// While set (a drag in progress), edits are not recorded one by one; releasing it
+    /// records them as one step.
+    hold: bool,
+}
+
+/// How many steps undo keeps.
+const UNDO_DEPTH: usize = 100;
+
+/// What undo restores: the campaign file and each level's map.
+#[derive(Debug, Clone)]
+struct Snapshot {
+    file: CampaignFile,
+    levels: Vec<(String, MapFile)>,
+    selected: Option<usize>,
+}
+
+impl Snapshot {
+    /// Whether two snapshots hold the same content (the selection aside).
+    fn same(&self, other: &Self) -> bool {
+        let text = |m: &MapFile| text_format::to_text(m).unwrap_or_default();
+        self.file == other.file
+            && self.levels.len() == other.levels.len()
+            && self
+                .levels
+                .iter()
+                .zip(&other.levels)
+                .all(|((pa, ma), (pb, mb))| pa == pb && text(ma) == text(mb))
+    }
 }
 
 /// A new level's story file (shows its intro crawl when the level starts, sets the
@@ -172,7 +205,7 @@ impl CampaignDoc {
                 "Opened {name}: no base map. Make one with --split-level from a whole level."
             )
         };
-        Ok(Self {
+        let mut doc = Self {
             name: name.to_string(),
             saved_file: file.clone(),
             file,
@@ -182,7 +215,10 @@ impl CampaignDoc {
             selected: None,
             revision: 1,
             status,
-        })
+            ..Self::default()
+        };
+        doc.last = Some(doc.snapshot());
+        Ok(doc)
     }
 
     /// An empty editor that says why `name` could not be opened.
@@ -208,16 +244,122 @@ impl CampaignDoc {
         self.file != self.saved_file || self.levels.iter().any(LevelDoc::is_dirty)
     }
 
+    /// Something changed: views rebuild, and the edit is recorded for undo.
     fn touch(&mut self, status: impl Into<String>) {
+        self.bump(status);
+        if !self.hold {
+            self.record();
+        }
+    }
+
+    /// Views rebuild; nothing to undo (selection, status).
+    fn bump(&mut self, status: impl Into<String>) {
         self.revision = self.revision.wrapping_add(1);
         self.status = status.into();
+    }
+
+    fn snapshot(&self) -> Snapshot {
+        Snapshot {
+            file: self.file.clone(),
+            levels: self
+                .levels
+                .iter()
+                .map(|l| (l.path.clone(), l.map.clone()))
+                .collect(),
+            selected: self.selected,
+        }
+    }
+
+    /// Keep the state as it is now as the next undo step, unless nothing changed.
+    fn record(&mut self) {
+        let now = self.snapshot();
+        match self.last.take() {
+            Some(before) if !before.same(&now) => {
+                self.undo.push(before);
+                if self.undo.len() > UNDO_DEPTH {
+                    self.undo.remove(0);
+                }
+                self.redo.clear();
+            }
+            _ => {}
+        }
+        self.last = Some(now);
+    }
+
+    /// Put a snapshot back. Each level keeps what its file holds (`saved`), so dirty
+    /// stays true to the disk.
+    fn restore(&mut self, snapshot: &Snapshot) {
+        self.file = snapshot.file.clone();
+        self.levels = snapshot
+            .levels
+            .iter()
+            .map(|(path, map)| {
+                let saved = self
+                    .levels
+                    .iter()
+                    .find(|l| &l.path == path)
+                    .map(|l| l.saved.clone())
+                    .unwrap_or_default();
+                LevelDoc {
+                    path: path.clone(),
+                    map: map.clone(),
+                    saved,
+                }
+            })
+            .collect();
+        self.selected = snapshot.selected.filter(|&i| i < self.levels.len());
+    }
+
+    /// Hold recording while a drag goes on (`true`), then record it as one step.
+    pub fn hold_history(&mut self, hold: bool) {
+        self.hold = hold;
+        if !hold {
+            self.record();
+        }
+    }
+
+    /// Go back one step. Whether there was one.
+    pub fn undo(&mut self) -> bool {
+        let Some(before) = self.undo.pop() else {
+            self.bump("Nothing to undo");
+            return false;
+        };
+        let now = self.last.take().unwrap_or_else(|| self.snapshot());
+        self.redo.push(now);
+        self.restore(&before);
+        self.last = Some(before);
+        self.bump(format!("Undone ({} more)", self.undo.len()));
+        true
+    }
+
+    /// Go forward one step. Whether there was one.
+    pub fn redo(&mut self) -> bool {
+        let Some(after) = self.redo.pop() else {
+            self.bump("Nothing to redo");
+            return false;
+        };
+        if let Some(now) = self.last.take() {
+            self.undo.push(now);
+        }
+        self.restore(&after);
+        self.last = Some(after);
+        self.bump(format!("Redone ({} more)", self.redo.len()));
+        true
+    }
+
+    pub const fn can_undo(&self) -> bool {
+        !self.undo.is_empty()
+    }
+
+    pub const fn can_redo(&self) -> bool {
+        !self.redo.is_empty()
     }
 
     pub fn select(&mut self, index: Option<usize>) {
         let index = index.filter(|&i| i < self.levels.len());
         if self.selected != index {
             self.selected = index;
-            self.touch(String::new());
+            self.bump(String::new());
         }
     }
 
@@ -631,6 +773,43 @@ mod tests {
         assert_eq!(placed[0].def_path, "defs/Crate.ron");
         assert!(doc.remove_placement(i, 12, 12));
         assert!(!doc.remove_placement(i, 12, 12));
+    }
+
+    #[test]
+    fn undo_and_redo_step_through_the_edits() {
+        let mut doc = doc();
+        doc.last = Some(doc.snapshot());
+        let i = doc.add_level(Region::new(0, 0, 10, 10)).unwrap();
+        doc.set_title(i, "Mall".into());
+        doc.select(None);
+        assert_eq!(doc.undo.len(), 2, "add and title; selecting is no step");
+        assert!(doc.undo());
+        assert_eq!(doc.file.levels[0].title, "Level 1");
+        assert!(doc.undo());
+        assert!(doc.levels.is_empty() && doc.file.levels.is_empty());
+        assert!(!doc.undo());
+        assert!(doc.redo() && doc.redo());
+        assert_eq!(doc.file.levels[0].title, "Mall");
+        assert!(!doc.redo());
+        // A new edit after an undo drops what could be redone.
+        doc.undo();
+        doc.set_tagline(i, "x".into());
+        assert!(!doc.can_redo());
+    }
+
+    #[test]
+    fn a_held_drag_is_one_step() {
+        let mut doc = doc();
+        let i = doc.add_level(Region::new(0, 0, 10, 10)).unwrap();
+        let steps = doc.undo.len();
+        doc.hold_history(true);
+        for x in 0..5 {
+            doc.set_region(i, Region::new(x * 2, 0, 10, 10));
+        }
+        doc.hold_history(false);
+        assert_eq!(doc.undo.len(), steps + 1);
+        doc.undo();
+        assert_eq!(doc.region_of(i), Some(Region::new(0, 0, 10, 10)));
     }
 
     #[test]

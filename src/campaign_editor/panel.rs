@@ -81,6 +81,7 @@ pub fn spawn_panel(commands: Commands, theme: Res<LavaTheme>) {
             "1 player  2 spawn  3 goal  Esc: select tool",
             "S: suggest spawns  F: frame  PgUp/PgDn: order",
             "Del: remove level  Ctrl+S: save  Esc: leave",
+            "Ctrl+Z: undo  Ctrl+Y / Ctrl+Shift+Z: redo",
             "F5: save and play the selected level",
             "PLACE: pick a def, click to put it, R turns",
         ] {
@@ -588,6 +589,16 @@ pub fn rebuild_panel(
         heading(p, "CAMPAIGN");
         field(p, "Victory title", &doc.file.victory_title, Field::VictoryTitle, focus);
         strip(p).with_children(|line| {
+            if doc.can_undo() {
+                button(line, "Undo (Ctrl+Z)", false, |doc, _, _| {
+                    doc.undo();
+                });
+            }
+            if doc.can_redo() {
+                button(line, "Redo (Ctrl+Y)", false, |doc, _, _| {
+                    doc.redo();
+                });
+            }
             button(line, "Save (Ctrl+S)", false, |doc, _, _| {
                 if let Err(e) = doc.save() {
                     doc.status = format!("Save failed: {e}");
@@ -659,7 +670,17 @@ pub fn handle_keys(
         if event.key_code != KeyCode::Escape {
             confirm.leave = false;
         }
+        let shift = keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]);
         match event.key_code {
+            KeyCode::KeyZ if ctrl && shift => {
+                doc.redo();
+            }
+            KeyCode::KeyZ if ctrl => {
+                doc.undo();
+            }
+            KeyCode::KeyY if ctrl => {
+                doc.redo();
+            }
             KeyCode::KeyS if ctrl => {
                 if let Err(e) = doc.save() {
                     doc.status = format!("Save failed: {e}");
