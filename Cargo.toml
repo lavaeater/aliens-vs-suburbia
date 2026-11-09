@@ -89,7 +89,6 @@ ureq = { version = "3.3.0", features = ["json"] }
 dotenvy = "0.15"
 urlencoding = "2"
 bevy_wind_waker_shader = { path = "bevy_wind_waker_shader" }
-bevy_skein = "0.7.0"
 ratatui = { version = "0.30", optional = true }
 crossterm = { version = "0.29", optional = true }
 enumflags2 = { version = "0.7.12", features = ["serde"] }

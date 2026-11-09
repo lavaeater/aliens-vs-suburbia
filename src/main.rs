@@ -57,7 +57,6 @@ pub(crate) mod player_setup;
 pub(crate) mod poly_pizza;
 pub(crate) mod retro;
 pub(crate) mod settings;
-pub mod skein;
 pub(crate) mod towers;
 pub(crate) mod ui;
 pub(crate) mod validate;
