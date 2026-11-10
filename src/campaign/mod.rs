@@ -255,15 +255,14 @@ pub fn start_level(
     start: Option<Res<crate::general::systems::map_systems::StartLevel>>,
 ) {
     // `--level <path>` plays that map, outside the campaign.
-    let (title, path) = match &start {
-        Some(start) => (start.0.clone(), start.0.clone()),
-        None => {
-            let Some(level) = campaign.level() else {
-                error!("campaign: no level {}", campaign.current);
-                return;
-            };
-            (level.title.clone(), level.map.clone())
-        }
+    let (title, path) = if let Some(start) = &start {
+        (start.0.clone(), start.0.clone())
+    } else {
+        let Some(level) = campaign.level() else {
+            error!("campaign: no level {}", campaign.current);
+            return;
+        };
+        (level.title.clone(), level.map.clone())
     };
     let map = match crate::map::text_format::load_level(crate::assets::paths::disk_path(&path)) {
         Ok((map, path)) => {

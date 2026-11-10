@@ -274,7 +274,7 @@ mod tests {
         meshes
             .iter()
             .filter(|((_, l), _)| *l == layer)
-            .map(|(_, m)| m.into_parts().1.len() / 3)
+            .map(|(_, m)| m.parts().1.len() / 3)
             .sum()
     }
 
@@ -296,8 +296,8 @@ mod tests {
         let roads = [road(RoadKind::Service, &[[0.0, 0.0], [6.0, 3.0], [6.0, 9.0]])];
         let meshes = build_roads(&roads, 2.0, 0.0, &GroundHeight::default());
         for mesh in meshes.values() {
-            let (positions, indices) = mesh.into_parts();
-            for tri in indices.chunks_exact(3) {
+            let (positions, indices) = mesh.parts();
+            for tri in indices.as_chunks::<3>().0 {
                 let p = |i: u32| positions[i as usize];
                 let (a, b, c) = (p(tri[0]), p(tri[1]), p(tri[2]));
                 let (ab, ac) = ([b[0] - a[0], b[2] - a[2]], [c[0] - a[0], c[2] - a[2]]);
@@ -330,7 +330,7 @@ mod tests {
         let marks: Vec<[f32; 3]> = meshes
             .iter()
             .filter(|((_, l), _)| *l == RoadLayer::Marking)
-            .flat_map(|(_, m)| m.into_parts().0)
+            .flat_map(|(_, m)| m.parts().0)
             .collect();
         assert!(!marks.is_empty());
         // Map (20, 10) is world (21, 11); the road is 2 wide.

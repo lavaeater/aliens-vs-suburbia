@@ -369,10 +369,10 @@ pub fn fields(model_type: &ModelType) -> Vec<Field> {
                     fields.push(int("rounds", "  rounds", *rounds as f32, 5.0));
                 }
                 ItemKind::Coins { value } => {
-                    fields.push(int("value", "  value", *value as f32, 5.0))
+                    fields.push(int("value", "  value", *value as f32, 5.0));
                 }
                 ItemKind::WeaponPickup { def } => {
-                    fields.push(info("def", "  weapon def", def.clone()))
+                    fields.push(info("def", "  weapon def", def.clone()));
                 }
                 ItemKind::Key { id } => fields.push(info("id", "  key id", id.clone())),
                 ItemKind::Loot { table } => {

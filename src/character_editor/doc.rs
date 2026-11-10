@@ -21,7 +21,7 @@ use crate::assets::paths;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
-use crate::assets::asset_definition::{AssetDefinition, ModelType};
+use crate::assets::asset_definition::{AssetDefinition, ModelType, TerrainProps};
 use crate::character_editor::debug::EditorOverlays;
 use crate::character_editor::hardpoints::HardpointSide;
 use crate::character_editor::models::{DefKind, EditorLibrary, def_stem, set_weapon};
@@ -358,7 +358,7 @@ impl Docs<'_> {
     fn preview(&mut self, model_path: &str) {
         self.prop.0 = DefDoc::preview(AssetDefinition {
             model_path: model_path.to_string(),
-            model_type: ModelType::Terrain(Default::default()),
+            model_type: ModelType::Terrain(TerrainProps::default()),
             ..Default::default()
         });
         self.focus.subject = Subject::Prop;
@@ -517,7 +517,7 @@ pub fn sync_weapon_doc(
     if unchanged {
         return;
     }
-    weapon.0 = wanted.as_deref().map(DefDoc::open).unwrap_or_default();
+    weapon.0 = wanted.as_deref().map_or_default(DefDoc::open);
 }
 
 /// Make the live character match the doc.

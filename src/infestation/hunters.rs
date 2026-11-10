@@ -165,8 +165,7 @@ pub fn choose_prey(
             |t| grid.distance(*t, goal),
             |t| *t == goal,
         )
-        .map(|(path, _)| path.into_iter().skip(1).collect())
-        .unwrap_or_default();
+        .map_or_default(|(path, _)| path.into_iter().skip(1).collect());
     }
 }
 

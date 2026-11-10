@@ -126,7 +126,7 @@ impl FloorMesh {
 
     /// Positions and indices, for tests.
     #[cfg(test)]
-    pub(crate) fn into_parts(&self) -> (Vec<[f32; 3]>, Vec<u32>) {
+    pub(crate) fn parts(&self) -> (Vec<[f32; 3]>, Vec<u32>) {
         (self.positions.clone(), self.indices.clone())
     }
 

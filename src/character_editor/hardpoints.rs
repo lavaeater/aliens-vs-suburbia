@@ -210,6 +210,10 @@ pub fn guess_hand_bone(bones: &[String]) -> Option<String> {
         let lower = name.to_lowercase();
         lower.contains("hand") && !FINGERS.iter().any(|f| lower.contains(f))
     };
+    #[expect(
+        clippy::case_sensitive_file_extension_comparisons,
+        reason = "a bone name suffix like `Hand.R`, not a file extension; already lowercased"
+    )]
     let is_right = |name: &str| {
         let lower = name.to_lowercase();
         lower.contains("right")
