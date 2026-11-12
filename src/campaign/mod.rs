@@ -108,6 +108,8 @@ pub struct Campaign {
     pub current: usize,
     /// Kills on the level just finished, for the card.
     pub last_kills: i32,
+    /// Townsfolk alive and the level's count at the end of the level just finished.
+    pub last_townsfolk: (u32, u32),
 }
 
 /// What the card between levels says.
@@ -338,11 +340,15 @@ pub fn card_text(campaign: &Campaign, kind: Intermission) -> (String, Vec<String
     let level = campaign.level();
     let title = level.map_or_else(String::new, |l| l.title.clone());
     let tagline = level.map_or_else(String::new, |l| l.tagline.clone());
-    let kills = format!("Aliens squashed: {}", campaign.last_kills);
+    let mut tally = vec![format!("Aliens squashed: {}", campaign.last_kills)];
+    let (alive, total) = campaign.last_townsfolk;
+    if total > 0 {
+        tally.push(format!("Townsfolk who made it: {alive} of {total}"));
+    }
     match kind {
         Intermission::NextLevel => (
             campaign.progress().to_uppercase(),
-            vec![title, tagline, String::new(), kills],
+            [vec![title, tagline, String::new()], tally].concat(),
             "Enter / Fire / Cross: continue      Esc / Circle: menu".into(),
         ),
         Intermission::Retry => (
@@ -351,13 +357,16 @@ pub fn card_text(campaign: &Campaign, kind: Intermission) -> (String, Vec<String
                 format!("{} - {}", campaign.progress(), title),
                 "The neighbourhood has fallen. For now.".into(),
                 String::new(),
-                kills,
-            ],
+            ]
+            .into_iter()
+            .chain(tally)
+            .collect(),
             "Enter / Fire / Cross: try again      Esc / Circle: menu".into(),
         ),
         Intermission::Victory => {
             let mut lines = campaign.file.victory_lines.clone();
-            lines.extend([String::new(), kills]);
+            lines.push(String::new());
+            lines.extend(tally);
             (
                 campaign.file.victory_title.clone(),
                 lines,

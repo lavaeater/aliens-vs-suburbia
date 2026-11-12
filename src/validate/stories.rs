@@ -149,6 +149,7 @@ fn check_stories(
     let mut set: BTreeSet<String> = GAME_FACTS
         .iter()
         .chain(crate::infestation::keys::ALL)
+        .chain(crate::townsfolk::keys::ALL)
         .map(|k| (*k).to_string())
         .collect();
     for story in &everything {

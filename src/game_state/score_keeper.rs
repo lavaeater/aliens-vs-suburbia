@@ -174,6 +174,7 @@ pub fn game_tracking_event_system(
 /// the brief end-screen delay, then hands over to the campaign (`campaign::Campaign::finish`)
 /// and its card between levels. See `docs/turbofacts.md` section 5. The delay only starts
 /// once every story crawl (say, a level outro) has played out.
+#[allow(clippy::too_many_arguments)]
 pub fn level_state_system(
     mut commands: Commands,
     mut campaign: ResMut<Campaign>,
@@ -181,6 +182,7 @@ pub fn level_state_system(
     mut goto_state_mw: MessageWriter<GotoState>,
     mut story_effects: MessageReader<StoryEffect>,
     crawls: Option<Res<CrawlQueue>>,
+    census: Option<Res<crate::townsfolk::TownCensus>>,
     time: Res<Time>,
 ) {
     for StoryEffect { effect } in story_effects.read() {
@@ -211,6 +213,7 @@ pub fn level_state_system(
             // Once: the campaign moves on (or not) and the card between levels says how.
             let won = level_tracker.level_state == LevelState::Completed;
             campaign.last_kills = level_tracker.aliens_killed;
+            campaign.last_townsfolk = census.map_or((0, 0), |c| (c.alive, c.total));
             commands.insert_resource(campaign.finish(won));
             goto_state_mw.write(GotoState {
                 state: GameState::Intermission,

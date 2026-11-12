@@ -27,7 +27,7 @@ use crate::ui::spawn_ui::AddHealthBar;
 
 /// A neighbour's health: a few seconds in a monster's grip.
 const NEIGHBOUR_HEALTH: i32 = 60;
-/// A monster this close (metres) sends a neighbour running.
+/// A monster this close (metres) sends a neighbour running (a townsperson: their temper's).
 const FLEE_FROM: f32 = 5.0;
 /// This close, they call for help instead of just running.
 const CORNERED: f32 = 1.0;
@@ -144,7 +144,7 @@ pub fn flee(
             &mut AngularVelocity,
             &mut Rotation,
             &mut CreatureAnim,
-            Has<crate::townsfolk::Townsfolk>,
+            Option<&crate::townsfolk::Townsfolk>,
             Has<crate::townsfolk::Indoors>,
         ),
         Without<Alien>,
@@ -180,10 +180,17 @@ pub fn flee(
         };
         let monster = nearest(&mut monsters.iter().map(|p| p.0.xz()));
         let monster_distance = monster.map_or(f32::INFINITY, |m| m.distance(here));
-        if monster_distance < FLEE_FROM {
+        let (flee_from, run_speed) = townsfolk.map_or((FLEE_FROM, RUN_SPEED), |t| {
+            (t.temper.scare_radius(), t.temper.run_speed())
+        });
+        if monster_distance < flee_from {
             neighbour.scared_for = CALM_DOWN;
         } else {
             neighbour.scared_for = (neighbour.scared_for - dt).max(0.0);
+        }
+        // A townsperson running for a door is their tree's (`townsfolk`).
+        if townsfolk.is_some_and(|t| t.shelter.is_some()) {
+            continue;
         }
         let running = neighbour.scared_for > 0.0;
         let player =
@@ -193,14 +200,14 @@ pub fn flee(
             .and_then(|m| run_direction(here, m, player));
         let Some(dir) = dir else {
             // A townsperson's walking is their tree's (`townsfolk`), not ours.
-            if townsfolk {
+            if townsfolk.is_some() {
                 continue;
             }
             velocity.0 = Vec3::new(0.0, velocity.0.y, 0.0);
             anim.set_if_neq(CreatureAnim(AnimationKey::Idle));
             continue;
         };
-        velocity.0 = Vec3::new(dir.x * RUN_SPEED, velocity.0.y, dir.y * RUN_SPEED);
+        velocity.0 = Vec3::new(dir.x * run_speed, velocity.0.y, dir.y * run_speed);
         if let Some(goal) = facing(dir) {
             rotation.0 = rotation.0.slerp(goal, (dt * 8.0).min(1.0));
         }

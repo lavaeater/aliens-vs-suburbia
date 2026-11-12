@@ -6,6 +6,8 @@
 // Grid code: indices come from the grid's own ranges or are checked with `get`.
 #![allow(clippy::indexing_slicing)]
 
+use bevy::math::Vec2;
+
 use crate::general::components::map_components::{MapFile, RoadKind};
 use crate::map::reach::{enemy_passable, player_passable};
 
@@ -132,6 +134,27 @@ pub fn pick_errand(
     near.get((roll as usize) % near.len()).copied()
 }
 
+/// The door to run for from `here` when a monster is at `monster`: the nearest within
+/// `reach` metres that the monster is not nearer to (nor within 2 m of). World positions
+/// and padded-grid tiles share their numbers (tile `(x, y)` is at `(x, y)` on the floor).
+pub fn pick_shelter(
+    doors: &[(usize, usize)],
+    here: Vec2,
+    monster: Vec2,
+    reach: f32,
+) -> Option<(usize, usize)> {
+    doors
+        .iter()
+        .map(|&(x, y)| ((x, y), Vec2::new(x as f32, y as f32)))
+        .filter(|&(_, at)| {
+            let mine = at.distance(here);
+            let theirs = at.distance(monster);
+            mine <= reach && theirs > mine && theirs > 2.0
+        })
+        .min_by(|a, b| a.1.distance(here).total_cmp(&b.1.distance(here)))
+        .map(|(tile, _)| tile)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -184,5 +207,21 @@ mod tests {
         assert_ne!(errand, from);
         assert!(pick_errand(&places, from, 1, 1).is_none(), "nothing that close");
         assert!(pick_homes(&Places::default(), 3, 1).is_empty());
+    }
+
+    #[test]
+    fn they_run_for_the_nearest_door_away_from_the_monster() {
+        let doors = [(10, 10), (14, 10), (20, 10)];
+        let here = Vec2::new(12.0, 10.0);
+        // The monster at the west door: the east one, not the one it stands by.
+        let picked = pick_shelter(&doors, here, Vec2::new(9.0, 10.0), 14.0);
+        assert_eq!(picked, Some((14, 10)));
+        // From the east: the west door.
+        let picked = pick_shelter(&doors, here, Vec2::new(16.0, 10.0), 14.0);
+        assert_eq!(picked, Some((10, 10)));
+        // Nothing within reach.
+        assert_eq!(pick_shelter(&doors, here, Vec2::new(9.0, 10.0), 1.0), None);
+        // The monster is on them: every door is nearer to it, or too close to it.
+        assert_eq!(pick_shelter(&[(12, 11)], here, here, 14.0), None);
     }
 }
