@@ -78,7 +78,14 @@ impl Plugin for PlayerPlugin {
                 OutlinePlugin::EXTRUDE_VERTEX,
                 AutoGenerateOutlineNormalsPlugin::default(),
             ))
-            .add_systems(Update, (auto_outline_scenes, sync_outline_with_visibility))
+            .add_systems(
+                Update,
+                (
+                    auto_outline_scenes
+                        .run_if(not(resource_exists::<crate::plain_look::PlainLook>)),
+                    sync_outline_with_visibility,
+                ),
+            )
             .add_systems(
                 Update,
                 (

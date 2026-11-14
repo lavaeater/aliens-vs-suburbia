@@ -27,6 +27,10 @@ cargo run -- --validate
 
 # Play another campaign than the default (assets/campaigns/<name>; default gis)
 cargo run -- --play --campaign main
+
+# Playtest without our own looks: no retro look, fog, dread grade or outlines
+# (src/plain_look.rs; lighting, particles and grass stay)
+cargo run -- --play --plain
 ```
 
 Dev builds use `opt-level = 3` for all dependencies (configured in `Cargo.toml`) for acceptable frame rates without a full release build. Don't build dependencies with Cranelift (`codegen-backend` in `~/.cargo/config.toml`): it ignores that `opt-level`, and the music alone then eats a core (`docs/performance.md`). `cargo run -- --play --perf` logs frame and render pass timings.
