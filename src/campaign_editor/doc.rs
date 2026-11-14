@@ -15,6 +15,7 @@ use crate::campaign::{CampaignFile, CampaignLevel, campaign_file};
 use crate::general::components::map_components::{
     ELEVATION_STEP, MapFile, Marker, MarkerKind, Region, TilePlacement,
 };
+use super::intro::{IntroDoc, IntroWords};
 use crate::map::compose::MIN_SIZE;
 use crate::map::text_format;
 
@@ -26,6 +27,8 @@ pub struct LevelDoc {
     pub map: MapFile,
     /// The `.map` text as read or last saved; empty for a level never saved.
     saved: String,
+    /// Its intro crawl and objective (`intro.rs`); `None` without a story.
+    pub intro: Option<IntroDoc>,
 }
 
 impl LevelDoc {
@@ -34,7 +37,9 @@ impl LevelDoc {
     }
 
     pub fn is_dirty(&self) -> bool {
-        self.saved.is_empty() || self.text() != self.saved
+        self.saved.is_empty()
+            || self.text() != self.saved
+            || self.intro.as_ref().is_some_and(IntroDoc::is_dirty)
     }
 
     /// Whether the level is cut from a base map (only those are edited here).
@@ -64,6 +69,39 @@ pub struct CampaignDoc {
     pub revision: u64,
     /// The last thing that happened, for the status line.
     pub status: String,
+    /// Undo and redo (`undo` / `redo`): the states before and after, newest last.
+    undo: Vec<Snapshot>,
+    redo: Vec<Snapshot>,
+    /// The state the last recorded edit left; what an undo goes back past.
+    last: Option<Snapshot>,
+    /// While set (a drag in progress), edits are not recorded one by one; releasing it
+    /// records them as one step.
+    hold: bool,
+}
+
+/// How many steps undo keeps.
+const UNDO_DEPTH: usize = 100;
+
+/// What undo restores: the campaign file and each level's map.
+#[derive(Debug, Clone)]
+struct Snapshot {
+    file: CampaignFile,
+    levels: Vec<(String, MapFile, Option<IntroWords>)>,
+    selected: Option<usize>,
+}
+
+impl Snapshot {
+    /// Whether two snapshots hold the same content (the selection aside).
+    fn same(&self, other: &Self) -> bool {
+        let text = |m: &MapFile| text_format::to_text(m).unwrap_or_default();
+        self.file == other.file
+            && self.levels.len() == other.levels.len()
+            && self
+                .levels
+                .iter()
+                .zip(&other.levels)
+                .all(|((pa, ma, ia), (pb, mb, ib))| pa == pb && ia == ib && text(ma) == text(mb))
+    }
 }
 
 /// A new level's story file (shows its intro crawl when the level starts, sets the
@@ -146,10 +184,12 @@ impl CampaignDoc {
         for level in &file.levels {
             let map = text_format::read_map_file(disk_path(&level.map))?;
             let saved = text_format::to_text(&map)?;
+            let intro = IntroDoc::load(&level.map, &map.stories);
             levels.push(LevelDoc {
                 path: content_ref(&level.map),
                 map,
                 saved,
+                intro,
             });
         }
         let base_ref = if file.base.is_empty() {
@@ -172,7 +212,7 @@ impl CampaignDoc {
                 "Opened {name}: no base map. Make one with --split-level from a whole level."
             )
         };
-        Ok(Self {
+        let mut doc = Self {
             name: name.to_string(),
             saved_file: file.clone(),
             file,
@@ -182,7 +222,10 @@ impl CampaignDoc {
             selected: None,
             revision: 1,
             status,
-        })
+            ..Self::default()
+        };
+        doc.last = Some(doc.snapshot());
+        Ok(doc)
     }
 
     /// An empty editor that says why `name` could not be opened.
@@ -208,16 +251,127 @@ impl CampaignDoc {
         self.file != self.saved_file || self.levels.iter().any(LevelDoc::is_dirty)
     }
 
+    /// Something changed: views rebuild, and the edit is recorded for undo.
     fn touch(&mut self, status: impl Into<String>) {
+        self.bump(status);
+        if !self.hold {
+            self.record();
+        }
+    }
+
+    /// Views rebuild; nothing to undo (selection, status).
+    fn bump(&mut self, status: impl Into<String>) {
         self.revision = self.revision.wrapping_add(1);
         self.status = status.into();
+    }
+
+    fn snapshot(&self) -> Snapshot {
+        Snapshot {
+            file: self.file.clone(),
+            levels: self
+                .levels
+                .iter()
+                .map(|l| (l.path.clone(), l.map.clone(), l.intro.as_ref().map(IntroDoc::words)))
+                .collect(),
+            selected: self.selected,
+        }
+    }
+
+    /// Keep the state as it is now as the next undo step, unless nothing changed.
+    fn record(&mut self) {
+        let now = self.snapshot();
+        match self.last.take() {
+            Some(before) if !before.same(&now) => {
+                self.undo.push(before);
+                if self.undo.len() > UNDO_DEPTH {
+                    self.undo.remove(0);
+                }
+                self.redo.clear();
+            }
+            _ => {}
+        }
+        self.last = Some(now);
+    }
+
+    /// Put a snapshot back. Each level keeps what its file holds (`saved`), so dirty
+    /// stays true to the disk.
+    fn restore(&mut self, snapshot: &Snapshot) {
+        self.file = snapshot.file.clone();
+        self.levels = snapshot
+            .levels
+            .iter()
+            .map(|(path, map, words)| {
+                let now = self.levels.iter().find(|l| &l.path == path);
+                let saved = now.map_or_else(String::new, |l| l.saved.clone());
+                // The intro keeps where its files are and what they hold; only the words
+                // go back.
+                let intro = now.and_then(|l| l.intro.clone()).map(|mut intro| {
+                    if let Some(words) = words {
+                        intro.set_words(words.clone());
+                    }
+                    intro
+                });
+                LevelDoc {
+                    path: path.clone(),
+                    map: map.clone(),
+                    saved,
+                    intro,
+                }
+            })
+            .collect();
+        self.selected = snapshot.selected.filter(|&i| i < self.levels.len());
+    }
+
+    /// Hold recording while a drag goes on (`true`), then record it as one step.
+    pub fn hold_history(&mut self, hold: bool) {
+        self.hold = hold;
+        if !hold {
+            self.record();
+        }
+    }
+
+    /// Go back one step. Whether there was one.
+    pub fn undo(&mut self) -> bool {
+        let Some(before) = self.undo.pop() else {
+            self.bump("Nothing to undo");
+            return false;
+        };
+        let now = self.last.take().unwrap_or_else(|| self.snapshot());
+        self.redo.push(now);
+        self.restore(&before);
+        self.last = Some(before);
+        self.bump(format!("Undone ({} more)", self.undo.len()));
+        true
+    }
+
+    /// Go forward one step. Whether there was one.
+    pub fn redo(&mut self) -> bool {
+        let Some(after) = self.redo.pop() else {
+            self.bump("Nothing to redo");
+            return false;
+        };
+        if let Some(now) = self.last.take() {
+            self.undo.push(now);
+        }
+        self.restore(&after);
+        self.last = Some(after);
+        self.bump(format!("Redone ({} more)", self.redo.len()));
+        true
+    }
+
+    pub const fn can_undo(&self) -> bool {
+        !self.undo.is_empty()
+    }
+
+    pub const fn can_redo(&self) -> bool {
+        !self.redo.is_empty()
     }
 
     pub fn select(&mut self, index: Option<usize>) {
         let index = index.filter(|&i| i < self.levels.len());
         if self.selected != index {
             self.selected = index;
-            self.touch(String::new());
+            self.bump(String::new());
         }
     }
 
@@ -271,6 +425,7 @@ impl CampaignDoc {
             path: path.clone(),
             map,
             saved: String::new(),
+            intro: None,
         });
         let index = self.levels.len() - 1;
         self.selected = Some(index);
@@ -445,6 +600,24 @@ impl CampaignDoc {
         removed
     }
 
+    /// Put markers on level `index` where `analysis::auto_markers` says (all of its
+    /// markers are replaced).
+    pub fn auto_markers(&mut self, index: usize) {
+        let (Some(base), Some(level)) = (self.base.as_ref(), self.levels.get(index)) else {
+            return;
+        };
+        match super::analysis::auto_markers(base, &level.map) {
+            Ok(markers) => {
+                let spawns = markers.iter().filter(|m| m.kind == MarkerKind::Spawn).count();
+                if let Some(level) = self.levels.get_mut(index) {
+                    level.map.markers = markers;
+                }
+                self.touch(format!("Goal, player start and {spawns} spawn(s) placed"));
+            }
+            Err(e) => self.bump(format!("No markers: {e}")),
+        }
+    }
+
     /// Replace level `index`'s alien spawns with `spawns` (base tiles).
     pub fn set_spawns(&mut self, index: usize, spawns: &[(i32, i32)]) {
         let Some(level) = self.levels.get_mut(index) else {
@@ -460,6 +633,14 @@ impl CampaignDoc {
                 y,
             }));
         self.touch(format!("{} alien spawn(s) where roads leave", spawns.len()));
+    }
+
+    /// Edit level `index`'s intro crawl or objective in place.
+    pub fn edit_intro(&mut self, index: usize, edit: impl FnOnce(&mut IntroDoc)) {
+        if let Some(intro) = self.levels.get_mut(index).and_then(|l| l.intro.as_mut()) {
+            edit(intro);
+            self.touch(String::new());
+        }
     }
 
     /// Edit level `index`'s map (rules and the like) in place.
@@ -493,7 +674,10 @@ impl CampaignDoc {
             }
         }
         let story_ref = content_ref(&story.to_string_lossy());
-        self.edit_map(index, |map| map.stories = story_ref);
+        self.edit_map(index, |map| map.stories.clone_from(&story_ref));
+        if let Some(level) = self.levels.get_mut(index) {
+            level.intro = IntroDoc::load(&level.path, &story_ref);
+        }
         self.status = format!("Story and intro crawl in {}", dir.display());
         Ok(())
     }
@@ -512,6 +696,9 @@ impl CampaignDoc {
             text_format::write_map_file(&path, &level.map)?;
             level.saved = level.text();
             written += 1;
+            if let Some(intro) = level.intro.as_mut() {
+                written += intro.save()?;
+            }
         }
         if self.file != self.saved_file {
             let path = campaign_file(&self.name);
@@ -634,6 +821,43 @@ mod tests {
     }
 
     #[test]
+    fn undo_and_redo_step_through_the_edits() {
+        let mut doc = doc();
+        doc.last = Some(doc.snapshot());
+        let i = doc.add_level(Region::new(0, 0, 10, 10)).unwrap();
+        doc.set_title(i, "Mall".into());
+        doc.select(None);
+        assert_eq!(doc.undo.len(), 2, "add and title; selecting is no step");
+        assert!(doc.undo());
+        assert_eq!(doc.file.levels[0].title, "Level 1");
+        assert!(doc.undo());
+        assert!(doc.levels.is_empty() && doc.file.levels.is_empty());
+        assert!(!doc.undo());
+        assert!(doc.redo() && doc.redo());
+        assert_eq!(doc.file.levels[0].title, "Mall");
+        assert!(!doc.redo());
+        // A new edit after an undo drops what could be redone.
+        doc.undo();
+        doc.set_tagline(i, "x".into());
+        assert!(!doc.can_redo());
+    }
+
+    #[test]
+    fn a_held_drag_is_one_step() {
+        let mut doc = doc();
+        let i = doc.add_level(Region::new(0, 0, 10, 10)).unwrap();
+        let steps = doc.undo.len();
+        doc.hold_history(true);
+        for x in 0..5 {
+            doc.set_region(i, Region::new(x * 2, 0, 10, 10));
+        }
+        doc.hold_history(false);
+        assert_eq!(doc.undo.len(), steps + 1);
+        doc.undo();
+        assert_eq!(doc.region_of(i), Some(Region::new(0, 0, 10, 10)));
+    }
+
+    #[test]
     fn dirty_follows_the_text() {
         let mut level = LevelDoc {
             path: "x.map".into(),
@@ -642,6 +866,7 @@ mod tests {
                 ..MapFile::default()
             },
             saved: String::new(),
+            intro: None,
         };
         assert!(level.is_dirty(), "never saved");
         level.saved = level.text();

@@ -144,6 +144,7 @@ pub fn setup_blood_assets(
 
 /// Spawn blood on every non-fire hit: a particle spray at the impact and a lasting
 /// stain on the ground below it.
+#[allow(clippy::too_many_arguments)]
 pub fn spawn_blood_on_damage(
     mut damage: MessageReader<DamageDealt>,
     mut commands: Commands,

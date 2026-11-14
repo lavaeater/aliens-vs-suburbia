@@ -63,7 +63,7 @@ pub struct Frame {
 }
 
 impl Frame {
-    pub fn to_tiles(&self, (x, y): Point) -> Point {
+    pub fn to_tiles(self, (x, y): Point) -> Point {
         let (sin, cos) = self.rotation.sin_cos();
         let (rx, ry) = (x * cos - y * sin, x * sin + y * cos);
         (
@@ -106,7 +106,7 @@ pub fn fill_rings(rings: &[Vec<Point>], width: usize, height: usize) -> Vec<(usi
             }
         }
         crossings.sort_by(f64::total_cmp);
-        for span in crossings.chunks_exact(2) {
+        for span in crossings.as_chunks::<2>().0 {
             // Cells whose centre (col + 0.5) is in [span0, span1).
             let first = (span[0] - 0.5).ceil().max(0.0);
             let last = (span[1] - 0.5).ceil().min(width as f64);
@@ -293,7 +293,7 @@ mod tests {
     fn fills_a_square_with_a_hole() {
         let outer = vec![(1.0, 1.0), (6.0, 1.0), (6.0, 6.0), (1.0, 6.0), (1.0, 1.0)];
         let inner = vec![(3.0, 3.0), (4.0, 3.0), (4.0, 4.0), (3.0, 4.0), (3.0, 3.0)];
-        let cells = fill_rings(&[outer.clone()], 10, 10);
+        let cells = fill_rings(std::slice::from_ref(&outer), 10, 10);
         assert_eq!(cells.len(), 25);
         let cells = fill_rings(&[outer, inner], 10, 10);
         assert_eq!(cells.len(), 24);

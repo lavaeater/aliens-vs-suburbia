@@ -44,6 +44,11 @@ pub enum Field {
     Tagline(usize),
     VictoryTitle,
     Name(usize),
+    /// The objective line on the HUD (the story's `ObjectiveText`).
+    Objective(usize),
+    /// The intro crawl's title, and one of its lines.
+    CrawlTitle(usize),
+    CrawlLine(usize, usize),
 }
 
 /// The field being typed into, if any.
@@ -79,8 +84,10 @@ pub fn spawn_panel(commands: Commands, theme: Res<LavaTheme>) {
             "Click: select  drag: move  edges: resize",
             "Shift+drag (or drag on empty ground): new level",
             "1 player  2 spawn  3 goal  Esc: select tool",
-            "S: suggest spawns  F: frame  PgUp/PgDn: order",
+            "S: suggest spawns  A: auto markers  F: frame",
+            "PgUp/PgDn: order",
             "Del: remove level  Ctrl+S: save  Esc: leave",
+            "Ctrl+Z: undo  Ctrl+Y / Ctrl+Shift+Z: redo",
             "F5: save and play the selected level",
             "PLACE: pick a def, click to put it, R turns",
         ] {
@@ -268,6 +275,58 @@ fn waves(
             });
         }
     });
+}
+
+/// Defend (aliens walk to the goal) or infestation (spawners open around the level and
+/// must be destroyed; `docs/infestation.md`), and the infestation's numbers.
+fn mode(
+    parent: &mut ChildSpawnerCommands,
+    index: usize,
+    rules: Option<&crate::general::components::map_components::InfestationRules>,
+) {
+    use crate::general::components::map_components::InfestationRules;
+    strip(parent).with_children(|line| {
+        text(line, "Mode:", 11.0, LABEL);
+        button(line, "Defend", rules.is_none(), move |doc, _, _| {
+            doc.edit_map(index, |map| map.infestation = None);
+        });
+        button(line, "Infestation", rules.is_some(), move |doc, _, _| {
+            doc.edit_map(index, |map| {
+                map.infestation.get_or_insert_with(InfestationRules::default);
+            });
+        });
+    });
+    let Some(rules) = rules else {
+        return;
+    };
+    for (label, value, field) in [
+        ("Spawners", rules.spawners, 0u8),
+        ("Waves each", rules.waves, 1u8),
+    ] {
+        strip(parent).with_children(|line| {
+            text(line, format!("{label}:"), 11.0, LABEL);
+            for (glyph, up) in [("<", false), (">", true)] {
+                button(line, glyph, false, move |doc, _, _| {
+                    doc.edit_map(index, |map| {
+                        if let Some(r) = map.infestation.as_mut() {
+                            let n = if field == 0 { &mut r.spawners } else { &mut r.waves };
+                            *n = if up { n.saturating_add(1) } else { n.saturating_sub(1).max(1) };
+                        }
+                    });
+                });
+            }
+            text(line, value.to_string(), 11.0, VALUE);
+        });
+    }
+    text(
+        parent,
+        format!(
+            "A spawner opens every {:.0}-{:.0} s; no goal or spawns needed",
+            rules.every.0, rules.every.1
+        ),
+        10.0,
+        HELP,
+    );
 }
 
 /// The loot bags: on or off, how thick, which table they roll.
@@ -476,6 +535,11 @@ pub fn rebuild_panel(
                     button(line, label, tool == t, move |_, tool, _| *tool = t);
                 }
             });
+            strip(p).with_children(|line| {
+                button(line, "A: auto markers (goal, start, spawns)", false, move |doc, _, _| {
+                    doc.auto_markers(i);
+                });
+            });
             if !analysis.suggested_spawns.is_empty() {
                 let spawns = analysis.suggested_spawns.clone();
                 strip(p).with_children(|line| {
@@ -488,7 +552,12 @@ pub fn rebuild_panel(
 
             heading(p, "CHECK");
             if analysis.problems.is_empty() {
-                text(p, "OK: every spawn reaches the goal.", 11.0, OK);
+                let ok = if level.map.infestation.is_some() {
+                    "OK: an infestation (spawners open around the level)."
+                } else {
+                    "OK: every spawn reaches the goal."
+                };
+                text(p, ok, 11.0, OK);
             }
             for problem in &analysis.problems {
                 text(p, problem.clone(), 11.0, PROBLEM);
@@ -503,6 +572,7 @@ pub fn rebuild_panel(
             }
 
             heading(p, "RULES");
+            mode(p, i, level.map.infestation.as_ref());
             stepper(
                 p,
                 "Escape limit",
@@ -581,13 +651,23 @@ pub fn rebuild_panel(
                 });
             } else {
                 text(p, level.map.stories.clone(), 10.0, HELP);
-                text(p, "Edit it (and its crawls) in a text editor.", 10.0, HELP);
+                story(p, i, level.intro.as_ref(), focus);
             }
         }
 
         heading(p, "CAMPAIGN");
         field(p, "Victory title", &doc.file.victory_title, Field::VictoryTitle, focus);
         strip(p).with_children(|line| {
+            if doc.can_undo() {
+                button(line, "Undo (Ctrl+Z)", false, |doc, _, _| {
+                    doc.undo();
+                });
+            }
+            if doc.can_redo() {
+                button(line, "Redo (Ctrl+Y)", false, |doc, _, _| {
+                    doc.redo();
+                });
+            }
             button(line, "Save (Ctrl+S)", false, |doc, _, _| {
                 if let Err(e) = doc.save() {
                     doc.status = format!("Save failed: {e}");
@@ -603,7 +683,13 @@ pub fn rebuild_panel(
 }
 
 fn field_value(doc: &CampaignDoc, field: Field) -> String {
+    let intro = |i: usize| doc.levels.get(i).and_then(|l| l.intro.as_ref());
     match field {
+        Field::Objective(i) => intro(i).and_then(|x| x.objective.clone()),
+        Field::CrawlTitle(i) => intro(i).and_then(|x| x.crawl.as_ref()).map(|c| c.title.clone()),
+        Field::CrawlLine(i, n) => intro(i)
+            .and_then(|x| x.crawl.as_ref())
+            .and_then(|c| c.lines.get(n).cloned()),
         Field::Title(i) => doc.file.levels.get(i).map(|l| l.title.clone()),
         Field::Tagline(i) => doc.file.levels.get(i).map(|l| l.tagline.clone()),
         Field::VictoryTitle => Some(doc.file.victory_title.clone()),
@@ -618,7 +704,62 @@ fn set_field(doc: &mut CampaignDoc, field: Field, value: String) {
         Field::Tagline(i) => doc.set_tagline(i, value),
         Field::VictoryTitle => doc.set_victory_title(value),
         Field::Name(i) => doc.edit_map(i, |map| map.name = value),
+        Field::Objective(i) => doc.edit_intro(i, |x| x.objective = Some(value)),
+        Field::CrawlTitle(i) => doc.edit_intro(i, |x| {
+            if let Some(c) = x.crawl.as_mut() {
+                c.title = value;
+            }
+        }),
+        Field::CrawlLine(i, n) => doc.edit_intro(i, |x| {
+            if let Some(line) = x.crawl.as_mut().and_then(|c| c.lines.get_mut(n)) {
+                *line = value;
+            }
+        }),
     }
+}
+
+/// The level's words: its objective line and its intro crawl, line by line.
+fn story(
+    parent: &mut ChildSpawnerCommands,
+    index: usize,
+    intro: Option<&super::intro::IntroDoc>,
+    focus: TextFocus,
+) {
+    let Some(intro) = intro else {
+        text(parent, "No intro found next to the level.", 10.0, HELP);
+        return;
+    };
+    match &intro.objective {
+        Some(objective) => field(parent, "Objective", objective, Field::Objective(index), focus),
+        None => text(parent, "The story sets no ObjectiveText.", 10.0, HELP),
+    }
+    let Some(crawl) = &intro.crawl else {
+        text(parent, "No intro crawl (<level>_crawl_intro.ron).", 10.0, HELP);
+        return;
+    };
+    field(parent, "Intro title", &crawl.title, Field::CrawlTitle(index), focus);
+    for (n, line) in crawl.lines.iter().enumerate() {
+        field(parent, &format!("{:>2}", n + 1), line, Field::CrawlLine(index, n), focus);
+    }
+    strip(parent).with_children(|line| {
+        button(line, "Add line", false, move |doc, _, _| {
+            doc.edit_intro(index, |x| {
+                if let Some(c) = x.crawl.as_mut() {
+                    c.lines.push(String::new());
+                }
+            });
+        });
+        if !crawl.lines.is_empty() {
+            button(line, "Remove last", false, move |doc, _, _| {
+                doc.edit_intro(index, |x| {
+                    if let Some(c) = x.crawl.as_mut() {
+                        c.lines.pop();
+                    }
+                });
+            });
+        }
+    });
+    text(parent, "Ctrl+S writes the crawl and the objective too.", 10.0, HELP);
 }
 
 /// Typing into a field, or the editor's keys.
@@ -659,7 +800,17 @@ pub fn handle_keys(
         if event.key_code != KeyCode::Escape {
             confirm.leave = false;
         }
+        let shift = keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]);
         match event.key_code {
+            KeyCode::KeyZ if ctrl && shift => {
+                doc.redo();
+            }
+            KeyCode::KeyZ if ctrl => {
+                doc.undo();
+            }
+            KeyCode::KeyY if ctrl => {
+                doc.redo();
+            }
             KeyCode::KeyS if ctrl => {
                 if let Err(e) = doc.save() {
                     doc.status = format!("Save failed: {e}");
@@ -669,6 +820,11 @@ pub fn handle_keys(
             KeyCode::Digit2 => *tool = Tool::Marker(MarkerKind::Spawn),
             KeyCode::Digit3 => *tool = Tool::Marker(MarkerKind::Goal),
             KeyCode::KeyR => turn.0 = (turn.0 + 1) % 8,
+            KeyCode::KeyA if !ctrl => {
+                if let Some(i) = selected {
+                    doc.auto_markers(i);
+                }
+            }
             KeyCode::KeyS => {
                 if let Some(i) = selected
                     && !analysis.suggested_spawns.is_empty()

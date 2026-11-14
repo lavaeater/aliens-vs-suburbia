@@ -111,6 +111,10 @@ const fn four() -> usize {
 const fn yes() -> bool {
     true
 }
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "serde's default for an `Option<LootSpread>` field must return the field's type"
+)]
 fn default_loot() -> Option<LootSpread> {
     Some(LootSpread {
         per_tiles: 40,
@@ -302,22 +306,21 @@ pub fn import(
         return Err("the export has nothing a level can use (no buildings, roads or land)".into());
     }
 
-    let centre = match spec.centre {
-        Some((lat, lon)) => LatLon { lat, lon },
-        None => {
-            let buildings: Vec<&data::Feature> = classified
-                .iter()
-                .filter(|(p, _)| *p == Paint::Building)
-                .map(|(_, f)| *f)
-                .collect();
-            let source: Vec<&data::Feature> = if buildings.is_empty() {
-                classified.iter().map(|(_, f)| *f).collect()
-            } else {
-                buildings
-            };
-            middle(source.iter().flat_map(|f| points(&f.shape)))
-                .ok_or("the export has no coordinates")?
-        }
+    let centre = if let Some((lat, lon)) = spec.centre {
+        LatLon { lat, lon }
+    } else {
+        let buildings: Vec<&data::Feature> = classified
+            .iter()
+            .filter(|(p, _)| *p == Paint::Building)
+            .map(|(_, f)| *f)
+            .collect();
+        let source: Vec<&data::Feature> = if buildings.is_empty() {
+            classified.iter().map(|(_, f)| *f).collect()
+        } else {
+            buildings
+        };
+        middle(source.iter().flat_map(|f| points(&f.shape)))
+            .ok_or("the export has no coordinates")?
     };
     let projection = Projection::new(centre);
 
@@ -353,26 +356,25 @@ pub fn import(
         ),
     };
 
-    let (width_m, height_m) = match spec.size {
-        Some(size) => size,
-        None => {
-            let turned = Frame {
-                rotation,
-                metres_per_tile: 1.0,
-                width: 0,
-                height: 0,
-            };
-            let buildings: Vec<Point> = projected
-                .iter()
-                .filter(|f| f.paint == Paint::Building)
-                .flat_map(|f| f.rings.iter().flatten())
-                .map(|p| turned.to_tiles(*p))
-                .collect();
-            let half = |axis: fn(&Point) -> f64| {
-                buildings.iter().map(|p| axis(p).abs()).fold(0.0, f64::max)
-            };
-            (2.0 * (half(|p| p.0) + MARGIN_M), 2.0 * (half(|p| p.1) + MARGIN_M))
-        }
+    let (width_m, height_m) = if let Some(size) = spec.size {
+        size
+    } else {
+        let turned = Frame {
+            rotation,
+            metres_per_tile: 1.0,
+            width: 0,
+            height: 0,
+        };
+        let buildings: Vec<Point> = projected
+            .iter()
+            .filter(|f| f.paint == Paint::Building)
+            .flat_map(|f| f.rings.iter().flatten())
+            .map(|p| turned.to_tiles(*p))
+            .collect();
+        let half = |axis: fn(&Point) -> f64| {
+            buildings.iter().map(|p| axis(p).abs()).fold(0.0, f64::max)
+        };
+        (2.0 * (half(|p| p.0) + MARGIN_M), 2.0 * (half(|p| p.1) + MARGIN_M))
     };
     // One extra tile each side for the wall around the level.
     let width = (width_m / spec.metres_per_tile).ceil().max(4.0) as usize + 2;
@@ -693,8 +695,8 @@ fn middle(points: impl Iterator<Item = LatLon>) -> Option<LatLon> {
         *b = (b.0.min(p.lat), b.1.min(p.lon), b.2.max(p.lat), b.3.max(p.lon));
     }
     bounds.map(|(s, w, n, e)| LatLon {
-        lat: (s + n) / 2.0,
-        lon: (w + e) / 2.0,
+        lat: f64::midpoint(s, n),
+        lon: f64::midpoint(w, e),
     })
 }
 
@@ -828,7 +830,10 @@ mod tests {
         assert_eq!(storeys(&[("building", "yes"), ("building:levels", "many")]), 2);
     }
 
-    fn square_forest(size: usize) -> (Vec<Vec<bool>>, Vec<Vec<Layer>>, Vec<Vec<Ground>>) {
+    /// A forest mask, its layer and its ground, `size` tiles square.
+    type Forest = (Vec<Vec<bool>>, Vec<Vec<Layer>>, Vec<Vec<Ground>>);
+
+    fn square_forest(size: usize) -> Forest {
         (
             vec![vec![true; size]; size],
             vec![vec![Layer::Open; size]; size],
@@ -842,7 +847,7 @@ mod tests {
         let pines = plant_forest(&forest, &mut layer, &ground);
         assert!(pines.len() > 300, "a real forest: {}", pines.len());
         for row in &layer {
-            assert!(row.iter().any(|t| *t == Layer::Open));
+            assert!(row.contains(&Layer::Open));
         }
         // No two pines touch, not even at a corner.
         for a in &pines {

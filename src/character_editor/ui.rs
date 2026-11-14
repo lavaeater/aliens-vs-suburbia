@@ -937,13 +937,17 @@ pub fn rebuild_hardpoint_panel(
 /// Picking one writes `PlayerProps.weapon` into the doc. That is an edit like any other:
 /// `sync_doc_to_live` sees the live character carrying something else and respawns it from
 /// the doc, holding the new gun. Nothing is saved until you Save.
+/// What the weapon list was last built for: the equipped weapon, the doc's weapon and
+/// the open subject.
+type WeaponListKey = (Option<String>, Option<String>, Subject);
+
 pub fn rebuild_weapon_list(
     mut models: ResMut<EditorLibrary>,
     doc: Res<EditorDoc>,
     focus: Res<EditorFocus>,
     mut commands: Commands,
     container_q: Query<Entity, With<WeaponListContainer>>,
-    mut last: Local<Option<(Option<String>, Option<String>, Subject)>>,
+    mut last: Local<Option<WeaponListKey>>,
 ) {
     let equipped = doc
         .def

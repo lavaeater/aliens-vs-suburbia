@@ -10,6 +10,7 @@ pub mod road_mesh;
 pub mod house;
 pub mod map_generator;
 pub mod map_lights;
+pub mod grass;
 pub mod ground;
 pub mod map_plugins;
 pub mod neighbourhood;

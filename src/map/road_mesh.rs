@@ -113,6 +113,17 @@ pub fn build_roads(
     out
 }
 
+/// How far either side of its centreline a road covers the ground, pavement included, in
+/// world units (`tile` a tile). What `build_roads` draws; `map::grass` keeps it bare.
+pub fn half_width(road: &RoadLine, tile: f32) -> f32 {
+    let width = road.width.max(0.0) * tile;
+    match road.kind {
+        RoadKind::Major | RoadKind::Street => width * (0.5 + PAVEMENT),
+        RoadKind::Service => width / 2.0,
+        RoadKind::Path => width.max(MIN_PATH * tile) / 2.0,
+    }
+}
+
 /// Drop points on top of the one before.
 fn dedup(points: Vec<Vec2>) -> Vec<Vec2> {
     let mut out: Vec<Vec2> = Vec::with_capacity(points.len());
@@ -274,7 +285,7 @@ mod tests {
         meshes
             .iter()
             .filter(|((_, l), _)| *l == layer)
-            .map(|(_, m)| m.into_parts().1.len() / 3)
+            .map(|(_, m)| m.parts().1.len() / 3)
             .sum()
     }
 
@@ -296,8 +307,8 @@ mod tests {
         let roads = [road(RoadKind::Service, &[[0.0, 0.0], [6.0, 3.0], [6.0, 9.0]])];
         let meshes = build_roads(&roads, 2.0, 0.0, &GroundHeight::default());
         for mesh in meshes.values() {
-            let (positions, indices) = mesh.into_parts();
-            for tri in indices.chunks_exact(3) {
+            let (positions, indices) = mesh.parts();
+            for tri in indices.as_chunks::<3>().0 {
                 let p = |i: u32| positions[i as usize];
                 let (a, b, c) = (p(tri[0]), p(tri[1]), p(tri[2]));
                 let (ab, ac) = ([b[0] - a[0], b[2] - a[2]], [c[0] - a[0], c[2] - a[2]]);
@@ -330,7 +341,7 @@ mod tests {
         let marks: Vec<[f32; 3]> = meshes
             .iter()
             .filter(|((_, l), _)| *l == RoadLayer::Marking)
-            .flat_map(|(_, m)| m.into_parts().0)
+            .flat_map(|(_, m)| m.parts().0)
             .collect();
         assert!(!marks.is_empty());
         // Map (20, 10) is world (21, 11); the road is 2 wide.

@@ -105,6 +105,9 @@ bevy_psx = { git = "https://github.com/lavaeater/bevy_psx", rev = "96fe8947b5bea
 # Behaviour trees for the townsfolk (`src/townsfolk/`). Upstream (RJ/bevy_behave) has no Bevy 0.20
 # release or branch yet: a copy of its main (rev dbf9680, MIT/Apache) with the version bump.
 bevy_behave = { path = "vendor/bevy_behave" }
+# Grass blades built on the GPU near the camera (`src/map/grass.rs`). No physics feature:
+# characters trample it through `GrassInteractor`, not their (Jolt) colliders.
+bevy_grass = "0.20.6"
 
 # Enabled here only for its features; bevy_seedling depends on the same cpal. `default_host`
 # then opens a native PipeWire stream, on a realtime thread via rtkit, and falls back to ALSA

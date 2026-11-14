@@ -50,6 +50,7 @@ pub(crate) mod map_editor_tui;
 pub(crate) mod model_settings;
 pub(crate) mod music;
 mod perf;
+mod plain_look;
 mod smoke;
 pub(crate) mod physics;
 pub(crate) mod player;
@@ -262,6 +263,7 @@ fn print_help() {
     println!("  cargo run -- --palette <name>              Start with another palette from assets/palettes");
     println!("                                             (default {}; F12 for all settings)", retro::DEFAULT_PALETTE);
     println!("  cargo run -- --no-retro                    Start in full colour, without the retro look");
+    println!("  cargo run -- --plain                       No retro look, fog, dread grade or outlines (playtesting)");
     println!("  cargo run -- --play --retro-shots <dir>    ... a screenshot per palette into <dir>, then quit");
     println!("  cargo run --features map-editor -- --map-editor [--file <path>]");
     println!("                                             Launch the map editor TUI");
@@ -396,7 +398,9 @@ fn main() -> std::process::ExitCode {
         .add_plugins(GamePlugin)
         .add_plugins(retro::RetroPlugin {
             // The PSX look renders the game camera its own way.
-            force_off: args.iter().any(|a| a == "--no-retro" || a == "--psx"),
+            force_off: args
+                .iter()
+                .any(|a| a == "--no-retro" || a == "--psx" || a == "--plain"),
             palette: args.iter().skip_while(|a| *a != "--palette").nth(1).cloned(),
             shots: args
                 .iter()
@@ -407,6 +411,11 @@ fn main() -> std::process::ExitCode {
 
     if let Some(path) = level_path {
         app.insert_resource(general::systems::map_systems::StartLevel(path));
+    }
+    if !args.iter().any(|a| a == "--no-grass-plugin") {
+        app.add_plugins(map::grass::LawnGrassPlugin {
+            on: !args.iter().any(|a| a == "--no-grass"),
+        });
     }
     if !args.iter().any(|a| a == "--flat") {
         app.insert_resource(map::ground::Hills);
@@ -423,6 +432,9 @@ fn main() -> std::process::ExitCode {
         app.add_plugins(fullscreen::FullscreenPlugin);
     }
 
+    if args.iter().any(|a| a == "--plain") {
+        app.add_plugins(plain_look::PlainLookPlugin);
+    }
     if let Some(level) = args
         .iter()
         .skip_while(|a| *a != "--fog")

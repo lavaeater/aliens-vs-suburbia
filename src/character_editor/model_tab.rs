@@ -75,7 +75,7 @@ const MIN_HEIGHT: f32 = 1e-3;
 
 /// The scale that makes a model measured `height` tall at `scale` stand `target` tall.
 pub fn scale_for_height(scale: f32, height: f32, target: f32) -> Option<f32> {
-    (height > MIN_HEIGHT && target > 0.0).then(|| scale * target / height)
+    (height > MIN_HEIGHT && target > 0.0).then_some(scale * target / height)
 }
 
 /// Whether the game reads this def's scale. Characters are sized by the model panel.

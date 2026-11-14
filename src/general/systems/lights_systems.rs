@@ -263,7 +263,6 @@ pub fn animate_lights(
 #[cfg(test)]
 mod tests {
     use super::SkyLightSettings;
-    use bevy::prelude::*;
 
     #[test]
     fn the_default_sky_comes_from_where_it_always_did() {

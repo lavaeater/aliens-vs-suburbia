@@ -123,15 +123,14 @@ pub fn run_cli() -> std::process::ExitCode {
 /// The `.ron` (or other `ext`) files directly in `dir`, as `dir/name.ext` strings, sorted.
 pub fn files_in(dir: &str, ext: &str) -> Vec<String> {
     let mut files: Vec<String> = std::fs::read_dir(dir)
-        .map(|entries| {
+        .map_or_default(|entries| {
             entries
                 .flatten()
                 .map(|e| e.path())
                 .filter(|p| p.is_file() && p.extension().is_some_and(|e| e == ext))
                 .map(|p| p.to_string_lossy().replace('\\', "/"))
                 .collect()
-        })
-        .unwrap_or_default();
+        });
     files.sort();
     files
 }
@@ -177,8 +176,7 @@ pub fn did_you_mean<'a>(wanted: &str, known: impl IntoIterator<Item = &'a str>) 
             (distance <= limit && distance > 0).then_some((distance, k))
         })
         .min_by_key(|(d, _)| *d)
-        .map(|(_, k)| format!(" (did you mean '{k}'?)"))
-        .unwrap_or_default()
+        .map_or_default(|(_, k)| format!(" (did you mean '{k}'?)"))
 }
 
 /// Edit distance by characters, a swap of two neighbours counting as one edit (optimal

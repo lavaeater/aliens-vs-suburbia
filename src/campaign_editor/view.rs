@@ -499,12 +499,15 @@ pub fn use_tool(
                 }
             }
         };
+        if matches!(*drag, Drag::Move { .. } | Drag::Resize { .. } | Drag::Marker(_)) {
+            doc.hold_history(true);
+        }
     }
 
     let held = mouse.pressed(MouseButton::Left);
     let Some(tile) = hover.tile else {
         if !held && !matches!(*drag, Drag::Pan(_)) {
-            *drag = Drag::None;
+            end_drag(&mut doc, &mut drag);
         }
         return;
     };
@@ -551,8 +554,16 @@ pub fn use_tool(
         _ => {}
     }
     if !held && !matches!(*drag, Drag::Pan(_)) {
-        *drag = Drag::None;
+        end_drag(&mut doc, &mut drag);
     }
+}
+
+/// The button is up: a drag that edited becomes one undo step.
+fn end_drag(doc: &mut CampaignDoc, drag: &mut Drag) {
+    if matches!(*drag, Drag::Move { .. } | Drag::Resize { .. } | Drag::Marker(_)) {
+        doc.hold_history(false);
+    }
+    *drag = Drag::None;
 }
 
 const REGION: Color = Color::srgba(1.0, 0.85, 0.3, 0.55);

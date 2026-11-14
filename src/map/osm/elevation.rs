@@ -267,8 +267,8 @@ mod tests {
     fn sweref_puts_the_level_in_its_height_file() {
         // map-01's centre, in the 10 x 10 km file m656_65.
         let (east, north) = sweref(LatLon {
-            lat: 59.199295,
-            lon: 17.753444,
+            lat: 59.199_295,
+            lon: 17.753_444,
         });
         assert!((650_000.0..660_000.0).contains(&east), "{east}");
         assert!((6_560_000.0..6_570_000.0).contains(&north), "{north}");
