@@ -7,8 +7,8 @@
     levels: [
         (
             map: "campaigns/gis/map_01/map_01.map",
-            title: "Up The Hill",
-            tagline: "Placeholder: a real place, real hills, unreal visitors.",
+            title: "Är detta Salems öde?",
+            tagline: "Ingen kunde berätta varför vi behövde skyddsutrustningen",
         ),
         (
             map: "campaigns/gis/gis_02/gis_02.map",
@@ -43,10 +43,10 @@
         music: "music/intro.mp3",
         music_db: 0.0,
         copter: (
-            model: "",
-            scale: 1.0,
+            model: "new-models/drone.glb",
+            scale: 15.0,
             turn_degrees: 0.0,
-            rotors: [],
+            rotors: [(node: "Rotor_BL"), (node: "Rotor_FL"), (node: "Rotor_BR"), (node: "Rotor_FR")],
         ),
         timing: (dive: 10.0, low_pass: 9.0, flare: 4.0, rappel: 5.0, handoff: 3.0),
         clouds: (base: 70.0, top: 115.0),
