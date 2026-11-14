@@ -54,17 +54,23 @@ fn hill_shade(normal: Vec3) -> [f32; 4] {
 
 /// [`hill_shade`], times the altitude tint: `height` between `range`'s lowest (darker by
 /// [`ALTITUDE_CONTRAST`]) and highest (lighter by as much). Flat ground is untouched.
-fn ground_shade(normal: Vec3, height: f32, (lowest, highest): (f32, f32)) -> [f32; 4] {
+fn ground_shade(normal: Vec3, height: f32, range: (f32, f32)) -> [f32; 4] {
     let [slope, _, _, _] = hill_shade(normal);
+    let shade = slope * altitude_tint(height, range);
+    [shade, shade, shade, 1.0]
+}
+
+/// The altitude tint alone, a factor on the colour: `1 - ALTITUDE_CONTRAST` at the lowest
+/// ground, `1 + ALTITUDE_CONTRAST` at the highest, 1 on flat ground. The grass bands
+/// (`map::grass`) use it too, so the blades darken and lighten with the floor.
+pub fn altitude_tint(height: f32, (lowest, highest): (f32, f32)) -> f32 {
     let span = highest - lowest;
-    let altitude = if span > f32::EPSILON {
+    if span > f32::EPSILON {
         let at = ((height - lowest) / span).clamp(0.0, 1.0);
         1.0 + ALTITUDE_CONTRAST * (2.0 * at - 1.0)
     } else {
         1.0
-    };
-    let shade = slope * altitude;
-    [shade, shade, shade, 1.0]
+    }
 }
 
 /// Mesh data ready for `Mesh::insert_attribute`.

@@ -130,6 +130,7 @@ dependencies = [
  "bevy",
  "bevy-inspector-egui",
  "bevy_behave",
+ "bevy_grass",
  "bevy_mod_outline",
  "bevy_psx",
  "bevy_seedling",
@@ -1288,6 +1289,18 @@ dependencies = [
  "thiserror 2.0.21",
  "tracing",
  "wgpu-types",
+]
+
+[[package]]
+name = "bevy_grass"
+version = "0.20.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "54ff7d7dec21b801fc3a147e4005448b6c011d7142045d9e57af8e4ed1929b07"
+dependencies = [
+ "bevy",
+ "bytemuck",
+ "ron 0.12.3",
+ "serde",
 ]
 
 [[package]]

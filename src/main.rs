@@ -409,6 +409,11 @@ fn main() -> std::process::ExitCode {
     if let Some(path) = level_path {
         app.insert_resource(general::systems::map_systems::StartLevel(path));
     }
+    if !args.iter().any(|a| a == "--no-grass-plugin") {
+        app.add_plugins(map::grass::LawnGrassPlugin {
+            on: !args.iter().any(|a| a == "--no-grass"),
+        });
+    }
     if !args.iter().any(|a| a == "--flat") {
         app.insert_resource(map::ground::Hills);
     }

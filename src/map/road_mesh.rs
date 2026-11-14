@@ -113,6 +113,17 @@ pub fn build_roads(
     out
 }
 
+/// How far either side of its centreline a road covers the ground, pavement included, in
+/// world units (`tile` a tile). What `build_roads` draws; `map::grass` keeps it bare.
+pub fn half_width(road: &RoadLine, tile: f32) -> f32 {
+    let width = road.width.max(0.0) * tile;
+    match road.kind {
+        RoadKind::Major | RoadKind::Street => width * (0.5 + PAVEMENT),
+        RoadKind::Service => width / 2.0,
+        RoadKind::Path => width.max(MIN_PATH * tile) / 2.0,
+    }
+}
+
 /// Drop points on top of the one before.
 fn dedup(points: Vec<Vec2>) -> Vec<Vec2> {
     let mut out: Vec<Vec2> = Vec::with_capacity(points.len());
