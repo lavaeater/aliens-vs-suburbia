@@ -38,7 +38,6 @@ use crate::loot::LootDrop;
 use crate::player::components::{IsBuildIndicator, IsObstacle};
 use crate::player::events::building_events::{AddTile, RemoveTile};
 use crate::towers::systems::spawn_tower_sensor;
-use crate::ui::spawn_ui::AddHealthBar;
 
 /// `--level <path>`: the map a match plays instead of the campaign's current level
 /// (`campaign::start_level`).
@@ -49,6 +48,11 @@ pub fn load_map_showcase(mut send_event: MessageWriter<LoadMap>) {
     let map = crate::map::map_generator::generate_showcase_map(42);
     send_event.write(LoadMap { map });
 }
+
+/// The plane under the map that hides the void round it (the campaign intro stretches it
+/// under its whole flight).
+#[derive(bevy::prelude::Component)]
+pub struct BackgroundFloor;
 
 #[derive(Resource)]
 pub struct TileDefinitions {
@@ -116,7 +120,6 @@ pub fn map_loader(
     game_assets: Res<GameAssets>,
     tile_defs: Res<TileDefinitions>,
     model_defs: Res<MapModelDefinitions>,
-    mut add_health_bar_mw: MessageWriter<AddHealthBar>,
     mut wave_manager: Option<ResMut<crate::alien::wave_manager::WaveManager>>,
     mut neighbours_mw: MessageWriter<crate::infestation::SpawnNeighbour>,
     hills: Option<Res<Hills>>,
@@ -399,6 +402,7 @@ pub fn map_loader(
         });
         commands.spawn((
             Name::from("BackgroundFloor"),
+            BackgroundFloor,
             Mesh3d(bg_mesh),
             MeshMaterial3d(bg_mat),
             Transform::from_xyz(map_center_x, bg_y, map_center_z)
@@ -503,10 +507,6 @@ pub fn map_loader(
                     }
                     spawn_tower_sensor(&mut ec, props, pos);
                     map_graph.path_finding_grid.remove_vertex(tile_coord);
-                    add_health_bar_mw.write(AddHealthBar {
-                        entity: ec.id(),
-                        name: "TOWER",
-                    });
                 }
                 ModelType::Item(props) => {
                     let mut ec = commands.spawn((

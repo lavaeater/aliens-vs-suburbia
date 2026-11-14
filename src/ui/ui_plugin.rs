@@ -5,8 +5,8 @@ use crate::ui::player_hud::{
     PickupToasts, spawn_player_bar, track_pickup_toasts, update_player_bar,
 };
 use crate::ui::spawn_ui::{
-    AddHealthBar, GotoState, StateMarker, add_health_bar, cleanup_state, game_theme,
-    goto_state_system, spawn_menu, spawn_showcase_ui, spawn_ui, sync_health_bars,
+    GotoState, StateMarker, cleanup_state, game_theme,
+    goto_state_system, spawn_menu, spawn_showcase_ui, spawn_ui,
     toggle_model_panel, toggle_settings_panel, update_alien_meter, update_anim_mapping_labels,
     update_build_cost_hud, update_camera_panel, update_coin_hud, update_hud, update_model_labels,
     update_wave_hud,
@@ -27,7 +27,6 @@ impl Plugin for UiPlugin {
             .insert_resource(game_theme())
             .init_resource::<PickupToasts>()
             .add_message::<GotoState>()
-            .add_message::<AddHealthBar>()
             .add_systems(OnEnter(GameState::InGame), spawn_ui_camera)
             .add_systems(
                 OnEnter(GameState::InGame),
@@ -45,8 +44,6 @@ impl Plugin for UiPlugin {
                 Update,
                 (
                     goto_state_system,
-                    add_health_bar,
-                    sync_health_bars,
                     update_hud,
                     update_alien_meter,
                     update_wave_hud,

@@ -5,7 +5,6 @@ use crate::general::components::map_components::{AlienSpawnPoint, CoolDown};
 use crate::general::damage::Faction;
 use crate::general::events::map_events::SpawnAlien;
 use crate::loot::LootDrop;
-use crate::ui::spawn_ui::AddHealthBar;
 
 use crate::alien::enemy_defs::{EnemyDef, EnemyDefCache, LoadedEnemyDef, RangedAttack};
 use crate::alien::wave_manager::WaveManager;
@@ -108,7 +107,6 @@ pub fn spawn_aliens(
     mut alien_counter: ResMut<AlienCounter>,
     mut spawn_alien_mr: MessageReader<SpawnAlien>,
     mut commands: Commands,
-    mut add_health_bar_mw: MessageWriter<AddHealthBar>,
     game_assets: Res<GameAssets>,
     mut game_tracking_mw: MessageWriter<GameTrackingEvent>,
     mut wave_manager: Option<ResMut<WaveManager>>,
@@ -129,10 +127,6 @@ pub fn spawn_aliens(
             if spawn_alien.hunts {
                 crate::infestation::make_hunter(&mut commands.entity(id), loaded);
             }
-            add_health_bar_mw.write(AddHealthBar {
-                entity: id,
-                name: "ALIEN",
-            });
             game_tracking_mw.write(GameTrackingEvent::AlienSpawned);
             if let Some(ref mut wm) = wave_manager {
                 wm.spawned_this_wave = wm.spawned_this_wave.saturating_add(1);
@@ -197,10 +191,6 @@ pub fn spawn_aliens(
         if spawn_alien.hunts {
             crate::infestation::make_builtin_hunter(&mut commands.entity(id));
         }
-        add_health_bar_mw.write(AddHealthBar {
-            entity: id,
-            name: "ALIEN",
-        });
 
         game_tracking_mw.write(GameTrackingEvent::AlienSpawned);
 

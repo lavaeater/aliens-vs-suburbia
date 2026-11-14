@@ -23,7 +23,6 @@ use crate::general::components::{CollisionLayer, Health};
 use crate::general::damage::Faction;
 use crate::model_settings::resources::ModelSettings;
 use crate::player::components::{Player, PlayerDead};
-use crate::ui::spawn_ui::AddHealthBar;
 
 /// A neighbour's health: a few seconds in a monster's grip.
 const NEIGHBOUR_HEALTH: i32 = 60;
@@ -62,7 +61,6 @@ pub fn spawn_neighbours(
     mut cache: ResMut<EnemyDefCache>,
     asset_server: Res<AssetServer>,
     settings: Res<ModelSettings>,
-    mut health_bars: MessageWriter<AddHealthBar>,
 ) {
     for request in requests.read() {
         let Some(loaded) = cache.get_or_load_creature(&request.def, &asset_server) else {
@@ -114,10 +112,6 @@ pub fn spawn_neighbours(
                 .entity(id)
                 .insert(crate::townsfolk::Townsfolk::new(home, seed));
         }
-        health_bars.write(AddHealthBar {
-            entity: id,
-            name: "NEIGHBOUR",
-        });
     }
 }
 
