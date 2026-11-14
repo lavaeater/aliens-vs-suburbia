@@ -78,6 +78,11 @@ pub struct Rotor {
     /// The point it spins about, in its own space: the middle of its meshes, found once
     /// they have bounds (`find_rotor_hubs`); it doesn't spin before.
     hub: Option<Vec3>,
+    /// Its transform at rest and how far it has turned. Each frame's transform is built
+    /// from these, never by turning last frame's again: that compounds rounding until the
+    /// rotation shrinks to nothing and the rotor collapses onto its hub.
+    rest: Option<Transform>,
+    angle: f32,
 }
 
 /// Blinks on and off.
@@ -291,11 +296,15 @@ fn stand_in(
         axis: Vec3::Y,
         rpm: 300.0,
         hub: Some(Vec3::ZERO),
+        rest: None,
+        angle: 0.0,
     });
     commands.entity(tail).insert(Rotor {
         axis: Vec3::X,
         rpm: 1400.0,
         hub: Some(Vec3::ZERO),
+        rest: None,
+        angle: 0.0,
     });
 }
 
@@ -320,6 +329,8 @@ pub fn find_model_rotors(
                     axis: rotor.axis.normalize_or(Vec3::Y),
                     rpm: rotor.rpm,
                     hub: None,
+                    rest: None,
+                    angle: 0.0,
                 });
                 found.push(rotor.node.clone());
             }
@@ -373,13 +384,15 @@ fn spun_about(transform: &Transform, hub: Vec3, axis: Vec3, angle: f32) -> Trans
     spun
 }
 
-pub fn spin_rotors(time: Res<Time>, mut rotors: Query<(&Rotor, &mut Transform)>) {
-    for (rotor, mut transform) in &mut rotors {
+pub fn spin_rotors(time: Res<Time>, mut rotors: Query<(&mut Rotor, &mut Transform)>) {
+    for (mut rotor, mut transform) in &mut rotors {
         let Some(hub) = rotor.hub else {
             continue;
         };
+        let rest = *rotor.rest.get_or_insert(*transform);
         let turn = rotor.rpm / 60.0 * std::f32::consts::TAU * time.delta_secs();
-        *transform = spun_about(&transform, hub, rotor.axis, turn);
+        rotor.angle = (rotor.angle + turn) % std::f32::consts::TAU;
+        *transform = spun_about(&rest, hub, rotor.axis, rotor.angle);
     }
 }
 
@@ -456,16 +469,28 @@ pub fn animate_rappellers(
 mod tests {
     use super::*;
 
+    /// Ten minutes of frames at 380 rpm: the rotation stays a rotation and the hub stays put.
+    #[test]
+    fn a_spinning_rotor_does_not_drift() {
+        let rest = Transform::from_rotation(Quat::from_rotation_y(0.2));
+        let hub = Vec3::new(0.25, 0.03, 0.13);
+        let mut angle = 0.0_f32;
+        let mut t = rest;
+        for _ in 0..36_000 {
+            angle = (angle + 380.0 / 60.0 * std::f32::consts::TAU / 60.0) % std::f32::consts::TAU;
+            t = spun_about(&rest, hub, Vec3::Y, angle);
+        }
+        assert!((t.rotation.length() - 1.0).abs() < 1e-4);
+        assert!(t.transform_point(hub).distance(rest.transform_point(hub)) < 1e-4);
+    }
+
     #[test]
     fn a_rotor_spins_about_its_hub_not_its_origin() {
         let start = Transform::from_xyz(1.0, 2.0, 3.0)
             .with_rotation(Quat::from_rotation_z(0.3))
             .with_scale(Vec3::splat(2.0));
         let hub = Vec3::new(0.25, 0.03, 0.13);
-        let mut t = start;
-        for _ in 0..5 {
-            t = spun_about(&t, hub, Vec3::Y, 0.9);
-        }
+        let t = spun_about(&start, hub, Vec3::Y, 4.5);
         assert!(t.transform_point(hub).distance(start.transform_point(hub)) < 1e-4);
         // and it did turn: a point off the hub moved
         let blade = hub + Vec3::Z;
@@ -506,3 +531,4 @@ mod tests {
         assert!(up.distance(top) < 1e-4 && down.distance(bottom) < 1e-4);
     }
 }
+
