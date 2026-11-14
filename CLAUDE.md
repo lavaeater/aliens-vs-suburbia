@@ -220,7 +220,7 @@ Each behavior has its own submodule under `src/ai/`. When the flow field has no 
 - **Shaders are WESL** (`.wesl`): `import a::b::C;` (module paths follow the crate's files: `bevy_pbr::render::...`, `bevy_sprite_render::mesh2d::vertex_output::VertexOutput`), `@if(DEF)` instead of `#ifdef`, `@group(constants::MATERIAL_BIND_GROUP)`. A naga_oil-style `.wgsl` fails at runtime with a parse error and renders nothing (`assets/shaders/retro_canvas.wesl`).
 - **BSN**: scene calls take `@` (`@scenes::button("x")`), `template_value(..)` is gone, entities in a list are separated by `--`.
 - **Primitives** live in `bevy::shape` (the prelude has them); `iter_many` yields `Result`s.
-- **Font**: Bevy's default embedded font is ASCII-only. All UI text must use plain ASCII — no Unicode arrows, em-dashes, emoji, etc.
+- **Font**: `ui::font::GameFontPlugin` puts the full Fira Mono Medium (`assets/fonts/`) behind Bevy's default font handle, so text may use Latin letters (å ä ö, é, ü), dashes and curly quotes; `ui::font::drawable` says what it draws. No arrows, emoji or other scripts.
 
 ### Key Dependencies
 

@@ -6,7 +6,7 @@
 //   title:   shown on the card before the level
 //   tagline: one line under the title
 // The victory screen after the last level shows `victory_title` and `victory_lines`.
-// Plain ASCII only: the game's font has nothing else.
+// Latin letters (å ä ö, é) are fine; no emoji or arrows (src/ui/font.rs).
 (
     levels: [
         (

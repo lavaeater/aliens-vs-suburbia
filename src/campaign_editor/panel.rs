@@ -1,7 +1,7 @@
 //! The campaign editor's side panel and keys: the levels in order, the selected one's
 //! title, region, markers, path check and rules, and the campaign's own texts.
 //!
-//! Text fields: click one to type into it; Enter or Esc ends. Plain ASCII only.
+//! Text fields: click one to type into it; Enter or Esc ends. Latin letters only (`ui::font`).
 
 use bevy::input::ButtonState;
 use bevy::input::keyboard::{Key, KeyboardInput};

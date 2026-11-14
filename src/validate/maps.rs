@@ -129,11 +129,12 @@ fn check_campaign(report: &mut Report, campaign_file: &str) {
         if level.title.trim().is_empty() {
             report.warn(campaign_file, format!("level {} has no title", i + 1));
         }
-        if !level.title.is_ascii() || !level.tagline.is_ascii() {
+        let drawn = |s: &str| s.chars().all(crate::ui::font::drawable);
+        if !drawn(&level.title) || !drawn(&level.tagline) {
             report.error(
                 campaign_file,
                 format!(
-                    "{what}: title/tagline must be plain ASCII (the game font has nothing else)"
+                    "{what}: title/tagline has a letter the game font cannot draw (Latin only, `ui::font`)"
                 ),
             );
         }

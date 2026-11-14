@@ -1,7 +1,7 @@
 // The GIS campaign: one OpenStreetMap import (`world/world.map`, from
 // assets/osm/map-01.osm.ron) cut into levels with the campaign editor
 // (cargo run -- --campaign-editor gis). The default campaign (`campaign::DEFAULT_CAMPAIGN`).
-// Placeholder texts. Plain ASCII only.
+// Placeholder texts. Latin letters (å ä ö) are fine; no emoji.
 (
     base: "campaigns/gis/world/world.map",
     levels: [
@@ -44,11 +44,11 @@
         music_db: 0.0,
         copter: (
             model: "new-models/drone.glb",
-            scale: 15.0,
+            scale: 10.0,
             turn_degrees: 0.0,
             rotors: [(node: "Rotor_BL"), (node: "Rotor_FL"), (node: "Rotor_BR"), (node: "Rotor_FR")],
         ),
         timing: (dive: 10.0, low_pass: 9.0, flare: 4.0, rappel: 5.0, handoff: 3.0),
-        clouds: (base: 70.0, top: 115.0),
+        clouds: (base: 20.0, top: 90.0),
     )),
 )

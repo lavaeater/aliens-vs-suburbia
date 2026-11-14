@@ -71,7 +71,7 @@ pub fn crawl_file(stem: &str, crawl: &CrawlSpec) -> Result<String, String> {
         .map_err(|e| e.to_string())?;
     Ok(format!(
         "// {stem}'s intro crawl, written by the campaign editor. Fields: see\n\
-         // assets/campaigns/main/level_01/level_01_crawl_intro.ron. Plain ASCII only.\n{body}\n"
+         // assets/campaigns/main/level_01/level_01_crawl_intro.ron. Latin letters (å ä ö) are fine; no emoji.\n{body}\n"
     ))
 }
 

@@ -2,3 +2,5 @@ This project contains free models from Poly Pizza licenced under CC-BY (https://
 
 
 Drone by NateGazzard [CC-BY] via Poly Pizza
+
+Fira Mono (assets/fonts/FiraMono-Medium.ttf) by Mozilla / Carrois Apostrophe, SIL Open Font License 1.1 (https://openfontlicense.org)

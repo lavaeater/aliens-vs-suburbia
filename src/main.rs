@@ -425,6 +425,7 @@ fn main() -> std::process::ExitCode {
     }
 
     app.add_plugins(intro::IntroPlugin);
+    app.add_plugins(ui::font::GameFontPlugin);
     if args.iter().any(|a| a == "--no-intro") {
         app.insert_resource(intro::NoIntro);
     }
