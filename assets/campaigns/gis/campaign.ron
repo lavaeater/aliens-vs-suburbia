@@ -36,4 +36,19 @@
         "Placeholder: the last spawner gutters out behind the shopping centre.",
         "The neighbourhood goes back to arguing about parking.",
     ],
+    // The copter ride in before level 1 (src/intro, docs/intro.md). Every field may be
+    // left out. `music` is played once over it (mp3/ogg/wav, inside assets/); `timing` is
+    // seconds per part, to fit the track; `copter.model` empty = the built-in stand-in.
+    intro: Some((
+        music: "music/intro.mp3",
+        music_db: 0.0,
+        copter: (
+            model: "",
+            scale: 1.0,
+            turn_degrees: 0.0,
+            rotors: [],
+        ),
+        timing: (dive: 10.0, low_pass: 9.0, flare: 4.0, rappel: 5.0, handoff: 3.0),
+        clouds: (base: 70.0, top: 115.0),
+    )),
 )

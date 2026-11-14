@@ -41,6 +41,7 @@ pub(crate) mod townsfolk;
 mod psx;
 mod shot;
 pub(crate) mod infestation;
+pub(crate) mod intro;
 pub(crate) mod items;
 pub(crate) mod loot;
 mod map;
@@ -255,6 +256,8 @@ fn print_help() {
     println!("  cargo run -- --psx                         PlayStation 1 look (bevy_psx) instead of the retro look");
     println!("                                             (cut a base map into levels; default: the --campaign)");
     println!("  cargo run -- --play [--level N]            Launch straight into a match (level 1, or N)");
+    println!("  cargo run -- --no-intro                    Skip the campaign's copter intro before level 1");
+    println!("  cargo run -- --play --intro-at <secs>      ... start the intro's flight that far in");
     println!("  cargo run -- --campaign <name>             Play assets/campaigns/<name> (default: {})", campaign::DEFAULT_CAMPAIGN);
     println!("  cargo run -- --fullscreen                  1920x1080 fullscreen (combines with the others)");
     println!("  cargo run -- --play --level <path>         ... into the map at <path> (.map or .ron), outside the campaign");
@@ -419,6 +422,19 @@ fn main() -> std::process::ExitCode {
     }
     if !args.iter().any(|a| a == "--flat") {
         app.insert_resource(map::ground::Hills);
+    }
+
+    app.add_plugins(intro::IntroPlugin);
+    if args.iter().any(|a| a == "--no-intro") {
+        app.insert_resource(intro::NoIntro);
+    }
+    if let Some(at) = args
+        .iter()
+        .skip_while(|a| *a != "--intro-at")
+        .nth(1)
+        .and_then(|s| s.parse().ok())
+    {
+        app.insert_resource(intro::IntroStartAt(at));
     }
 
     if args.iter().any(|a| a == "--perf") {

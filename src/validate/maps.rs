@@ -138,6 +138,40 @@ fn check_campaign(report: &mut Report, campaign_file: &str) {
             );
         }
     }
+    if let Some(intro) = &file.intro {
+        check_intro(report, campaign_file, intro);
+    }
+}
+
+/// The campaign's intro (`crate::intro`): its track and copter model are there. A missing
+/// track only warns: the intro flies in silence without one.
+fn check_intro(report: &mut Report, campaign_file: &str, intro: &crate::intro::CampaignIntro) {
+    if !intro.music.is_empty() {
+        if !disk_path(&intro.music).is_file() {
+            report.warn(
+                campaign_file,
+                format!("intro: no music '{}' (it flies in silence)", intro.music),
+            );
+        } else if !["mp3", "ogg", "wav"]
+            .iter()
+            .any(|ext| intro.music.to_lowercase().ends_with(ext))
+        {
+            report.error(
+                campaign_file,
+                format!("intro: music '{}' is not mp3, ogg or wav", intro.music),
+            );
+        }
+    }
+    let model = &intro.copter.model;
+    if !model.is_empty() && !disk_path(model).is_file() {
+        report.error(campaign_file, format!("intro: no copter model '{model}'"));
+    }
+    if intro.clouds.top <= intro.clouds.base {
+        report.warn(
+            campaign_file,
+            "intro: clouds' top is not above their base (made 10 m deep)",
+        );
+    }
 }
 
 /// A level on a base map (`map::compose`): the base is there, the level cuts from it, and
