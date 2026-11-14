@@ -173,6 +173,7 @@ impl Plugin for IntroPlugin {
                 (
                     clouds::drift_clouds,
                     copter::find_model_rotors,
+                    copter::find_rotor_hubs,
                     copter::spin_rotors,
                     copter::blink_beacons,
                     copter::animate_rappellers,

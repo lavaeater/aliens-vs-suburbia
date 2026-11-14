@@ -3,11 +3,13 @@
 //! Until a model is given (`CopterLook::model` in the campaign's `intro`), the copter is
 //! a stand-in made of primitives: fuselage, tail boom, fin, skids and two rotors, nose
 //! along -Z. A model gets its rotors from `CopterLook::rotors`: node names spun about an
-//! axis. Either way it carries a searchlight and a blinking beacon.
+//! axis through the middle of their own meshes (a modelling tool often leaves a part's
+//! origin at the model's, far from its hub). Either way it carries a searchlight and a blinking beacon.
 //!
 //! The team goes down as stand-ins: each player's own model, without physics, eased down
 //! a rope (`FlightPlan::rappeller_at`); the real players spawn where they land.
 
+use bevy::camera::primitives::Aabb;
 use bevy::gltf::{Gltf, GltfAssetLabel};
 use bevy::prelude::*;
 use bevy::world_serialization::WorldAssetRoot;
@@ -68,11 +70,14 @@ pub struct Copter {
     pending_rotors: Vec<RotorSpec>,
 }
 
-/// Spins about its own `axis` at `rpm`.
+/// Spins about its own `axis` at `rpm`, through `hub`.
 #[derive(Component)]
 pub struct Rotor {
     axis: Vec3,
     rpm: f32,
+    /// The point it spins about, in its own space: the middle of its meshes, found once
+    /// they have bounds (`find_rotor_hubs`); it doesn't spin before.
+    hub: Option<Vec3>,
 }
 
 /// Blinks on and off.
@@ -285,10 +290,12 @@ fn stand_in(
     commands.entity(main).insert(Rotor {
         axis: Vec3::Y,
         rpm: 300.0,
+        hub: Some(Vec3::ZERO),
     });
     commands.entity(tail).insert(Rotor {
         axis: Vec3::X,
         rpm: 1400.0,
+        hub: Some(Vec3::ZERO),
     });
 }
 
@@ -312,6 +319,7 @@ pub fn find_model_rotors(
                 commands.entity(node).insert(Rotor {
                     axis: rotor.axis.normalize_or(Vec3::Y),
                     rpm: rotor.rpm,
+                    hub: None,
                 });
                 found.push(rotor.node.clone());
             }
@@ -320,10 +328,58 @@ pub fn find_model_rotors(
     }
 }
 
+/// Give each model rotor its hub: the middle of the bounds of every mesh under it, in
+/// the rotor's own space.
+pub fn find_rotor_hubs(
+    mut rotors: Query<(Entity, &mut Rotor, &GlobalTransform)>,
+    children: Query<&Children>,
+    meshes: Query<(&Aabb, &GlobalTransform)>,
+) {
+    for (entity, mut rotor, rotor_global) in &mut rotors {
+        if rotor.hub.is_some() {
+            continue;
+        }
+        let to_local = rotor_global.affine().inverse();
+        let mut bounds: Option<(Vec3, Vec3)> = None;
+        for node in std::iter::once(entity).chain(children.iter_descendants(entity)) {
+            let Ok((aabb, global)) = meshes.get(node) else {
+                continue;
+            };
+            let (centre, half) = (Vec3::from(aabb.center), Vec3::from(aabb.half_extents));
+            for corner in 0..8_u8 {
+                let sign = Vec3::new(
+                    if corner & 1 == 0 { -1.0 } else { 1.0 },
+                    if corner & 2 == 0 { -1.0 } else { 1.0 },
+                    if corner & 4 == 0 { -1.0 } else { 1.0 },
+                );
+                let p = to_local.transform_point3(global.transform_point(centre + half * sign));
+                bounds = Some(bounds.map_or((p, p), |(lo, hi)| (lo.min(p), hi.max(p))));
+            }
+        }
+        if let Some((lo, hi)) = bounds {
+            let hub = (lo + hi) * 0.5;
+            debug!("rotor {entity} spins about {hub}");
+            rotor.hub = Some(hub);
+        }
+    }
+}
+
+/// `transform` turned by `angle` about its own `axis` through `hub` (in its own space):
+/// the hub stays where it is.
+fn spun_about(transform: &Transform, hub: Vec3, axis: Vec3, angle: f32) -> Transform {
+    let pivot = transform.transform_point(hub);
+    let mut spun = *transform;
+    spun.rotate_around(pivot, Quat::from_axis_angle(transform.rotation * axis, angle));
+    spun
+}
+
 pub fn spin_rotors(time: Res<Time>, mut rotors: Query<(&Rotor, &mut Transform)>) {
     for (rotor, mut transform) in &mut rotors {
+        let Some(hub) = rotor.hub else {
+            continue;
+        };
         let turn = rotor.rpm / 60.0 * std::f32::consts::TAU * time.delta_secs();
-        transform.rotate_local(Quat::from_axis_angle(rotor.axis, turn));
+        *transform = spun_about(&transform, hub, rotor.axis, turn);
     }
 }
 
@@ -399,6 +455,22 @@ pub fn animate_rappellers(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_rotor_spins_about_its_hub_not_its_origin() {
+        let start = Transform::from_xyz(1.0, 2.0, 3.0)
+            .with_rotation(Quat::from_rotation_z(0.3))
+            .with_scale(Vec3::splat(2.0));
+        let hub = Vec3::new(0.25, 0.03, 0.13);
+        let mut t = start;
+        for _ in 0..5 {
+            t = spun_about(&t, hub, Vec3::Y, 0.9);
+        }
+        assert!(t.transform_point(hub).distance(start.transform_point(hub)) < 1e-4);
+        // and it did turn: a point off the hub moved
+        let blade = hub + Vec3::Z;
+        assert!(t.transform_point(blade).distance(start.transform_point(blade)) > 0.1);
+    }
     use crate::intro::plan::{CloudDeck, IntroTiming};
 
     fn plan() -> FlightPlan {
