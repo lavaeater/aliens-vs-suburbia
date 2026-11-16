@@ -3,14 +3,13 @@ use crate::alien::wave_manager::WaveManager;
 use crate::animation::animation_plugin::{ANIM_KEYS, AnimationKey};
 use crate::game_state::GameState;
 use crate::game_state::score_keeper::LevelTracker;
-use crate::general::components::Health;
 use crate::model_settings::resources::{CharacterFolder, ModelSettings, PlayerAnimClips};
 use crate::player::components::IsBuilding;
 use crate::settings::resources::{GameSettings, ProjectionMode};
 use bevy::prelude::*;
 use bevy::ui_widgets::Activate;
 use lava_ui_builder::{
-    ButtonTheme, LavaTheme, ProgressBar, TextStyle, TextTheme, UIBuilder, WorldFollower,
+    ButtonTheme, LavaTheme, ProgressBar, TextStyle, TextTheme, UIBuilder,
     progress_bar,
 };
 
@@ -972,58 +971,6 @@ pub fn update_hud(
             settings.zoom, settings.pitch_degrees, settings.yaw_degrees
         );
     }
-}
-
-// ── Health bars ───────────────────────────────────────────────────────────────
-
-#[derive(Message, Clone)]
-pub struct AddHealthBar {
-    pub entity: Entity,
-    #[allow(dead_code)]
-    pub name: &'static str,
-}
-
-pub fn add_health_bar(mut commands: Commands, mut add_health_bar_mr: MessageReader<AddHealthBar>) {
-    for msg in add_health_bar_mr.read() {
-        let target = msg.entity;
-        let bar = commands
-            .spawn((
-                WorldFollower {
-                    target,
-                    offset: Vec2::new(-30.0, -40.0),
-                },
-                progress_bar(
-                    1.0,
-                    60.0,
-                    8.0,
-                    Color::srgb(0.2, 0.85, 0.3),
-                    Color::srgba(0.0, 0.0, 0.0, 0.5),
-                ),
-            ))
-            .id();
-        commands
-            .entity(bar)
-            .entry::<Node>()
-            .and_modify(|mut n| n.position_type = PositionType::Absolute);
-    }
-}
-
-pub fn sync_health_bars(
-    mut bars: Query<(&WorldFollower, &mut ProgressBar, &mut Node)>,
-    health_query: Query<&Health>,
-) {
-    for (follower, mut bar, mut node) in bars.iter_mut() {
-        if let Ok(health) = health_query.get(follower.target) {
-            bar.value = (health.health as f32 / health.max_health as f32).clamp(0.0, 1.0);
-            // Wider bar for tankier things, so a brute reads as a brute.
-            node.width = Val::Px(health_bar_width(health.max_health));
-        }
-    }
-}
-
-/// 60 px at 100 hp, clamped so swarm critters and bosses both stay readable.
-pub fn health_bar_width(max_health: i32) -> f32 {
-    (60.0 * max_health as f32 / 100.0).clamp(36.0, 160.0)
 }
 
 pub fn update_build_cost_hud(

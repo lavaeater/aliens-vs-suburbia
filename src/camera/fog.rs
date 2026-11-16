@@ -82,6 +82,29 @@ pub fn fog_for(level: FogLevel, preset: LightingPreset, distance: f32) -> Option
     })
 }
 
+/// The fog for the campaign intro's camera, `distance` metres from what it looks at:
+/// pushed far out while it flies (`handed` 0), so the town shows from the air, and drawn
+/// back in to the game's own [`fog_for`] as it hands over (`handed` 1).
+pub fn aerial_fog(
+    level: FogLevel,
+    preset: LightingPreset,
+    distance: f32,
+    handed: f32,
+) -> Option<DistanceFog> {
+    let (start, depth, strength) = level.shape()?;
+    let k = handed.clamp(0.0, 1.0);
+    let start = 40.0 + (start - 40.0) * k;
+    let depth = 320.0 + (depth - 320.0) * k;
+    Some(DistanceFog {
+        color: fog_color(preset).with_alpha(strength),
+        falloff: FogFalloff::Linear {
+            start: distance + start,
+            end: distance + start + depth,
+        },
+        ..default()
+    })
+}
+
 pub fn cycle_fog(keys: Res<ButtonInput<KeyCode>>, mut level: ResMut<FogLevel>) {
     let ctrl = keys.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]);
     if ctrl && keys.just_pressed(KeyCode::KeyO) {
@@ -125,6 +148,19 @@ mod tests {
         assert!(start(&near) > 3.0);
         assert!((start(&far) - start(&near) - 3.0).abs() < 1e-5);
         assert!(fog_for(FogLevel::Off, LightingPreset::Day, 3.0).is_none());
+    }
+
+    #[test]
+    fn the_intro_fog_ends_as_the_games_own() {
+        let span = |f: Option<DistanceFog>| match f.map(|f| f.falloff) {
+            Some(FogFalloff::Linear { start, end }) => (start, end),
+            _ => (f32::NAN, f32::NAN),
+        };
+        let game = span(fog_for(FogLevel::Haze, LightingPreset::Night, 300.0));
+        let handed = span(aerial_fog(FogLevel::Haze, LightingPreset::Night, 300.0, 1.0));
+        assert!((game.0 - handed.0).abs() < 1e-3 && (game.1 - handed.1).abs() < 1e-3);
+        let flying = span(aerial_fog(FogLevel::Haze, LightingPreset::Night, 300.0, 0.0));
+        assert!(flying.0 > 330.0);
     }
 
     #[test]

@@ -66,7 +66,7 @@ pub struct CampaignLevel {
 }
 
 /// A campaign's `campaign.ron` ([`campaign_file`]).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CampaignFile {
     /// The base map the campaign editor cuts new levels from (`map::compose`), inside
     /// `assets/`. Empty = the base of the first level that has one, if any. Only the
@@ -79,6 +79,9 @@ pub struct CampaignFile {
     pub victory_title: String,
     #[serde(default)]
     pub victory_lines: Vec<String>,
+    /// The copter ride in before the first level (`intro`). None = straight in.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub intro: Option<crate::intro::CampaignIntro>,
 }
 
 fn default_victory_title() -> String {
@@ -96,6 +99,7 @@ impl Default for CampaignFile {
             }],
             victory_title: default_victory_title(),
             victory_lines: Vec::new(),
+            intro: None,
         }
     }
 }
@@ -110,6 +114,8 @@ pub struct Campaign {
     pub last_kills: i32,
     /// Townsfolk alive and the level's count at the end of the level just finished.
     pub last_townsfolk: (u32, u32),
+    /// The intro has played this campaign (a retry of the first level skips it).
+    pub intro_seen: bool,
 }
 
 /// What the card between levels says.

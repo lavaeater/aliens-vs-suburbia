@@ -1,1 +1,6 @@
 This project contains free models from Poly Pizza licenced under CC-BY (https://creativecommons.org/licenses/by/3.0/). Full credits can be found here: https://poly.pizza/l/
+
+
+Drone by NateGazzard [CC-BY] via Poly Pizza
+
+Fira Mono (assets/fonts/FiraMono-Medium.ttf) by Mozilla / Carrois Apostrophe, SIL Open Font License 1.1 (https://openfontlicense.org)

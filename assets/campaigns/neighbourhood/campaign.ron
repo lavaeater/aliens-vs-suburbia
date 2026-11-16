@@ -1,7 +1,7 @@
 // The neighbourhood campaign: infestation levels on generated suburbs (`src/infestation`,
 // `map::neighbourhood`). Play it with `cargo run -- --campaign neighbourhood`; the default
 // is `gis` (`campaign::DEFAULT_CAMPAIGN`). Format: see
-// `assets/campaigns/main/campaign.ron`. Plain ASCII only.
+// `assets/campaigns/main/campaign.ron`. Latin letters (å ä ö) are fine; no emoji.
 (
     levels: [
         (

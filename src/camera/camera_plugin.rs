@@ -31,7 +31,9 @@ impl Plugin for StatefulCameraPlugin {
                 camera_follow
                     .before(TransformSystems::Propagate)
                     .run_if(in_state(GameState::InGame))
-                    .run_if(not(crate::character_editor::inspect::orbit_camera_active)),
+                    .run_if(not(crate::character_editor::inspect::orbit_camera_active))
+                    // The campaign intro flies the camera itself until it hands over.
+                    .run_if(not(crate::intro::holding_camera)),
             )
             .add_systems(
                 Update,
@@ -44,6 +46,7 @@ impl Plugin for StatefulCameraPlugin {
                 Update,
                 apply_camera_settings
                     .run_if(resource_changed::<GameSettings>)
+                    .run_if(not(crate::intro::holding_camera))
                     .run_if(
                         in_state(GameState::InGame).or_else(in_state(GameState::ModelShowcase)),
                     ),

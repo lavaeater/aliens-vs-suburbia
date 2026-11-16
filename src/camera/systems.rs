@@ -245,41 +245,50 @@ pub fn fit_factor(
     (needed_scale / zoom.max(0.01)).clamp(1.0, max.max(1.0))
 }
 
-pub fn apply_camera_settings(
-    settings: Res<GameSettings>,
-    mut camera_query: Query<(&mut Projection, &mut Transform, &mut CameraOffset), With<GameCamera>>,
-) {
+/// Where the camera sits relative to what it looks at, at fit 1 (`camera_follow` scales
+/// it by the fit): from the settings' pitch, yaw and zoom.
+pub fn camera_offset(settings: &GameSettings) -> Vec3 {
     let pitch_rad = settings.pitch_degrees.to_radians();
     let yaw_rad = settings.yaw_degrees.to_radians();
     let offset_dist = settings.zoom * 0.75;
     let offset_y = -pitch_rad.sin() * offset_dist;
     let offset_xz = pitch_rad.cos() * offset_dist;
+    Vec3::new(
+        yaw_rad.sin() * offset_xz,
+        offset_y,
+        yaw_rad.cos() * offset_xz,
+    )
+}
 
+/// The game camera's projection under the settings.
+pub fn projection_for(settings: &GameSettings) -> Projection {
+    match settings.projection {
+        ProjectionMode::Orthographic => Projection::Orthographic(OrthographicProjection {
+            near: settings.ortho_near,
+            far: settings.ortho_far,
+            viewport_origin: Vec2::new(0.5, 0.5),
+            scaling_mode: ScalingMode::FixedVertical {
+                viewport_height: settings.ortho_viewport_height,
+            },
+            area: Rect::new(-1.0, -1.0, 1.0, 1.0),
+            scale: settings.zoom,
+        }),
+        ProjectionMode::Perspective => Projection::Perspective(PerspectiveProjection {
+            fov: settings.persp_fov.clamp(10.0, 170.0).to_radians(),
+            near: settings.persp_near,
+            far: settings.persp_far,
+            ..default()
+        }),
+    }
+}
+
+pub fn apply_camera_settings(
+    settings: Res<GameSettings>,
+    mut camera_query: Query<(&mut Projection, &mut Transform, &mut CameraOffset), With<GameCamera>>,
+) {
     for (mut proj, mut _transform, mut offset) in &mut camera_query {
-        offset.0 = Vec3::new(
-            yaw_rad.sin() * offset_xz,
-            offset_y,
-            yaw_rad.cos() * offset_xz,
-        );
-
-        *proj = match settings.projection {
-            ProjectionMode::Orthographic => Projection::Orthographic(OrthographicProjection {
-                near: settings.ortho_near,
-                far: settings.ortho_far,
-                viewport_origin: Vec2::new(0.5, 0.5),
-                scaling_mode: ScalingMode::FixedVertical {
-                    viewport_height: settings.ortho_viewport_height,
-                },
-                area: Rect::new(-1.0, -1.0, 1.0, 1.0),
-                scale: settings.zoom,
-            }),
-            ProjectionMode::Perspective => Projection::Perspective(PerspectiveProjection {
-                fov: settings.persp_fov.clamp(10.0, 170.0).to_radians(),
-                near: settings.persp_near,
-                far: settings.persp_far,
-                ..default()
-            }),
-        };
+        offset.0 = camera_offset(&settings);
+        *proj = projection_for(&settings);
     }
 }
 

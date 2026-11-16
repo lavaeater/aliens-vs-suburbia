@@ -12,7 +12,6 @@ use crate::player::events::building_events::{
 };
 use crate::towers::events::BuildTower;
 use crate::towers::systems::spawn_tower_sensor;
-use crate::ui::spawn_ui::AddHealthBar;
 use crate::physics::prelude::{CollisionLayers, LockedAxes, Position, RigidBody, Rotation};
 use bevy::asset::AssetServer;
 use bevy::log::info;
@@ -350,7 +349,6 @@ impl ToGridNeighbour for Rotation {
 pub fn build_tower_system(
     mut build_tower_mr: MessageReader<BuildTower>,
     mut commands: Commands,
-    mut add_health_bar_mw: MessageWriter<AddHealthBar>,
     asset_server: Res<AssetServer>,
     model_defs: Res<MapModelDefinitions>,
     tile_defs: Res<TileDefinitions>,
@@ -397,12 +395,6 @@ pub fn build_tower_system(
             }
             spawn_tower_sensor(&mut ec, props, build_tower.position);
         }
-
-        let id = ec.id();
-        add_health_bar_mw.write(AddHealthBar {
-            entity: id,
-            name: "OBSTACLE",
-        });
     }
 }
 

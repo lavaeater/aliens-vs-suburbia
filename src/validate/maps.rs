@@ -129,14 +129,49 @@ fn check_campaign(report: &mut Report, campaign_file: &str) {
         if level.title.trim().is_empty() {
             report.warn(campaign_file, format!("level {} has no title", i + 1));
         }
-        if !level.title.is_ascii() || !level.tagline.is_ascii() {
+        let drawn = |s: &str| s.chars().all(crate::ui::font::drawable);
+        if !drawn(&level.title) || !drawn(&level.tagline) {
             report.error(
                 campaign_file,
                 format!(
-                    "{what}: title/tagline must be plain ASCII (the game font has nothing else)"
+                    "{what}: title/tagline has a letter the game font cannot draw (Latin only, `ui::font`)"
                 ),
             );
         }
+    }
+    if let Some(intro) = &file.intro {
+        check_intro(report, campaign_file, intro);
+    }
+}
+
+/// The campaign's intro (`crate::intro`): its track and copter model are there. A missing
+/// track only warns: the intro flies in silence without one.
+fn check_intro(report: &mut Report, campaign_file: &str, intro: &crate::intro::CampaignIntro) {
+    if !intro.music.is_empty() {
+        if !disk_path(&intro.music).is_file() {
+            report.warn(
+                campaign_file,
+                format!("intro: no music '{}' (it flies in silence)", intro.music),
+            );
+        } else if !["mp3", "ogg", "wav"]
+            .iter()
+            .any(|ext| intro.music.to_lowercase().ends_with(ext))
+        {
+            report.error(
+                campaign_file,
+                format!("intro: music '{}' is not mp3, ogg or wav", intro.music),
+            );
+        }
+    }
+    let model = &intro.copter.model;
+    if !model.is_empty() && !disk_path(model).is_file() {
+        report.error(campaign_file, format!("intro: no copter model '{model}'"));
+    }
+    if intro.clouds.top <= intro.clouds.base {
+        report.warn(
+            campaign_file,
+            "intro: clouds' top is not above their base (made 10 m deep)",
+        );
     }
 }
 

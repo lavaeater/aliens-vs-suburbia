@@ -34,7 +34,9 @@ impl Plugin for PauseMenuPlugin {
                 Update,
                 request_pause
                     .run_if(in_state(PauseState::Running))
-                    .run_if(in_normal_game),
+                    .run_if(in_normal_game)
+                    // Esc skips the campaign intro instead.
+                    .run_if(not(crate::intro::holding_camera)),
             )
             .add_systems(OnEnter(PauseState::Paused), enter_pause)
             .add_systems(OnExit(PauseState::Paused), exit_pause)

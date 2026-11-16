@@ -109,7 +109,7 @@ impl Snapshot {
 pub fn story_templates(stem: &str, title: &str) -> (String, String) {
     let title: String = title
         .chars()
-        .filter(|c| c.is_ascii() && *c != '"' && *c != '\\')
+        .filter(|&c| crate::ui::font::drawable(c) && c != '"' && c != '\\')
         .collect();
     let story = format!(
         r#"// {stem}'s own stories, loaded on top of the base level-flow ones (`MapFile::stories`).
@@ -131,7 +131,7 @@ pub fn story_templates(stem: &str, title: &str) -> (String, String) {
     );
     let crawl = format!(
         r#"// {stem}'s intro crawl, made by the campaign editor. Fields: see
-// assets/campaigns/main/level_01/level_01_crawl_intro.ron. Plain ASCII only.
+// assets/campaigns/main/level_01/level_01_crawl_intro.ron. Latin letters (å ä ö) are fine; no emoji.
 (
     title: "{upper}",
     lines: [
@@ -706,7 +706,7 @@ impl CampaignDoc {
                 .map_err(|e| e.to_string())?;
             let text = format!(
                 "// The {} campaign (`campaign::CampaignFile`), written by the campaign editor:\n\
-                 // cargo run -- --campaign-editor {}. Levels in order; plain ASCII only.\n{body}\n",
+                 // cargo run -- --campaign-editor {}. Levels in order; Latin letters (å ä ö) are fine.\n{body}\n",
                 self.name, self.name
             );
             std::fs::write(&path, text).map_err(|e| format!("cannot write {path}: {e}"))?;

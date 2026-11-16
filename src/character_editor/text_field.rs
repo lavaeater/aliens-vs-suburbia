@@ -7,8 +7,8 @@
 //!
 //! Clicking anywhere else, or Escape, gives the keyboard back.
 //!
-//! Text is ASCII only, like everything else on screen: Bevy's default font has nothing
-//! more, and a character it cannot draw would sit in the value invisibly.
+//! Only what the game font draws is typed (`ui::font::drawable`: Latin, so å ä ö): a
+//! character it cannot draw would sit in the value invisibly.
 
 use bevy::input::ButtonState;
 use bevy::input::keyboard::{Key, KeyboardInput};
@@ -91,7 +91,7 @@ pub fn edit_value(value: &mut String, key: &Key) -> bool {
         Key::Character(text) => {
             let typed: String = text
                 .chars()
-                .filter(|c| c.is_ascii() && !c.is_control())
+                .filter(|&c| crate::ui::font::drawable(c))
                 .collect();
             value.push_str(&typed);
             !typed.is_empty()
@@ -233,12 +233,13 @@ mod tests {
         assert_eq!(value, "a ");
     }
 
-    /// The default font draws ASCII only; anything else would be typed invisibly.
+    /// The game font draws Latin (`ui::font`); anything else would be typed invisibly.
     #[test]
-    fn non_ascii_is_not_typed() {
+    fn swedish_is_typed_emoji_is_not() {
         let mut value = String::new();
-        assert!(!edit_value(&mut value, &Key::Character("e\u{301}".into())) || value == "e");
-        assert!(value.is_ascii());
+        assert!(edit_value(&mut value, &Key::Character("å".into())));
+        assert!(!edit_value(&mut value, &Key::Character("\u{1f47d}".into())));
+        assert_eq!(value, "å");
     }
 
     #[test]

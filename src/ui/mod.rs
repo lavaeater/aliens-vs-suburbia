@@ -1,4 +1,5 @@
 pub mod collapse;
+pub mod font;
 pub(crate) mod gait_panel;
 pub(crate) mod minimap;
 pub mod pause_menu;

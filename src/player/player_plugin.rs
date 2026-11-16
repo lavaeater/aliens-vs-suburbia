@@ -89,7 +89,8 @@ impl Plugin for PlayerPlugin {
             .add_systems(
                 Update,
                 (
-                    spawn_players,
+                    // The campaign intro keeps the players back until they are down the ropes.
+                    spawn_players.run_if(not(crate::intro::holding_players)),
                     switch_weapons,
                     equip_pending_weapons,
                     keep_weapons_snapped,

@@ -94,7 +94,7 @@ crossterm = { version = "0.29", optional = true }
 enumflags2 = { version = "0.7.12", features = ["serde"] }
 # Use the submodule checkout so local edits to rusty_music take effect immediately.
 rusty_music = { path = "rusty_music", features = ["synth"] }
-bevy_seedling = { version = "0.8.0", default-features = false, features = ["wav"] }
+bevy_seedling = { version = "0.8.0", default-features = false, features = ["wav", "mp3", "ogg"] }
 leafwing-input-manager = "0.22"
 # GPU particles. Its `bevy-0.20` branch (no release yet); pinned so it cannot move under us.
 bevy_sprinkles = { git = "https://github.com/doceazedo/sprinkles", rev = "7d8cae40af1213990e2586dd20474ba4c91d8539" }

@@ -23,7 +23,6 @@ use crate::general::events::map_events::SpawnAlien;
 use crate::general::systems::lights_systems::{LightAnimation, LightStyle};
 use crate::general::systems::map_systems::TileDefinitions;
 use crate::player::components::Player;
-use crate::ui::spawn_ui::AddHealthBar;
 
 /// A spawner's health: a few magazines' worth.
 const SPAWNER_HEALTH: i32 = 400;
@@ -186,7 +185,6 @@ pub fn open_spawners(
     tile_defs: Res<TileDefinitions>,
     players: Query<&Position, With<Player>>,
     spawners: Query<&Position, With<Spawner>>,
-    mut health_bars: MessageWriter<AddHealthBar>,
 ) {
     let Some(rules) = infestation.rules.clone() else {
         return;
@@ -221,7 +219,7 @@ pub fn open_spawners(
         "infestation: spawner {} of {} opens at {tile:?}",
         infestation.opened, rules.spawners
     );
-    let id = commands
+    commands
         .spawn((
             Name::from(format!("Spawner {}:{}", tile.0, tile.1)),
             Spawner::new(waves),
@@ -261,12 +259,7 @@ pub fn open_spawners(
                 },
             },
             Transform::from_xyz(0.0, 1.2, 0.0),
-        ))
-        .id();
-    health_bars.write(AddHealthBar {
-        entity: id,
-        name: "SPAWNER",
-    });
+        ));
 }
 
 /// Every open spawner sends out what is due.

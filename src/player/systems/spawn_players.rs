@@ -18,7 +18,6 @@ use crate::player::systems::loadout::Weapons;
 use crate::player::systems::torso_twist::PendingTorsoTwist;
 use crate::player_setup::state::InputDevice;
 use crate::settings::resources::GameSettings;
-use crate::ui::spawn_ui::AddHealthBar;
 use crate::physics::prelude::TransformInterpolation;
 use crate::physics::prelude::Collider;
 use bevy::asset::AssetServer;
@@ -54,7 +53,6 @@ pub fn spawn_players(
     asset_server: Res<AssetServer>,
     roster: Option<Res<crate::player_setup::state::PlayerRoster>>,
     existing_players: Query<&PlayerSlot, With<crate::player::components::Player>>,
-    mut add_health_bar_mw: MessageWriter<AddHealthBar>,
     mut player_added_mw: MessageWriter<GameTrackingEvent>,
     settings: Res<GameSettings>,
     level_loadout: Option<Res<crate::campaign::LevelLoadout>>,
@@ -221,10 +219,6 @@ pub fn spawn_players(
         if let Some(equip) = pending_equip {
             commands.entity(player).insert(equip);
         }
-        add_health_bar_mw.write(AddHealthBar {
-            entity: player,
-            name: "PLAYER",
-        });
         player_added_mw.write(GameTrackingEvent::PlayerAdded(player));
     }
 }
