@@ -159,6 +159,8 @@ enum SurfaceKind {
     Floor,
     Road,
     Wall(WallKind),
+    /// Houses drawn from their outlines (`radhus`).
+    Houses,
 }
 
 /// What stands in one chunk.
@@ -256,6 +258,23 @@ fn plan_surfaces(
         });
     }
 
+    let height = |p: Vec2| floor_y + ground.height(p.x, p.y);
+    let house_ground = super::radhus::Ground {
+        height: &height,
+        tile,
+    };
+    let houses = super::radhus::build_houses(&load.map.buildings, &load.map.roads, &house_ground);
+    if !houses.is_empty() {
+        let material = materials.add(WallKind::Solid.material());
+        for (chunk, mesh) in houses {
+            planned.entry(chunk).or_default().surfaces.push(Surface {
+                kind: SurfaceKind::Houses,
+                mesh: meshes.add(mesh.into_mesh()),
+                material: material.clone(),
+            });
+        }
+    }
+
     let mut wall_looks: HashMap<WallKind, Handle<StandardMaterial>> = HashMap::new();
     for (chunk, kind, wall) in plan_walls(&load.map, tiles, tile, floor_y, ground) {
         let material = wall_looks
@@ -289,6 +308,9 @@ fn spawn_surface(parent: &mut ChildSpawnerCommands, surface: &Surface) {
         }
         SurfaceKind::Wall(kind) => {
             spawned.insert((Name::from(kind.label()), NotShadowCaster));
+        }
+        SurfaceKind::Houses => {
+            spawned.insert(Name::from("Houses"));
         }
     }
 }

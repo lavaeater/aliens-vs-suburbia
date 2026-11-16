@@ -15,7 +15,7 @@ use crate::general::components::map_components::{
 use crate::general::events::map_events::{LoadMap, SpawnPlayer};
 use crate::general::resources::map_resources::MapGraph;
 use crate::map::{BitFlags, MapFeatures};
-use crate::physics::prelude::{Collider, CollisionLayers, Position, RigidBody};
+use crate::physics::prelude::{Collider, CollisionLayers, Position, RigidBody, Rotation};
 use bevy::asset::AssetServer;
 use bevy::math::{Quat, Vec3};
 use bevy::pbr::StandardMaterial;
@@ -303,6 +303,47 @@ pub fn map_loader(
         let block_half_h = 4.0_f32 / 3.0;
         let block_y = tile_defs.floor_level;
         let tw = tile_defs.tile_width;
+
+        // Houses drawn from their outlines (`map::radhus`) collide along them, at their
+        // own angle, not by tile; their tiles stay walls for the pathfinding.
+        let covered = crate::map::radhus::covered_tiles(&map_file.buildings);
+        imp_all_set.retain(|t| !covered.contains(t));
+        for print in crate::map::radhus::footprints(&map_file.buildings, tw)
+            .into_iter()
+            .flatten()
+        {
+            let highest = [(-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0), (0.0, 0.0)]
+                .map(|(x, y): (f32, f32)| {
+                    let p = print.centre + print.a * x * print.size.x / 2.0
+                        + print.b * y * print.size.y / 2.0;
+                    ground.height(p.x, p.y)
+                })
+                .into_iter()
+                .fold(0.0_f32, f32::max);
+            let tall = 2.0 * crate::map::radhus::STOREY;
+            let centre = Vec3::new(
+                print.centre.x,
+                block_y + f32::midpoint(highest, tall),
+                print.centre.y,
+            );
+            let rotation = Quat::from_rotation_y(print.yaw());
+            commands.spawn((
+                Name::from("House collider"),
+                RigidBody::Static,
+                Collider::cuboid(print.size.x, block_half_h + highest + tall, print.size.y),
+                CollisionLayers::new(
+                    [CollisionLayer::ImpassableAll],
+                    [
+                        CollisionLayer::Ball,
+                        CollisionLayer::Alien,
+                        CollisionLayer::Player,
+                    ],
+                ),
+                Transform::from_translation(centre).with_rotation(rotation),
+                Position::from(centre),
+                Rotation::from(rotation),
+            ));
+        }
 
         let imp_configs: [(&HashSet<(i32, i32)>, CollisionLayers); 3] = [
             (

@@ -13,7 +13,7 @@
 #![allow(clippy::indexing_slicing)]
 
 use crate::general::components::map_components::{
-    ELEVATION_STEP, MapFile, Marker, MarkerKind, Region, RoadLine,
+    BuildingOutline, ELEVATION_STEP, MapFile, Marker, MarkerKind, Region, RoadLine,
 };
 use crate::map::osm::geometry::clip_polyline;
 use crate::map::{BitFlags, MapFeatures};
@@ -242,6 +242,7 @@ pub fn compose_level(base: &MapFile, level: &MapFile) -> Result<MapFile, String>
         decorations,
         placements,
         roads: crop_roads(&base.roads, region),
+        buildings: crop_buildings(&base.buildings, region),
         houses,
         waves: level.waves.clone(),
         stories: level.stories.clone(),
@@ -306,6 +307,26 @@ fn crop_roads(roads: &[RoadLine], region: Region) -> Vec<RoadLine> {
     out
 }
 
+/// The buildings wholly inside the region, moved to its corner. One the edge cuts keeps
+/// the wall blocks its tiles get anyway.
+fn crop_buildings(buildings: &[BuildingOutline], region: Region) -> Vec<BuildingOutline> {
+    let (dx, dy) = (region.x as f32, region.y as f32);
+    let (hi_x, hi_y) = (region.width as f32 - 0.5, region.height as f32 - 0.5);
+    buildings
+        .iter()
+        .filter_map(|b| {
+            let outline: Vec<[f32; 2]> = b.outline.iter().map(|&[x, y]| [x - dx, y - dy]).collect();
+            outline
+                .iter()
+                .all(|&[x, y]| (-0.5..=hi_x).contains(&x) && (-0.5..=hi_y).contains(&y))
+                .then(|| BuildingOutline {
+                    outline,
+                    ..b.clone()
+                })
+        })
+        .collect()
+}
+
 /// Split a whole level into a base map and a level on it (`base_ref`, the base's content
 /// path) that composes back to the same tiles: the level gets the markers, rules, waves,
 /// stories and placements, the base the place. An alien spawn on the base's edge is
@@ -322,6 +343,7 @@ pub fn split_level(map: &MapFile, base_ref: &str) -> (MapFile, MapFile) {
         elevation: map.elevation.clone(),
         decorations: map.decorations.clone(),
         roads: map.roads.clone(),
+        buildings: map.buildings.clone(),
         houses: map.houses.clone(),
         ..MapFile::default()
     };
@@ -465,6 +487,23 @@ mod tests {
         assert_eq!(map.name, "Corner");
         assert!(map.base.is_empty() && map.markers.is_empty() && map.region.is_none());
         assert!(crate::map::walls::enclosed_voids(&map).is_empty());
+    }
+
+    #[test]
+    fn buildings_inside_the_region_move_with_it() {
+        let square = |x: f32, y: f32| BuildingOutline {
+            outline: vec![[x, y], [x + 2.0, y], [x + 2.0, y + 3.0], [x, y + 3.0]],
+            ..BuildingOutline::default()
+        };
+        let region = Region {
+            x: 10,
+            y: 20,
+            width: 10,
+            height: 10,
+        };
+        let kept = crop_buildings(&[square(12.0, 22.0), square(18.0, 22.0)], region);
+        assert_eq!(kept.len(), 1, "the one over the edge is dropped");
+        assert_eq!(kept[0].outline[0], [2.0, 2.0]);
     }
 
     #[test]

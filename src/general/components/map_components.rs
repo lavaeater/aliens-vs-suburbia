@@ -149,6 +149,37 @@ pub struct RoadLine {
     pub points: Vec<[f32; 2]>,
 }
 
+/// What a [`BuildingOutline`] is drawn as.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub enum BuildingKind {
+    /// One house of a row of terraced houses (Swedish radhus, `map::radhus`).
+    #[default]
+    Terrace,
+}
+
+impl BuildingKind {
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Terrace => "terrace",
+        }
+    }
+
+    pub fn from_name(name: &str) -> Option<Self> {
+        [Self::Terrace].into_iter().find(|k| k.name() == name)
+    }
+}
+
+/// A building's real outline (OSM imports write them), drawn as a house of its `kind`
+/// instead of the wall blocks its tiles would get, at its own angle. Its tiles stay walls
+/// for the pathfinding; the collider follows the outline. Points are map tile
+/// coordinates, like [`RoadLine`]'s.
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
+pub struct BuildingOutline {
+    pub kind: BuildingKind,
+    pub storeys: u8,
+    pub outline: Vec<[f32; 2]>,
+}
+
 /// Tiles between the points of [`MapFile::elevation`].
 pub const ELEVATION_STEP: usize = 2;
 
@@ -192,6 +223,9 @@ pub struct MapFile {
     /// Road centrelines (`map::road_mesh`); OSM imports write them.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub roads: Vec<RoadLine>,
+    /// Buildings drawn from their real outlines (`map::radhus`); OSM imports write them.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub buildings: Vec<BuildingOutline>,
     /// Houses placed in the map (`assets/houses`), stamped into `tiles` on load.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub houses: Vec<HousePlacement>,

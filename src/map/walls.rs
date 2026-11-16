@@ -265,6 +265,8 @@ pub fn plan_walls(
         .map(|p| (p.x, p.y))
         .chain(map.decorations.iter().map(|d| (d.x, d.y)))
         .map(|(x, y)| (x + 1, y + 1))
+        // A house from an outline (`radhus`) is drawn in their place.
+        .chain(super::radhus::covered_tiles(&map.buildings))
         .collect();
 
     let mut cells: HashMap<(Chunk, WallKind, u8), HashSet<(i32, i32)>> = HashMap::new();
