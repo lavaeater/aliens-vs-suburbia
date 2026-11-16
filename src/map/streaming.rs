@@ -21,7 +21,7 @@ use bevy::prelude::*;
 use bevy::world_serialization::{WorldAsset, WorldAssetRoot};
 
 use crate::camera::components::GameCamera;
-use crate::general::components::map_components::Floor;
+use crate::general::components::map_components::{Floor, MapFile};
 use crate::general::events::map_events::LoadMap;
 use crate::general::systems::map_systems::TileDefinitions;
 use crate::loot::bags::{self, PlannedBag, StreamedBag};
@@ -182,6 +182,11 @@ struct Decoration {
     foliage: bool,
 }
 
+/// What a level's chunk draws (its surfaces and decorations; not its lamps or bags): the
+/// intro hides it while it shows the whole town instead (`intro::backdrop`).
+#[derive(Component)]
+pub struct ChunkScenery;
+
 /// A plant, drawn without an outline: its leaves are see-through cards, and an outline
 /// follows the cards, not the leaves.
 #[derive(Component)]
@@ -217,6 +222,80 @@ fn floor_material(
         metallic: 0.0,
         ..default()
     })
+}
+
+/// A map's decorations into the chunks' plans.
+fn plan_decorations(
+    map: &MapFile,
+    tile_defs: &TileDefinitions,
+    ground: &GroundHeight,
+    player_unit: f32,
+    asset_server: &AssetServer,
+    planned: &mut HashMap<Chunk, ChunkPlan>,
+) {
+    for dec in &map.decorations {
+        // Map coordinates, like placements: one tile in from the padded grid.
+        let tile = (dec.x + 1, dec.y + 1);
+        let (x, z) = (
+            tile_defs.tile_width * tile.0 as f32,
+            tile_defs.tile_width * tile.1 as f32,
+        );
+        let floor = tile_defs.floor_level + tile_defs.tile_depth;
+        let at = Vec3::new(x, floor + ground.height(x, z), z);
+        // `dec.scale` is in player units.
+        let scale = dec.scale * player_unit;
+        planned
+            .entry(chunk_of(tile))
+            .or_default()
+            .decorations
+            .push(Decoration {
+                name: format!("Decoration {}:{} {}", dec.x, dec.y, dec.model),
+                transform: Transform::from_translation(at)
+                    .with_rotation(Quat::from_rotation_y(dec.rotation_y.to_radians()))
+                    .with_scale(Vec3::splat(scale)),
+                scene: asset_server.load(format!("{}#Scene0", dec.model)),
+                foliage: is_foliage(&dec.model),
+            });
+    }
+}
+
+/// A whole map's look at once, not streamed and with nothing to touch: floors, walls,
+/// roads, houses and decorations, under `root`. The intro's view of the town round the
+/// level (`intro::backdrop`).
+#[allow(clippy::too_many_arguments)]
+pub fn spawn_scenery(
+    commands: &mut Commands,
+    root: Entity,
+    map: MapFile,
+    tile_defs: &TileDefinitions,
+    ground: &GroundHeight,
+    player_unit: f32,
+    asset_server: &AssetServer,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+) {
+    let mut planned: HashMap<Chunk, ChunkPlan> = HashMap::new();
+    plan_decorations(&map, tile_defs, ground, player_unit, asset_server, &mut planned);
+    let tiles = padded_tiles(&map);
+    let load = LoadMap { map };
+    plan_surfaces(&load, &tiles, tile_defs, ground, &mut planned, meshes, materials);
+    commands.entity(root).with_children(|parent| {
+        for plan in planned.values() {
+            for surface in &plan.surfaces {
+                spawn_surface(parent, surface);
+            }
+            for decoration in &plan.decorations {
+                let mut scene = parent.spawn((
+                    Name::new(decoration.name.clone()),
+                    WorldAssetRoot(decoration.scene.clone()),
+                    decoration.transform,
+                ));
+                if decoration.foliage {
+                    scene.insert(Foliage);
+                }
+            }
+        }
+    });
 }
 
 /// Build a map's floors and walls into the chunks' plans.
@@ -289,7 +368,7 @@ fn plan_surfaces(
     }
 }
 
-fn spawn_surface(parent: &mut ChildSpawnerCommands, surface: &Surface) {
+fn spawn_surface(parent: &mut ChildSpawnerCommands, surface: &Surface) -> Entity {
     let mut spawned = parent.spawn((
         Mesh3d(surface.mesh.clone()),
         MeshMaterial3d(surface.material.clone()),
@@ -313,6 +392,7 @@ fn spawn_surface(parent: &mut ChildSpawnerCommands, surface: &Surface) {
             spawned.insert(Name::from("Houses"));
         }
     }
+    spawned.id()
 }
 
 /// Plan a map's chunks when it loads.
@@ -355,30 +435,14 @@ pub fn plan_map_stream(
             }
             None => (Vec::new(), String::new(), 0),
         };
-        for dec in &load.map.decorations {
-            // Map coordinates, like placements: one tile in from the padded grid.
-            let tile = (dec.x + 1, dec.y + 1);
-            let (x, z) = (
-                tile_defs.tile_width * tile.0 as f32,
-                tile_defs.tile_width * tile.1 as f32,
-            );
-            let floor = tile_defs.floor_level + tile_defs.tile_depth;
-            let at = Vec3::new(x, floor + ground.height(x, z), z);
-            // `dec.scale` is in player units.
-            let scale = dec.scale * game_settings.player_unit;
-            planned
-                .entry(chunk_of(tile))
-                .or_default()
-                .decorations
-                .push(Decoration {
-                    name: format!("Decoration {}:{} {}", dec.x, dec.y, dec.model),
-                    transform: Transform::from_translation(at)
-                        .with_rotation(Quat::from_rotation_y(dec.rotation_y.to_radians()))
-                        .with_scale(Vec3::splat(scale)),
-                    scene: asset_server.load(format!("{}#Scene0", dec.model)),
-                    foliage: is_foliage(&dec.model),
-                });
-        }
+        plan_decorations(
+            &load.map,
+            &tile_defs,
+            &ground,
+            game_settings.player_unit,
+            &asset_server,
+            &mut planned,
+        );
         plan_surfaces(
             load,
             &tiles,
@@ -482,13 +546,15 @@ pub fn stream_map_chunks(
             ))
             .with_children(|parent| {
                 for surface in &plan.surfaces {
-                    spawn_surface(parent, surface);
+                    let id = spawn_surface(parent, surface);
+                    parent.commands().entity(id).insert(ChunkScenery);
                 }
                 for decoration in &plan.decorations {
                     let mut scene = parent.spawn((
                         Name::new(decoration.name.clone()),
                         WorldAssetRoot(decoration.scene.clone()),
                         decoration.transform,
+                        ChunkScenery,
                     ));
                     if decoration.foliage {
                         scene.insert(Foliage);

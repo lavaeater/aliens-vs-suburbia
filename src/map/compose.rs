@@ -256,6 +256,31 @@ pub fn compose_level(base: &MapFile, level: &MapFile) -> Result<MapFile, String>
     })
 }
 
+/// Where `level` lies in `base`: its region, and how far its ground is lowered (the
+/// region's lowest point, in centimetres). A base tile `(region.x + c, region.y + r)` is the
+/// level's `(c, r)`, and the level's ground is the base's minus `lowest`.
+pub fn level_offset(base: &MapFile, level: &MapFile) -> Result<(Region, u16), String> {
+    let region = effective_region(base, level)?;
+    Ok((region, lowest_in(&base.elevation, region)))
+}
+
+/// The lowest elevation point under `region`, 0 on a flat map.
+fn lowest_in(elevation: &[Vec<u16>], region: Region) -> u16 {
+    let step = ELEVATION_STEP;
+    let (i0, j0) = (region.x as usize / step, region.y as usize / step);
+    let (wide, high) = (
+        region.width as usize / step + 1,
+        region.height as usize / step + 1,
+    );
+    elevation
+        .iter()
+        .skip(j0)
+        .take(high)
+        .flat_map(|row| row.iter().skip(i0).take(wide).copied())
+        .min()
+        .unwrap_or(0)
+}
+
 /// The elevation lattice under `region` (whose origin is on the lattice), lowered so its
 /// lowest point is 0 again.
 fn crop_elevation(elevation: &[Vec<u16>], region: Region) -> Vec<Vec<u16>> {
@@ -487,6 +512,25 @@ mod tests {
         assert_eq!(map.name, "Corner");
         assert!(map.base.is_empty() && map.markers.is_empty() && map.region.is_none());
         assert!(crate::map::walls::enclosed_voids(&map).is_empty());
+    }
+
+    #[test]
+    fn a_levels_offset_is_its_region_and_the_lowest_ground_in_it() {
+        let mut base = MapFile {
+            tiles: vec![vec![1; 40]; 40],
+            ..MapFile::default()
+        };
+        // Lattice points every 2 tiles; rising to the east.
+        base.elevation = (0..21).map(|_| (0..21).map(|i| 100 + i as u16 * 10).collect()).collect();
+        let level = MapFile {
+            region: Some(Region::new(11, 4, 20, 20)),
+            ..MapFile::default()
+        };
+        let (region, lowest) = level_offset(&base, &level).unwrap();
+        assert_eq!((region.x, region.y), (10, 4), "snapped to the lattice");
+        assert_eq!(lowest, 150, "the lattice point at x 10");
+        let composed = compose_level(&base, &level).unwrap();
+        assert_eq!(composed.elevation[0][0], 0, "the level's ground is lowered by as much");
     }
 
     #[test]

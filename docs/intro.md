@@ -43,6 +43,14 @@ flare into the hover, the ropes, and the camera's hand-off. Play begins at their
 - The generative music is ducked (`Mix::duck_db`) until the intro's track ends.
 - The map's background plane is stretched under the whole flight, so its edges don't
   show from the air.
+- On a level cut from a base map (`map::compose`, the `gis` levels), the whole base is
+  drawn round the level while flying (`backdrop.rs`): its ground, walls, roads, radhus
+  and trees, all at once (`streaming::spawn_scenery`), lined up with the level
+  (`compose::level_offset`: back by the region's corner, down by the ground the level was
+  lowered by), with no colliders, pathfinding or grass. The level's own chunk scenery
+  (`ChunkScenery`, its border wall too) is hidden meanwhile; its lamps and grass stay.
+  The copter's flight clears the town's hills, not only the level's. At the hand-over
+  the backdrop is despawned and the level shows again.
 
 Esc / Enter / Space / Start / Cross skip to the hand-off. `--no-intro` leaves it out.
 `--intro-at <secs>` starts the flight that far in (for looking at one moment, e.g. with
@@ -58,6 +66,8 @@ the light, with a two-lobed Henyey-Greenstein phase. The look's numbers are in
 `cloud_params`.
 
 ## Known gaps
+
+- The town round the level has no lamps: at night only the level is lit.
 
 - Seen from above, the deck reads weak. It looks best from the side and from below.
 - The stand-ins play a fall/jump/idle clip from their own model only (no external
