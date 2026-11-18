@@ -22,6 +22,7 @@ use crate::gore::components::{DamageKind, Ephemeral};
 use crate::map::ground::GroundHeight;
 use crate::player::ammo::AmmoPouch;
 use crate::player::components::{AutoAim, Player, PlayerDead};
+use crate::player::systems::aim_level::AimLevel;
 use crate::player::systems::equip::EquippedWeapon;
 use crate::player::systems::muzzle_flash::MuzzleFlash;
 
@@ -232,6 +233,7 @@ pub fn shoot_weapons(
         (
             Entity,
             &AutoAim,
+            &AimLevel,
             &CharacterControl,
             &EquippedWeapon,
             &Position,
@@ -244,7 +246,7 @@ pub fn shoot_weapons(
     mut reload_mw: MessageWriter<ReloadRequest>,
     mut flash_mw: MessageWriter<MuzzleFlash>,
     mut fx_mw: MessageWriter<SpawnFx>,
-    factions: Query<&Faction>,
+    factions: Query<(&Faction, &GlobalTransform)>,
     mut rng_seed: Local<u32>,
     ground: Res<GroundHeight>,
 ) {
@@ -254,7 +256,7 @@ pub fn shoot_weapons(
     let filter =
         SpatialQueryFilter::from_mask([CollisionLayer::Alien, CollisionLayer::ImpassableAll]);
 
-    for (player, aim, control, equipped, player_pos) in players.iter() {
+    for (player, aim, level, control, equipped, player_pos) in players.iter() {
         let Ok((mut weapon, weapon_gt)) = weapons.get_mut(equipped.0) else {
             continue;
         };
@@ -284,19 +286,17 @@ pub fn shoot_weapons(
             weapon.rounds_in_mag -= 1;
         }
 
-        // Muzzle world position (fall back to just in front of the player).
-        let origin = match &weapon.muzzle {
-            Some(m) => weapon_gt.transform_point(Vec3::from(m.translation)),
-            None => player_pos.0 + Vec3::Y * 0.35 + aim.0 * 0.3,
-        };
+        let origin = muzzle_origin(weapon.muzzle.as_ref(), Some(weapon_gt), player_pos.0, aim.0);
         let aim_dir = aim.0.normalize_or(Vec3::X);
+        // Where the barrel points: over the ground ahead, or at a monster's centre.
+        let barrel_dir = level.dir_from(origin, aim_dir);
         flash_mw.write(MuzzleFlash {
             weapon: weapon
                 .muzzle
                 .as_ref()
                 .map(|m| (equipped.0, Vec3::from(m.translation))),
             at: origin,
-            dir: aim_dir,
+            dir: barrel_dir,
         });
 
         game_mw.write(GameTrackingEvent::ShotFired(player));
@@ -309,7 +309,7 @@ pub fn shoot_weapons(
                 &mut materials,
                 player,
                 origin,
-                ground.along(origin, aim_dir) * props.speed,
+                barrel_dir * props.speed,
                 props,
             );
             continue;
@@ -325,9 +325,16 @@ pub fn shoot_weapons(
             let dir = (aim_dir + jitter).normalize_or(aim_dir);
             let Ok(dir3) = Dir3::new(dir) else { continue };
 
+            // The hit test is a level ray; tall colliders make it meet across slopes.
             let end = if let Some(hit) = spatial.cast_ray(origin, dir3, weapon.range, true, &filter)
             {
-                let point = ground.carried(origin, origin + dir * hit.distance);
+                let target = factions.get(hit.entity).ok();
+                let mut point = ground.carried(origin, origin + dir * hit.distance);
+                // A monster is hit where it is, at its centre's height, not at the level
+                // ray's: the barrel was aimed there.
+                if let Some((Faction::Alien, transform)) = target {
+                    point.y = transform.translation().y;
+                }
                 // Whatever it is — alien, wall, tower — `apply_damage` decides if it hurts.
                 damage_mw.write(
                     ApplyDamage::at(hit.entity, weapon.damage, DamageKind::Ballistic, point)
@@ -336,10 +343,7 @@ pub fn shoot_weapons(
                 );
                 // Flesh bleeds (`gore::blood`); anything else throws sparks, kicked
                 // out halfway between the surface normal and the ricochet.
-                let flesh = matches!(
-                    factions.get(hit.entity),
-                    Ok(Faction::Alien | Faction::Player)
-                );
+                let flesh = matches!(target, Some((Faction::Alien | Faction::Player, _)));
                 if !flesh {
                     fx_mw.write(
                         SpawnFx::at(FxKind::ImpactSparks, point)
@@ -353,6 +357,20 @@ pub fn shoot_weapons(
 
             spawn_tracer(&mut commands, &mut meshes, &mut materials, origin, end);
         }
+    }
+}
+
+/// Where a gun's shots leave from: its `muzzle` hardpoint, or just in front of the player
+/// along `aim` without one.
+pub fn muzzle_origin(
+    muzzle: Option<&Hardpoint>,
+    weapon: Option<&GlobalTransform>,
+    player: Vec3,
+    aim: Vec3,
+) -> Vec3 {
+    match (muzzle, weapon) {
+        (Some(m), Some(weapon)) => weapon.transform_point(Vec3::from(m.translation)),
+        _ => player + Vec3::Y * 0.35 + aim * 0.3,
     }
 }
 
