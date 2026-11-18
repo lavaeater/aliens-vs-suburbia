@@ -17,6 +17,7 @@ pub mod neighbourhood;
 pub mod compose;
 pub mod osm;
 pub mod procgen;
+pub mod radhus;
 pub mod reach;
 pub mod scatter;
 pub mod stitch;

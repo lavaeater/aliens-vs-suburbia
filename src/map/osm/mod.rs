@@ -29,7 +29,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use crate::general::components::map_components::{
-    DecorationItem, LootSpread, MapFile, RoadLine, WaveDef,
+    BuildingKind, BuildingOutline, DecorationItem, LootSpread, MapFile, RoadLine, WaveDef,
 };
 use crate::map::{BitFlags, MapFeatures};
 pub use classify::FenceRule;
@@ -283,6 +283,8 @@ struct Projected {
     id: i64,
     paint: Paint,
     storeys: u8,
+    /// Drawn from its outline as this (`MapFile::buildings`), not as wall blocks.
+    drawn_as: Option<BuildingKind>,
     rings: Vec<Vec<Point>>,
 }
 
@@ -334,6 +336,9 @@ pub fn import(
             } else {
                 0
             },
+            drawn_as: (*paint == Paint::Building
+                && f.tags.get("building").map(String::as_str) == Some("terrace"))
+            .then_some(BuildingKind::Terrace),
             rings: match &f.shape {
                 Shape::Point(p) => vec![vec![projection.project(*p)]],
                 Shape::Line(line) => vec![line.iter().map(|p| projection.project(*p)).collect()],
@@ -468,11 +473,31 @@ pub fn import(
         }
     }
     let mut storeys = vec![vec![0u8; width]; height];
+    let mut buildings = Vec::new();
     for f in projected.iter().filter(|f| f.paint == Paint::Building) {
         counts[0] += 1;
-        for (col, row) in geometry::fill_rings(&in_tiles(f), width, height) {
+        let rings = in_tiles(f);
+        for (col, row) in geometry::fill_rings(&rings, width, height) {
             layer[row][col] = Layer::Building;
             storeys[row][col] = storeys[row][col].max(f.storeys);
+        }
+        // Grid cells span [col, col + 1); map coordinates put the centre on col.
+        let round = |v: f64| ((v - 0.5) * 100.0).round() as f32 / 100.0;
+        if let (Some(kind), Some(ring)) = (f.drawn_as, rings.first()) {
+            let mut outline: Vec<[f32; 2]> = ring.iter().map(|&(x, y)| [round(x), round(y)]).collect();
+            if outline.len() > 1 && outline.first() == outline.last() {
+                outline.pop();
+            }
+            let inside = |&[x, y]: &[f32; 2]| {
+                (0.0..width as f32).contains(&x) && (0.0..height as f32).contains(&y)
+            };
+            if outline.len() >= 3 && outline.iter().all(inside) {
+                buildings.push(BuildingOutline {
+                    kind,
+                    storeys: f.storeys,
+                    outline,
+                });
+            }
         }
     }
     for f in &projected {
@@ -670,6 +695,7 @@ pub fn import(
             elevation,
             decorations,
             roads,
+            buildings,
             waves: spec.waves.clone(),
             stories: spec.stories.clone(),
             loot: spec.loot.clone(),

@@ -36,6 +36,9 @@
 //! [roads]
 //! road: street | width: 1.5 | points: 1,2 6.5,2 9,4.25
 //!
+//! [buildings]
+//! building: terrace | storeys: 2 | outline: 3,5 5.6,5 5.6,8.6 3,8.6
+//!
 //! [waves]
 //! enemy: defs/Alien.ron | count: 5 | rate: 10
 //! ```
@@ -51,7 +54,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use crate::general::components::map_components::{
-    DecorationItem, HousePlacement, InfestationRules, LootSpread, MapFile, MapGenerator,
+    BuildingKind, BuildingOutline, DecorationItem, HousePlacement, InfestationRules, LootSpread, MapFile, MapGenerator,
     Marker, MarkerKind, Region, RoadKind, RoadLine, TilePlacement, WaveDef,
 };
 use crate::map::{BitFlags, MapFeatures, house};
@@ -116,6 +119,7 @@ enum Section {
     Placements,
     Houses,
     Roads,
+    Buildings,
     Waves,
     Markers,
 }
@@ -132,6 +136,7 @@ impl Section {
             "placements" => Self::Placements,
             "houses" => Self::Houses,
             "roads" => Self::Roads,
+            "buildings" => Self::Buildings,
             "waves" => Self::Waves,
             "markers" => Self::Markers,
             _ => return None,
@@ -187,6 +192,7 @@ pub fn parse(text: &str) -> Result<MapFile, String> {
             Some(Section::Placements) => placement(line).map(|p| map.placements.push(p)),
             Some(Section::Houses) => house(line).map(|h| map.houses.push(h)),
             Some(Section::Roads) => road(line).map(|r| map.roads.push(r)),
+            Some(Section::Buildings) => building(line).map(|b| map.buildings.push(b)),
             Some(Section::Waves) => wave(line).map(|w| map.waves.push(w)),
             Some(Section::Markers) => marker(line).map(|m| map.markers.push(m)),
         };
@@ -455,22 +461,50 @@ fn decoration(line: &str) -> Result<DecorationItem, String> {
 }
 
 /// `road: street | width: 1.5 | points: 1,2 6.5,2 9,4.25`.
+fn points(fields: &mut Fields, key: &str) -> Result<Vec<[f32; 2]>, String> {
+    fields
+        .require(key)?
+        .split_whitespace()
+        .map(|pair| {
+            let (x, y) = pair
+                .split_once(',')
+                .ok_or_else(|| format!("{key}: expected `x,y`, got `{pair}`"))?;
+            Ok([number(key, x)?, number(key, y)?])
+        })
+        .collect()
+}
+
+fn building(line: &str) -> Result<BuildingOutline, String> {
+    let mut fields = Fields::parse(line)?;
+    let kind_name = fields.require("building")?;
+    let kind = BuildingKind::from_name(kind_name)
+        .ok_or_else(|| format!("building: `{kind_name}` is not terrace"))?;
+    let storeys = match fields.take("storeys") {
+        Some(value) => value
+            .trim()
+            .parse::<u8>()
+            .map_err(|_| format!("storeys: `{value}` is not a whole number"))?,
+        None => 2,
+    };
+    let outline = points(&mut fields, "outline")?;
+    if outline.len() < 3 {
+        return Err("outline: a building needs at least three corners".to_string());
+    }
+    fields.finish()?;
+    Ok(BuildingOutline {
+        kind,
+        storeys,
+        outline,
+    })
+}
+
 fn road(line: &str) -> Result<RoadLine, String> {
     let mut fields = Fields::parse(line)?;
     let kind_name = fields.require("road")?;
     let kind = RoadKind::from_name(kind_name)
         .ok_or_else(|| format!("road: `{kind_name}` is not major, street, service or path"))?;
     let width = number("width", fields.require("width")?)?;
-    let points = fields
-        .require("points")?
-        .split_whitespace()
-        .map(|pair| {
-            let (x, y) = pair
-                .split_once(',')
-                .ok_or_else(|| format!("points: expected `x,y`, got `{pair}`"))?;
-            Ok([number("points", x)?, number("points", y)?])
-        })
-        .collect::<Result<Vec<_>, String>>()?;
+    let points = points(&mut fields, "points")?;
     if points.len() < 2 {
         return Err("points: a road needs at least two".to_string());
     }
@@ -758,6 +792,23 @@ pub fn to_text(map: &MapFile) -> Result<String, String> {
             "road: {} | width: {} | points: {}",
             r.kind.name(),
             r.width,
+            points.join(" ")
+        ));
+    }
+
+    if !map.buildings.is_empty() {
+        lines.extend([
+            String::new(),
+            "[buildings]".into(),
+            "# building: terrace | storeys: <n> | outline: <x,y in tiles> ...".into(),
+        ]);
+    }
+    for b in &map.buildings {
+        let points: Vec<String> = b.outline.iter().map(|[x, y]| format!("{x},{y}")).collect();
+        lines.push(format!(
+            "building: {} | storeys: {} | outline: {}",
+            b.kind.name(),
+            b.storeys,
             points.join(" ")
         ));
     }
@@ -1213,6 +1264,20 @@ count: 3
         assert_eq!(again.region, map.region);
         assert!(parse("[markers]\nmarker: boss | at: 1, 1\n").is_err());
         assert!(parse("[properties]\nregion: 1, 2, 3\n").is_err());
+    }
+
+    #[test]
+    fn buildings_round_trip() {
+        let text = "[tiles]\nfff\n[buildings]\nbuilding: terrace | storeys: 2 | outline: 0,0 2.5,0 2.5,3.5 0,3.5\n";
+        let map = parse(text).unwrap();
+        assert_eq!(map.buildings.len(), 1);
+        assert_eq!(map.buildings[0].kind, BuildingKind::Terrace);
+        assert_eq!(map.buildings[0].outline[2], [2.5, 3.5]);
+        let back = parse(&to_text(&map).unwrap()).unwrap();
+        assert_eq!(back.buildings, map.buildings);
+        assert!(parse("[buildings]\nbuilding: castle | outline: 0,0 1,0 1,1\n").is_err());
+        assert!(parse("[buildings]\nbuilding: terrace | outline: 0,0 1,0\n").is_err());
+        assert!(!to_text(&MapFile::default()).unwrap().contains("[buildings]"));
     }
 
     #[test]

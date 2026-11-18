@@ -102,6 +102,8 @@ pub struct MapEditorState {
     pub elevation: Vec<Vec<u16>>,
     /// The loaded map's road centrelines (`MapFile::roads`); kept like `stories`.
     pub roads: Vec<crate::general::components::map_components::RoadLine>,
+    /// The loaded map's building outlines (`MapFile::buildings`); kept like `roads`.
+    pub buildings: Vec<crate::general::components::map_components::BuildingOutline>,
     /// The loaded map's story file (`MapFile::stories`); not editable here, but kept so a
     /// save does not drop it.
     pub stories: String,
@@ -184,6 +186,7 @@ impl Default for MapEditorState {
             storeys: Vec::new(),
             elevation: Vec::new(),
             roads: Vec::new(),
+            buildings: Vec::new(),
             stories: String::new(),
             loot: None,
             level_rules: (None, Vec::new(), None),
@@ -645,6 +648,7 @@ impl MapEditorState {
             storeys: self.storeys.clone(),
             elevation: self.elevation.clone(),
             roads: self.roads.clone(),
+            buildings: self.buildings.clone(),
             decorations: Vec::new(),
             placements: self.placements.clone(),
             houses: self.houses.clone(),
@@ -694,6 +698,7 @@ impl MapEditorState {
         self.storeys = map.storeys;
         self.elevation = map.elevation;
         self.roads = map.roads;
+        self.buildings = map.buildings;
         self.stories = map.stories;
         self.loot = map.loot;
         self.level_rules = (map.escape_limit, map.weapons, map.coins);

@@ -38,8 +38,8 @@ const CELLS_PER_TILE: usize = 2;
 /// Altitude bands on a hilly level.
 pub const BANDS: usize = 5;
 /// How wide (metres) a trampling foot is, and how flat it presses.
-const FOOT_RADIUS: f32 = 0.45;
-const FOOT_STRENGTH: f32 = 0.85;
+const FOOT_RADIUS: f32 = 0.25;
+const FOOT_STRENGTH: f32 = 0.35;
 
 /// Whether the grass shows (Ctrl+Y, `--no-grass`).
 #[derive(Resource, Debug, Clone, Copy, PartialEq, Eq)]
@@ -60,14 +60,14 @@ pub struct LevelGrass;
 pub fn lawn_style() -> GrassStyle {
     GrassStyle {
         blade: GrassBlade {
-            height: Vec2::new(0.08, 0.20),
-            width: 0.045,
+            height: Vec2::new(0.08, 0.25),
+            width: 0.005,
             root_color: Color::srgb(0.10, 0.26, 0.07),
             tip_color: Color::srgb(0.42, 0.72, 0.28),
             translucency: 0.6,
             ..GrassStyle::LAWN.blade
         },
-        density: 160.0,
+        density: 800.0,
         ..GrassStyle::LAWN
     }
 }

@@ -13,7 +13,7 @@
 #![allow(clippy::indexing_slicing)]
 
 use crate::general::components::map_components::{
-    ELEVATION_STEP, MapFile, Marker, MarkerKind, Region, RoadLine,
+    BuildingOutline, ELEVATION_STEP, MapFile, Marker, MarkerKind, Region, RoadLine,
 };
 use crate::map::osm::geometry::clip_polyline;
 use crate::map::{BitFlags, MapFeatures};
@@ -242,6 +242,7 @@ pub fn compose_level(base: &MapFile, level: &MapFile) -> Result<MapFile, String>
         decorations,
         placements,
         roads: crop_roads(&base.roads, region),
+        buildings: crop_buildings(&base.buildings, region),
         houses,
         waves: level.waves.clone(),
         stories: level.stories.clone(),
@@ -253,6 +254,31 @@ pub fn compose_level(base: &MapFile, level: &MapFile) -> Result<MapFile, String>
         townsfolk: level.townsfolk,
         ..MapFile::default()
     })
+}
+
+/// Where `level` lies in `base`: its region, and how far its ground is lowered (the
+/// region's lowest point, in centimetres). A base tile `(region.x + c, region.y + r)` is the
+/// level's `(c, r)`, and the level's ground is the base's minus `lowest`.
+pub fn level_offset(base: &MapFile, level: &MapFile) -> Result<(Region, u16), String> {
+    let region = effective_region(base, level)?;
+    Ok((region, lowest_in(&base.elevation, region)))
+}
+
+/// The lowest elevation point under `region`, 0 on a flat map.
+fn lowest_in(elevation: &[Vec<u16>], region: Region) -> u16 {
+    let step = ELEVATION_STEP;
+    let (i0, j0) = (region.x as usize / step, region.y as usize / step);
+    let (wide, high) = (
+        region.width as usize / step + 1,
+        region.height as usize / step + 1,
+    );
+    elevation
+        .iter()
+        .skip(j0)
+        .take(high)
+        .flat_map(|row| row.iter().skip(i0).take(wide).copied())
+        .min()
+        .unwrap_or(0)
 }
 
 /// The elevation lattice under `region` (whose origin is on the lattice), lowered so its
@@ -306,6 +332,26 @@ fn crop_roads(roads: &[RoadLine], region: Region) -> Vec<RoadLine> {
     out
 }
 
+/// The buildings wholly inside the region, moved to its corner. One the edge cuts keeps
+/// the wall blocks its tiles get anyway.
+fn crop_buildings(buildings: &[BuildingOutline], region: Region) -> Vec<BuildingOutline> {
+    let (dx, dy) = (region.x as f32, region.y as f32);
+    let (hi_x, hi_y) = (region.width as f32 - 0.5, region.height as f32 - 0.5);
+    buildings
+        .iter()
+        .filter_map(|b| {
+            let outline: Vec<[f32; 2]> = b.outline.iter().map(|&[x, y]| [x - dx, y - dy]).collect();
+            outline
+                .iter()
+                .all(|&[x, y]| (-0.5..=hi_x).contains(&x) && (-0.5..=hi_y).contains(&y))
+                .then(|| BuildingOutline {
+                    outline,
+                    ..b.clone()
+                })
+        })
+        .collect()
+}
+
 /// Split a whole level into a base map and a level on it (`base_ref`, the base's content
 /// path) that composes back to the same tiles: the level gets the markers, rules, waves,
 /// stories and placements, the base the place. An alien spawn on the base's edge is
@@ -322,6 +368,7 @@ pub fn split_level(map: &MapFile, base_ref: &str) -> (MapFile, MapFile) {
         elevation: map.elevation.clone(),
         decorations: map.decorations.clone(),
         roads: map.roads.clone(),
+        buildings: map.buildings.clone(),
         houses: map.houses.clone(),
         ..MapFile::default()
     };
@@ -465,6 +512,42 @@ mod tests {
         assert_eq!(map.name, "Corner");
         assert!(map.base.is_empty() && map.markers.is_empty() && map.region.is_none());
         assert!(crate::map::walls::enclosed_voids(&map).is_empty());
+    }
+
+    #[test]
+    fn a_levels_offset_is_its_region_and_the_lowest_ground_in_it() {
+        let mut base = MapFile {
+            tiles: vec![vec![1; 40]; 40],
+            ..MapFile::default()
+        };
+        // Lattice points every 2 tiles; rising to the east.
+        base.elevation = (0..21).map(|_| (0..21).map(|i| 100 + i as u16 * 10).collect()).collect();
+        let level = MapFile {
+            region: Some(Region::new(11, 4, 20, 20)),
+            ..MapFile::default()
+        };
+        let (region, lowest) = level_offset(&base, &level).unwrap();
+        assert_eq!((region.x, region.y), (10, 4), "snapped to the lattice");
+        assert_eq!(lowest, 150, "the lattice point at x 10");
+        let composed = compose_level(&base, &level).unwrap();
+        assert_eq!(composed.elevation[0][0], 0, "the level's ground is lowered by as much");
+    }
+
+    #[test]
+    fn buildings_inside_the_region_move_with_it() {
+        let square = |x: f32, y: f32| BuildingOutline {
+            outline: vec![[x, y], [x + 2.0, y], [x + 2.0, y + 3.0], [x, y + 3.0]],
+            ..BuildingOutline::default()
+        };
+        let region = Region {
+            x: 10,
+            y: 20,
+            width: 10,
+            height: 10,
+        };
+        let kept = crop_buildings(&[square(12.0, 22.0), square(18.0, 22.0)], region);
+        assert_eq!(kept.len(), 1, "the one over the edge is dropped");
+        assert_eq!(kept[0].outline[0], [2.0, 2.0]);
     }
 
     #[test]

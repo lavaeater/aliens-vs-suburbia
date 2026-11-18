@@ -20,6 +20,7 @@
 //! The flight is pure maths in [`plan`], the clouds in [`clouds`], the copter, ropes and
 //! stand-ins in [`copter`].
 
+pub mod backdrop;
 pub mod clouds;
 pub mod copter;
 pub mod plan;
@@ -114,6 +115,10 @@ pub struct Intro {
     music: Option<Entity>,
     unducked: bool,
     background_scale: f32,
+    /// The base map drawn round the level while flying (`backdrop`), and whether it was
+    /// looked for yet.
+    backdrop: Option<backdrop::Backdrop>,
+    backdrop_tried: bool,
 }
 
 /// `--intro-at <secs>`: start the flight that far in (to look at one moment of it).
@@ -156,8 +161,10 @@ impl Plugin for IntroPlugin {
                 (
                     learn_level,
                     hold_spawns.run_if(holding_players),
+                    backdrop::build_backdrop,
                     take_off,
                     run_intro,
+                    backdrop::level_scenery,
                     hold_stories.before(turbofacts::systems::check_stories),
                     intro_fog.after(crate::camera::fog::apply_fog),
                     letterbox,
@@ -246,17 +253,20 @@ fn begin_intro(
         music: None,
         unducked: false,
         background_scale: 1.0,
+        backdrop: None,
+        backdrop_tried: false,
     });
 }
 
 fn end_intro(
     mut commands: Commands,
-    intro: Option<Res<Intro>>,
+    intro: Option<ResMut<Intro>>,
     mix: Option<ResMut<rusty_music::mix::Mix>>,
 ) {
-    if intro.is_none() {
+    let Some(mut intro) = intro else {
         return;
-    }
+    };
+    backdrop::remove_backdrop(&mut commands, &mut intro);
     commands.remove_resource::<Intro>();
     if let Some(mut mix) = mix {
         mix.duck_db = 0.0;
@@ -321,9 +331,20 @@ fn take_off(
     if noise.image.is_none() && intro.waited < WAIT_FOR_CLOUDS {
         return;
     }
+    if !intro.backdrop_tried {
+        return;
+    }
 
     let floor = tiles.map_or(0.0, |t| t.floor_level);
-    let height = |x: f32, z: f32| ground.as_ref().map_or(0.0, |g| g.height(x, z)) + floor;
+    // Over the whole town where it is drawn round the level, so the copter clears its hills.
+    let town = intro.backdrop.clone();
+    let height = |x: f32, z: f32| {
+        let over = match &town {
+            Some(town) => town.height(x, z),
+            None => ground.as_ref().map_or(0.0, |g| g.height(x, z)),
+        };
+        over + floor
+    };
     // One stand-in per player; they take the map's starts in turn, as `spawn_players`
     // hands them out.
     let count = roster.as_ref().map_or(1, |r| r.def_paths.len().max(1));
@@ -537,6 +558,7 @@ fn run_intro(
         if let Some(clouds) = intro.clouds.take() {
             commands.entity(clouds).try_despawn();
         }
+        backdrop::remove_backdrop(&mut commands, &mut intro);
         for (mut projection, mut at) in &mut cameras {
             *projection = crate::camera::systems::projection_for(&settings);
             let offset = crate::camera::systems::camera_offset(&settings);
