@@ -86,6 +86,14 @@ impl Plugin for PlayerPlugin {
                     sync_outline_with_visibility,
                 ),
             )
+            // The aim's height, after this frame's aim and before the shots that use it.
+            .add_systems(
+                Update,
+                crate::player::systems::aim_level::level_aims
+                    .after(auto_aim)
+                    .before(shoot_weapons)
+                    .run_if(in_state(GameState::InGame)),
+            )
             .add_systems(
                 Update,
                 (

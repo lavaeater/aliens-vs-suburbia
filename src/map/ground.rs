@@ -133,19 +133,6 @@ impl GroundHeight {
         point + Vec3::Y * rise
     }
 
-    /// `dir` turned to run along the ground ahead of `from`, for what flies straight.
-    pub fn along(&self, from: Vec3, dir: Vec3) -> Vec3 {
-        const LOOK_AHEAD: f32 = 2.0;
-        let flat = dir.with_y(0.0).normalize_or_zero();
-        let reach = LOOK_AHEAD * self.tile;
-        if self.points.is_empty() || flat == Vec3::ZERO {
-            return dir;
-        }
-        let ahead = from + flat * reach;
-        let rise = self.height(ahead.x, ahead.z) - self.height(from.x, from.z);
-        (flat + Vec3::Y * rise / reach).normalize_or(dir)
-    }
-
     /// The turn that lays something flat, a decal say, on the ground at a point.
     pub fn lie(&self, x: f32, z: f32) -> Quat {
         Quat::from_rotation_arc(Vec3::Y, self.normal(x, z))
@@ -263,14 +250,6 @@ mod tests {
         let slope = ground(vec![vec![0, 100, 200, 300, 400]; 5]);
         let end = slope.carried(Vec3::new(2.0, 1.5, 3.0), Vec3::new(6.0, 1.5, 3.0));
         assert!((end.y - 3.5).abs() < 1e-5, "{end}");
-    }
-
-    #[test]
-    fn straight_flight_follows_the_slope_and_stays_level_on_the_flat() {
-        let slope = ground(vec![vec![0, 100, 200, 300, 400]; 5]);
-        let dir = slope.along(Vec3::new(3.0, 1.0, 5.0), Vec3::X);
-        assert!((dir.y / dir.x - 0.5).abs() < 1e-5, "{dir}");
-        assert_eq!(ground(vec![]).along(Vec3::ZERO, Vec3::X), Vec3::X);
     }
 
     #[test]

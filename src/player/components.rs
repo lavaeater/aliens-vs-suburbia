@@ -28,6 +28,7 @@ pub struct ShootingTower;
 #[derive(Component, Default, Reflect)]
 #[reflect(Component, Default)]
 #[type_path = "avs"]
+#[require(crate::player::systems::aim_level::AimLevel)]
 pub struct AutoAim(pub Vec3);
 
 /// Which roster slot this player occupies (0 = first joined). Stable for the whole

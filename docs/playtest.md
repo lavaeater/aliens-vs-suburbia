@@ -10,6 +10,13 @@ The game supports four players, so up to four players, a big screen and some sna
 
 ## The Game
 
+### Fun Features
+
+#### Aim Level
+
+The player's aim level should always be barrel height over the ground at some distance in front of the player - unless the sight line is hitting a monster in which case the aim level should be at the "center" of it. This improves play feel.
+
+
 ### Crashes
 
 Weird crashes need to be found. How do we do that? We make a stupid player-ai for controlling the player and walking hither and dither and basically playing the game to find crashes?
@@ -140,7 +147,7 @@ Tests:
 - The left panel lists the levels in campaign order: add, delete, move up/down, title,
   tagline, and the victory title/lines. It edits `campaign.ron`.
 - Draw a new region by dragging. Move or resize one by its edges. A readout shows the size
-  in tiles and the open tiles, with a warning past the sizes `docs/gis-levels.md` measured as
+skola  in tiles and the open tiles, with a warning past the sizes `docs/gis-levels.md` measured as
   costly.
 - Save writes `campaign.ron` and each level file. Dirty tracking and "unsaved changes"
   follow the character editor's doc pattern (`def != saved`).

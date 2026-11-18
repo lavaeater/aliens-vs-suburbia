@@ -36,6 +36,7 @@ use bevy::prelude::*;
 
 use crate::assets::asset_definition::Hardpoint;
 use crate::player::components::{AutoAim, Player};
+use crate::player::systems::aim_level::AimLevel;
 use crate::player::systems::shoot::Weapon;
 
 /// How fast recoil decays, in fractions per second. Matches `keep_weapons_snapped`.
@@ -200,7 +201,7 @@ pub fn level_aim(aim: Vec3, max_pitch: f32) -> Vec3 {
 pub fn aim_weapons(
     time: Res<Time>,
     aimed: Query<(Entity, &AimedWeapon)>,
-    aims: Query<&AutoAim, With<Player>>,
+    aims: Query<(&AutoAim, &AimLevel), With<Player>>,
     globals: Query<&GlobalTransform>,
     mut transforms: Query<&mut Transform>,
     mut recoil_q: Query<&mut Weapon>,
@@ -208,7 +209,7 @@ pub fn aim_weapons(
     let dt = time.delta_secs();
 
     for (weapon, aimed) in aimed.iter() {
-        let Ok(aim) = aims.get(aimed.owner) else {
+        let Ok((aim, level)) = aims.get(aimed.owner) else {
             continue;
         };
         let Ok(bone) = globals.get(aimed.anchor_bone) else {
@@ -229,7 +230,11 @@ pub fn aim_weapons(
             aimed.weapon_axis,
             world_scale,
             anchor_world,
-            level_aim(aim.0, MAX_AIM_PITCH_DEGREES.to_radians()),
+            // Pitched at the aim level from the anchor, which is close enough to the muzzle.
+            level_aim(
+                level.dir_from(anchor_world, aim.0),
+                MAX_AIM_PITCH_DEGREES.to_radians(),
+            ),
         );
 
         // Expressed in the owner's frame, since that is what the weapon is parented to.
