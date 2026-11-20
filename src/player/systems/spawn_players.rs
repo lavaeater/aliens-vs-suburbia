@@ -56,7 +56,10 @@ pub fn spawn_players(
     mut player_added_mw: MessageWriter<GameTrackingEvent>,
     settings: Res<GameSettings>,
     level_loadout: Option<Res<crate::campaign::LevelLoadout>>,
+    editor: Option<Res<crate::character_editor::state::EditorSession>>,
 ) {
+    // Not in the character editor, whose weapon doc follows the one held gun.
+    let full_arsenal = settings.full_arsenal && editor.is_none();
     let max_players = roster.as_ref().map_or(1, |r| r.def_paths.len().max(1));
     let occupied: Vec<usize> = existing_players.iter().map(|s| s.0).collect();
     let requests: Vec<SpawnPlayer> = spawn_player_event_reader.read().cloned().collect();
@@ -106,7 +109,7 @@ pub fn spawn_players(
         // everyone the same weapons instead (`MapFile::weapons`).
         let roster_def_path = roster.as_ref().and_then(|r| r.def_paths.get(slot)).cloned();
         let level_weapons = level_loadout.as_ref().map_or(&[][..], |l| l.0.as_slice());
-        let loadout = match (player_props.as_ref(), roster_def_path.as_ref()) {
+        let mut loadout = match (player_props.as_ref(), roster_def_path.as_ref()) {
             (Some(_), Some(def_path)) if !level_weapons.is_empty() => {
                 Weapons::new(def_path.clone(), level_weapons.iter().cloned())
             }
@@ -120,15 +123,34 @@ pub fn spawn_players(
             ),
             _ => Weapons::default(),
         };
+        // Testing: everything on top of what they'd carry anyway, own guns first.
+        if full_arsenal && roster_def_path.is_some() {
+            for def_path in super::loadout::every_weapon_def() {
+                if !loadout
+                    .slots
+                    .iter()
+                    .any(|s| crate::assets::paths::same(&s.def_path, &def_path))
+                {
+                    loadout.slots.push(super::loadout::WeaponSlot {
+                        def_path,
+                        rounds_in_mag: None,
+                    });
+                }
+            }
+        }
         let pending_equip = loadout
             .active_slot()
             .zip(roster_def.as_ref())
             .and_then(|(weapon_slot, def)| PendingEquip::resolve(def, &weapon_slot.def_path));
-        let pouch = AmmoPouch::from_loadout(
-            player_props
-                .as_ref()
-                .map_or(&[][..], |p| p.starting_ammo.as_slice()),
-        );
+        let pouch = if full_arsenal {
+            AmmoPouch::full()
+        } else {
+            AmmoPouch::from_loadout(
+                player_props
+                    .as_ref()
+                    .map_or(&[][..], |p| p.starting_ammo.as_slice()),
+            )
+        };
 
         let player = {
             // 3D model path — use roster def if available for this slot, else default.

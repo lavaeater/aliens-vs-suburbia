@@ -21,6 +21,15 @@ impl AmmoPouch {
         pouch
     }
 
+    /// Every kind filled to its cap (`GameSettings::full_arsenal`).
+    pub fn full() -> Self {
+        let mut pouch = Self::default();
+        for kind in AmmoKind::POUCHED {
+            pouch.add(kind, kind.cap());
+        }
+        pouch
+    }
+
     pub fn rounds(&self, kind: AmmoKind) -> u32 {
         if kind == AmmoKind::Infinite {
             return u32::MAX;

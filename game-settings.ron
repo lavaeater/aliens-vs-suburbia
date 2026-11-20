@@ -18,4 +18,5 @@
     bleed_out_secs: 10.0,
     respawn_secs: 5.0,
     drop_on_death: true,
+    full_arsenal: true,
 )

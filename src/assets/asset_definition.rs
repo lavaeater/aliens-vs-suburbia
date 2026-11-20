@@ -165,6 +165,16 @@ pub enum AmmoKind {
 }
 
 impl AmmoKind {
+    /// Every kind a pouch can hold (not `Infinite`).
+    pub const POUCHED: [Self; 6] = [
+        Self::Pistol,
+        Self::Rifle,
+        Self::Shells,
+        Self::Grenade,
+        Self::Molotov,
+        Self::Fuel,
+    ];
+
     /// Most rounds of this kind a player can carry outside the magazine.
     pub const fn cap(self) -> u32 {
         match self {
