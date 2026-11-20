@@ -453,7 +453,7 @@ fn walk(
         &mut LinearVelocity,
         &mut Rotation,
         &mut CreatureAnim,
-    )>,
+    ), Without<crate::status::panic::Panicking>>,
     mut commands: Commands,
 ) {
     let dt = time.delta_secs();

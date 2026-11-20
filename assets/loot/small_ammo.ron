@@ -5,5 +5,6 @@
         Item(weight: 50.0, kind: AmmoPickup(kind: Pistol, rounds: 12), count: 1),
         Item(weight: 35.0, kind: AmmoPickup(kind: Rifle, rounds: 20), count: 1),
         Item(weight: 15.0, kind: AmmoPickup(kind: Shells, rounds: 4), count: 1),
+        Item(weight: 8.0, kind: AmmoPickup(kind: Fuel, rounds: 50), count: 1),
     ],
 )

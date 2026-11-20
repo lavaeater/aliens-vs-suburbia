@@ -141,7 +141,7 @@ pub fn flee(
             Option<&crate::townsfolk::Townsfolk>,
             Has<crate::townsfolk::Indoors>,
         ),
-        Without<Alien>,
+        (Without<Alien>, Without<crate::status::panic::Panicking>),
     >,
     monsters: Query<&Position, (With<Alien>, Without<Neighbour>)>,
     players: Query<&Position, (With<Player>, Without<PlayerDead>, Without<Neighbour>)>,

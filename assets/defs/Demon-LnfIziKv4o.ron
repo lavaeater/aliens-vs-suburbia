@@ -7,7 +7,9 @@
         speed: 1.2,
         coin_drop: 15,
         touch_dps: 25.0,
-        resistances: { Ballistic: 0.6, Explosive: 1.5 },
+        // A demon is at home in fire: it burns, a little, and keeps coming.
+        resistances: { Ballistic: 0.6, Explosive: 1.5, Fire: 0.5 },
+        reactions: { Burning: Ignore },
         loot_table: Some("crate"),
     )),
     hidden_nodes: [],

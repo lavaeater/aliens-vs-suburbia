@@ -1,0 +1,99 @@
+// A flamethrower's stream (`player::systems::flamethrower`). Loops while the trigger is
+// held; +Y along the aim, the emitter riding the muzzle. Particles are in world space, so
+// the stream bends behind a turning gun. Fast blobs that slow, swell, go from white-yellow
+// to red and rise: the reach is about speed x lifetime, ~5.5 m.
+// Edit with the sprinkles editor (`cargo install bevy_sprinkles_editor`) or by hand;
+// `every_fx_in_assets_parses` checks the file.
+(
+    sprinkles_version: "0.3",
+    name: "Flame jet",
+    dimension: D3,
+    despawn_on_finish: false,
+    emitters: [
+        (
+            name: "Stream",
+            time: (
+                lifetime: 0.55,
+                lifetime_randomness: 0.25,
+            ),
+            draw_pass: (
+                mesh: Sphere(radius: 0.5, segments: 6, rings: 4),
+                material: Standard((
+                    base_color: (1.0, 1.0, 1.0, 1.0),
+                    emissive: (3.0, 1.3, 0.25, 1.0),
+                    alpha_mode: Opaque,
+                    unlit: true,
+                )),
+                shadow_caster: false,
+            ),
+            emission: (
+                shape: Point,
+                particles_amount: 60,
+            ),
+            scale: (
+                range: (min: 0.14, max: 0.3),
+                scale_over_lifetime: Some((
+                    x: (
+                        points: [
+                            (position: 0.0, value: 0.3),
+                            (position: 0.6, value: 1.0),
+                            (position: 1.0, value: 0.0),
+                        ],
+                        range: (min: 0.0, max: 1.0),
+                    ),
+                )),
+            ),
+            colors: (
+                color_over_lifetime: (
+                    stops: [
+                        (color: (1.0, 1.0, 0.85, 1.0), position: 0.0),
+                        (color: (1.0, 0.7, 0.2, 1.0), position: 0.3),
+                        (color: (0.9, 0.25, 0.05, 1.0), position: 0.75),
+                        (color: (0.3, 0.06, 0.02, 1.0), position: 1.0),
+                    ],
+                ),
+            ),
+            velocities: (
+                initial_direction: (0.0, 1.0, 0.0),
+                spread: 6.0,
+                initial_velocity: (min: 9.0, max: 11.0),
+            ),
+            accelerations: (
+                gravity: (0.0, 0.0, 0.0),
+            ),
+        ),
+        (
+            name: "Embers",
+            time: (
+                lifetime: 0.8,
+                lifetime_randomness: 0.5,
+            ),
+            draw_pass: (
+                mesh: Cuboid(half_size: (0.15, 1.0, 0.15)),
+                material: Standard((
+                    base_color: (1.0, 0.8, 0.35, 1.0),
+                    emissive: (4.0, 2.2, 0.6, 1.0),
+                    alpha_mode: Opaque,
+                    unlit: true,
+                )),
+                shadow_caster: false,
+                transform_align: Some(YToVelocity),
+            ),
+            emission: (
+                shape: Point,
+                particles_amount: 16,
+            ),
+            scale: (
+                range: (min: 0.01, max: 0.02),
+            ),
+            velocities: (
+                initial_direction: (0.0, 1.0, 0.0),
+                spread: 14.0,
+                initial_velocity: (min: 6.0, max: 10.0),
+            ),
+            accelerations: (
+                gravity: (0.0, -2.0, 0.0),
+            ),
+        ),
+    ],
+)

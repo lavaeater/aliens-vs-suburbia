@@ -8,5 +8,6 @@
         Item(weight: 20.0, kind: WeaponPickup(def: "defs/Shotgun.ron"), count: 1),
         Item(weight: 15.0, kind: WeaponPickup(def: "defs/Assault Rifle.ron"), count: 1),
         Item(weight: 5.0, kind: WeaponPickup(def: "defs/Grenade Launcher.ron"), count: 1),
+        Item(weight: 6.0, kind: WeaponPickup(def: "defs/Flamethrower.ron"), count: 1),
     ],
 )

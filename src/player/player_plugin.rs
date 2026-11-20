@@ -75,6 +75,7 @@ impl Plugin for PlayerPlugin {
             )
             .add_plugins((
                 crate::player::systems::muzzle_flash::MuzzleFlashPlugin,
+                crate::player::systems::flamethrower::FlamethrowerPlugin,
                 OutlinePlugin::EXTRUDE_VERTEX,
                 AutoGenerateOutlineNormalsPlugin::default(),
             ))

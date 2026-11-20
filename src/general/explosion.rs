@@ -151,6 +151,7 @@ pub fn explosion_system(
                 radius: props.radius * 0.8,
                 duration: 5.0,
                 dps: 40.0,
+                spill: false,
             });
         }
         sfx_mw.write(PlaySfx {

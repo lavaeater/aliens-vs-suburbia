@@ -242,6 +242,7 @@ fn detonate(
                 radius: props.radius,
                 duration: props.duration,
                 dps: props.dps,
+                spill: true,
             });
         }
     }

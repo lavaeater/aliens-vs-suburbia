@@ -29,6 +29,10 @@ pub struct EnemyProps {
     /// Detonate on death (exploders).
     #[serde(default)]
     pub explodes_on_death: Option<ExplosionProps>,
+    /// What it does about a status (`status::Reaction`); missing = the status's default
+    /// (burning: panic). `{ Burning: Ignore }` keeps it coming through the flames.
+    #[serde(default)]
+    pub reactions: HashMap<crate::status::StatusKind, crate::status::Reaction>,
 }
 
 /// How an enemy hurts players beyond bumping into them.
@@ -65,6 +69,7 @@ impl Default for EnemyProps {
             touch_dps: default_touch_dps(),
             attack: EnemyAttack::default(),
             explodes_on_death: None,
+            reactions: HashMap::new(),
         }
     }
 }
@@ -155,6 +160,8 @@ pub enum AmmoKind {
     Shells,
     Grenade,
     Molotov,
+    /// A flamethrower's.
+    Fuel,
 }
 
 impl AmmoKind {
@@ -167,6 +174,7 @@ impl AmmoKind {
             Self::Shells => 48,
             Self::Grenade => 6,
             Self::Molotov => 4,
+            Self::Fuel => 300,
         }
     }
 
@@ -178,6 +186,7 @@ impl AmmoKind {
             Self::Shells => "shells",
             Self::Grenade => "grenades",
             Self::Molotov => "molotovs",
+            Self::Fuel => "fuel",
         }
     }
 }
@@ -347,6 +356,10 @@ pub struct WeaponProps {
     /// Fire a physics projectile (grenade launcher, rocket) instead of a hitscan ray.
     #[serde(default)]
     pub projectile: Option<ProjectileProps>,
+    /// A flamethrower: each shot is a burst of fire in a short cone (`damage` as Fire,
+    /// and it sets things alight) instead of a ray. `player::systems::flamethrower`.
+    #[serde(default)]
+    pub flame: Option<crate::player::systems::flamethrower::FlameProps>,
 }
 
 const fn default_magazine() -> u32 {
@@ -370,6 +383,7 @@ impl Default for WeaponProps {
             magazine: default_magazine(),
             reload_secs: default_reload_secs(),
             projectile: None,
+            flame: None,
         }
     }
 }

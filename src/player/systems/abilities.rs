@@ -204,6 +204,7 @@ pub fn activate_ability(
                         radius: 2.0,
                         duration: 5.0,
                         dps: 40.0,
+                        spill: false,
                     });
                 }
                 spawn_flash(&mut commands, center, &mut meshes, &mut materials);

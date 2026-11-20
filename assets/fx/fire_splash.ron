@@ -1,0 +1,148 @@
+// A molotov breaking (`gore::fire`, a `SpawnFire` with `spill`): a puff of flame, burning
+// droplets thrown out and falling back, and glass. The puddles' own flames take over.
+// Edit with the sprinkles editor (`cargo install bevy_sprinkles_editor`) or by hand;
+// `every_fx_in_assets_parses` checks the file.
+(
+    sprinkles_version: "0.3",
+    name: "Fire splash",
+    dimension: D3,
+    despawn_on_finish: true,
+    emitters: [
+        (
+            name: "Droplets",
+            time: (
+                lifetime: 0.7,
+                lifetime_randomness: 0.4,
+                one_shot: true,
+                explosiveness: 1.0,
+            ),
+            draw_pass: (
+                mesh: Sphere(radius: 0.5, segments: 6, rings: 4),
+                material: Standard((
+                    base_color: (1.0, 1.0, 1.0, 1.0),
+                    emissive: (4.0, 1.6, 0.3, 1.0),
+                    alpha_mode: Opaque,
+                    unlit: true,
+                )),
+                shadow_caster: false,
+            ),
+            emission: (
+                shape: Point,
+                particles_amount: 28,
+            ),
+            scale: (
+                range: (min: 0.06, max: 0.14),
+                scale_over_lifetime: Some((
+                    x: (
+                        points: [
+                            (position: 0.0, value: 1.0),
+                            (position: 0.8, value: 0.7),
+                            (position: 1.0, value: 0.0),
+                        ],
+                        range: (min: 0.0, max: 1.0),
+                    ),
+                )),
+            ),
+            colors: (
+                color_over_lifetime: (
+                    stops: [
+                        (color: (1.0, 0.95, 0.6, 1.0), position: 0.0),
+                        (color: (1.0, 0.5, 0.12, 1.0), position: 0.5),
+                        (color: (0.5, 0.1, 0.03, 1.0), position: 1.0),
+                    ],
+                ),
+            ),
+            velocities: (
+                initial_direction: (0.0, 1.0, 0.0),
+                spread: 75.0,
+                initial_velocity: (min: 2.0, max: 4.5),
+            ),
+            accelerations: (
+                gravity: (0.0, -9.0, 0.0),
+            ),
+        ),
+        (
+            name: "Puff",
+            time: (
+                lifetime: 0.35,
+                lifetime_randomness: 0.3,
+                one_shot: true,
+                explosiveness: 1.0,
+            ),
+            draw_pass: (
+                mesh: Sphere(radius: 0.5, segments: 6, rings: 4),
+                material: Standard((
+                    base_color: (1.0, 0.85, 0.5, 1.0),
+                    emissive: (5.0, 2.5, 0.6, 1.0),
+                    alpha_mode: Opaque,
+                    unlit: true,
+                )),
+                shadow_caster: false,
+            ),
+            emission: (
+                shape: Point,
+                particles_amount: 6,
+            ),
+            scale: (
+                range: (min: 0.35, max: 0.6),
+                scale_over_lifetime: Some((
+                    x: (
+                        points: [
+                            (position: 0.0, value: 0.4),
+                            (position: 0.3, value: 1.0),
+                            (position: 1.0, value: 0.0),
+                        ],
+                        range: (min: 0.0, max: 1.0),
+                    ),
+                )),
+            ),
+            velocities: (
+                initial_direction: (0.0, 1.0, 0.0),
+                spread: 60.0,
+                initial_velocity: (min: 0.5, max: 1.5),
+            ),
+            accelerations: (
+                gravity: (0.0, 1.5, 0.0),
+            ),
+        ),
+        (
+            name: "Glass",
+            time: (
+                lifetime: 0.6,
+                lifetime_randomness: 0.3,
+                one_shot: true,
+                explosiveness: 1.0,
+            ),
+            draw_pass: (
+                mesh: Cuboid(half_size: (0.5, 0.15, 0.3)),
+                material: Standard((
+                    base_color: (0.55, 0.75, 0.55, 1.0),
+                    emissive: (0.4, 0.6, 0.4, 1.0),
+                    alpha_mode: Opaque,
+                    unlit: true,
+                )),
+                shadow_caster: false,
+            ),
+            emission: (
+                shape: Point,
+                particles_amount: 10,
+            ),
+            scale: (
+                range: (min: 0.03, max: 0.06),
+            ),
+            velocities: (
+                initial_direction: (0.0, 1.0, 0.0),
+                spread: 80.0,
+                initial_velocity: (min: 1.5, max: 3.5),
+            ),
+            accelerations: (
+                gravity: (0.0, -9.8, 0.0),
+            ),
+            collision: (
+                mode: Some(Rigid(friction: 0.6, bounce: 0.3)),
+                use_scale: true,
+                base_size: 1.0,
+            ),
+        ),
+    ],
+)
