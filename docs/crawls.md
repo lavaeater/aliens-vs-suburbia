@@ -53,6 +53,27 @@ An `Item` def with `kind: Key(id: "<id>")` (e.g. `assets/defs/story_letter.ron`)
 The level-end transition (`level_state_system`) waits until every crawl has finished,
 so an outro on `LevelComplete` plays before the game returns to the menu.
 
+## Voice
+
+A crawl can be read aloud, a clip per line:
+
+```ron
+lines: ["Skyddsutrustning?", "", "Ingen kunde ge oss ett svar."],
+voice: ["campaigns/gis/map_01/voice/01.ogg", "", "campaigns/gis/map_01/voice/02.ogg"],
+```
+
+`voice` goes line by line with `lines` (inside `assets/`, mp3 / ogg / wav); `""` or a
+shorter list leaves a line silent. Each clip starts when its line comes up: a scroll line
+when it has risen a little way up the screen, a typewriter page when it shows. While a
+clip is still speaking, a scroll waits with the next voiced line at that point, and a
+typewriter page does not turn by itself (`auto_advance`), so the two never drift apart,
+whatever the window size or `speed`. Set `speed` so the text rarely has to wait. Turning a
+page by hand cuts its clip; skipping or clearing the crawl stops it. `--validate` checks
+the clips exist.
+
+The timing lives in `lava_ui_builder::crawl` (`CrawlLineReached`,
+`CrawlQueue::set_voice_busy`), the playback in `src/crawl/voice.rs`.
+
 ## Level 1 sample
 
 `assets/campaigns/main/level_01/level_01_story.ron`: an intro scroll on `LevelStarted`, a non-modal

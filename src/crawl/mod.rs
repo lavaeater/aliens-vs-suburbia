@@ -18,9 +18,13 @@
 //!   [`PauseState::Cutscene`]: `Time<Virtual>` stops (waves, physics, animation) and
 //!   player input closes, exactly like the pause menu. The level-end transition also waits
 //!   for crawls to finish (`score_keeper::level_state_system`).
+//! - **Voice.** `voice: [...]` in a crawl file plays a clip per line, in step with it
+//!   ([`voice`]).
 //! - **Input.** Fire / Place / Interact / Pause or Enter, from the keyboard or any pad,
 //!   advance a modal crawl. A non-modal one plays over the running game, so only
 //!   Interact (E / Circle) and Enter advance it - Fire is for shooting.
+
+pub mod voice;
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -85,6 +89,7 @@ impl Plugin for CrawlsPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(CrawlPlugin)
             .insert_resource(CrawlLibrary::load())
+            .init_resource::<voice::CrawlVoice>()
             .add_systems(OnEnter(GameState::InGame), reload_library)
             .add_systems(OnExit(GameState::InGame), clear_crawls)
             .add_systems(OnEnter(PauseState::Cutscene), freeze_time)
@@ -99,6 +104,14 @@ impl Plugin for CrawlsPlugin {
                 )
                     .chain()
                     .run_if(in_state(GameState::InGame)),
+            )
+            // Everywhere a crawl can show; after the crawl has ticked, so a reached line's
+            // clip has started before the next tick asks whether it is still speaking.
+            .add_systems(
+                Update,
+                (voice::play_line_voices, voice::track_voice)
+                    .chain()
+                    .after(lava_ui_builder::crawl::CrawlSystems),
             );
     }
 }

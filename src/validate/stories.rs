@@ -76,7 +76,7 @@ pub fn check_crawls(report: &mut Report) {
             .and_then(|text| parse_crawl(id, &text))
         {
             Ok(spec) if spec.lines.is_empty() => report.error(&path, "has no text"),
-            Ok(_) => {}
+            Ok(spec) => check_voice(report, &path, &spec),
             Err(e) => report.error(&path, format!("does not parse: {e}")),
         }
         if !shown.contains(id) {
@@ -84,6 +84,25 @@ pub fn check_crawls(report: &mut Report) {
                 &path,
                 format!("no story shows it (Emit(effect: \"crawl:{id}\"))"),
             );
+        }
+    }
+}
+
+/// The crawl's clips exist, and there are no more of them than lines.
+fn check_voice(report: &mut Report, path: &str, spec: &lava_ui_builder::crawl::CrawlSpec) {
+    if spec.voice.len() > spec.lines.len() {
+        report.error(
+            path,
+            format!(
+                "{} voice clips for {} lines; voice goes line by line",
+                spec.voice.len(),
+                spec.lines.len()
+            ),
+        );
+    }
+    for (line, clip) in spec.voice.iter().enumerate() {
+        if !clip.is_empty() && !super::asset_exists(clip) {
+            report.error(path, format!("line {}: no voice clip '{clip}'", line + 1));
         }
     }
 }
