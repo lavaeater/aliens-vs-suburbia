@@ -35,8 +35,11 @@ flare into the hover, the ropes, and the camera's hand-off. Play begins at their
 - The level is loaded and alive underneath (townsfolk, lamps).
 - `spawn_players` waits, and the map's `SpawnPlayer`s are held back. Stand-ins in each
   player's model go down the ropes, and the real players spawn where they land.
-- The stories are off (`StoryStore::active`), so there is no `LevelStarted`, no intro
-  crawl, and no waves or spawners until the players are in.
+- The stories are off (`StoryStore::active`), so there is no `LevelStarted` and no
+  waves or spawners until the players are in.
+- The level's intro crawl (`<level>_crawl_intro`) rolls over the flight from take-off,
+  not modal, so the flight goes on under it. When the players are in and the level's
+  story asks for it, it is not shown again (`Intro::played_crawl`).
 - `camera_follow` and the camera settings wait. The intro flies a perspective camera,
   and the hand-off is a dolly zoom down to a 3 degree view matching the orthographic
   one, then switches to it.
@@ -52,7 +55,7 @@ flare into the hover, the ropes, and the camera's hand-off. Play begins at their
   The copter's flight clears the town's hills, not only the level's. At the hand-over
   the backdrop is despawned and the level shows again.
 
-Esc / Enter / Space / Start / Cross skip to the hand-off. `--no-intro` leaves it out.
+Fire (and Esc / Enter / Space / Start / Cross) skips the flight and the crawl to the hand-off. `--no-intro` leaves it out.
 `--intro-at <secs>` starts the flight that far in (for looking at one moment, e.g. with
 `--shot`). A retry of the first level does not replay it.
 

@@ -16,7 +16,10 @@
 //!   view matches the orthographic one, then switches;
 //! - the generative music, ducked under the intro's own track until that ends.
 //!
-//! Esc / Enter / Space / Start / Cross skip to the hand-off. `--no-intro` leaves it out.
+//! The level's intro crawl (`<level>_crawl_intro`) rolls over the flight, not modal, and
+//! the level's story does not show it again at the start ([`Intro::played_crawl`]).
+//!
+//! Fire, Esc / Enter / Space / Start / Cross skip the flight and the crawl to the hand-off. `--no-intro` leaves it out.
 //! The flight is pure maths in [`plan`], the clouds in [`clouds`], the copter, ropes and
 //! stand-ins in [`copter`].
 
@@ -38,6 +41,9 @@ use crate::assets::assets_plugin::GameAssets;
 use crate::camera::components::{CameraFocus, GameCamera};
 use crate::campaign::Campaign;
 use crate::character_editor::state::in_normal_game;
+use crate::control::bindings::{ControlBindings, PlayerAction};
+use crate::facts::facts_resource::Facts;
+use lava_ui_builder::crawl::{ClearCrawls, CrawlQueue};
 use crate::general::events::map_events::{LoadMap, SpawnPlayer};
 use crate::general::systems::lights_systems::LightingPreset;
 use crate::general::systems::map_systems::TileDefinitions;
@@ -119,6 +125,17 @@ pub struct Intro {
     /// looked for yet.
     backdrop: Option<backdrop::Backdrop>,
     backdrop_tried: bool,
+    /// The level's intro crawl, shown over the flight, and whether it was looked for.
+    crawl: Option<String>,
+    crawl_tried: bool,
+}
+
+impl Intro {
+    /// The crawl shown over the flight: the level's story asks for it again once the
+    /// players are in, and is not to show it twice.
+    pub fn played_crawl(&self) -> Option<&str> {
+        self.crawl.as_deref()
+    }
 }
 
 /// `--intro-at <secs>`: start the flight that far in (to look at one moment of it).
@@ -163,6 +180,8 @@ impl Plugin for IntroPlugin {
                     hold_spawns.run_if(holding_players),
                     backdrop::build_backdrop,
                     take_off,
+                    start_crawl,
+                    skip_intro,
                     run_intro,
                     backdrop::level_scenery,
                     hold_stories.before(turbofacts::systems::check_stories),
@@ -255,6 +274,8 @@ fn begin_intro(
         background_scale: 1.0,
         backdrop: None,
         backdrop_tried: false,
+        crawl: None,
+        crawl_tried: false,
     });
 }
 
@@ -465,6 +486,76 @@ fn take_off(
     intro.t = start_at.map_or(0.0, |s| s.0.max(0.0));
 }
 
+/// The level's intro crawl (`<level>_crawl_intro`), rolled over the flight. Not modal, so
+/// the flight goes on under it.
+fn start_crawl(
+    mut intro: ResMut<Intro>,
+    campaign: Res<Campaign>,
+    library: Res<crate::crawl::CrawlLibrary>,
+    mut queue: ResMut<CrawlQueue>,
+) {
+    if intro.crawl_tried || intro.stage != Stage::Flying {
+        return;
+    }
+    intro.crawl_tried = true;
+    let Some(stem) = campaign
+        .file
+        .levels
+        .get(campaign.current)
+        .and_then(|level| std::path::Path::new(&level.map).file_stem()?.to_str().map(str::to_owned))
+    else {
+        return;
+    };
+    let id = format!("{stem}_crawl_intro");
+    let Some(spec) = library.0.get(&id) else {
+        return;
+    };
+    let mut spec = spec.clone();
+    spec.modal = false;
+    queue.push(spec);
+    intro.crawl = Some(id);
+}
+
+/// Fire (or Esc / Enter / Space / Start / Cross) skips the flight and its crawl to the
+/// hand-off.
+#[allow(clippy::too_many_arguments)]
+fn skip_intro(
+    mut commands: Commands,
+    mut intro: ResMut<Intro>,
+    keys: Res<ButtonInput<KeyCode>>,
+    mouse: Res<ButtonInput<MouseButton>>,
+    gamepads: Query<&Gamepad>,
+    bindings: Res<ControlBindings>,
+    mut clear: MessageWriter<ClearCrawls>,
+    mut facts: ResMut<Facts>,
+) {
+    let Some(plan) = intro.plan.as_ref() else {
+        return;
+    };
+    if intro.stage != Stage::Flying || intro.t <= SKIP_GRACE {
+        return;
+    }
+    let skip = keys.any_just_pressed([KeyCode::Escape, KeyCode::Enter, KeyCode::Space])
+        || bindings.kbm_just_pressed(PlayerAction::Fire, &keys, &mouse)
+        || gamepads.iter().any(|pad| {
+            pad.any_just_pressed([GamepadButton::Start, GamepadButton::South])
+                || bindings.pad_just_pressed(PlayerAction::Fire, pad)
+        });
+    if !skip {
+        return;
+    }
+    info!("intro: skipped");
+    intro.t = intro.t.max(plan.timing.landed_at());
+    if let Some(music) = intro.music.take() {
+        commands.entity(music).try_despawn();
+    }
+    if let Some(id) = &intro.crawl {
+        // Cleared crawls report no `CrawlFinished`; a story chained off it still goes on.
+        clear.write(ClearCrawls);
+        facts.set_bool(&crate::facts::keys::crawl_finished(id), true);
+    }
+}
+
 /// Advance the intro: the copter, the stand-ins and the ropes; the players handed over
 /// when the last one is down; the camera handed back at the end; the copter gone after.
 #[allow(clippy::too_many_arguments)]
@@ -472,8 +563,6 @@ fn run_intro(
     mut commands: Commands,
     mut intro: ResMut<Intro>,
     time: Res<Time>,
-    keys: Res<ButtonInput<KeyCode>>,
-    gamepads: Query<&Gamepad>,
     mut transforms: Query<&mut Transform, (Without<GameCamera>, Without<Rappeller>, Without<Rope>)>,
     rappellers: Query<(Entity, &Rappeller, &mut Transform), (Without<Rope>, Without<GameCamera>)>,
     mut ropes: Query<
@@ -493,18 +582,6 @@ fn run_intro(
     };
     intro.t += time.delta_secs();
 
-    // Skip to the hand-off.
-    let skip = keys.any_just_pressed([KeyCode::Escape, KeyCode::Enter, KeyCode::Space])
-        || gamepads.iter().any(|pad| {
-            pad.any_just_pressed([GamepadButton::Start, GamepadButton::South])
-        });
-    if skip && intro.stage == Stage::Flying && intro.t > SKIP_GRACE {
-        info!("intro: skipped");
-        intro.t = intro.t.max(plan.timing.landed_at());
-        if let Some(music) = intro.music.take() {
-            commands.entity(music).try_despawn();
-        }
-    }
     let t = intro.t;
 
     if let Some(mut at) = intro.copter.and_then(|c| transforms.get_mut(c).ok()) {

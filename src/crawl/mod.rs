@@ -117,11 +117,16 @@ fn show_story_crawls(
     mut effects: MessageReader<StoryEffect>,
     library: Res<CrawlLibrary>,
     mut queue: ResMut<CrawlQueue>,
+    intro: Option<Res<crate::intro::Intro>>,
 ) {
     for StoryEffect { effect } in effects.read() {
         let Some(id) = keys::crawl_effect(effect) else {
             continue;
         };
+        // Already rolled over the campaign intro's flight.
+        if intro.as_ref().is_some_and(|i| i.played_crawl() == Some(id)) {
+            continue;
+        }
         if let Some(spec) = library.0.get(id) {
             queue.push(spec.clone());
         } else {
