@@ -26,7 +26,7 @@ pub enum FogLevel {
 }
 
 impl FogLevel {
-    const fn next(self) -> Self {
+    pub const fn next(self) -> Self {
         match self {
             Self::Off => Self::Haze,
             Self::Haze => Self::Thick,
@@ -103,14 +103,6 @@ pub fn aerial_fog(
         },
         ..default()
     })
-}
-
-pub fn cycle_fog(keys: Res<ButtonInput<KeyCode>>, mut level: ResMut<FogLevel>) {
-    let ctrl = keys.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]);
-    if ctrl && keys.just_pressed(KeyCode::KeyO) {
-        *level = level.next();
-        info!("fog: {}", level.label());
-    }
 }
 
 /// The fog the scene has before the mood gets at it. `gore::despair` puts it on the

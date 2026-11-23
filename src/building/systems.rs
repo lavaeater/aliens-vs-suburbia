@@ -113,8 +113,9 @@ pub fn init_build_indicator_tint(
     >,
     scene_spawner: Res<WorldInstanceSpawner>,
     children_q: Query<&Children>,
-    mut mat_q: Query<&mut MeshMaterial3d<StandardMaterial>>,
+    mat_q: Query<&crate::retro::shading::BaseMaterial>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut commands: Commands,
 ) {
     for (entity, scene_instance, mut tint) in &mut indicators {
         if tint.initialized {
@@ -128,15 +129,16 @@ pub fn init_build_indicator_tint(
         collect_descendants(entity, &children_q, &mut descendants);
 
         for desc in descendants {
-            if let Ok(mut mat_handle) = mat_q.get_mut(desc)
-                && let Some(new_mat) = materials.get(&mat_handle.0).cloned()
+            if let Ok(base) = mat_q.get(desc)
+                && let Some(new_mat) = materials.get(&base.0).cloned()
             {
                 let mut tinted = new_mat;
                 tinted.alpha_mode = AlphaMode::Blend;
                 tinted.base_color = Color::srgba(0.2, 1.0, 0.2, 0.55);
                 let handle = materials.add(tinted);
                 tint.handles.push(handle.clone());
-                mat_handle.0 = handle;
+                // Inserted, so a toon or PSX look picks the new material up too.
+                commands.entity(desc).insert(MeshMaterial3d(handle));
             }
         }
         tint.initialized = true;

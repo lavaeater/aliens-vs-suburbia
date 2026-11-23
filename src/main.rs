@@ -38,7 +38,6 @@ pub(crate) mod gore;
 pub(crate) mod house_editor;
 pub(crate) mod campaign_editor;
 pub(crate) mod townsfolk;
-mod psx;
 mod shot;
 pub(crate) mod infestation;
 pub(crate) mod intro;
@@ -254,7 +253,8 @@ fn print_help() {
     println!("  cargo run -- --campaign-editor [name]      Launch straight into the campaign editor");
     println!("  cargo run -- --shot <secs> <file.png>      Save a screenshot after <secs>, then quit");
     println!("  cargo run -- --fog <off|haze|thick>        Start with this much fog (Ctrl+O cycles it)");
-    println!("  cargo run -- --psx                         PlayStation 1 look (bevy_psx) instead of the retro look");
+    println!("  cargo run -- --look <plain|retro|toon|toon-retro|psx>  This look for the run (F12 / Ctrl+K switch)");
+    println!("  cargo run -- --psx                         Same as --look psx");
     println!("                                             (cut a base map into levels; default: the --campaign)");
     println!("  cargo run -- --play [--level N]            Launch straight into a match (level 1, or N)");
     println!("  cargo run -- --no-intro                    Skip the campaign's copter intro before level 1");
@@ -390,21 +390,23 @@ fn main() -> std::process::ExitCode {
         // .add_plugins(SkeinPlugin::default())
         .add_plugins(GamePhysicsPlugin)
         .add_plugins(fx::FxPlugin)
-        // Lit by lamps and flashlights rather than ambient light (`lights_systems`), so
-        // unlit ground has to be allowed to go dark, and coloured lights to tint.
-        //.add_plugins(FlatShaderPlugin::global_with(
-        //     FlatShaderBuilder::default()
-        //         .dark_level(0.25)
-        //         .light_tint(0.8)
-        //         .build(),
-        //))
-        // .add_plugins(PixelShaderPlugin::default())
+        // The toon shader and PSX are looks of the retro plugin (F12, `retro::shading`).
         .add_plugins(GamePlugin)
         .add_plugins(retro::RetroPlugin {
-            // The PSX look renders the game camera its own way.
-            force_off: args
+            force_mode: if let Some(mode) = args
                 .iter()
-                .any(|a| a == "--no-retro" || a == "--psx" || a == "--plain"),
+                .skip_while(|a| *a != "--look")
+                .nth(1)
+                .and_then(|name| retro::LookMode::from_name(name))
+            {
+                Some(mode)
+            } else if args.iter().any(|a| a == "--psx") {
+                Some(retro::LookMode::Psx)
+            } else if args.iter().any(|a| a == "--no-retro" || a == "--plain") {
+                Some(retro::LookMode::Plain)
+            } else {
+                None
+            },
             palette: args.iter().skip_while(|a| *a != "--palette").nth(1).cloned(),
             shots: args
                 .iter()
@@ -460,10 +462,6 @@ fn main() -> std::process::ExitCode {
         .and_then(|name| camera::fog::FogLevel::from_name(name))
     {
         app.insert_resource(level);
-    }
-
-    if args.iter().any(|a| a == "--psx") {
-        app.add_plugins(psx::PsxLookPlugin);
     }
 
     if let Some(shot) = shot::from_args(&args) {

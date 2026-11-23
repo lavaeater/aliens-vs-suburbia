@@ -55,14 +55,6 @@ impl LightingPreset {
         }
     }
 
-    pub const fn label(self) -> &'static str {
-        match self {
-            Self::Night => "night (moon + placed lights)",
-            Self::Dark => "dark (placed lights only)",
-            Self::Day => "day (ambient + sun)",
-        }
-    }
-
     /// Ambient brightness. `gore::despair` dims from this as the danger rises.
     pub const fn ambient(self) -> f32 {
         match self {
@@ -174,15 +166,6 @@ pub fn spawn_lights(
 /// ambient, so leaving the match puts it back.
 pub fn restore_ambient(mut commands: Commands) {
     commands.insert_resource(GlobalAmbientLight::default());
-}
-
-/// `Ctrl+L`: next preset.
-pub fn cycle_lighting_preset(keys: Res<ButtonInput<KeyCode>>, mut preset: ResMut<LightingPreset>) {
-    let ctrl = keys.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]);
-    if ctrl && keys.just_pressed(KeyCode::KeyL) {
-        *preset = preset.next();
-        info!("lighting: {}", preset.label());
-    }
 }
 
 /// Push a changed preset or sky tuning into the sky light and the ambient light.

@@ -8,18 +8,27 @@
 //! glued to the world while the camera still glides; the dither pattern is offset by the
 //! camera's texel so it stays on the world too.
 //!
-//! **F12** opens the settings panel (`panel.rs`), every setting with left/right buttons;
-//! any change flashes a summary on screen and is saved to `retro-settings.ron`
-//! (`look.rs`). Hotkeys: **Ctrl+K** on/off, **Ctrl+J** next palette (Shift: previous; the
-//! first is full colour), **Ctrl+H** dither strength, **Ctrl+U / Ctrl+I** smaller / bigger
-//! pixels. Starts as the file says ([`DEFAULT_PALETTE`] without one); `--no-retro` starts
-//! with it off, `--palette <name>` picks another palette, `--retro-shots <dir>` saves a
+//! The canvas is one part of the game's look ([`LookMode`], `mode.rs`): Plain, Retro, Toon,
+//! Toon + retro, PSX. The modes that shade the scene themselves swap the meshes' materials
+//! (`shading.rs`); PSX also draws through this canvas, as a plain low-res upscale.
+//!
+//! **F12** opens the settings panel (`panel.rs`, rows in `rows.rs`): the mode, then the
+//! settings of the canvas, the toon shader or PSX as the mode has them, the scene and the
+//! sky; any change flashes on screen and is saved to `retro-settings.ron` (`look.rs`).
+//! Hotkeys (`look_keys`, Shift steps back): **Ctrl+K** next look, **Ctrl+J** palette,
+//! **Ctrl+H** dither, **Ctrl+U / Ctrl+I** smaller / bigger pixels (PSX's in PSX),
+//! **Ctrl+L** sky, **Ctrl+O** fog, **Ctrl+Y** grass. Starts as the file says
+//! ([`DEFAULT_PALETTE`] without one); `--no-retro` / `--plain` start Plain and `--psx` PSX
+//! for the run, `--palette <name>` picks another palette, `--retro-shots <dir>` saves a
 //! screenshot per palette and quits.
 //! Off in the character editor (its camera is clipped to a pane).
 
 pub mod look;
+pub mod mode;
 pub mod palette;
 mod panel;
+pub mod rows;
+pub mod shading;
 mod shots;
 pub mod snap;
 
@@ -40,8 +49,11 @@ use bevy::window::{PrimaryWindow, WindowRef};
 use crate::camera::components::GameCamera;
 use crate::character_editor::state::EditorSession;
 pub use look::RetroLook;
-use look::{RetroFile, Setting};
+use look::{ForcedMode, RetroFile, Setting};
+pub use mode::LookMode;
+use mode::{PsxLook, PsxSetting};
 use palette::{MAX_COLORS, Palette};
+use rows::{LookChanged, LookParams, Row, SceneSetting};
 use snap::{CanvasLayout, snap_to_texels};
 
 /// The render layer only the canvas camera and its quad live on.
@@ -70,7 +82,7 @@ impl Palettes {
 }
 
 /// Where the picture is this frame, for anything that turns window positions into world
-/// rays (mouse aim). `None` while the retro look is off.
+/// rays (mouse aim). `None` while there is no canvas.
 #[derive(Resource, Default)]
 pub struct RetroView(pub Option<CanvasLayout>);
 
@@ -161,8 +173,9 @@ impl Material2d for RetroCanvasMaterial {
 }
 
 pub struct RetroPlugin {
-    /// `--no-retro`: start with the look off whatever the settings file says.
-    pub force_off: bool,
+    /// `--no-retro` / `--plain` (Plain), `--psx` (PSX): this look for the run, whatever the
+    /// settings file says.
+    pub force_mode: Option<LookMode>,
     pub palette: Option<String>,
     /// `--retro-shots <dir>`: screenshot every palette and quit (`shots.rs`).
     pub shots: Option<std::path::PathBuf>,
@@ -172,13 +185,22 @@ impl Plugin for RetroPlugin {
     fn build(&self, app: &mut App) {
         let palettes = Palettes(palette::load_all());
         let file = RetroFile::load().unwrap_or_default();
-        let mut look = file.look(&palettes);
-        app.insert_resource(file.light).insert_resource(file.sky);
-        if self.force_off {
-            // Off for this run only: saves keep what the file said.
-            app.insert_resource(look::SavedEnabled(look.enabled));
-            look.enabled = false;
+        let mut snap = file.snapshot(&palettes);
+        if let Some(forced) = self.force_mode {
+            // For this run only: saves keep what the file said.
+            app.insert_resource(ForcedMode {
+                forced,
+                saved: snap.mode,
+            });
+            snap.mode = forced;
         }
+        app.insert_resource(snap.light)
+            .insert_resource(snap.sky)
+            .insert_resource(snap.mode)
+            .insert_resource(snap.toon)
+            .insert_resource(snap.psx)
+            .insert_resource(snap.outline);
+        let mut look = snap.look;
         if let Some(name) = &self.palette {
             if let Some(i) = palettes.index_of(name) {
                 look.palette = i;
@@ -194,8 +216,8 @@ impl Plugin for RetroPlugin {
             .insert_resource(look)
             .init_resource::<RetroView>()
             .init_resource::<RetroRig>()
-            .add_systems(Update, (retro_keys, sync_retro_rig).chain())
-            .add_plugins(panel::plugin)
+            .add_systems(Update, (look_keys, sync_retro_rig).chain())
+            .add_plugins((panel::plugin, shading::plugin))
             .add_systems(
                 PostUpdate,
                 snap_retro_camera
@@ -205,10 +227,11 @@ impl Plugin for RetroPlugin {
     }
 }
 
-fn retro_keys(
+/// The look's Ctrl hotkeys, each a panel row; Shift steps back.
+fn look_keys(
     keys: Res<ButtonInput<KeyCode>>,
-    mut look: ResMut<RetroLook>,
-    palettes: Res<Palettes>,
+    mut p: LookParams,
+    mut changed: MessageWriter<LookChanged>,
 ) {
     if !keys.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]) {
         return;
@@ -218,15 +241,24 @@ fn retro_keys(
     } else {
         1
     };
-    for (key, setting, dir) in [
-        (KeyCode::KeyK, Setting::Enabled, 1),
-        (KeyCode::KeyJ, Setting::Palette, back),
-        (KeyCode::KeyH, Setting::Dither, 1),
-        (KeyCode::KeyU, Setting::PixelSize, -1),
-        (KeyCode::KeyI, Setting::PixelSize, 1),
+    let pixels = if *p.mode == LookMode::Psx {
+        Row::Psx(PsxSetting::Pixels)
+    } else {
+        Row::Retro(Setting::PixelSize)
+    };
+    for (key, row, dir) in [
+        (KeyCode::KeyK, Row::Mode, back),
+        (KeyCode::KeyJ, Row::Retro(Setting::Palette), back),
+        (KeyCode::KeyH, Row::Retro(Setting::Dither), back),
+        (KeyCode::KeyU, pixels, -1),
+        (KeyCode::KeyI, pixels, 1),
+        (KeyCode::KeyL, Row::Light(look::LightSetting::Preset), back),
+        (KeyCode::KeyO, Row::Scene(SceneSetting::Fog), back),
+        (KeyCode::KeyY, Row::Scene(SceneSetting::Grass), 1),
     ] {
         if keys.just_pressed(key) {
-            setting.step(&mut look, &palettes, dir);
+            row.step(&mut p, dir);
+            changed.write(LookChanged(row));
         }
     }
 }
@@ -249,12 +281,15 @@ fn new_target_image(size: UVec2) -> Image {
     image
 }
 
-/// Bring the rig in line with `RetroLook`: render the game camera into an image of the
-/// right size and show it through the canvas, or put everything back.
+/// Bring the rig in line with the look's canvas (`LookMode::canvas_look`): render the game
+/// camera into an image of the right size and show it through the canvas, or put
+/// everything back.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 fn sync_retro_rig(
     mut commands: Commands,
+    mode: Res<LookMode>,
     look: Res<RetroLook>,
+    psx: Res<PsxLook>,
     editor: Option<Res<EditorSession>>,
     windows: Query<&Window, With<PrimaryWindow>>,
     mut cameras: Query<
@@ -269,8 +304,12 @@ fn sync_retro_rig(
     parts: Query<(), With<RetroCanvasPart>>,
 ) {
     let physical = windows.single().map_or(UVec2::ZERO, Window::physical_size);
-    let want =
-        look.enabled && editor.is_none() && !cameras.is_empty() && physical.x > 0 && physical.y > 0;
+    let canvas = mode.canvas_look(&look, &psx);
+    let want = canvas.is_some()
+        && editor.is_none()
+        && !cameras.is_empty()
+        && physical.x > 0
+        && physical.y > 0;
 
     if !want {
         for (entity, mut camera, mut target, retro) in &mut cameras {
@@ -291,7 +330,8 @@ fn sync_retro_rig(
         return;
     }
 
-    let size = CanvasLayout::image_size(physical, look.pixel_size);
+    let pixel_size = canvas.map_or(1, |c| c.pixel_size);
+    let size = CanvasLayout::image_size(physical, pixel_size);
     let image = match rig.image.clone() {
         Some(image) if rig.size == size => image,
         _ => {
@@ -372,7 +412,9 @@ type RetroGameCamera = (With<GameCamera>, With<RetroCamera>);
 /// the shader this frame's palette and pattern offset.
 #[allow(clippy::too_many_arguments)]
 fn snap_retro_camera(
-    look: Res<RetroLook>,
+    mode: Res<LookMode>,
+    retro: Res<RetroLook>,
+    psx: Res<PsxLook>,
     palettes: Res<Palettes>,
     rig: Res<RetroRig>,
     mut view: ResMut<RetroView>,
@@ -382,6 +424,9 @@ fn snap_retro_camera(
     mut materials: ResMut<Assets<RetroCanvasMaterial>>,
 ) {
     let (Some(quad), Some(material)) = (rig.quad, rig.material.as_ref()) else {
+        return;
+    };
+    let Some(look) = mode.canvas_look(&retro, &psx) else {
         return;
     };
     let Ok(window) = windows.single() else { return };

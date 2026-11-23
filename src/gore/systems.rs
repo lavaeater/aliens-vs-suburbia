@@ -11,7 +11,7 @@ pub fn tick_ephemeral(
     mut query: Query<(
         Entity,
         &mut Ephemeral,
-        Option<&MeshMaterial3d<StandardMaterial>>,
+        Option<&crate::retro::shading::BaseMaterial>,
     )>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {

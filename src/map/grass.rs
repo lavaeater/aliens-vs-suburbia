@@ -268,7 +268,6 @@ impl Plugin for LawnGrassPlugin {
                 Update,
                 (
                     plant_grass.after(crate::map::streaming::plan_map_stream),
-                    toggle_grass,
                     show_grass,
                 )
                     .chain()
@@ -370,14 +369,6 @@ fn plant_grass(
             size.x,
             size.y
         );
-    }
-}
-
-fn toggle_grass(keys: Res<ButtonInput<KeyCode>>, mut on: ResMut<GrassOn>) {
-    let ctrl = keys.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]);
-    if ctrl && keys.just_pressed(KeyCode::KeyY) {
-        on.0 = !on.0;
-        info!("grass: {}", if on.0 { "on" } else { "off" });
     }
 }
 

@@ -9,7 +9,7 @@
 //! part flies off as one physics body with the creature's own materials, its holes
 //! capped in [`DismemberAssets::flesh`].
 //!
-//! [`GibStyle`] picks limbs, boxes or both (**Ctrl+K** cycles it). With limbs only, a
+//! [`GibStyle`] picks limbs, boxes or both (**Ctrl+T** cycles it). With limbs only, a
 //! corpse that has no skinned mesh still bursts into boxes.
 
 pub mod cut;
@@ -96,10 +96,10 @@ pub fn setup_dismember_assets(
     commands.insert_resource(DismemberAssets { flesh });
 }
 
-/// `Ctrl+K`: next [`GibStyle`].
+/// `Ctrl+T`: next [`GibStyle`] (Ctrl+K is the look's).
 pub fn cycle_gib_style(keys: Res<ButtonInput<KeyCode>>, mut settings: ResMut<GibSettings>) {
     let ctrl = keys.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]);
-    if ctrl && keys.just_pressed(KeyCode::KeyK) {
+    if ctrl && keys.just_pressed(KeyCode::KeyT) {
         settings.style = settings.style.next();
         info!("gibs: {:?}", settings.style);
     }
@@ -130,7 +130,7 @@ pub fn dismember_the_dead(
         &Mesh3d,
         &SkinnedMesh,
         &InheritedVisibility,
-        Option<&MeshMaterial3d<StandardMaterial>>,
+        Option<&crate::retro::shading::BaseMaterial>,
     )>,
     globals: Query<&GlobalTransform>,
     bindposes: Res<Assets<SkinnedMeshInverseBindposes>>,

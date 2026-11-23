@@ -27,7 +27,7 @@ use crate::general::systems::collision_handling_system::collision_handling_syste
 use crate::general::systems::death_effect_system::{spawn_death_effects, tick_death_effects};
 use crate::general::systems::health_monitor_system::health_monitor_system;
 use crate::general::systems::lights_systems::{
-    LightingPreset, animate_lights, apply_lighting_preset, cycle_lighting_preset, restore_ambient,
+    LightingPreset, animate_lights, apply_lighting_preset, restore_ambient,
     spawn_lights,
 };
 use crate::general::systems::throwing_system::throwing;
@@ -114,7 +114,7 @@ impl Plugin for GamePlugin {
             .add_systems(OnExit(GameState::InGame), restore_ambient)
             .add_systems(
                 Update,
-                (cycle_lighting_preset, apply_lighting_preset, animate_lights)
+                (apply_lighting_preset, animate_lights)
                     .chain()
                     .run_if(in_state(GameState::InGame)),
             )

@@ -32,6 +32,10 @@ impl Plugin for SettingsPlugin {
 fn settings_keyboard_system(keys: Res<ButtonInput<KeyCode>>, mut settings: ResMut<GameSettings>) {
     use crate::settings::resources::ProjectionMode;
 
+    // Ctrl+letter is the look's (`retro::look_keys`): Ctrl+M must not turn the camera too.
+    if keys.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]) {
+        return;
+    }
     let mut changed = false;
 
     if keys.just_pressed(KeyCode::KeyP) {

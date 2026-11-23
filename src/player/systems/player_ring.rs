@@ -137,7 +137,7 @@ pub fn update_rings(
         (
             Entity,
             &PlayerRing,
-            &MeshMaterial3d<StandardMaterial>,
+            &crate::retro::shading::BaseMaterial,
             &mut Transform,
             &mut GlobalTransform,
         ),

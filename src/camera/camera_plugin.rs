@@ -37,8 +37,7 @@ impl Plugin for StatefulCameraPlugin {
             )
             .add_systems(
                 Update,
-                (crate::camera::fog::cycle_fog, crate::camera::fog::apply_fog)
-                    .chain()
+                crate::camera::fog::apply_fog
                     .run_if(in_state(GameState::InGame))
                     .run_if(crate::character_editor::state::in_normal_game),
             )

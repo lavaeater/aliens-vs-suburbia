@@ -25,11 +25,13 @@ pub struct RetroShots {
     pub frames: Option<u32>,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn take_retro_shots(
     mut commands: Commands,
     time: Res<Time<Real>>,
     mut shots: ResMut<RetroShots>,
     mut look: ResMut<RetroLook>,
+    mut mode: ResMut<super::LookMode>,
     palettes: Res<Palettes>,
     mut clear: MessageWriter<ClearCrawls>,
     mut exit: MessageWriter<AppExit>,
@@ -37,7 +39,7 @@ pub fn take_retro_shots(
     shots.timer += time.delta_secs();
     if shots.timer < SETTLE {
         clear.write(ClearCrawls);
-        look.enabled = true;
+        *mode = super::LookMode::Retro;
         return;
     }
     let Some(frames) = shots.frames else {

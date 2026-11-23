@@ -1,31 +1,36 @@
-//! The F12 panel: every [`Setting`] of the retro look as a `< value >` row, like the F1
-//! camera panel. Any change, from here or a hotkey, flashes a one-line summary at the top
-//! of the screen and is saved to `retro-settings.ron`. Not in the character editor, where
-//! F12 is the bind pose (and the look is off).
+//! The F12 panel: the look mode and every setting of it as a `< value >` row ([`Row`]),
+//! sections for the retro canvas, the toon shader and PSX shown only in the modes they
+//! apply to, then the scene (outline, fog, dread, grass) and the sky. A step, from here or
+//! a hotkey, flashes the new value at the top of the screen; the look, its settings,
+//! outline and sky are saved to `retro-settings.ron` (fog, dread and grass are for this
+//! run). Not in the character editor, where F12 is the bind pose (and the look is off).
 
 use bevy::prelude::*;
 use bevy::ui_widgets::Activate;
 use lava_ui_builder::{LavaTheme, TextStyle, UIBuilder};
 
-use super::look::{LightSetting, RetroFile, SavedEnabled, Setting, summary};
+use super::look::{ForcedMode, LightSetting, LookSnapshot, RetroFile, RetroLook, Setting, summary};
+use super::mode::{LookMode, OutlineLook, PsxLook, PsxSetting, ToonLook, ToonSetting};
+use super::rows::{LookChanged, LookParams, Row, SceneSetting};
 use super::shots::RetroShots;
-use super::{Palettes, RetroLook};
 use crate::character_editor::state::EditorSession;
 use crate::general::systems::lights_systems::{LightingPreset, SkyLightSettings};
 
-/// How long the summary stays up, in seconds (the last half second fades).
+/// How long the flash stays up, in seconds (the last half second fades).
 const FLASH_SECS: f32 = 2.5;
+const ROW_HEIGHT: f32 = 22.0;
+const FONT: f32 = 14.0;
 
 #[derive(Component, Default)]
 struct RetroPanel;
 
 /// The value label of a row.
 #[derive(Component)]
-struct ValueLabel(Setting);
+struct ValueLabel(Row);
 
-/// The value label of a lighting row.
+/// A row, or a section heading, shown only in the modes `Row::shown_in` allows.
 #[derive(Component)]
-struct LightLabel(LightSetting);
+struct ShownFor(Row);
 
 #[derive(Component, Default)]
 struct RetroFlash {
@@ -33,17 +38,27 @@ struct RetroFlash {
 }
 
 pub fn plugin(app: &mut App) {
-    app.add_systems(Startup, (spawn_panel, spawn_flash))
+    app.add_message::<LookChanged>()
+        .add_systems(Startup, (spawn_panel, spawn_flash))
         .add_systems(
             Update,
             (
                 toggle_panel,
-                (show_values, flash_and_save).run_if(resource_changed::<RetroLook>),
-                (show_light_values, save_light).run_if(
-                    resource_changed::<LightingPreset>.or_else(resource_changed::<SkyLightSettings>),
+                show_sections.run_if(resource_changed::<LookMode>),
+                show_values,
+                flash,
+                save.run_if(
+                    resource_changed::<LookMode>
+                        .or_else(resource_changed::<RetroLook>)
+                        .or_else(resource_changed::<ToonLook>)
+                        .or_else(resource_changed::<PsxLook>)
+                        .or_else(resource_changed::<OutlineLook>)
+                        .or_else(resource_changed::<LightingPreset>)
+                        .or_else(resource_changed::<SkyLightSettings>),
                 ),
                 fade_flash,
-            ),
+            )
+                .chain(),
         );
 }
 
@@ -55,75 +70,70 @@ fn spawn_panel(commands: Commands, theme: Res<LavaTheme>) {
         .top(px(8.0))
         .left(px(8.0))
         .flex_column()
-        .row_gap_px(6.0)
-        .padding_all_px(12.0)
-        .min_width_px(380.0)
+        .row_gap_px(2.0)
+        .padding_all_px(10.0)
+        .min_width_px(360.0)
         .bg_color(Color::srgba(0.09, 0.06, 0.14, 0.92))
         .insert(ZIndex(50));
 
     let label_color = ui.theme().text.label_color;
-    ui.themed_header("Retro look  [F12]");
-    for setting in Setting::ALL {
-        ui.add_row(|row| {
-            row.gap_px(4.0).align_items_center();
-            row.with_child(|c| {
-                c.with_text(setting.name(), Some(TextStyle::size_color(16.0, label_color)))
-                    .width_px(80.0);
+    let heading = Color::srgb(0.6, 0.55, 0.75);
+    ui.themed_header("Look  [F12]");
+
+    let sections: [(&str, Vec<Row>); 6] = [
+        ("", vec![Row::Mode]),
+        ("-- Retro canvas --", Setting::ALL.map(Row::Retro).to_vec()),
+        (
+            "-- Toon shader --",
+            ToonSetting::ALL.map(Row::Toon).to_vec(),
+        ),
+        ("-- PSX --", PsxSetting::ALL.map(Row::Psx).to_vec()),
+        ("-- Scene --", SceneSetting::ALL.map(Row::Scene).to_vec()),
+        ("-- Light --", LightSetting::ALL.map(Row::Light).to_vec()),
+    ];
+    for (title, rows) in sections {
+        let Some(&first) = rows.first() else { continue };
+        if !title.is_empty() {
+            ui.label_child(title, 12.0, heading, |c| {
+                c.insert(ShownFor(first)).margin_top(px(4.0));
             });
-            for (text, dir) in [("<", -1), (">", 1)] {
-                if dir > 0 {
-                    row.with_child(|v| {
-                        v.default_text("")
-                            .insert(ValueLabel(setting))
-                            .min_width_px(200.0);
-                    });
+        }
+        for row in rows {
+            ui.add_row(|r| {
+                r.insert(ShownFor(row)).gap_px(4.0).align_items_center();
+                r.with_child(|c| {
+                    c.with_text(row.name(), Some(TextStyle::size_color(FONT, label_color)))
+                        .width_px(80.0);
+                });
+                for (text, dir) in [("<", -1), (">", 1)] {
+                    if dir > 0 {
+                        r.with_child(|v| {
+                            v.with_text("", Some(TextStyle::size(FONT)))
+                                .insert(ValueLabel(row))
+                                .min_width_px(200.0);
+                        });
+                    }
+                    r.add_button_observe(
+                        text,
+                        |b| {
+                            b.size_px(ROW_HEIGHT, ROW_HEIGHT);
+                        },
+                        move |_: On<Activate>,
+                              mut p: LookParams,
+                              mut changed: MessageWriter<LookChanged>| {
+                            row.step(&mut p, dir);
+                            changed.write(LookChanged(row));
+                        },
+                    );
                 }
-                row.add_button_observe(
-                    text,
-                    |b| {
-                        b.size_px(28.0, 28.0);
-                    },
-                    move |_: On<Activate>, mut look: ResMut<RetroLook>, palettes: Res<Palettes>| {
-                        setting.step(&mut look, &palettes, dir);
-                    },
-                );
-            }
-        });
-    }
-    ui.label("-- Light --", 12.0, Color::srgb(0.6, 0.55, 0.75));
-    for setting in LightSetting::ALL {
-        ui.add_row(|row| {
-            row.gap_px(4.0).align_items_center();
-            row.with_child(|c| {
-                c.with_text(setting.name(), Some(TextStyle::size_color(16.0, label_color)))
-                    .width_px(80.0);
             });
-            for (text, dir) in [("<", -1), (">", 1)] {
-                if dir > 0 {
-                    row.with_child(|v| {
-                        v.default_text("")
-                            .insert(LightLabel(setting))
-                            .min_width_px(200.0);
-                    });
-                }
-                row.add_button_observe(
-                    text,
-                    |b| {
-                        b.size_px(28.0, 28.0);
-                    },
-                    move |_: On<Activate>,
-                          mut preset: ResMut<LightingPreset>,
-                          mut sky: ResMut<SkyLightSettings>| {
-                        setting.step(&mut preset, &mut sky, dir);
-                    },
-                );
-            }
-        });
+        }
     }
     ui.label(
-        "Ctrl+K on/off  Ctrl+J palette  Ctrl+H dither  Ctrl+U/I pixels",
+        "Ctrl+K look  Ctrl+J palette  Ctrl+H dither  Ctrl+U/I pixels\n\
+         Ctrl+L sky  Ctrl+O fog  Ctrl+Y grass  (Shift: back)",
         12.0,
-        Color::srgb(0.6, 0.55, 0.75),
+        heading,
     );
     ui.build();
 }
@@ -170,98 +180,89 @@ fn toggle_panel(
     }
 }
 
+fn show_sections(mode: Res<LookMode>, mut rows: Query<(&ShownFor, &mut Node)>) {
+    for (shown, mut node) in &mut rows {
+        let display = if shown.0.shown_in(*mode) {
+            Display::Flex
+        } else {
+            Display::None
+        };
+        if node.display != display {
+            node.display = display;
+        }
+    }
+}
+
+/// Every frame the panel is open, so changes made elsewhere (the hotkeys of other
+/// plugins, the dread fading in) show too.
 fn show_values(
-    look: Res<RetroLook>,
-    palettes: Res<Palettes>,
+    p: LookParams,
+    panels: Query<&Node, With<RetroPanel>>,
     mut labels: Query<(&ValueLabel, &mut Text)>,
 ) {
+    if panels.iter().all(|n| n.display == Display::None) {
+        return;
+    }
     for (label, mut text) in &mut labels {
-        let value = label.0.value(&look, &palettes);
+        let value = label.0.value(&p);
         if text.0 != value {
             text.0 = value;
         }
     }
 }
 
-fn show_light_values(
-    preset: Res<LightingPreset>,
-    sky: Res<SkyLightSettings>,
-    mut labels: Query<(&LightLabel, &mut Text)>,
+fn flash(
+    mut changed: MessageReader<LookChanged>,
+    p: LookParams,
+    shots: Option<Res<RetroShots>>,
+    mut flashes: Query<(&mut RetroFlash, &mut Text)>,
 ) {
-    for (label, mut text) in &mut labels {
-        let value = label.0.value(*preset, &sky);
-        if text.0 != value {
-            text.0 = value;
-        }
+    let Some(LookChanged(row)) = changed.read().last().copied() else {
+        return;
+    };
+    if shots.is_some() {
+        return;
+    }
+    let line = match row {
+        Row::Mode => summary(&snapshot(&p), &p.palettes),
+        row => format!("{}   {}", row.name(), row.value(&p)),
+    };
+    info!("look: {line}");
+    for (mut flash, mut text) in &mut flashes {
+        flash.left = FLASH_SECS;
+        text.0.clone_from(&line);
     }
 }
 
-/// Save lighting changes, but not the character editor's switch to daylight.
-#[allow(clippy::too_many_arguments)]
-fn save_light(
-    look: Res<RetroLook>,
-    palettes: Res<Palettes>,
-    preset: Res<LightingPreset>,
-    sky: Res<SkyLightSettings>,
+fn snapshot(p: &LookParams) -> LookSnapshot {
+    LookSnapshot {
+        mode: *p.mode,
+        look: p.retro.clone(),
+        toon: *p.toon,
+        psx: p.psx.clone(),
+        outline: *p.outline,
+        light: *p.preset,
+        sky: *p.sky,
+    }
+}
+
+/// Save every change after the first frame, but not the character editor's switch to
+/// daylight, nor the palette shots run.
+fn save(
+    p: LookParams,
     editor: Option<Res<EditorSession>>,
     shots: Option<Res<RetroShots>>,
-    saved: Option<Res<SavedEnabled>>,
-    mut flashes: Query<(&mut RetroFlash, &mut Text)>,
+    forced: Option<Res<ForcedMode>>,
 ) {
-    if preset.is_added() || sky.is_added() || editor.is_some() || shots.is_some() {
+    if p.mode.is_added() || p.preset.is_added() || editor.is_some() || shots.is_some() {
         return;
     }
-    let line = format!(
-        "Sky {}   height {}   turn {}   {}   ambient {}   (F12)",
-        LightSetting::Preset.value(*preset, &sky),
-        LightSetting::Height.value(*preset, &sky),
-        LightSetting::Turn.value(*preset, &sky),
-        LightSetting::Strength.value(*preset, &sky),
-        LightSetting::Ambient.value(*preset, &sky),
-    );
-    for (mut flash, mut text) in &mut flashes {
-        flash.left = FLASH_SECS;
-        text.0.clone_from(&line);
-    }
-    save(&look, &palettes, *preset, *sky, saved.as_deref());
-}
-
-/// Flash and save every change after the first frame; the shots run changes palettes
-/// on its own and leaves the file alone.
-fn flash_and_save(
-    look: Res<RetroLook>,
-    palettes: Res<Palettes>,
-    preset: Res<LightingPreset>,
-    sky: Res<SkyLightSettings>,
-    saved: Option<Res<SavedEnabled>>,
-    shots: Option<Res<RetroShots>>,
-    mut flashes: Query<(&mut RetroFlash, &mut Text)>,
-) {
-    if look.is_added() || shots.is_some() {
-        return;
-    }
-    let line = summary(&look, &palettes);
-    info!("retro look: {line}");
-    for (mut flash, mut text) in &mut flashes {
-        flash.left = FLASH_SECS;
-        text.0.clone_from(&line);
-    }
-    save(&look, &palettes, *preset, *sky, saved.as_deref());
-}
-
-fn save(
-    look: &RetroLook,
-    palettes: &Palettes,
-    preset: LightingPreset,
-    sky: SkyLightSettings,
-    saved: Option<&SavedEnabled>,
-) {
-    let mut file = RetroFile::of_all(look, palettes, preset, sky);
-    // Toggled back on in a `--no-retro` run: that sticks.
-    if let Some(saved) = saved
-        && !look.enabled
+    let mut file = RetroFile::of(&snapshot(&p), &p.palettes);
+    // Still in the look a flag forced: the file keeps its own.
+    if let Some(forced) = forced
+        && *p.mode == forced.forced
     {
-        file.enabled = saved.0;
+        file.mode = Some(forced.saved);
     }
     file.save();
 }
@@ -273,5 +274,23 @@ fn fade_flash(time: Res<Time<Real>>, mut flashes: Query<(&mut RetroFlash, &mut T
         }
         flash.left = (flash.left - time.delta_secs()).max(0.0);
         colour.0 = Color::srgba(1.0, 0.95, 0.85, (flash.left / 0.5).min(1.0));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sections_follow_the_mode() {
+        let toon = Row::Toon(ToonSetting::Shadow);
+        let retro = Row::Retro(Setting::Palette);
+        let psx = Row::Psx(PsxSetting::Snap);
+        assert!(toon.shown_in(LookMode::ToonRetro) && retro.shown_in(LookMode::ToonRetro));
+        assert!(!toon.shown_in(LookMode::Retro) && !psx.shown_in(LookMode::Toon));
+        assert!(psx.shown_in(LookMode::Psx) && !retro.shown_in(LookMode::Psx));
+        for mode in LookMode::ALL {
+            assert!(Row::Mode.shown_in(mode) && Row::Scene(SceneSetting::Fog).shown_in(mode));
+        }
     }
 }

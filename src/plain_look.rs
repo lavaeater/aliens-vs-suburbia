@@ -4,7 +4,8 @@
 //! and the valley fog banks (`FogLevel::Off`, unless `--fog` asks for some), the dread
 //! colour grade and haze (`DespairSettings::max_strength` 0) and the scene outlines
 //! (`auto_outline_scenes` skips while [`PlainLook`] exists). Kept: lighting, particles,
-//! grass (`--no-grass` for that). Ctrl+K and Ctrl+O still turn retro and fog back on.
+//! grass (`--no-grass` for that). Plain is the look for the run (`main.rs` forces
+//! `LookMode::Plain`); Ctrl+K and Ctrl+O, or the F12 panel, still switch looks and fog.
 
 use bevy::prelude::*;
 

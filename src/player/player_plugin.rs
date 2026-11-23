@@ -25,6 +25,7 @@ use crate::player::systems::torso_twist::{
     TorsoTwistEnabled, apply_torso_twist, resolve_twist_bones, toggle_torso_twist,
 };
 use crate::player::systems::weapon_aim::aim_weapons;
+use crate::retro::mode::OutlineLook;
 use bevy::prelude::*;
 use bevy::transform::TransformSystems;
 use bevy::world_serialization::{WorldAssetRoot, WorldInstance};
@@ -85,6 +86,7 @@ impl Plugin for PlayerPlugin {
                     auto_outline_scenes
                         .run_if(not(resource_exists::<crate::plain_look::PlainLook>)),
                     sync_outline_with_visibility,
+                    retune_outlines.run_if(resource_changed::<OutlineLook>),
                 ),
             )
             // The aim's height, after this frame's aim and before the shots that use it.
@@ -166,6 +168,7 @@ fn reset_ability_input(mut input: ResMut<AbilityInput>) {
 #[allow(clippy::type_complexity)]
 fn auto_outline_scenes(
     mut commands: Commands,
+    look: Option<Res<OutlineLook>>,
     query: Query<
         Entity,
         (
@@ -176,6 +179,7 @@ fn auto_outline_scenes(
         ),
     >,
 ) {
+    let width = look.map_or(OutlineLook::default().width, |l| l.width);
     for entity in query.iter() {
         // `try_insert`, not `insert`: a scene root can be despawned between this system
         // queueing the command and the buffers being applied — the character editor's model swap
@@ -183,12 +187,26 @@ fn auto_outline_scenes(
         // despawned entity is a hard error that takes the app down.
         commands.entity(entity).try_insert((
             OutlineVolume {
-                visible: true,
-                width: 2.0,
+                visible: width > 0.0,
+                width,
                 colour: Color::BLACK,
             },
             AsyncWorldInheritOutline::default(),
         ));
+    }
+}
+
+/// The F12 panel's outline width on every outline; 0 hides them.
+fn retune_outlines(
+    look: Res<OutlineLook>,
+    mut outlines: Query<(&mut OutlineVolume, Option<&Visibility>)>,
+) {
+    for (mut outline, vis) in &mut outlines {
+        let visible = look.width > 0.0 && !matches!(vis, Some(Visibility::Hidden));
+        if (outline.width - look.width).abs() > f32::EPSILON || outline.visible != visible {
+            outline.width = look.width;
+            outline.visible = visible;
+        }
     }
 }
 
@@ -212,7 +230,7 @@ fn sync_outline_with_visibility(
     changed_query: Query<(Entity, &Visibility), (With<InheritOutline>, Changed<Visibility>)>,
 ) {
     for (vis, mut outline) in volume_query.iter_mut() {
-        let should_be_visible = !matches!(vis, Visibility::Hidden);
+        let should_be_visible = !matches!(vis, Visibility::Hidden) && outline.width > 0.0;
         if outline.visible != should_be_visible {
             outline.visible = should_be_visible;
         }

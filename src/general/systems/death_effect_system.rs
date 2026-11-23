@@ -39,7 +39,7 @@ pub fn tick_death_effects(
         Entity,
         &mut DeathEffect,
         &mut Transform,
-        &MeshMaterial3d<StandardMaterial>,
+        &crate::retro::shading::BaseMaterial,
     )>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     time: Res<Time>,

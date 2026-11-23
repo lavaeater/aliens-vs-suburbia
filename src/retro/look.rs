@@ -6,6 +6,7 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use super::Palettes;
+use super::mode::{LookMode, OutlineLook, PsxLook, PsxSetting, ToonLook, ToonSetting};
 use crate::general::systems::lights_systems::{LightingPreset, SkyLightSettings};
 
 pub const SETTINGS_PATH: &str = "retro-settings.ron";
@@ -15,7 +16,6 @@ const DITHER_STEPS: [f32; 5] = [0.0, 0.2, 0.35, 0.7, 1.0];
 /// What the retro look should be. Edited by the hotkeys and the F12 panel; read every frame.
 #[derive(Resource, Clone, Debug, PartialEq)]
 pub struct RetroLook {
-    pub enabled: bool,
     /// Screen pixels per texel.
     pub pixel_size: u32,
     /// Index into `Palettes`; 0 is full colour (pixelation only).
@@ -41,7 +41,6 @@ pub struct RetroLook {
 impl Default for RetroLook {
     fn default() -> Self {
         Self {
-            enabled: false,
             pixel_size: 3,
             palette: 0,
             dither: 0.7,
@@ -59,7 +58,6 @@ impl Default for RetroLook {
 /// One row of the panel.
 #[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Setting {
-    Enabled,
     Palette,
     PixelSize,
     Dither,
@@ -73,8 +71,7 @@ pub enum Setting {
 }
 
 impl Setting {
-    pub const ALL: [Setting; 11] = [
-        Setting::Enabled,
+    pub const ALL: [Setting; 10] = [
         Setting::Palette,
         Setting::PixelSize,
         Setting::Dither,
@@ -89,7 +86,6 @@ impl Setting {
 
     pub fn name(self) -> &'static str {
         match self {
-            Setting::Enabled => "Retro",
             Setting::Palette => "Palette",
             Setting::PixelSize => "Pixels",
             Setting::Dither => "Dither",
@@ -112,7 +108,6 @@ impl Setting {
             ((next / by).round() * by).clamp(lo, hi)
         };
         match self {
-            Setting::Enabled => look.enabled = !look.enabled,
             Setting::Palette => {
                 let count = palettes.0.len() + 1;
                 look.palette = if up {
@@ -155,7 +150,6 @@ impl Setting {
     /// The value as the panel shows it.
     pub fn value(self, look: &RetroLook, palettes: &Palettes) -> String {
         match self {
-            Setting::Enabled => if look.enabled { "on" } else { "off" }.to_string(),
             Setting::Palette => match palettes.get(look.palette) {
                 Some(p) => format!("{} ({})", p.name, p.len()),
                 None => "full colour".to_string(),
@@ -167,11 +161,13 @@ impl Setting {
             Setting::Saturation => format!("{:.1}", look.saturation),
             Setting::ShadowTint => format!("{:.1}", look.shadow_tint),
             Setting::Warmth => format!("{:.1}", look.warmth),
-            Setting::Ink => if look.ink <= 0.0 {
-                "off".to_string()
-            } else {
-                format!("{:.2}", look.ink)
-            },
+            Setting::Ink => {
+                if look.ink <= 0.0 {
+                    "off".to_string()
+                } else {
+                    format!("{:.2}", look.ink)
+                }
+            }
             Setting::InkThreshold => format!("{:.2}", look.ink_threshold),
         }
     }
@@ -236,29 +232,70 @@ impl LightSetting {
     }
 }
 
-/// One line for the on-screen flash when something changes.
-pub fn summary(look: &RetroLook, palettes: &Palettes) -> String {
-    if !look.enabled {
-        return "Retro off   (F12 settings, Ctrl+K on)".to_string();
-    }
-    format!(
-        "{}   {}   dither {}   ink {}   (F12)",
-        Setting::Palette.value(look, palettes),
-        Setting::PixelSize.value(look, palettes),
-        Setting::Dither.value(look, palettes),
-        Setting::Ink.value(look, palettes),
-    )
+/// One line for the on-screen flash when the look mode changes.
+pub fn summary(snap: &LookSnapshot, palettes: &Palettes) -> String {
+    let look = &snap.look;
+    let retro = || {
+        format!(
+            "{}   {}   dither {}   ink {}",
+            Setting::Palette.value(look, palettes),
+            Setting::PixelSize.value(look, palettes),
+            Setting::Dither.value(look, palettes),
+            Setting::Ink.value(look, palettes),
+        )
+    };
+    let toon = || {
+        format!(
+            "shadow {}   levels {}   dark at {}",
+            ToonSetting::Shadow.value(&snap.toon),
+            ToonSetting::Levels.value(&snap.toon),
+            ToonSetting::DarkLevel.value(&snap.toon),
+        )
+    };
+    let detail = match snap.mode {
+        LookMode::Plain => "Bevy's own shading".to_string(),
+        LookMode::Retro => retro(),
+        LookMode::Toon => toon(),
+        LookMode::ToonRetro => format!("{}   {}", toon(), retro()),
+        LookMode::Psx => format!(
+            "{}   wobble {}   colours {}",
+            PsxSetting::Pixels.value(&snap.psx),
+            PsxSetting::Snap.value(&snap.psx),
+            PsxSetting::Colours.value(&snap.psx),
+        ),
+    };
+    format!("{}   {detail}   (F12, Ctrl+K next look)", snap.mode.name())
 }
 
-/// With `--no-retro`, whether the file had the look on, so saving this run's other changes
-/// does not switch it off for good.
+/// A look forced by a flag for this run (`--psx`, `--plain`, `--no-retro`) and the one the
+/// file had, so saving this run's other changes does not keep the flag's look for good.
 #[derive(Resource)]
-pub struct SavedEnabled(pub bool);
+pub struct ForcedMode {
+    pub forced: LookMode,
+    pub saved: LookMode,
+}
+
+/// Everything `retro-settings.ron` keeps, as the game holds it.
+#[derive(Clone, Debug, PartialEq, Default)]
+pub struct LookSnapshot {
+    pub mode: LookMode,
+    pub look: RetroLook,
+    pub toon: ToonLook,
+    pub psx: PsxLook,
+    pub outline: OutlineLook,
+    pub light: LightingPreset,
+    pub sky: SkyLightSettings,
+}
 
 /// `retro-settings.ron`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(default)]
 pub struct RetroFile {
+    /// `None` in a file from before the modes: then `enabled` says Retro or Plain.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mode: Option<LookMode>,
+    /// The old on/off switch, read but no longer written.
+    #[serde(skip_serializing)]
     pub enabled: bool,
     pub palette: String,
     pub pixel_size: u32,
@@ -270,6 +307,10 @@ pub struct RetroFile {
     pub warmth: f32,
     pub ink: f32,
     pub ink_threshold: f32,
+    pub toon: ToonLook,
+    pub psx: PsxLook,
+    /// Outline width in pixels, 0 off.
+    pub outline: f32,
     /// The sky preset and its tuning (`general::systems::lights_systems`).
     pub light: LightingPreset,
     pub sky: SkyLightSettings,
@@ -277,31 +318,24 @@ pub struct RetroFile {
 
 impl Default for RetroFile {
     fn default() -> Self {
-        let look = RetroLook {
-            enabled: true,
-            ..default()
-        };
-        Self::from_look(&look, &Palettes::default(), super::DEFAULT_PALETTE)
+        let mut file = Self::of(&LookSnapshot::default(), &Palettes::default());
+        file.palette = super::DEFAULT_PALETTE.to_string();
+        // No mode, so an old file's `enabled: false` still means Plain.
+        file.mode = None;
+        file.enabled = true;
+        file
     }
 }
 
 impl RetroFile {
-    fn from_look(look: &RetroLook, palettes: &Palettes, palette: &str) -> Self {
-        Self::with_light(look, palettes, palette, LightingPreset::default(), SkyLightSettings::default())
-    }
-
-    fn with_light(
-        look: &RetroLook,
-        palettes: &Palettes,
-        palette: &str,
-        light: LightingPreset,
-        sky: SkyLightSettings,
-    ) -> Self {
+    pub fn of(snap: &LookSnapshot, palettes: &Palettes) -> Self {
+        let look = &snap.look;
         Self {
-            enabled: look.enabled,
+            mode: Some(snap.mode),
+            enabled: snap.mode.canvas() != super::mode::Canvas::Off,
             palette: palettes
                 .get(look.palette)
-                .map_or_else(|| palette.to_string(), |p| p.name.clone()),
+                .map_or_else(String::new, |p| p.name.clone()),
             pixel_size: look.pixel_size,
             dither: look.dither,
             exposure: look.exposure,
@@ -311,39 +345,45 @@ impl RetroFile {
             warmth: look.warmth,
             ink: look.ink,
             ink_threshold: look.ink_threshold,
-            light,
-            sky,
+            toon: snap.toon,
+            psx: snap.psx.clone(),
+            outline: snap.outline.width,
+            light: snap.light,
+            sky: snap.sky,
         }
     }
 
-    #[cfg(test)]
-    pub fn of(look: &RetroLook, palettes: &Palettes) -> Self {
-        Self::from_look(look, palettes, "")
-    }
-
-    pub fn of_all(
-        look: &RetroLook,
-        palettes: &Palettes,
-        light: LightingPreset,
-        sky: SkyLightSettings,
-    ) -> Self {
-        Self::with_light(look, palettes, "", light, sky)
-    }
-
-    /// The look this file describes; an unknown palette name falls back to full colour.
-    pub fn look(&self, palettes: &Palettes) -> RetroLook {
-        RetroLook {
-            enabled: self.enabled,
-            pixel_size: self.pixel_size.clamp(1, MAX_PIXEL_SIZE),
-            palette: palettes.index_of(&self.palette).unwrap_or(0),
-            dither: self.dither.clamp(0.0, 1.0),
-            exposure: self.exposure,
-            contrast: self.contrast,
-            saturation: self.saturation,
-            shadow_tint: self.shadow_tint,
-            warmth: self.warmth,
-            ink: self.ink.clamp(0.0, 1.0),
-            ink_threshold: self.ink_threshold,
+    /// What this file describes; an unknown palette name falls back to full colour.
+    pub fn snapshot(&self, palettes: &Palettes) -> LookSnapshot {
+        let mode = self.mode.unwrap_or(if self.enabled {
+            LookMode::Retro
+        } else {
+            LookMode::Plain
+        });
+        let mut psx = self.psx.clone();
+        psx.pixel_size = psx.pixel_size.clamp(1, MAX_PIXEL_SIZE);
+        psx.palette = psx.palette.filter(|name| palettes.index_of(name).is_some());
+        LookSnapshot {
+            mode,
+            look: RetroLook {
+                pixel_size: self.pixel_size.clamp(1, MAX_PIXEL_SIZE),
+                palette: palettes.index_of(&self.palette).unwrap_or(0),
+                dither: self.dither.clamp(0.0, 1.0),
+                exposure: self.exposure,
+                contrast: self.contrast,
+                saturation: self.saturation,
+                shadow_tint: self.shadow_tint,
+                warmth: self.warmth,
+                ink: self.ink.clamp(0.0, 1.0),
+                ink_threshold: self.ink_threshold,
+            },
+            toon: self.toon,
+            psx,
+            outline: OutlineLook {
+                width: self.outline.clamp(0.0, 8.0),
+            },
+            light: self.light,
+            sky: self.sky,
         }
     }
 
@@ -424,18 +464,22 @@ mod tests {
     #[test]
     fn the_file_keeps_the_palette_by_name() {
         let p = palettes();
-        let look = RetroLook {
-            palette: 2,
-            ink: 0.5,
+        let snap = LookSnapshot {
+            mode: LookMode::ToonRetro,
+            look: RetroLook {
+                palette: 2,
+                ink: 0.5,
+                ..default()
+            },
             ..default()
         };
-        let file = RetroFile::of(&look, &p);
+        let file = RetroFile::of(&snap, &p);
         assert_eq!(file.palette, "b");
         let text = ron::to_string(&file).unwrap_or_default();
         let back: RetroFile = ron::from_str(&text).unwrap_or_default();
-        assert_eq!(back.look(&p), look);
+        assert_eq!(back.snapshot(&p), snap);
         let shuffled = Palettes(p.0.into_iter().rev().collect());
-        assert_eq!(back.look(&shuffled).palette, 1);
+        assert_eq!(back.snapshot(&shuffled).look.palette, 1);
     }
 
     #[test]
@@ -459,6 +503,21 @@ mod tests {
         let file: RetroFile = ron::from_str("(palette: \"a\", ink: 0.25)").unwrap_or_default();
         assert_eq!(file.ink, 0.25);
         assert_eq!(file.pixel_size, 3);
-        assert!(file.enabled);
+        let snap = file.snapshot(&palettes());
+        assert_eq!(snap.mode, LookMode::Retro);
+        assert_eq!(snap.toon, ToonLook::default());
+    }
+
+    #[test]
+    fn an_old_file_switched_off_opens_plain() {
+        let file: RetroFile = ron::from_str("(enabled: false, palette: \"a\")").unwrap_or_default();
+        assert_eq!(file.palette, "a");
+        assert_eq!(file.snapshot(&palettes()).mode, LookMode::Plain);
+        let text = ron::to_string(&RetroFile::of(&LookSnapshot::default(), &palettes()))
+            .unwrap_or_default();
+        assert!(
+            !text.contains("enabled") && text.contains("Retro"),
+            "{text}"
+        );
     }
 }

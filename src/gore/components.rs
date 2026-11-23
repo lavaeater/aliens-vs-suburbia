@@ -68,7 +68,7 @@ pub struct LastHit {
 pub struct Ephemeral {
     pub timer: Timer,
     /// Fade `base_color` alpha linearly to 0 across the lifetime (needs a
-    /// `MeshMaterial3d<StandardMaterial>`).
+    /// `StandardMaterial`, found through `retro::shading::BaseMaterial`).
     pub fade: bool,
 }
 
