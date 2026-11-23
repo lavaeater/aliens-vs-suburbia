@@ -156,7 +156,7 @@ const ABILITIES: &[&str] = &[
 ];
 const HANDS: &[&str] = &["OneHanded", "TwoHanded"];
 const AMMO: &[&str] = &[
-    "Infinite", "Pistol", "Rifle", "Shells", "Grenade", "Molotov",
+    "Infinite", "Pistol", "Rifle", "Shells", "Grenade", "Molotov", "Fuel",
 ];
 const ATTACKS: &[&str] = &["Melee", "Ranged"];
 const TOWER_KINDS: &[&str] = &["Shooter", "Slow", "Area"];
@@ -188,6 +188,7 @@ const fn ammo_name(ammo: AmmoKind) -> &'static str {
         AmmoKind::Shells => "Shells",
         AmmoKind::Grenade => "Grenade",
         AmmoKind::Molotov => "Molotov",
+        AmmoKind::Fuel => "Fuel",
     }
 }
 
@@ -198,6 +199,7 @@ fn ammo_from(name: &str) -> AmmoKind {
         "Shells" => AmmoKind::Shells,
         "Grenade" => AmmoKind::Grenade,
         "Molotov" => AmmoKind::Molotov,
+        "Fuel" => AmmoKind::Fuel,
         _ => AmmoKind::Infinite,
     }
 }

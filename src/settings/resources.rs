@@ -67,6 +67,10 @@ pub struct GameSettings {
     /// Whether a bleed-out drops the player's guns and ammo where they fell.
     #[serde(default = "default_drop_on_death")]
     pub drop_on_death: bool,
+    /// Testing: every player spawns carrying every weapon def in `assets/defs` and a
+    /// full pouch of every ammo kind (grenades and molotovs included).
+    #[serde(default)]
+    pub full_arsenal: bool,
 }
 
 const fn default_projection() -> ProjectionMode {
@@ -149,6 +153,7 @@ impl Default for GameSettings {
             bleed_out_secs: default_bleed_out_secs(),
             respawn_secs: default_respawn_secs(),
             drop_on_death: default_drop_on_death(),
+            full_arsenal: false,
         }
     }
 }

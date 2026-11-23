@@ -93,6 +93,9 @@ fn spawn_from_def(
     if !props.resistances.is_empty() {
         ec.insert(DamageResistances(props.resistances.clone()));
     }
+    if !props.reactions.is_empty() {
+        ec.insert(crate::status::Reactions(props.reactions.clone()));
+    }
     if let Some(blast) = &props.explodes_on_death {
         ec.insert(ExplodesOnDeath(blast.clone()));
     }

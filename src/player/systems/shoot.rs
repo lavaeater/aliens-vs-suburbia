@@ -24,6 +24,7 @@ use crate::player::ammo::AmmoPouch;
 use crate::player::components::{AutoAim, Player, PlayerDead};
 use crate::player::systems::aim_level::AimLevel;
 use crate::player::systems::equip::EquippedWeapon;
+use crate::player::systems::flamethrower::{FlameBurst, FlameProps};
 use crate::player::systems::muzzle_flash::MuzzleFlash;
 
 /// Runtime combat state of an equipped weapon, resolved from its `WeaponProps` at
@@ -54,6 +55,8 @@ pub struct Weapon {
     pub reloading: Option<Timer>,
     /// Set for launcher-type guns; `None` = hitscan.
     pub projectile: Option<ProjectileProps>,
+    /// Set for flamethrowers: shots are `FlameBurst`s.
+    pub flame: Option<FlameProps>,
 }
 
 impl Weapon {
@@ -85,6 +88,7 @@ impl Weapon {
             reload_secs: props.reload_secs.max(0.05),
             reloading: None,
             projectile: props.projectile.clone(),
+            flame: props.flame,
         }
     }
 
@@ -246,6 +250,7 @@ pub fn shoot_weapons(
     mut reload_mw: MessageWriter<ReloadRequest>,
     mut flash_mw: MessageWriter<MuzzleFlash>,
     mut fx_mw: MessageWriter<SpawnFx>,
+    mut flame_mw: MessageWriter<FlameBurst>,
     factions: Query<(&Faction, &GlobalTransform)>,
     mut rng_seed: Local<u32>,
     ground: Res<GroundHeight>,
@@ -290,6 +295,22 @@ pub fn shoot_weapons(
         let aim_dir = aim.0.normalize_or(Vec3::X);
         // Where the barrel points: over the ground ahead, or at a monster's centre.
         let barrel_dir = level.dir_from(origin, aim_dir);
+
+        // A flamethrower burns rather than shoots: no flash, no ray, a gentle shove.
+        if let Some(flame) = weapon.flame {
+            weapon.recoil = 0.04;
+            flame_mw.write(FlameBurst {
+                source: player,
+                weapon: equipped.0,
+                muzzle: weapon.muzzle.as_ref().map(|m| Vec3::from(m.translation)),
+                origin,
+                dir: barrel_dir,
+                damage: weapon.damage,
+                props: flame,
+            });
+            game_mw.write(GameTrackingEvent::ShotFired(player));
+            continue;
+        }
         flash_mw.write(MuzzleFlash {
             weapon: weapon
                 .muzzle

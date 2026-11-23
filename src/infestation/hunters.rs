@@ -188,7 +188,7 @@ pub fn hunt(
             &mut Rotation,
             &mut CreatureAnim,
         ),
-        With<Alien>,
+        (With<Alien>, Without<crate::status::panic::Panicking>),
     >,
     targets: Query<&Position, Without<Hunter>>,
 ) {

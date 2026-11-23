@@ -29,6 +29,8 @@ pub enum FxKind {
     ImpactSparks,
     Explosion,
     DustBurst,
+    /// A molotov breaking: glass and burning droplets (`gore::fire`).
+    FireSplash,
 }
 
 /// Play a one-shot effect at `at`, its +Y along `dir`.
@@ -63,6 +65,9 @@ pub struct FxAssets {
     impact_sparks: Handle<ParticlesAsset>,
     explosion: Handle<ParticlesAsset>,
     dust_burst: Handle<ParticlesAsset>,
+    fire_splash: Handle<ParticlesAsset>,
+    /// Looping; a flamethrower's stream (`player::systems::flamethrower`).
+    pub flame_jet: Handle<ParticlesAsset>,
     /// Looping; spawned by `gore::fire` for each fire field.
     pub fire: Handle<ParticlesAsset>,
     /// Looping; over every fire field (`gore::fire`).
@@ -80,6 +85,7 @@ impl FxAssets {
             FxKind::ImpactSparks => self.impact_sparks.clone(),
             FxKind::Explosion => self.explosion.clone(),
             FxKind::DustBurst => self.dust_burst.clone(),
+            FxKind::FireSplash => self.fire_splash.clone(),
         }
     }
 }
@@ -126,6 +132,8 @@ fn setup_fx_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
         impact_sparks: asset_server.load("fx/impact_sparks.ron"),
         explosion: asset_server.load("fx/explosion.ron"),
         dust_burst: asset_server.load("fx/dust_burst.ron"),
+        fire_splash: asset_server.load("fx/fire_splash.ron"),
+        flame_jet: asset_server.load("fx/flame_jet.ron"),
         fire: asset_server.load("fx/fire.ron"),
         smoke: asset_server.load("fx/smoke.ron"),
         smoke_column: asset_server.load("fx/smoke_column.ron"),

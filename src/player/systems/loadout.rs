@@ -24,6 +24,27 @@ pub struct WeaponSlot {
     pub rounds_in_mag: Option<u32>,
 }
 
+/// Every weapon def in `assets/defs`, as content paths (`defs/Pistol.ron`), sorted by
+/// name. For `GameSettings::full_arsenal`.
+pub fn every_weapon_def() -> Vec<String> {
+    let Ok(entries) = std::fs::read_dir("assets/defs") else {
+        return Vec::new();
+    };
+    let mut paths: Vec<String> = entries
+        .filter_map(Result::ok)
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|ext| ext == "ron"))
+        .filter_map(|p| {
+            let path = crate::assets::paths::content_ref(&p.to_string_lossy());
+            AssetDefinition::load_from_def_path(&path)
+                .filter(|def| matches!(def.model_type, crate::assets::asset_definition::ModelType::Weapon(_)))
+                .map(|_| path)
+        })
+        .collect();
+    paths.sort();
+    paths
+}
+
 /// Everything a player carries, whether or not it is in their hands.
 #[derive(Component, Debug, Clone, Default)]
 pub struct Weapons {

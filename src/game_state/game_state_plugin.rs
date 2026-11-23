@@ -106,6 +106,7 @@ impl Plugin for GamePlugin {
                 crate::infestation::InfestationPlugin,
                 CampaignEditorPlugin,
                 crate::townsfolk::TownsfolkPlugin,
+                crate::status::StatusPlugin,
             ))
             .init_resource::<LightingPreset>()
             .init_resource::<crate::general::systems::lights_systems::SkyLightSettings>()
