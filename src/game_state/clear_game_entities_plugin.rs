@@ -5,7 +5,7 @@ use bevy::ecs::resource::IsResource;
 use bevy::ecs::system::SystemIdMarker;
 use bevy::input::gamepad::Gamepad;
 use bevy::picking::pointer::PointerId;
-use bevy::prelude::{Commands, Component, Entity, OnExit, Query, Window, Without};
+use bevy::prelude::{ChildOf, Commands, Component, Entity, OnExit, Query, Window, With, Without};
 use bevy::window::Monitor;
 use bevy_seedling::prelude::FirewheelNode;
 
@@ -47,9 +47,17 @@ type EngineOwned = (
 pub fn clear_game_entities(
     mut commands: Commands,
     query: Query<Entity, EngineOwned>,
+    parents: Query<&ChildOf>,
+    persistent: Query<(), With<Persistent>>,
 ) {
     // A despawned collider takes its Jolt body with it (`physics::jolt::sync::remove_body`).
     for entity in query.iter() {
+        if parents
+            .iter_ancestors(entity)
+            .any(|above| persistent.contains(above))
+        {
+            continue;
+        }
         commands.entity(entity).try_despawn();
     }
 }
@@ -79,5 +87,26 @@ mod tests {
 
         assert!(world.get_entity(alien).is_err(), "game entities go");
         assert_eq!(world.resource::<Score>().0, 7, "resources stay");
+    }
+
+    #[test]
+    fn the_sweep_keeps_everything_under_a_persistent_entity() {
+        let mut world = World::new();
+        let row = world.spawn_empty().id();
+        let value = world.spawn(ChildOf(row)).id();
+        let root = world.spawn(Persistent).add_child(row).id();
+        let other = world.spawn_empty().id();
+        let others_child = world.spawn(ChildOf(other)).id();
+
+        world
+            .run_system_cached(clear_game_entities)
+            .expect("sweep runs without panicking");
+
+        for kept in [root, row, value] {
+            assert!(world.get_entity(kept).is_ok(), "{kept} stays");
+        }
+        for gone in [other, others_child] {
+            assert!(world.get_entity(gone).is_err(), "{gone} goes");
+        }
     }
 }

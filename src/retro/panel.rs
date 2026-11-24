@@ -14,6 +14,7 @@ use super::mode::{LookMode, OutlineLook, PsxLook, PsxSetting, ToonLook, ToonSett
 use super::rows::{LookChanged, LookParams, Row, SceneSetting};
 use super::shots::RetroShots;
 use crate::character_editor::state::EditorSession;
+use crate::game_state::clear_game_entities_plugin::Persistent;
 use crate::general::systems::lights_systems::{LightingPreset, SkyLightSettings};
 
 /// How long the flash stays up, in seconds (the last half second fades).
@@ -64,7 +65,9 @@ pub fn plugin(app: &mut App) {
 
 fn spawn_panel(commands: Commands, theme: Res<LavaTheme>) {
     let mut ui = UIBuilder::new(commands, Some(theme.clone()));
+    // Spawned once, so it must outlive the matches.
     ui.component::<RetroPanel>()
+        .insert(Persistent)
         .display_none()
         .absolute_position()
         .top(px(8.0))
@@ -142,6 +145,7 @@ fn spawn_flash(mut commands: Commands) {
     commands
         .spawn((
             Name::new("Retro Flash"),
+            Persistent,
             Node {
                 position_type: PositionType::Absolute,
                 top: px(64.0),
@@ -292,5 +296,28 @@ mod tests {
         for mode in LookMode::ALL {
             assert!(Row::Mode.shown_in(mode) && Row::Scene(SceneSetting::Fog).shown_in(mode));
         }
+    }
+
+    /// The panel is spawned once, at startup: F12 had nothing to open after a match.
+    #[test]
+    fn the_panel_and_the_flash_outlive_a_match() {
+        let mut world = World::new();
+        world.init_resource::<LavaTheme>();
+        world.run_system_cached(spawn_panel).unwrap();
+        world.run_system_cached(spawn_flash).unwrap();
+        let count = |world: &mut World| {
+            (
+                world.query::<&RetroPanel>().iter(world).count(),
+                world.query::<&ValueLabel>().iter(world).count(),
+                world.query::<&Text>().iter(world).count(),
+                world.query::<&RetroFlash>().iter(world).count(),
+            )
+        };
+        let before = count(&mut world);
+        assert!(before.0 == 1 && before.1 > 10 && before.3 == 1, "{before:?}");
+        world
+            .run_system_cached(crate::game_state::clear_game_entities_plugin::clear_game_entities)
+            .unwrap();
+        assert_eq!(count(&mut world), before);
     }
 }
