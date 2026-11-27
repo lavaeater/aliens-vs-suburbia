@@ -5,11 +5,28 @@
         name: "Map 01 intro",
         repeat: false,
         init_facts: [
-            ("ObjectiveText", Text("Hold the hill. Do not let 10 of them reach the goal")),
+            ("ObjectiveText", Text("Hold the hill. Destroy every spawner")),
         ],
         rules: [
             (name: "started", criteria: [BoolIs(key: "LevelStarted", expected: true)]),
         ],
         consequences: [Emit(effect: "crawl:map_01_crawl_intro")],
+    ),
+    (
+        name: "Every spawner destroyed",
+        repeat: false,
+        init_facts: [
+            ("Objective.spawners", Bool(false)),
+        ],
+        rules: [
+            (
+                name: "none left",
+                criteria: [
+                    BoolIs(key: "LevelStarted", expected: true),
+                    IntCmp(key: "SpawnersLeft", op: Eq, value: 0),
+                ],
+            ),
+        ],
+        consequences: [SetFact(key: "Objective.spawners", value: Bool(true))],
     ),
 ]

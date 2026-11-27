@@ -4,19 +4,16 @@
 name: Example Area
 stories: campaigns/gis/map_01/map_01_story.ron
 loot: 1-3 per 40
-escape_limit: 10
 townsfolk: 16
+spawners: 4
+spawner_every: 20-40
+spawner_waves: 3
 base: campaigns/gis/world/world.map
 region: 78, 78, 80, 80
 
 [markers]
 # marker: player | spawn | goal | at: <x, y in the base map's tiles>
-marker: goal | at: 118, 118
 marker: player | at: 120, 118
-marker: spawn | at: 97, 78
-marker: spawn | at: 157, 108
-marker: spawn | at: 78, 124
-marker: spawn | at: 85, 78
 
 [placements]
 # at: x, y | def: <def under assets/, e.g. defs/Barrel.ron> | rotation: <degrees, steps of 45>
