@@ -67,7 +67,7 @@ pub fn lawn_style() -> GrassStyle {
             translucency: 0.6,
             ..GrassStyle::LAWN.blade
         },
-        density: 800.0,
+        density: 200.0,
         ..GrassStyle::LAWN
     }
 }
